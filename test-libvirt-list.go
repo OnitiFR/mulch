@@ -9,6 +9,7 @@ import (
 
 func main() {
 	conn, err := libvirt.NewConnect("qemu:///system")
+//	conn, err := libvirt.NewConnect("qemu:///session")
 	if err != nil {
 		log.Fatal(err)
 	}

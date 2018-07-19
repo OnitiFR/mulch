@@ -9,3 +9,6 @@ guestfish -a testing.qcow2 -i write /root/.ssh/authorized_keys "ssh-rsa sshkeyhe
 
 # eject media after/during first boot ?
 virsh change-media testing hda --eject --config
+
+# allow a user to connect to qemu://system without any password
+usermod --append --groups libvirt `whoami`
