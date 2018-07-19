@@ -33,7 +33,7 @@ func main() {
 	//
 	// fmt.Printf("Virt type %s\n", domcfg.Type)
 
-	xml, err := ioutil.ReadFile("/home/xfennec/Clicproxy/KVM/test.xml")
+	xml, err := ioutil.ReadFile("test-virsh.xml")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,7 +47,8 @@ func main() {
 
 	for _, intf := range domcfg2.Devices.Interfaces {
 		//fmt.Println(intf.MAC)
-		fmt.Println(intf.MAC.Address)
+		fmt.Println(intf.Source.Bridge.Bridge) // change this to mulch net Bridge
+		fmt.Println(intf.MAC.Address)          // randomize that
 	}
 
 	domcfg2.Name = "test2"

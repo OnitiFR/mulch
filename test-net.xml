@@ -5,11 +5,11 @@
       <port start='1024' end='65535'/>
     </nat>
   </forward>
-  <bridge name='virbr100' stp='on' delay='0'/>
+  <bridge name='virbr104' stp='on' delay='0'/>
   <mac address='52:54:00:86:59:25'/>
-  <ip address='192.168.123.1' netmask='255.255.255.0'>
+  <ip address='10.104.0.1' netmask='255.255.0.0'>
     <dhcp>
-      <range start='192.168.123.2' end='192.168.123.254'/>
+      <range start='10.104.0.2' end='10.104.255.254'/>
     </dhcp>
   </ip>
 </network>

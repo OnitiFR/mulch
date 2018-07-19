@@ -1,3 +1,6 @@
+storage/releases/*
+storage/disks/*
+
 # Binaries for programs and plugins
 *.exe
 *.exe~

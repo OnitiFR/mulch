@@ -1,0 +1,3 @@
+- check connection and access rights
+- what about libvirt group / qemu user for storage ?
+- need to check if storage pool is really useful for our need
