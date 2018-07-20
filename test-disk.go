@@ -54,4 +54,6 @@ func main() {
 	fmt.Printf("took %s\n", elapsed)
 
 	// then define domain using disk and virtfs-ci
+	// (first test : define the domain with only its disk, to test
+	// probable access issues between libvirt / qemu)
 }
