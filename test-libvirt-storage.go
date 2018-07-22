@@ -32,8 +32,12 @@ func main() {
 	// 	}
 	// 	pool.Free() // ?
 	// }
-	const poolName = "mulch"
-	const poolPath = "storage"
+	const poolName = "mulch-disks"
+	const poolPath = "storage/disks"
+	// const poolName = "mulch-releases"
+	// const poolPath = "storage/releases"
+	// const poolName = "mulch-disks"
+	// const poolPath = "storage/disks"
 
 	pool, err := conn.LookupStoragePoolByName(poolName)
 	if err != nil {
@@ -54,7 +58,7 @@ func main() {
 			}
 
 			poolcfg.Name = poolName
-			poolcfg.Target.Path = cwd + "/storage"
+			poolcfg.Target.Path = cwd + "/" + poolPath
 
 			out, err := poolcfg.Marshal()
 			if err != nil {

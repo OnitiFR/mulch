@@ -6,7 +6,7 @@
     </nat>
   </forward>
   <bridge name='virbr104' stp='on' delay='0'/>
-  <mac address='52:54:00:86:59:25'/>
+  <mac address='00:16:3e:00:00:01'/>
   <ip address='10.104.0.1' netmask='255.255.0.0'>
     <dhcp>
       <range start='10.104.0.2' end='10.104.255.254'/>
