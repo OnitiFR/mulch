@@ -162,12 +162,13 @@ func main() {
 	// 3 - define domain
 	// should dynamically define:
 	// - name
-	// - CPU, RAM
+	// - CPU count, RAM amount
+	// - CPU topology
 	// - disk path
 	// - virtfs "config-2" path
 	// - bridge interface name
 	// - interface MAC address
-	xml, err := ioutil.ReadFile("test-virtfs.xml")
+	xml, err := ioutil.ReadFile("test-ci-disk.xml")
 	if err != nil {
 		log.Fatal(err)
 	}

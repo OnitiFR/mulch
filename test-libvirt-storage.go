@@ -32,10 +32,12 @@ func main() {
 	// 	}
 	// 	pool.Free() // ?
 	// }
-	const poolName = "mulch-disks"
-	const poolPath = "storage/disks"
+	const poolName = "mulch-cloud-init"
+	const poolPath = "storage/cloud-init"
+
 	// const poolName = "mulch-releases"
 	// const poolPath = "storage/releases"
+
 	// const poolName = "mulch-disks"
 	// const poolPath = "storage/disks"
 

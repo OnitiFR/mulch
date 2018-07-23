@@ -1,5 +1,6 @@
 storage/releases/*
 storage/disks/*
+storage/cloud-init/*
 
 # Binaries for programs and plugins
 *.exe
