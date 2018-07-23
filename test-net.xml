@@ -1,9 +1,9 @@
 <network>
   <name>mulch</name>
   <forward mode='nat'>
-    <nat>
+    <!-- <nat>
       <port start='1024' end='65535'/>
-    </nat>
+    </nat> -->
   </forward>
   <bridge name='virbr104' stp='on' delay='0'/>
   <mac address='00:16:3e:00:00:01'/>
