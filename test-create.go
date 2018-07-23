@@ -159,13 +159,18 @@ func main() {
 	// resizeDisk("test.qcow2", "20G")
 	resizeDiskWithLibvirt("test.qcow2", 20*1024*1024*1024, conn)
 
-	// 3 - define domain
+	// 3 - create cloud-init disk
+	// use ci-sample/ as a template
+	// create image
+	// upload image to storage pool
+
+	// 4 - define domain
 	// should dynamically define:
 	// - name
 	// - CPU count, RAM amount
 	// - CPU topology
-	// - disk path
-	// - virtfs "config-2" path
+	// - mail qcow2 disk path
+	// - cloud init disk path
 	// - bridge interface name
 	// - interface MAC address
 	xml, err := ioutil.ReadFile("test-ci-disk.xml")
