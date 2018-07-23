@@ -12,3 +12,5 @@ virsh change-media testing hda --eject --config
 
 # allow a user to connect to qemu://system without any password
 usermod --append --groups libvirt `whoami`
+
+ssh -i ~/.ssh/id_rsa_test -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no oniti@192.168.122.17

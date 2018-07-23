@@ -159,28 +159,15 @@ func main() {
 	// resizeDisk("test.qcow2", "20G")
 	resizeDiskWithLibvirt("test.qcow2", 20*1024*1024*1024, conn)
 
-	os.Exit(0)
-
-	// const poolName = "mulch-disks"
-	// pool, err := conn.LookupStoragePoolByName(poolName)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// err = pool.Refresh(0)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	//
-	// vol, err := pool.LookupStorageVolByName("test.qcow2")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(vol.GetName())
-
-	// then define domain using disk and virtfs-ci
-	// (first test : define the domain with only its disk, to test
-	// probable access issues between libvirt / qemu)
-	xml, err := ioutil.ReadFile("test-0.xml")
+	// 3 - define domain
+	// should dynamically define:
+	// - name
+	// - CPU, RAM
+	// - disk path
+	// - virtfs "config-2" path
+	// - bridge interface name
+	// - interface MAC address
+	xml, err := ioutil.ReadFile("test-virtfs.xml")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -203,6 +190,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	fmt.Println("creating domain")
 	dom, err := conn.DomainDefineXML(string(xml2))
 	if err != nil {
 		log.Fatal(err)
@@ -210,12 +198,12 @@ func main() {
 
 	name, _ := dom.GetName()
 	id, _ := dom.GetID()
-	uuid, _ := dom.GetUUID()
+	uuid, _ := dom.GetUUIDString()
 	fmt.Println(name, id, uuid)
 
+	fmt.Println("starting domain")
 	err = dom.Create()
 	if err != nil {
 		log.Fatal(err)
 	}
-
 }

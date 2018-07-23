@@ -4,6 +4,7 @@
   <currentMemory unit='KiB'>1048576</currentMemory>
   <vcpu placement='static'>1</vcpu>
   <os>
+    <!-- make arch dynamic? -->
     <type arch='x86_64' machine='pc-i440fx-2.11'>hvm</type>
     <boot dev='hd'/>
   </os>
@@ -12,6 +13,7 @@
     <apic/>
     <vmport state='off'/>
   </features>
+  <!-- not portable… -->
   <cpu mode='custom' match='exact' check='partial'>
     <model fallback='allow'>Broadwell-noTSX-IBRS</model>
   </cpu>
@@ -28,23 +30,25 @@
     <suspend-to-disk enabled='no'/>
   </pm>
   <devices>
+    <!-- is this possible to make this more portable? -->
     <emulator>/usr/bin/qemu-kvm</emulator>
     <disk type='file' device='disk'>
       <driver name='qemu' type='qcow2'/>
-      <source file='/srv/images/test.qcow2'/>
+      <source file='/home/xfennec/Documents/GitHub/mulch/storage/disks/test.qcow2'/>
       <target dev='vda' bus='virtio'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
     </disk>
     <disk type='file' device='cdrom'>
       <driver name='qemu' type='raw'/>
-      <source file='/srv/images/a.iso'/>
+      <source file='/srv/a.iso'/>
       <target dev='hda' bus='ide'/>
       <readonly/>
       <address type='drive' controller='0' bus='0' target='0' unit='0'/>
     </disk>
     <filesystem type='mount' accessmode='mapped'>
-      <source dir='/srv/images/virtfs'/>
-      <target dir='config-2'/>
+      <!-- <source dir='/home/xfennec/Documents/GitHub/mulch/storage/virtfs-ci-sample'/> -->
+      <source dir='/srv'/>
+      <target dir='config-x'/>
     </filesystem>
     <controller type='usb' index='0' model='ich9-ehci1'>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x7'/>
@@ -70,7 +74,8 @@
     </controller>
     <interface type='bridge'>
       <mac address='00:16:3e:00:00:01'/>
-      <source bridge='virbr104'/>
+      <source bridge='virbr0'/>
+      <!-- <source bridge='virbr104'/> -->
       <model type='virtio'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
     </interface>
@@ -99,9 +104,9 @@
       <listen type='address'/>
       <image compression='off'/>
     </graphics>
-    <sound model='ich6'>
+    <!-- <sound model='ich6'>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0'/>
-    </sound>
+    </sound> -->
     <video>
       <model type='qxl' ram='65536' vram='65536' vgamem='16384' heads='1' primary='yes'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
