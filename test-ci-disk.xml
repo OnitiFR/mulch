@@ -1,5 +1,5 @@
 <domain type='kvm'>
-  <name>test</name>
+  <name>undefined-name</name>
   <memory unit='KiB'>1048576</memory>
   <currentMemory unit='KiB'>1048576</currentMemory>
   <vcpu placement='static'>1</vcpu>
@@ -32,18 +32,23 @@
   <devices>
     <!-- is this possible to make this more portable? -->
     <emulator>/usr/bin/qemu-kvm</emulator>
+
     <disk type='file' device='disk'>
+      <alias name="ua-mulch-disk"/>
       <driver name='qemu' type='qcow2'/>
-      <source file='/home/xfennec/Documents/GitHub/mulch/storage/disks/test.qcow2'/>
+      <source file='undefined-disk'/>
       <target dev='vda' bus='virtio'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
     </disk>
+
     <disk type='file' device='disk'>
+      <alias name="ua-mulch-cloudinit"/>
       <driver name='qemu' type='raw'/>
-      <source file='/home/xfennec/Documents/GitHub/mulch/storage/cloud-init/test.img'/>
+      <source file='undefined-cloudinit'/>
       <target dev='hda' bus='ide'/>
       <address type='drive' controller='0' bus='0' target='0' unit='0'/>
     </disk>
+
     <controller type='usb' index='0' model='ich9-ehci1'>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x7'/>
     </controller>

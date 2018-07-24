@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -34,21 +33,25 @@ func addFile(dir fs.Directory, src string) error {
 	return nil
 }
 
-func main() {
-	f, err := os.Create("storage/cloud-init/test.img")
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
+func CloudInitCreateFatImg(outputFile string, size int64, inputFiles []string) error {
 
-	if err := f.Truncate(256 * 1024); err != nil {
-		panic(err)
+	f, err := os.Create(outputFile)
+	if err != nil {
+		return err
+	}
+
+	if err := f.Truncate(size); err != nil {
+		f.Close()
+		os.Remove(outputFile)
+		return err
 	}
 
 	// BlockDevice backed by a file
 	device, err := fs.NewFileDisk(f)
 	if err != nil {
-		panic(err)
+		f.Close()
+		os.Remove(outputFile)
+		return err
 	}
 
 	// Format the block device so it contains a valid FAT filesystem
@@ -57,27 +60,35 @@ func main() {
 		Label:   "cidata",
 		OEMName: "cidata",
 	}
+
 	if fat.FormatSuperFloppy(device, formatConfig); err != nil {
-		log.Fatal("Error creating floppy: %s", err)
+		f.Close()
+		os.Remove(outputFile)
+		return err
 	}
 
 	filesys, err := fat.New(device)
 	if err != nil {
-		panic(err)
+		f.Close()
+		os.Remove(outputFile)
+		return err
 	}
 
 	rootDir, err := filesys.RootDir()
 	if err != nil {
-		panic(err)
+		f.Close()
+		os.Remove(outputFile)
+		return err
 	}
 
-	err = addFile(rootDir, "ci-sample/meta-data")
-	if err != nil {
-		panic(err)
+	for _, file := range inputFiles {
+		err = addFile(rootDir, file)
+		if err != nil {
+			return err
+		}
 	}
-	err = addFile(rootDir, "ci-sample/user-data")
-	if err != nil {
-		panic(err)
-	}
+
+	f.Close()
+	return nil
 
 }

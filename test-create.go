@@ -138,6 +138,77 @@ func resizeDisk(disk string, size string) {
 	fmt.Printf("took %s\n", elapsed)
 }
 
+func UploadCloudInitImageToLibvirt(localImagePath string, asName string, conn *libvirt.Connect) error {
+	const poolCiName = "mulch-cloud-init"
+
+	poolCi, err := conn.LookupStoragePoolByName(poolCiName)
+	if err != nil {
+		return err
+	}
+	defer poolCi.Free()
+
+	// create dest volume
+	xml, err := ioutil.ReadFile("test-volume.xml")
+	if err != nil {
+		return err
+	}
+
+	volcfg := &libvirtxml.StorageVolume{}
+	err = volcfg.Unmarshal(string(xml))
+	if err != nil {
+		return err
+	}
+	volcfg.Name = asName
+	cwd, _ := os.Getwd()
+	volcfg.Target.Path = cwd + "/storage/cloud-init/" + asName
+	// volObj.Target.Format.Type = "raw"
+
+	xml2, err := volcfg.Marshal()
+	if err != nil {
+		return err
+	}
+	volDst, err := poolCi.StorageVolCreateXML(string(xml2), 0)
+	if err != nil {
+		return err
+	}
+	defer volDst.Free()
+
+	vu, err := NewVolumeUpload(localImagePath, conn, volDst)
+	if err != nil {
+		return err
+	}
+
+	bytesWritten, err := vu.Copy()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("transfered %d MiB (%s → %s)\n", bytesWritten/1024/1024, localImagePath, asName)
+	return nil
+}
+
+func createAndUploadCloudInitImage(imageName string, conn *libvirt.Connect) {
+	const tmpFile = "tmp.img"
+	const poolCiName = "mulch-cloud-init"
+
+	poolCi, err := conn.LookupStoragePoolByName(poolCiName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer poolCi.Free()
+
+	err = CloudInitCreateFatImg(tmpFile, 256*1024, []string{"ci-sample/meta-data", "ci-sample/user-data"})
+	if err != nil {
+		log.Fatalf("CloudInitCreateFatImg: %s", err)
+	}
+	defer os.Remove(tmpFile)
+
+	err = UploadCloudInitImageToLibvirt(tmpFile, imageName, conn)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
 	conn, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
@@ -160,9 +231,7 @@ func main() {
 	resizeDiskWithLibvirt("test.qcow2", 20*1024*1024*1024, conn)
 
 	// 3 - create cloud-init disk
-	// use ci-sample/ as a template
-	// create image
-	// upload image to storage pool
+	createAndUploadCloudInitImage("test.img", conn)
 
 	// 4 - define domain
 	// should dynamically define:
@@ -184,6 +253,19 @@ func main() {
 		log.Fatal(err)
 	}
 	// fmt.Println(domcfg2.Memory, domcfg2.CurrentMemory, domcfg2.Devices.Interfaces)
+
+	domcfg.Name = "test0"
+
+	cwd, _ := os.Getwd()
+
+	for _, disk := range domcfg.Devices.Disks {
+		if disk.Alias != nil && disk.Alias.Name == "ua-mulch-disk" {
+			disk.Source.File.File = cwd + "/storage/disks/test.qcow2"
+		}
+		if disk.Alias != nil && disk.Alias.Name == "ua-mulch-cloudinit" {
+			disk.Source.File.File = cwd + "/storage/cloud-init/test.img"
+		}
+	}
 
 	for _, intf := range domcfg.Devices.Interfaces {
 		//fmt.Println(intf.MAC)
