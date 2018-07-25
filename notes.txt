@@ -31,3 +31,6 @@ usermod --append --groups libvirt `whoami`
 # setfacl -m g:qemu:x /home/xfennec/
 
 ssh -i ~/.ssh/id_rsa_test -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no oniti@10.104.99.232
+
+# List of openstack supported distributions with URL to images:
+# https://docs.openstack.org/image-guide/obtain-images.html
