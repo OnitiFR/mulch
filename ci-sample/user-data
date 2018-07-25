@@ -7,12 +7,15 @@
 # cost: Debian = 10s
 package_upgrade: true
 
-phone_home:
-  url: http://192.168.122.1/cloud-init.php
+# Not really need, since the domain stops when ready and we've no way to
+# "variabilize" the gateway yet.
+#phone_home:
+#  url: http://192.168.122.1/cloud-init.php
+
 
 users:
-  - name: oniti
-    gecos: Oniti
+  - name: mulch
+    gecos: Mukch
     #groups: users
     shell: /bin/bash
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
@@ -27,12 +30,12 @@ write_files:
       [Unit]
       Description=Phone home on boot
       After=network.target
-      
+
       [Service]
       RemainAfterExit=yes
       ExecStart=/usr/local/bin/phone_home
       User=root
-      
+
       [Install]
       WantedBy=multi-user.target
     owner: root:root
@@ -40,14 +43,16 @@ write_files:
 
   - content: |
       #!/bin/bash
-      /usr/bin/curl -d "instance_id=$(cat /var/lib/cloud/data/instance-id)" -X POST http://192.168.122.1/cloud-init.php
+      gw=$(ip -4 route list 0/0 | cut -d ' ' -f 3)
+      id=$(cat /var/lib/cloud/data/instance-id)
+      #uuid=$(dmidecode -s system-uuid)
+      /usr/bin/curl -d "instance_id=$id" -X POST http://$gw:8585/phone
     owner: root:root
     permissions: '0755'
     path: /usr/local/bin/phone_home
 
 runcmd:
   - [ systemctl, enable, phone_home ]
-
 
 #locale:
 timezone: Europe/Paris
