@@ -6,6 +6,11 @@
   <source>
   </source>
   <target>
-    <path>.</path>
+    <path>undefined-pool-path</path>
+    <permissions>
+        <!-- default mode is not the most secure,
+        you should switch to 0711 for domain disks -->
+        <mode>0755</mode>
+    </permissions>
   </target>
 </pool>
