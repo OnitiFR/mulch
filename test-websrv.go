@@ -14,7 +14,8 @@ import (
 var addr = flag.String("addr", ":8585", "http service address")
 
 type Message struct {
-	Level   string `json:"level"`
+	// SUCCESS, ERROR, INFO, TRACE
+	Type    string `json:"type"`
 	Message string `json:"message"`
 }
 
@@ -33,7 +34,6 @@ func serveTest(w http.ResponseWriter, r *http.Request) {
 
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	// Send the initial headers saying we're gonna stream the response.
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
@@ -44,7 +44,7 @@ func serveTest(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		for {
-			delay := rnd.Intn(1200)
+			delay := rnd.Intn(12000)
 			time.Sleep(time.Duration(delay) * time.Millisecond)
 			messages <- fmt.Sprintf("Hello %d", delay)
 		}
@@ -55,13 +55,13 @@ func serveTest(w http.ResponseWriter, r *http.Request) {
 		case <-cn.CloseNotify():
 			fmt.Println("connection closed")
 			return
-		case <-time.After(1 * time.Second):
+		case <-time.After(10 * time.Second):
+			// Keep-alive
 			m := Message{
-				Level:   "NONE",
+				Type:    "NOOP",
 				Message: "",
 			}
 
-			// Send some data.
 			err := enc.Encode(m)
 			if err != nil {
 				fmt.Println(err)
@@ -69,13 +69,11 @@ func serveTest(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 
 		case msg := <-messages:
-			// fmt.Println(".")
 			m := Message{
-				Level:   "INFO",
+				Type:    "INFO",
 				Message: msg,
 			}
 
-			// Send some data.
 			err := enc.Encode(m)
 			if err != nil {
 				fmt.Println(err)

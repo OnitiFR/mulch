@@ -12,7 +12,8 @@ import (
 var host = flag.String("host", "http://localhost:8585", "Server host:port")
 
 type Message struct {
-	Level   string `json:"level"`
+	// SUCCESS, ERROR, INFO, TRACE
+	Type    string `json:"type"`
 	Message string `json:"message"`
 }
 
@@ -41,7 +42,7 @@ func main() {
 			}
 			log.Fatal(err)
 		}
-		fmt.Printf("%s: %s\n", m.Level, m.Message)
+		fmt.Printf("%s: %s\n", m.Type, m.Message)
 	}
 
 }
