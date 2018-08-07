@@ -2,22 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/Xfennec/mulch"
 )
-
-var addr = flag.String("addr", ":8585", "http service address")
-
-type Message struct {
-	// SUCCESS, ERROR, INFO, TRACE
-	Type    string `json:"type"`
-	Message string `json:"message"`
-}
 
 func serveTest(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("new connecion")
@@ -57,7 +49,7 @@ func serveTest(w http.ResponseWriter, r *http.Request) {
 			return
 		case <-time.After(10 * time.Second):
 			// Keep-alive
-			m := Message{
+			m := mulch.Message{
 				Type:    "NOOP",
 				Message: "",
 			}
@@ -69,7 +61,7 @@ func serveTest(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 
 		case msg := <-messages:
-			m := Message{
+			m := mulch.Message{
 				Type:    "INFO",
 				Message: msg,
 			}
@@ -85,7 +77,7 @@ func serveTest(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func servePhone(w http.ResponseWriter, r *http.Request) {
+func phoneController(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid request method.", 405)
 	}
@@ -96,22 +88,62 @@ func servePhone(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-func main() {
-	flag.Parse()
+func logController(w http.ResponseWriter, r *http.Request, hub *Hub) {
+	if r.Method != "GET" {
+		http.Error(w, "Invalid request method.", 405)
+	}
 
-	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-		serveTest(w, r)
-	})
+	cn, ok := w.(http.CloseNotifier)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
 
-	http.HandleFunc("/phone", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-		servePhone(w, r)
-	})
+	w.Header().Set("Transfer-Encoding", "chunked")
+	w.WriteHeader(http.StatusOK)
+	flusher.Flush()
 
-	fmt.Println("HTTP server listening:", *addr)
-	err := http.ListenAndServe(*addr, nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+	enc := json.NewEncoder(w)
+
+	// plug ourselves into the hub
+	client := hub.Register("me")
+
+	for {
+		select {
+		case <-cn.CloseNotify():
+			client.Unregister()
+			return
+		case <-time.After(10 * time.Second):
+			// Keep-alive
+			// fmt.Println("keepalive")
+			m := mulch.Message{
+				Type:    "NOOP",
+				Message: "",
+			}
+
+			err := enc.Encode(m)
+			if err != nil {
+				fmt.Println(err)
+			}
+			flusher.Flush()
+
+		case msg := <-client.Messages:
+			m := mulch.Message{
+				Type:    "INFO",
+				Message: string(msg),
+			}
+
+			err := enc.Encode(m)
+			if err != nil {
+				fmt.Println(err)
+			}
+			flusher.Flush()
+			break
+		}
 	}
 }

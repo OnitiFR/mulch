@@ -7,15 +7,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/Xfennec/mulch"
 )
 
 var host = flag.String("host", "http://localhost:8585", "Server host:port")
-
-type Message struct {
-	// SUCCESS, ERROR, INFO, TRACE
-	Type    string `json:"type"`
-	Message string `json:"message"`
-}
 
 func main() {
 	flag.Parse()
@@ -34,7 +30,7 @@ func main() {
 
 	dec := json.NewDecoder(resp.Body)
 	for {
-		var m Message
+		var m mulch.Message
 		err := dec.Decode(&m)
 		if err != nil {
 			if err == io.EOF {

@@ -1,4 +1,4 @@
-package main
+package old
 
 // Found mulch network gateway address, or create the network
 
@@ -68,7 +68,7 @@ func GetOrCreateStoragePool(poolName string, poolPath string, mode string, conn 
 	return pool, nil
 }
 
-func main() {
+func main005() {
 	conn, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
 		log.Fatal(err)

@@ -1,4 +1,4 @@
-package main
+package old
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"github.com/libvirt/libvirt-go"
 )
 
-func main() {
+func main002() {
 	conn, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
 		log.Fatal(err)

@@ -1,3 +1,6 @@
+// We put this file in the main package (and not in 'old') because
+// it's close to integration in the main code of mulchd
+
 package main
 
 import (
@@ -209,7 +212,7 @@ func createAndUploadCloudInitImage(imageName string, conn *libvirt.Connect) {
 	}
 }
 
-func main() {
+func main001() {
 	conn, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
 		log.Fatal(err)

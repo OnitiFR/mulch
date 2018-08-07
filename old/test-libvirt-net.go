@@ -1,4 +1,4 @@
-package main
+package old
 
 // Found mulch network gateway address, or create the network
 
@@ -11,7 +11,7 @@ import (
 	"github.com/libvirt/libvirt-go-xml"
 )
 
-func main() {
+func main004() {
 	conn, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
 		log.Fatal(err)
