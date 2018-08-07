@@ -16,7 +16,7 @@ var host = flag.String("host", "http://localhost:8585", "Server host:port")
 func main() {
 	flag.Parse()
 
-	req, err := http.NewRequest("GET", *host+"/test", nil)
+	req, err := http.NewRequest("GET", *host+"/log", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
