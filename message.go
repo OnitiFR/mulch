@@ -13,6 +13,8 @@ const MessageWarning = "WARNING"
 const MessageInfo = "INFO"
 const MessageTrace = "TRACE"
 
+const MessageNoop = "NOOP"
+
 type Message struct {
 	Time    time.Time `json:"time"`
 	Type    string    `json:"type"`

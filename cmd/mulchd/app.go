@@ -63,19 +63,14 @@ func (app *App) Run() {
 	// - must deal with usual response and streams
 	// - for streams, should deal with the hub in the background (global AND instances!)
 
-	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-		serveTest(w, r)
-	})
-
 	http.HandleFunc("/phone", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-		phoneController(w, r)
+		phoneController(w, r, app)
 	})
 
 	http.HandleFunc("/log", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-		logController(w, r, app.hub)
+		logController(w, r, app)
 	})
 
 	http.HandleFunc("/instances", func(w http.ResponseWriter, r *http.Request) {
