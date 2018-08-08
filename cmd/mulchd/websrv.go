@@ -133,12 +133,7 @@ func logController(w http.ResponseWriter, r *http.Request, hub *Hub) {
 			flusher.Flush()
 
 		case msg := <-client.Messages:
-			m := mulch.Message{
-				Type:    "INFO",
-				Message: string(msg),
-			}
-
-			err := enc.Encode(m)
+			err := enc.Encode(msg)
 			if err != nil {
 				fmt.Println(err)
 			}

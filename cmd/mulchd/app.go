@@ -13,6 +13,7 @@ type App struct {
 	// TODO: deal with multiple connections!
 	lvconn *LibvirtConnection
 	hub    *Hub
+	log    *Log
 }
 
 func NewApp() (*App, error) {
@@ -23,15 +24,18 @@ func NewApp() (*App, error) {
 		return nil, err
 	}
 
-	hub := newHub()
-	go hub.run()
+	hub := NewHub()
+	go hub.Run()
+
+	log := NewLog("", hub)
 
 	app := &App{
 		lvconn: lc,
 		hub:    hub,
+		log:    log,
 	}
 
-	app.Log(fmt.Sprintf("libvirt connection to '%s' OK", uri))
+	app.log.Info(fmt.Sprintf("libvirt connection to '%s' OK", uri))
 
 	// dirty log broadcast est
 	go func() {
@@ -39,16 +43,11 @@ func NewApp() (*App, error) {
 		for {
 			delay := rnd.Intn(12000)
 			time.Sleep(time.Duration(delay) * time.Millisecond)
-			app.Log(fmt.Sprintf("Test %d", delay))
+			app.log.Info(fmt.Sprintf("Test %d", delay))
 		}
 	}()
 
 	return app, nil
-}
-
-func (app *App) Log(message string) {
-	log.Println(message)
-	app.hub.Broadcast(message)
 }
 
 func (app *App) Run() {
@@ -84,7 +83,7 @@ func (app *App) Run() {
 		// instancesController(w, r)
 	})
 
-	app.Log(fmt.Sprintf("Mulch listening on %s", *addr))
+	app.log.Info(fmt.Sprintf("Mulch listening on %s", *addr))
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)

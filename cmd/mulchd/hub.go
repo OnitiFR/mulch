@@ -1,28 +1,30 @@
 package main
 
+import "github.com/Xfennec/mulch"
+
 type Hub struct {
 	clients    map[*HubClient]bool
-	broadcast  chan []byte
+	broadcast  chan *mulch.Message
 	register   chan *HubClient
 	unregister chan *HubClient
 }
 
 type HubClient struct {
-	Messages   chan []byte
+	Messages   chan *mulch.Message
 	ClientInfo string
 	hub        *Hub
 }
 
-func newHub() *Hub {
+func NewHub() *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte),
+		broadcast:  make(chan *mulch.Message),
 		register:   make(chan *HubClient),
 		unregister: make(chan *HubClient),
 		clients:    make(map[*HubClient]bool),
 	}
 }
 
-func (h *Hub) run() {
+func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
@@ -48,13 +50,13 @@ func (h *Hub) run() {
 	}
 }
 
-func (h *Hub) Broadcast(message string) {
-	h.broadcast <- []byte(message)
+func (h *Hub) Broadcast(message *mulch.Message) {
+	h.broadcast <- message
 }
 
 func (h *Hub) Register(info string) *HubClient {
 	client := &HubClient{
-		Messages:   make(chan []byte),
+		Messages:   make(chan *mulch.Message),
 		ClientInfo: info,
 		hub:        h,
 	}
