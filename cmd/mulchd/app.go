@@ -14,6 +14,7 @@ type App struct {
 	lvconn *LibvirtConnection
 	hub    *Hub
 	log    *Log
+	mux    *http.ServeMux
 }
 
 func NewApp() (*App, error) {
@@ -29,10 +30,13 @@ func NewApp() (*App, error) {
 
 	log := NewLog("", hub)
 
+	mux := http.NewServeMux()
+
 	app := &App{
 		lvconn: lc,
 		hub:    hub,
 		log:    log,
+		mux:    mux,
 	}
 
 	app.log.Info(fmt.Sprintf("libvirt connection to '%s' OK", uri))
@@ -51,35 +55,30 @@ func NewApp() (*App, error) {
 }
 
 func (app *App) Run() {
+	// do this in some sort of Setup()?
 	// check storage & network
 	// get storage & network? (or do it each time it's needed ?)
 
 	// "hub" to broadcast logs per vm
 
-	// probably wrap all this into a simple helper (route, method(s), controller)
-	// wishlist:
-	// - controller should be interface based
-	// - headers must be automatic
-	// - must deal with usual response and streams
-	// - for streams, should deal with the hub in the background (global AND instances!)
-
-	http.HandleFunc("/phone", func(w http.ResponseWriter, r *http.Request) {
+	// All this will soon use AddRouteHandler
+	app.mux.HandleFunc("/phone", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		phoneController(w, r, app)
 	})
 
-	http.HandleFunc("/log", func(w http.ResponseWriter, r *http.Request) {
+	app.mux.HandleFunc("/log", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		logController(w, r, app)
 	})
 
-	http.HandleFunc("/instances", func(w http.ResponseWriter, r *http.Request) {
+	app.mux.HandleFunc("/instances", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		// instancesController(w, r)
 	})
 
 	app.log.Info(fmt.Sprintf("Mulch listening on %s", *addr))
-	err := http.ListenAndServe(*addr, nil)
+	err := http.ListenAndServe(*addr, app.mux)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
