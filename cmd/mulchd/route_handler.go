@@ -20,3 +20,16 @@ func AddRouteHandler(app *App, methods []string, route string, controller func(w
 
 func AddRouteStreamHandler(app *App, methods []string, route string, controller func(w http.ResponseWriter, r *http.Request, app *App)) {
 }
+
+/*
+
+/log
+/log/ ← add urlArg?
+
+// Route Type: custom
+func(w http.ResponseWriter, r *http.Request, urlArgs string, app *App)
+
+// Route Type: stream (with optionnal target)
+func(log *Log, r *http.Request, urlArgs string, app *App)
+
+*/
