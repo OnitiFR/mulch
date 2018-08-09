@@ -46,14 +46,20 @@ func isRouteMethodAllowed(method string, methods []string) bool {
 	return false
 }
 
-func routeStreamPrepare(w http.ResponseWriter, r *http.Request, hub *Hub) (*Log, *HubClient, error) {
+func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request) {
 	cn, ok := w.(http.CloseNotifier)
 	if !ok {
-		return nil, nil, errors.New("CloseNotifier failed")
+		errMsg := fmt.Sprintf("stream preparation: CloseNotifier failed")
+		request.App.Log.Error(errMsg)
+		http.Error(w, errMsg, 500)
+		return
 	}
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		return nil, nil, errors.New("Flusher failed")
+		errMsg := fmt.Sprintf("stream preparation: Flusher failed")
+		request.App.Log.Error(errMsg)
+		http.Error(w, errMsg, 500)
+		return
 	}
 
 	w.Header().Set("Transfer-Encoding", "chunked")
@@ -63,35 +69,47 @@ func routeStreamPrepare(w http.ResponseWriter, r *http.Request, hub *Hub) (*Log,
 	enc := json.NewEncoder(w)
 
 	// plug ourselves into the hub
-	client := hub.Register("me", mulch.MessageNoTarget)
+	client := request.App.Hub.Register("me", mulch.MessageNoTarget)
+
+	request.Stream = NewLog(mulch.MessageNoTarget, request.App.Hub)
+	request.HubClient = client
+
+	closer := make(chan bool)
 	go func() {
-		for {
-			select {
-			case <-cn.CloseNotify():
-				client.Unregister()
-				return
-			// TODO: make timeout configurable
-			case <-time.After(10 * time.Second):
-				// Keep-alive
-				m := mulch.NewMessage(mulch.MessageNoop, mulch.MessageNoTarget, "")
-
-				err := enc.Encode(m)
-				if err != nil {
-					fmt.Println(err)
-				}
-				flusher.Flush()
-
-			case msg := <-client.Messages:
-				err := enc.Encode(msg)
-				if err != nil {
-					fmt.Println(err)
-				}
-				flusher.Flush()
-				break
-			}
-		}
+		request.Route.Handler(request)
+		// let's ensure the last message have time to be flushed
+		time.Sleep(time.Duration(100) * time.Millisecond)
+		closer <- true
 	}()
-	return NewLog(mulch.MessageNoTarget, hub), client, nil
+
+	for {
+		select {
+		case <-closer:
+			client.Unregister()
+			return
+		case <-cn.CloseNotify():
+			client.Unregister()
+			return
+		// TODO: make timeout configurable
+		case <-time.After(10 * time.Second):
+			// Keep-alive
+			m := mulch.NewMessage(mulch.MessageNoop, mulch.MessageNoTarget, "")
+
+			err := enc.Encode(m)
+			if err != nil {
+				fmt.Println(err)
+			}
+			flusher.Flush()
+
+		case msg := <-client.Messages:
+			err := enc.Encode(msg)
+			if err != nil {
+				fmt.Println(err)
+			}
+			flusher.Flush()
+			break
+		}
+	}
 }
 
 // AddRoute adds a new route to the muxer
@@ -124,48 +142,22 @@ func AddRoute(route *Route, app *App) error {
 			SubPath:  subPath,
 			HTTP:     r,
 			Response: w,
+			App:      app,
 		}
 
-		// prepare Stream if needed
-		if route.Type == RouteTypeStream {
-			stream, hubClient, err := routeStreamPrepare(w, r, app.Hub)
-			if err != nil {
-				errMsg := fmt.Sprintf("stream preparation: %s", err)
-				app.Log.Error(errMsg)
-				http.Error(w, errMsg, 500)
-				return
-			}
-			request.Stream = stream
-			request.HubClient = hubClient
+		switch route.Type {
+		case RouteTypeStream:
+			routeStreamHandler(w, r, request)
+		case RouteTypeCustom:
+			route.Handler(request)
 		}
-
-		route.Handler(request)
 	})
 	return nil
 }
 
-// wishlist:
-// - authorized API keys checking
-
-/*func AddRouteHandler(app *App, methods []string, route string, controller func(w http.ResponseWriter, r *http.Request, app *App)) {
-	var mux *http.ServeMux
-	mux = app.mux
-	fmt.Println(mux)
+// SetTarget define or change the default target for the request, for both
+// sending (Stream) and receiving (HubClient)
+func (req *Request) SetTarget(target string) {
+	req.Stream.SetTarget(target)
+	req.HubClient.SetTarget(target)
 }
-
-func AddRouteStreamHandler(app *App, methods []string, route string, controller func(w http.ResponseWriter, r *http.Request, app *App)) {
-}*/
-
-/*
-
-/log
-/log/ ← add urlArg?
-
-// Route Type: custom
-func(w http.ResponseWriter, r *http.Request, urlArgs string, app *App)
-
-// Route Type: stream (with optionnal target)
-func(log *Log, r *http.Request, urlArgs string, app *App)
-
-
-*/

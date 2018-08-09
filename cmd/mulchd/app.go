@@ -65,7 +65,6 @@ func NewApp() (*App, error) {
 }
 
 func (app *App) setupRoutes() {
-
 	AddRoute(&Route{
 		Methods: []string{"POST"},
 		Path:    "/phone",
@@ -80,23 +79,6 @@ func (app *App) setupRoutes() {
 		IsRestricted: true,
 		Handler:      LogController,
 	}, app)
-
-	/*
-		app.mux.HandleFunc("/phone", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-			phoneController(w, r, app)
-		})
-
-		app.mux.HandleFunc("/log", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-			logController(w, r, app)
-		})
-
-		app.mux.HandleFunc("/instances", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-			// instancesController(w, r)
-		})
-	*/
 }
 
 // Run wil start the app (in the foreground)
