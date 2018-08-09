@@ -15,6 +15,8 @@ const MessageTrace = "TRACE"
 
 const MessageNoop = "NOOP"
 
+const MessageNoTarget = ""
+
 type Message struct {
 	Time    time.Time `json:"time"`
 	Type    string    `json:"type"`

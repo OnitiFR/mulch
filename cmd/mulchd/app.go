@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"net/http"
 	"time"
+
+	"github.com/Xfennec/mulch"
 )
 
 type App struct {
@@ -41,13 +43,21 @@ func NewApp() (*App, error) {
 
 	app.log.Info(fmt.Sprintf("libvirt connection to '%s' OK", uri))
 
-	// dirty log broadcast est
+	// dirty log broadcast test
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	go func() {
-		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 		for {
 			delay := rnd.Intn(12000)
 			time.Sleep(time.Duration(delay) * time.Millisecond)
 			app.log.Info(fmt.Sprintf("Test %d", delay))
+		}
+	}()
+	go func() {
+		for {
+			delay := rnd.Intn(12000)
+			time.Sleep(time.Duration(delay) * time.Millisecond)
+			fmt.Printf("INFO(): test instance 1 (%d)\n", delay)
+			app.hub.Broadcast(mulch.NewMessage(mulch.MessageInfo, "instance-1", "Test instance 1"))
 		}
 	}()
 

@@ -25,17 +25,17 @@ func (log *Log) Log(message *mulch.Message) {
 }
 
 func (log *Log) Error(message string) {
-	log.Log(mulch.NewMessage(mulch.MessageError, "", message))
+	log.Log(mulch.NewMessage(mulch.MessageError, mulch.MessageNoTarget, message))
 }
 
 func (log *Log) Warning(message string) {
-	log.Log(mulch.NewMessage(mulch.MessageWarning, "", message))
+	log.Log(mulch.NewMessage(mulch.MessageWarning, mulch.MessageNoTarget, message))
 }
 
 func (log *Log) Info(message string) {
-	log.Log(mulch.NewMessage(mulch.MessageInfo, "", message))
+	log.Log(mulch.NewMessage(mulch.MessageInfo, mulch.MessageNoTarget, message))
 }
 
 func (log *Log) Trace(message string) {
-	log.Log(mulch.NewMessage(mulch.MessageTrace, "", message))
+	log.Log(mulch.NewMessage(mulch.MessageTrace, mulch.MessageNoTarget, message))
 }

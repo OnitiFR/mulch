@@ -12,6 +12,7 @@ type Hub struct {
 type HubClient struct {
 	Messages   chan *mulch.Message
 	ClientInfo string
+	Target     string
 	hub        *Hub
 }
 
@@ -39,6 +40,10 @@ func (h *Hub) Run() {
 		case message := <-h.broadcast:
 			// fmt.Printf("broadcasting\n")
 			for client := range h.clients {
+				if client.Target != message.Target && message.Target != mulch.MessageNoTarget {
+					continue // not for this client
+				}
+
 				select {
 				case client.Messages <- message:
 				default:
@@ -54,10 +59,11 @@ func (h *Hub) Broadcast(message *mulch.Message) {
 	h.broadcast <- message
 }
 
-func (h *Hub) Register(info string) *HubClient {
+func (h *Hub) Register(info string, target string) *HubClient {
 	client := &HubClient{
 		Messages:   make(chan *mulch.Message),
 		ClientInfo: info,
+		Target:     target,
 		hub:        h,
 	}
 	h.register <- client
@@ -66,4 +72,8 @@ func (h *Hub) Register(info string) *HubClient {
 
 func (hc *HubClient) Unregister() {
 	hc.hub.unregister <- hc
+}
+
+func (hc *HubClient) SetTarget(target string) {
+	hc.Target = target
 }

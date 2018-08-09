@@ -46,7 +46,8 @@ func logController(w http.ResponseWriter, r *http.Request, app *App) {
 	enc := json.NewEncoder(w)
 
 	// plug ourselves into the hub
-	client := app.hub.Register("me")
+	// client := app.hub.Register("me", mulch.MessageNoTarget)
+	client := app.hub.Register("me", "instance-1")
 
 	for {
 		select {
@@ -56,7 +57,7 @@ func logController(w http.ResponseWriter, r *http.Request, app *App) {
 		// TODO: make timeout configurable
 		case <-time.After(10 * time.Second):
 			// Keep-alive
-			m := mulch.NewMessage(mulch.MessageNoop, "", "")
+			m := mulch.NewMessage(mulch.MessageNoop, mulch.MessageNoTarget, "")
 
 			err := enc.Encode(m)
 			if err != nil {
