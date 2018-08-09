@@ -5,13 +5,17 @@ import "time"
 // TODO: add server timestamp
 
 // SUCCESS & FAILURE will end a client connection (no?)
-const MessageSuccess = "SUCCESS"
-const MessageFailure = "FAILURE"
+const (
+	MessageSuccess = "SUCCESS"
+	MessageFailure = "FAILURE"
+)
 
-const MessageError = "ERROR"
-const MessageWarning = "WARNING"
-const MessageInfo = "INFO"
-const MessageTrace = "TRACE"
+const (
+	MessageError   = "ERROR"
+	MessageWarning = "WARNING"
+	MessageInfo    = "INFO"
+	MessageTrace   = "TRACE"
+)
 
 const MessageNoop = "NOOP"
 
