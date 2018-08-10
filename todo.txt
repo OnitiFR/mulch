@@ -2,6 +2,8 @@
 - API keys or challenge based auth
 - "DataBase" ?
 
+- create a specific HTTP muxer for /phone (only listening on mulch's virbr)
+
 - check connection and access rights
 - differentiate "rights issues" from  "libvirtd not running" issues
 - what about libvirt group / qemu user for storage ?
