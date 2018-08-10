@@ -1,3 +1,5 @@
+- API keys or challenge based auth
+
 - check connection and access rights
 - differentiate "rights issues" from  "libvirtd not running" issues
 - what about libvirt group / qemu user for storage ?

@@ -5,9 +5,6 @@ import (
 	"log"
 )
 
-// TODO list:
-// - API keys or challenge based auth
-
 var addr = flag.String("addr", ":8585", "http service address")
 
 func main() {
