@@ -10,6 +10,7 @@ import (
 	"github.com/Xfennec/mulch"
 )
 
+// App describes an (the?) application
 type App struct {
 	// config
 	// TODO: deal with multiple connections!
@@ -19,7 +20,9 @@ type App struct {
 	Mux    *http.ServeMux
 }
 
+// NewApp creates a new application
 func NewApp() (*App, error) {
+	// TODO: get this from config
 	uri := "qemu:///system"
 
 	lc, err := NewLibvirtConnection(uri)
