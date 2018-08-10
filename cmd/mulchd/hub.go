@@ -2,6 +2,8 @@ package main
 
 import "github.com/Xfennec/mulch"
 
+// Hub structure allows multiple clients to receive messages
+// from mulchd.
 type Hub struct {
 	clients    map[*HubClient]bool
 	broadcast  chan *mulch.Message
@@ -9,6 +11,7 @@ type Hub struct {
 	unregister chan *HubClient
 }
 
+// HubClient describes a client of a Hub
 type HubClient struct {
 	Messages   chan *mulch.Message
 	clientInfo string
@@ -16,6 +19,7 @@ type HubClient struct {
 	hub        *Hub
 }
 
+// NewHub creates a new Hub
 func NewHub() *Hub {
 	return &Hub{
 		broadcast:  make(chan *mulch.Message),
@@ -25,6 +29,7 @@ func NewHub() *Hub {
 	}
 }
 
+// Run will start the Hub, allowing messages to be sent and received
 func (h *Hub) Run() {
 	for {
 		select {
@@ -55,10 +60,15 @@ func (h *Hub) Run() {
 	}
 }
 
+// Broadcast send a message to all clients of the Hub
+// (if the target matches)
 func (h *Hub) Broadcast(message *mulch.Message) {
 	h.broadcast <- message
 }
 
+// Register a new client of the Hub
+// clientInfo is not currently used but is supposed to differentiate
+// the client. Target may be mulch.MessageNoTarget.
 func (h *Hub) Register(info string, target string) *HubClient {
 	client := &HubClient{
 		Messages:   make(chan *mulch.Message),
@@ -70,10 +80,12 @@ func (h *Hub) Register(info string, target string) *HubClient {
 	return client
 }
 
+// Unregister the client from the Hub
 func (hc *HubClient) Unregister() {
 	hc.hub.unregister <- hc
 }
 
+// SetTarget allows the client to change (receiving) target
 func (hc *HubClient) SetTarget(target string) {
 	hc.target = target
 }
