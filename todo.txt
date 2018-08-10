@@ -1,4 +1,6 @@
+- File config
 - API keys or challenge based auth
+- "DataBase" ?
 
 - check connection and access rights
 - differentiate "rights issues" from  "libvirtd not running" issues

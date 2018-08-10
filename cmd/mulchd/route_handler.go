@@ -151,8 +151,6 @@ func AddRoute(route *Route, app *App) error {
 		case RouteTypeCustom:
 			route.Handler(request)
 		}
-		// TODO: check that we really get out of this function at
-		// the end (and play with 'default:' for that?)
 	})
 	return nil
 }
