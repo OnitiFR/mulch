@@ -8,45 +8,57 @@ import (
 	"time"
 
 	"github.com/Xfennec/mulch"
+	libvirt "github.com/libvirt/libvirt-go"
 )
 
 // App describes an (the?) application
 type App struct {
-	// config
-	// TODO: deal with multiple connections!
-	LVConn *LibvirtConnection
-	Hub    *Hub
-	Log    *Log
-	Mux    *http.ServeMux
+	Config  *AppConfig
+	Libvirt *Libvirt
+	Hub     *Hub
+	Log     *Log
+	Mux     *http.ServeMux
+	Pools   LibvirtPools
+}
+
+// LibvirtPools stores needed libvirt Pools for mulchd
+type LibvirtPools struct {
+	CloudInit *libvirt.StoragePool
+	Releases  *libvirt.StoragePool
+	Disks     *libvirt.StoragePool
 }
 
 // NewApp creates a new application
-func NewApp() (*App, error) {
-	// TODO: get this from config
-	uri := "qemu:///system"
+func NewApp(config *AppConfig) (*App, error) {
+	app := &App{
+		Config: config,
+	}
 
-	lc, err := NewLibvirtConnection(uri)
+	app.Hub = NewHub()
+	go app.Hub.Run()
+
+	app.Log = NewLog("", app.Hub)
+
+	lv, err := NewLibvirt(config.LibVirtURI)
+	if err != nil {
+		return nil, err
+	}
+	app.Log.Info(fmt.Sprintf("libvirt connection to '%s' OK", config.LibVirtURI))
+	app.Libvirt = lv
+
+	err = app.initLibvirtStorage()
 	if err != nil {
 		return nil, err
 	}
 
-	hub := NewHub()
-	go hub.Run()
-
-	log := NewLog("", hub)
-
-	mux := http.NewServeMux()
-
-	app := &App{
-		LVConn: lc,
-		Hub:    hub,
-		Log:    log,
-		Mux:    mux,
+	err = app.initLibvirtNetwork()
+	if err != nil {
+		return nil, err
 	}
 
-	app.Log.Info(fmt.Sprintf("libvirt connection to '%s' OK", uri))
+	app.Mux = http.NewServeMux()
 
-	// dirty log broadcast test
+	// dirty log broadcast tests
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	go func() {
 		for {
@@ -84,7 +96,47 @@ func (app *App) setupRoutes() {
 	}, app)
 }
 
-// Run wil start the app (in the foreground)
+func (app *App) initLibvirtStorage() error {
+	var err error
+
+	app.Pools.CloudInit, err = app.Libvirt.GetOrCreateStoragePool(
+		"mulch-cloud-init",
+		app.Config.StoragePath+"/cloud-init",
+		app.Config.configPath+"/templates/storage.xml",
+		"",
+		app.Log)
+	if err != nil {
+		return fmt.Errorf("initLibvirtStorage (cloud-init/): %s", err)
+	}
+
+	app.Pools.CloudInit, err = app.Libvirt.GetOrCreateStoragePool(
+		"mulch-releases",
+		app.Config.StoragePath+"/releases",
+		app.Config.configPath+"/templates/storage.xml",
+		"",
+		app.Log)
+	if err != nil {
+		return fmt.Errorf("initLibvirtStorage (releases): %s", err)
+	}
+
+	app.Pools.CloudInit, err = app.Libvirt.GetOrCreateStoragePool(
+		"mulch-disks",
+		app.Config.StoragePath+"/disks",
+		app.Config.configPath+"/templates/storage.xml",
+		"0711",
+		app.Log)
+	if err != nil {
+		return fmt.Errorf("initLibvirtStorage (disks): %s", err)
+	}
+
+	return nil
+}
+
+func (app *App) initLibvirtNetwork() error {
+	return nil
+}
+
+// Run will start the app (in the foreground)
 func (app *App) Run() {
 	// do this in some sort of Setup()?
 	// check storage & network
@@ -93,9 +145,15 @@ func (app *App) Run() {
 
 	// "hub" to broadcast logs per vm
 
-	app.Log.Info(fmt.Sprintf("Mulch listening on %s", *addr))
-	err := http.ListenAndServe(*addr, app.Mux)
+	app.Log.Info(fmt.Sprintf("Mulch listening on %s", app.Config.Listen))
+	err := http.ListenAndServe(app.Config.Listen, app.Mux)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
+}
+
+// Close is not called yet
+func (app *App) Close() {
+	// close pools
+	// close connection (app.Libvirt.CloseConnection())
 }

@@ -1,0 +1,16 @@
+<pool type='dir'>
+  <name>mulch</name>
+  <capacity unit='bytes'>0</capacity>
+  <allocation unit='bytes'>0</allocation>
+  <available unit='bytes'>0</available>
+  <source>
+  </source>
+  <target>
+    <path>undefined-pool-path</path>
+    <permissions>
+        <!-- default mode is not the most secure,
+        you should switch to 0711 for domain disks -->
+        <mode>0755</mode>
+    </permissions>
+  </target>
+</pool>

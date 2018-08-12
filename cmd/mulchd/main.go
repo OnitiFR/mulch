@@ -5,12 +5,20 @@ import (
 	"log"
 )
 
-var addr = flag.String("addr", ":8585", "http service address")
+var configPath = flag.String("path", "./etc/", "configuration path")
 
 func main() {
 	flag.Parse()
 
-	app, err := NewApp()
+	config := &AppConfig{
+		Listen:      ":8585",
+		LibVirtURI:  "qemu:///system",
+		StoragePath: "./var",
+
+		configPath: *configPath,
+	}
+
+	app, err := NewApp(config)
 	if err != nil {
 		log.Fatalln(err)
 	}
