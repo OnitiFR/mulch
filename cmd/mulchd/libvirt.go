@@ -13,8 +13,17 @@ import (
 
 // Libvirt is an interface to libvirt library
 type Libvirt struct {
-	conn *libvirt.Connect
-	app  *App
+	conn       *libvirt.Connect
+	Pools      LibvirtPools
+	Network    *libvirt.Network
+	NetworkXML *libvirtxml.Network
+}
+
+// LibvirtPools stores needed libvirt Pools for mulchd
+type LibvirtPools struct {
+	CloudInit *libvirt.StoragePool
+	Releases  *libvirt.StoragePool
+	Disks     *libvirt.StoragePool
 }
 
 // NewLibvirt create a new Libvirt instance
@@ -50,7 +59,7 @@ func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, temp
 
 			xml, err := ioutil.ReadFile(templateFile)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("GetOrCreateStoragePool: %s: %s", templateFile, err)
 			}
 
 			poolcfg := &libvirtxml.StoragePool{}
@@ -100,4 +109,50 @@ func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, temp
 		return nil, fmt.Errorf("GetOrCreateStoragePool: pool.Refresh: %s", err)
 	}
 	return pool, nil
+}
+
+// GetOrCreateNetwork retreives (and create, if necessary) a libvirt network
+func (lv *Libvirt) GetOrCreateNetwork(networkName string, templateFile string, log *Log) (*libvirt.Network, *libvirtxml.Network, error) {
+	net, errN := lv.conn.LookupNetworkByName(networkName)
+	if errN != nil {
+		virtErr := errN.(libvirt.Error)
+		if virtErr.Domain == libvirt.FROM_NETWORK && virtErr.Code == libvirt.ERR_NO_NETWORK {
+			log.Info(fmt.Sprintf("network '%s' not found, it's OK, let's create it", networkName))
+
+			xml, err := ioutil.ReadFile(templateFile)
+			if err != nil {
+				return nil, nil, fmt.Errorf("GetOrCreateNetwork: %s: %s", templateFile, err)
+			}
+
+			net, err = lv.conn.NetworkDefineXML(string(xml))
+			if err != nil {
+				return nil, nil, fmt.Errorf("GetOrCreateNetwork: NetworkDefineXML: %s", err)
+			}
+
+			err = net.SetAutostart(true)
+			if err != nil {
+				return nil, nil, fmt.Errorf("GetOrCreateNetwork: SetAutostart: %s", err)
+			}
+
+			err = net.Create()
+			if err != nil {
+				return nil, nil, fmt.Errorf("GetOrCreateNetwork: Create: %s", err)
+			}
+		} else {
+			return nil, nil, fmt.Errorf("GetOrCreateNetwork: Unexpected error: %s", errN)
+		}
+	}
+
+	xmldoc, err := net.GetXMLDesc(0)
+	if err != nil {
+		return nil, nil, fmt.Errorf("GetOrCreateNetwork: GetXMLDesc: %s", err)
+	}
+
+	netcfg := &libvirtxml.Network{}
+	err = netcfg.Unmarshal(xmldoc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("GetOrCreateNetwork: Unmarshal: %s", err)
+	}
+
+	return net, netcfg, nil
 }

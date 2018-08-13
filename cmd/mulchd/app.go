@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/Xfennec/mulch"
-	libvirt "github.com/libvirt/libvirt-go"
 )
 
 // App describes an (the?) application
@@ -18,14 +17,6 @@ type App struct {
 	Hub     *Hub
 	Log     *Log
 	Mux     *http.ServeMux
-	Pools   LibvirtPools
-}
-
-// LibvirtPools stores needed libvirt Pools for mulchd
-type LibvirtPools struct {
-	CloudInit *libvirt.StoragePool
-	Releases  *libvirt.StoragePool
-	Disks     *libvirt.StoragePool
 }
 
 // NewApp creates a new application
@@ -99,7 +90,7 @@ func (app *App) setupRoutes() {
 func (app *App) initLibvirtStorage() error {
 	var err error
 
-	app.Pools.CloudInit, err = app.Libvirt.GetOrCreateStoragePool(
+	app.Libvirt.Pools.CloudInit, err = app.Libvirt.GetOrCreateStoragePool(
 		"mulch-cloud-init",
 		app.Config.StoragePath+"/cloud-init",
 		app.Config.configPath+"/templates/storage.xml",
@@ -109,7 +100,7 @@ func (app *App) initLibvirtStorage() error {
 		return fmt.Errorf("initLibvirtStorage (cloud-init/): %s", err)
 	}
 
-	app.Pools.CloudInit, err = app.Libvirt.GetOrCreateStoragePool(
+	app.Libvirt.Pools.CloudInit, err = app.Libvirt.GetOrCreateStoragePool(
 		"mulch-releases",
 		app.Config.StoragePath+"/releases",
 		app.Config.configPath+"/templates/storage.xml",
@@ -119,7 +110,7 @@ func (app *App) initLibvirtStorage() error {
 		return fmt.Errorf("initLibvirtStorage (releases): %s", err)
 	}
 
-	app.Pools.CloudInit, err = app.Libvirt.GetOrCreateStoragePool(
+	app.Libvirt.Pools.CloudInit, err = app.Libvirt.GetOrCreateStoragePool(
 		"mulch-disks",
 		app.Config.StoragePath+"/disks",
 		app.Config.configPath+"/templates/storage.xml",
@@ -133,6 +124,22 @@ func (app *App) initLibvirtStorage() error {
 }
 
 func (app *App) initLibvirtNetwork() error {
+	networkName := "mulch"
+
+	net, netcfg, err := app.Libvirt.GetOrCreateNetwork(
+		networkName,
+		app.Config.configPath+"/templates/network.xml",
+		app.Log)
+
+	if err != nil {
+		return fmt.Errorf("initLibvirtNetwork: %s", err)
+	}
+
+	app.Log.Info(fmt.Sprintf("Network '%s': %s (%s)", netcfg.Name, netcfg.IPs[0].Address, netcfg.Bridge.Name))
+
+	app.Libvirt.Network = net
+	app.Libvirt.NetworkXML = netcfg
+
 	return nil
 }
 
