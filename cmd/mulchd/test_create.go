@@ -5,12 +5,9 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
-	"time"
 
 	"github.com/libvirt/libvirt-go"
 	"github.com/libvirt/libvirt-go-xml"
@@ -77,6 +74,7 @@ func createDiskFromReleaseWithLibvirt(release string, disk string, conn *libvirt
 	fmt.Printf("transfered %d MiB (%s → %s)\n", bytesWritten/1024/1024, release, disk)
 }
 
+/*
 func createDiskFromRelease(release string, disk string) {
 	start := time.Now()
 
@@ -102,6 +100,7 @@ func createDiskFromRelease(release string, disk string) {
 	fmt.Printf("copied %d MiB (%s → %s)\n", bytesWritten/1024/1024, release, disk)
 	fmt.Printf("took %s\n", elapsed)
 }
+*/
 
 func resizeDiskWithLibvirt(disk string, size uint64, conn *libvirt.Connect) {
 	// Should have a look at virStorageVolResize() !
@@ -126,6 +125,7 @@ func resizeDiskWithLibvirt(disk string, size uint64, conn *libvirt.Connect) {
 	fmt.Printf("Reised %s to %d\n", disk, size)
 }
 
+/*
 func resizeDisk(disk string, size string) {
 	start := time.Now()
 
@@ -140,6 +140,7 @@ func resizeDisk(disk string, size string) {
 	fmt.Print(string(out))
 	fmt.Printf("took %s\n", elapsed)
 }
+*/
 
 // UploadCloudInitImageToLibvirt uploads CloudInit FAT image to libvirt storage
 func UploadCloudInitImageToLibvirt(localImagePath string, asName string, conn *libvirt.Connect) error {
@@ -242,10 +243,11 @@ func main001() {
 	// - name
 	// - CPU count, RAM amount
 	// - CPU topology
-	// - mail qcow2 disk path
+	// - main qcow2 disk path
 	// - cloud init disk path
 	// - bridge interface name
 	// - interface MAC address
+	// - injected SSH key?
 	xml, err := ioutil.ReadFile("test-ci-disk.xml")
 	if err != nil {
 		log.Fatal(err)

@@ -15,7 +15,7 @@ package_upgrade: true
 
 users:
   - name: mulch
-    gecos: Mukch
+    gecos: Mulch
     #groups: users
     shell: /bin/bash
     sudo: ['ALL=(ALL) NOPASSWD:ALL']

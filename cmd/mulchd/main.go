@@ -13,9 +13,10 @@ func main() {
 	config := &AppConfig{
 		Listen:      ":8585",
 		LibVirtURI:  "qemu:///system",
-		StoragePath: "./var",
+		StoragePath: "./var/storage", // example: /srv/mulch
+		DataPath:    "./var/data",    // example: /var/lib/mulch
 
-		configPath: *configPath,
+		configPath: *configPath, // example: /etc/mulch
 	}
 
 	app, err := NewApp(config)

@@ -5,6 +5,7 @@ type AppConfig struct {
 	Listen      string
 	LibVirtURI  string
 	StoragePath string
+	DataPath    string
 
 	configPath string
 }
