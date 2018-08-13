@@ -9,7 +9,7 @@ import (
 	"github.com/mitchellh/go-fs/fat"
 )
 
-func addFile(dir fs.Directory, src string) error {
+func cloudInitFatAddFile(dir fs.Directory, src string) error {
 	in, err := os.Open(src)
 	if err != nil {
 		return err
@@ -33,14 +33,15 @@ func addFile(dir fs.Directory, src string) error {
 	return nil
 }
 
-func CloudInitCreateFatImg(outputFile string, size int64, inputFiles []string) error {
+// CloudInitFatCreateImage creates a FAT12 image with inputFiles as a content
+func CloudInitFatCreateImage(outputFile string, size int64, inputFiles []string) error {
 
 	f, err := os.Create(outputFile)
 	if err != nil {
 		return err
 	}
 
-	if err := f.Truncate(size); err != nil {
+	if err = f.Truncate(size); err != nil {
 		f.Close()
 		os.Remove(outputFile)
 		return err
@@ -82,7 +83,7 @@ func CloudInitCreateFatImg(outputFile string, size int64, inputFiles []string) e
 	}
 
 	for _, file := range inputFiles {
-		err = addFile(rootDir, file)
+		err = cloudInitFatAddFile(rootDir, file)
 		if err != nil {
 			return err
 		}

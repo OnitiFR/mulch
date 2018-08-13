@@ -7,11 +7,14 @@ import (
 	"github.com/libvirt/libvirt-go"
 )
 
+// VolumeUpload contains source and destination for the upload operation
 type VolumeUpload struct {
 	streamSrc *os.File
 	streamDst *libvirt.Stream
 }
 
+// NewVolumeUpload creates a VolumeUpload instance, allowing to upload
+// a file to a libvirt storage pool
 func NewVolumeUpload(srcFile string, connDst *libvirt.Connect, volDst *libvirt.StorageVol) (instance *VolumeUpload, err error) {
 	streamSrc, err := os.Open(srcFile)
 	if err != nil {
@@ -40,6 +43,7 @@ func (v VolumeUpload) Write(p []byte) (n int, e error) {
 	return v.streamDst.Send(p)
 }
 
+// Copy do the actual upload
 func (v *VolumeUpload) Copy() (written int64, err error) {
 	defer v.streamDst.Free()
 

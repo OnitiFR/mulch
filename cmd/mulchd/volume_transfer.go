@@ -6,11 +6,14 @@ import (
 	"github.com/libvirt/libvirt-go"
 )
 
+// VolumeTransfert contains source and destination for the transfert operation
 type VolumeTransfert struct {
 	streamSrc *libvirt.Stream
 	streamDst *libvirt.Stream
 }
 
+// NewVolumeTransfert creates a VolumeTransfert instance, allowing to
+// transfert a content from a libvirt storage pool to another
 func NewVolumeTransfert(connSrc *libvirt.Connect, volSrc *libvirt.StorageVol, connDst *libvirt.Connect, volDst *libvirt.StorageVol) (instance *VolumeTransfert, err error) {
 	streamSrc, err := connSrc.NewStream(0)
 	if err != nil {
@@ -48,6 +51,7 @@ func (v VolumeTransfert) Write(p []byte) (n int, e error) {
 	return v.streamDst.Send(p)
 }
 
+// Copy do the actual transfert
 func (v *VolumeTransfert) Copy() (written int64, err error) {
 	defer v.streamSrc.Free()
 	defer v.streamDst.Free()

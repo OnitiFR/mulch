@@ -141,6 +141,7 @@ func resizeDisk(disk string, size string) {
 	fmt.Printf("took %s\n", elapsed)
 }
 
+// UploadCloudInitImageToLibvirt uploads CloudInit FAT image to libvirt storage
 func UploadCloudInitImageToLibvirt(localImagePath string, asName string, conn *libvirt.Connect) error {
 	const poolCiName = "mulch-cloud-init"
 
@@ -200,7 +201,7 @@ func createAndUploadCloudInitImage(imageName string, conn *libvirt.Connect) {
 	}
 	defer poolCi.Free()
 
-	err = CloudInitCreateFatImg(tmpFile, 256*1024, []string{"ci-sample/meta-data", "ci-sample/user-data"})
+	err = CloudInitFatCreateImage(tmpFile, 256*1024, []string{"ci-sample/meta-data", "ci-sample/user-data"})
 	if err != nil {
 		log.Fatalf("CloudInitCreateFatImg: %s", err)
 	}
