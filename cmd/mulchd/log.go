@@ -73,6 +73,28 @@ func (log *Log) Tracef(format string, args ...interface{}) {
 	log.Trace(msg)
 }
 
+// Success sends an MessageSuccess Message
+func (log *Log) Success(message string) {
+	log.Log(mulch.NewMessage(mulch.MessageSuccess, log.target, message))
+}
+
+// Successf sends a formated string MessageSuccess Message
+func (log *Log) Successf(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	log.Success(msg)
+}
+
+// Failure sends an MessageFailure Message
+func (log *Log) Failure(message string) {
+	log.Log(mulch.NewMessage(mulch.MessageFailure, log.target, message))
+}
+
+// Failuref sends a formated string MessageFailure Message
+func (log *Log) Failuref(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	log.Failure(msg)
+}
+
 // SetTarget change the current "sending" target
 func (log *Log) SetTarget(target string) {
 	log.target = target
