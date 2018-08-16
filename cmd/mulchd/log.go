@@ -34,9 +34,21 @@ func (log *Log) Error(message string) {
 	log.Log(mulch.NewMessage(mulch.MessageError, log.target, message))
 }
 
+// Errorf sends a formated string MessageError Message
+func (log *Log) Errorf(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	log.Error(msg)
+}
+
 // Warning sends a MessageWarning Message
 func (log *Log) Warning(message string) {
 	log.Log(mulch.NewMessage(mulch.MessageWarning, log.target, message))
+}
+
+// Warningf sends a formated string MessageWarning Message
+func (log *Log) Warningf(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	log.Warning(msg)
 }
 
 // Info sends an MessageInfo Message
@@ -44,9 +56,21 @@ func (log *Log) Info(message string) {
 	log.Log(mulch.NewMessage(mulch.MessageInfo, log.target, message))
 }
 
+// Infof sends a formated string MessageInfo Message
+func (log *Log) Infof(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	log.Info(msg)
+}
+
 // Trace sends an MessageTrace Message
 func (log *Log) Trace(message string) {
 	log.Log(mulch.NewMessage(mulch.MessageTrace, log.target, message))
+}
+
+// Tracef sends a formated string MessageTrace Message
+func (log *Log) Tracef(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	log.Trace(msg)
 }
 
 // SetTarget change the current "sending" target

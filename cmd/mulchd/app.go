@@ -17,6 +17,7 @@ type App struct {
 	Hub     *Hub
 	Log     *Log
 	Mux     *http.ServeMux
+	Rand    *rand.Rand
 }
 
 // NewApp creates a new application
@@ -49,18 +50,19 @@ func NewApp(config *AppConfig) (*App, error) {
 
 	app.Mux = http.NewServeMux()
 
+	app.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
 	// dirty log broadcast tests
-	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	go func() {
 		for {
-			delay := rnd.Intn(12000)
+			delay := app.Rand.Intn(12000)
 			time.Sleep(time.Duration(delay) * time.Millisecond)
 			app.Log.Info(fmt.Sprintf("Test %d", delay))
 		}
 	}()
 	go func() {
 		for {
-			delay := rnd.Intn(12000)
+			delay := app.Rand.Intn(12000)
 			time.Sleep(time.Duration(delay) * time.Millisecond)
 			fmt.Printf("INFO(): test instance 1 (%d)\n", delay)
 			app.Hub.Broadcast(mulch.NewMessage(mulch.MessageInfo, "instance-1", "Test instance 1"))

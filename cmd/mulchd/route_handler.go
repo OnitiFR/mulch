@@ -69,10 +69,11 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 	enc := json.NewEncoder(w)
 
 	// plug ourselves into the hub
-	// TODO: create a random target
-	client := request.App.Hub.Register("me", mulch.MessageNoTarget)
+	// TODO: use API key owner instead of "me"
+	tmpTarget := fmt.Sprintf(".tmp-%d", request.App.Rand.Int31())
+	client := request.App.Hub.Register("me", tmpTarget)
 
-	request.Stream = NewLog(mulch.MessageNoTarget, request.App.Hub)
+	request.Stream = NewLog(tmpTarget, request.App.Hub)
 	request.HubClient = client
 
 	closer := make(chan bool)
