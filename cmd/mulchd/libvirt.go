@@ -21,9 +21,12 @@ type Libvirt struct {
 
 // LibvirtPools stores needed libvirt Pools for mulchd
 type LibvirtPools struct {
-	CloudInit *libvirt.StoragePool
-	Releases  *libvirt.StoragePool
-	Disks     *libvirt.StoragePool
+	CloudInit    *libvirt.StoragePool
+	Releases     *libvirt.StoragePool
+	Disks        *libvirt.StoragePool
+	CloudInitXML *libvirtxml.StoragePool
+	ReleasesXML  *libvirtxml.StoragePool
+	DisksXML     *libvirtxml.StoragePool
 }
 
 // NewLibvirt create a new Libvirt instance
@@ -38,6 +41,13 @@ func NewLibvirt(uri string) (*Libvirt, error) {
 	}, nil
 }
 
+// GetConnection returns the current libvirt connection
+func (lv *Libvirt) GetConnection() (*libvirt.Connect, error) {
+	// TODO: test if connection is OK, THEN return it?
+	// (what about storages, networks, etc?)
+	return lv.conn, nil
+}
+
 // CloseConnection close connection to libvirt
 func (lv *Libvirt) CloseConnection() {
 	lv.conn.Close()
@@ -50,7 +60,7 @@ func (lv *Libvirt) CloseConnection() {
 // - Code=38, Domain=0, Message='cannot open directory '…/storage/cloud-init': No such file or directory'
 // - Code=55, Domain=18, Message='Requested operation is not valid: storage pool 'mulch-cloud-init' is not active
 // Added more precise error messages to diagnose this.
-func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, templateFile string, mode string, log *Log) (*libvirt.StoragePool, error) {
+func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, templateFile string, mode string, log *Log) (*libvirt.StoragePool, *libvirtxml.StoragePool, error) {
 	pool, errP := lv.conn.LookupStoragePoolByName(poolName)
 	if errP != nil {
 		virtErr := errP.(libvirt.Error)
@@ -59,20 +69,20 @@ func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, temp
 
 			xml, err := ioutil.ReadFile(templateFile)
 			if err != nil {
-				return nil, fmt.Errorf("GetOrCreateStoragePool: %s: %s", templateFile, err)
+				return nil, nil, fmt.Errorf("GetOrCreateStoragePool: %s: %s", templateFile, err)
 			}
 
 			poolcfg := &libvirtxml.StoragePool{}
 			err = poolcfg.Unmarshal(string(xml))
 			if err != nil {
-				return nil, fmt.Errorf("GetOrCreateStoragePool: poolcfg.Unmarshal: %s", err)
+				return nil, nil, fmt.Errorf("GetOrCreateStoragePool: poolcfg.Unmarshal: %s", err)
 			}
 
 			poolcfg.Name = poolName
-			// check full path rght access? (too specific?)
+			// TODO: check full path rght access? (too specific?)
 			absPoolPath, err := filepath.Abs(poolPath)
 			if err != nil {
-				return nil, fmt.Errorf("GetOrCreateStoragePool: filepath.Abs: %s", err)
+				return nil, nil, fmt.Errorf("GetOrCreateStoragePool: filepath.Abs: %s", err)
 			}
 
 			poolcfg.Target.Path = absPoolPath
@@ -83,32 +93,44 @@ func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, temp
 
 			out, err := poolcfg.Marshal()
 			if err != nil {
-				return nil, fmt.Errorf("GetOrCreateStoragePool: poolcfg.Marshal: %s", err)
+				return nil, nil, fmt.Errorf("GetOrCreateStoragePool: poolcfg.Marshal: %s", err)
 			}
 
 			pool, err = lv.conn.StoragePoolDefineXML(string(out), 0)
 			if err != nil {
-				return nil, fmt.Errorf("GetOrCreateStoragePool: StoragePoolDefineXML: %s", err)
+				return nil, nil, fmt.Errorf("GetOrCreateStoragePool: StoragePoolDefineXML: %s", err)
 			}
 
 			pool.SetAutostart(true)
 			if err != nil {
-				return nil, fmt.Errorf("GetOrCreateStoragePool: pool.SetAutostart: %s", err)
+				return nil, nil, fmt.Errorf("GetOrCreateStoragePool: pool.SetAutostart: %s", err)
 			}
 
 			// WITH_BUILD = will create target directory if net exists
 			err = pool.Create(libvirt.STORAGE_POOL_CREATE_WITH_BUILD)
 			if err != nil {
-				return nil, fmt.Errorf("GetOrCreateStoragePool: pool.Create: %s", err)
+				return nil, nil, fmt.Errorf("GetOrCreateStoragePool: pool.Create: %s", err)
 			}
 		}
 	}
 
 	err := pool.Refresh(0)
 	if err != nil {
-		return nil, fmt.Errorf("GetOrCreateStoragePool: pool.Refresh: %s", err)
+		return nil, nil, fmt.Errorf("GetOrCreateStoragePool: pool.Refresh: %s", err)
 	}
-	return pool, nil
+
+	xmldoc, err := pool.GetXMLDesc(0)
+	if err != nil {
+		return nil, nil, fmt.Errorf("GetOrCreateStoragePool: GetXMLDesc: %s", err)
+	}
+
+	poolcfg := &libvirtxml.StoragePool{}
+	err = poolcfg.Unmarshal(xmldoc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("GetOrCreateStoragePool: Unmarshal: %s", err)
+	}
+
+	return pool, poolcfg, nil
 }
 
 // GetOrCreateNetwork retreives (and create, if necessary) a libvirt network
@@ -155,4 +177,54 @@ func (lv *Libvirt) GetOrCreateNetwork(networkName string, templateFile string, l
 	}
 
 	return net, netcfg, nil
+}
+
+// CreateDiskFromRelease creates a disk (into "disks" pool) from release image (from "releases" pool)
+func (lv *Libvirt) CreateDiskFromRelease(release string, disk string, volumeTemplateFile string, log *Log) error {
+
+	// find source volume
+	volSrc, err := lv.Pools.Releases.LookupStorageVolByName(release)
+	if err != nil {
+		return err
+	}
+	defer volSrc.Free()
+
+	// create dest volume
+	xml, err := ioutil.ReadFile(volumeTemplateFile)
+	if err != nil {
+		return err
+	}
+
+	volcfg := &libvirtxml.StorageVolume{}
+	err = volcfg.Unmarshal(string(xml))
+	if err != nil {
+		return err
+	}
+	volcfg.Name = disk
+
+	volcfg.Target.Path = lv.Pools.DisksXML.Target.Path + "/" + disk
+	// volObj.Target.Format.Type = "raw"
+
+	xml2, err := volcfg.Marshal()
+	if err != nil {
+		return err
+	}
+	volDst, err := lv.Pools.Disks.StorageVolCreateXML(string(xml2), 0)
+	if err != nil {
+		return err
+	}
+	defer volDst.Free()
+
+	vt, err := NewVolumeTransfert(lv.conn, volSrc, lv.conn, volDst)
+	if err != nil {
+		return err
+	}
+
+	bytesWritten, err := vt.Copy()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("done: %s → %s (transfered %d MiB)", release, disk, bytesWritten/1024/1024)
+	return nil
 }

@@ -70,35 +70,11 @@ func NewApp(config *AppConfig) (*App, error) {
 	return app, nil
 }
 
-func (app *App) setupRoutes() {
-	AddRoute(&Route{
-		Methods: []string{"POST"},
-		Path:    "/phone",
-		Type:    RouteTypeCustom,
-		Handler: PhoneController,
-	}, app)
-
-	AddRoute(&Route{
-		Methods:      []string{"GET"},
-		Path:         "/log",
-		Type:         RouteTypeStream,
-		IsRestricted: true,
-		Handler:      LogController,
-	}, app)
-
-	AddRoute(&Route{
-		Methods:      []string{"PUT"},
-		Path:         "/vm",
-		Type:         RouteTypeStream,
-		IsRestricted: true,
-		Handler:      VMController,
-	}, app)
-}
-
 func (app *App) initLibvirtStorage() error {
 	var err error
+	var pools = &app.Libvirt.Pools
 
-	app.Libvirt.Pools.CloudInit, err = app.Libvirt.GetOrCreateStoragePool(
+	pools.CloudInit, pools.CloudInitXML, err = app.Libvirt.GetOrCreateStoragePool(
 		"mulch-cloud-init",
 		app.Config.StoragePath+"/cloud-init",
 		app.Config.configPath+"/templates/storage.xml",
@@ -108,7 +84,7 @@ func (app *App) initLibvirtStorage() error {
 		return fmt.Errorf("initLibvirtStorage (cloud-init/): %s", err)
 	}
 
-	app.Libvirt.Pools.CloudInit, err = app.Libvirt.GetOrCreateStoragePool(
+	pools.Releases, pools.ReleasesXML, err = app.Libvirt.GetOrCreateStoragePool(
 		"mulch-releases",
 		app.Config.StoragePath+"/releases",
 		app.Config.configPath+"/templates/storage.xml",
@@ -118,7 +94,7 @@ func (app *App) initLibvirtStorage() error {
 		return fmt.Errorf("initLibvirtStorage (releases): %s", err)
 	}
 
-	app.Libvirt.Pools.CloudInit, err = app.Libvirt.GetOrCreateStoragePool(
+	pools.Disks, pools.DisksXML, err = app.Libvirt.GetOrCreateStoragePool(
 		"mulch-disks",
 		app.Config.StoragePath+"/disks",
 		app.Config.configPath+"/templates/storage.xml",
@@ -156,7 +132,7 @@ func (app *App) Run() {
 	// do this in some sort of Setup()?
 	// check storage & network
 	// get storage & network? (or do it each time it's needed ?)
-	app.setupRoutes()
+	app.AddRoutes()
 
 	// "hub" to broadcast logs per vm
 

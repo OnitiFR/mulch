@@ -15,6 +15,7 @@ func main() {
 		LibVirtURI:  "qemu:///system",
 		StoragePath: "./var/storage", // example: /srv/mulch
 		DataPath:    "./var/data",    // example: /var/lib/mulch
+		VMPrefix:    "mulch-",
 
 		configPath: *configPath, // example: /etc/mulch
 	}

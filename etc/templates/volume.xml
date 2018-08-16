@@ -1,0 +1,14 @@
+<volume>
+    <name>xxx</name>
+    <!-- <allocation>0</allocation> -->
+    <capacity unit="G">0</capacity>
+    <target>
+      <path>yyy/xxx</path>
+      <permissions>
+        <!-- <owner>107</owner>
+        <group>107</group> -->
+        <mode>0664</mode>
+        <!-- <label>testLabel0</label> -->
+      </permissions>
+    </target>
+</volume>

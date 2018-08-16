@@ -36,8 +36,8 @@ func VMController(req *Request) {
 	}
 
 	// TODO: check the name before doing that:
-	// No other libvirt VM with this name (our database and/or libvirt API?)
-	// Name is valid
+	// No other libvirt VM with this name in our database?
+	// Name is valid?
 	req.SetTarget(conf.Name)
 
 	vm, err := NewVM(conf, req.App, req.Stream)

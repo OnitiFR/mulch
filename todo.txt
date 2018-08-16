@@ -1,10 +1,10 @@
 - File config
 - API keys or challenge based auth
 - "DataBase" ?
+- mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
 
 - create a specific HTTP muxer for /phone (only listening on mulch's virbr)
 
 - check connection and access rights
 - differentiate "rights issues" from  "libvirtd not running" issues
-- what about libvirt group / qemu user for storage ?
-- need to check if storage pool is really useful for our need
+- check libvirt group / qemu user for storage?
