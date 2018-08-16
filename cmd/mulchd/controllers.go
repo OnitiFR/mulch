@@ -24,3 +24,27 @@ func LogController(req *Request) {
 	time.Sleep(time.Duration(5000) * time.Millisecond)
 	req.Stream.Info("Bye from LogController")
 }
+
+// VMController is currently a test
+func VMController(req *Request) {
+	conf := &VMConfig{
+		Name:           "test1",
+		ReferenceImage: "debian-9-openstack-amd64.qcow2",
+		DiskSize:       20 * 1024 * 1024 * 1024,
+		RAMSize:        1 * 1024 * 1024 * 1024,
+		CPUCount:       1,
+	}
+
+	// TODO: check the name before doing that:
+	// No other libvirt VM with this name (our database and/or libvirt API?)
+	// Name is valid
+	req.SetTarget(conf.Name)
+
+	vm, err := NewVM(conf, req.App, req.Stream)
+	if err != nil {
+		req.Stream.Failuref("Cannot create VM: %s", err)
+		return
+	}
+
+	req.Stream.Successf("VM '%s' created successfully (%s)", vm.Config.Name, vm.UUID)
+}

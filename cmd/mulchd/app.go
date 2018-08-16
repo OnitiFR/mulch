@@ -6,8 +6,6 @@ import (
 	"math/rand"
 	"net/http"
 	"time"
-
-	"github.com/Xfennec/mulch"
 )
 
 // App describes an (the?) application
@@ -60,14 +58,14 @@ func NewApp(config *AppConfig) (*App, error) {
 			app.Log.Info(fmt.Sprintf("Test %d", delay))
 		}
 	}()
-	go func() {
-		for {
-			delay := app.Rand.Intn(12000)
-			time.Sleep(time.Duration(delay) * time.Millisecond)
-			fmt.Printf("INFO(): test instance 1 (%d)\n", delay)
-			app.Hub.Broadcast(mulch.NewMessage(mulch.MessageInfo, "instance-1", "Test instance 1"))
-		}
-	}()
+	// go func() {
+	// 	for {
+	// 		delay := app.Rand.Intn(12000)
+	// 		time.Sleep(time.Duration(delay) * time.Millisecond)
+	// 		fmt.Printf("INFO(): test instance 1 (%d)\n", delay)
+	// 		app.Hub.Broadcast(mulch.NewMessage(mulch.MessageInfo, "instance-1", "Test instance 1"))
+	// 	}
+	// }()
 
 	return app, nil
 }
@@ -86,6 +84,14 @@ func (app *App) setupRoutes() {
 		Type:         RouteTypeStream,
 		IsRestricted: true,
 		Handler:      LogController,
+	}, app)
+
+	AddRoute(&Route{
+		Methods:      []string{"PUT"},
+		Path:         "/vm",
+		Type:         RouteTypeStream,
+		IsRestricted: true,
+		Handler:      VMController,
 	}, app)
 }
 
