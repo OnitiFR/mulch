@@ -39,6 +39,7 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Printf("%s: %s\n", m.Type, m.Message)
+		// stop on SUCCESS or ERROR on *my* target
 	}
 
 }

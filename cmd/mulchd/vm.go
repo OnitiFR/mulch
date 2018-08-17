@@ -68,16 +68,22 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	// delete the created volume in case of failure of the rest of the VM creation
 	defer func() {
 		if !commit {
-			vol, err := app.Libvirt.Pools.Disks.LookupStorageVolByName(diskName)
-			if err != nil {
+			vol, errDef := app.Libvirt.Pools.Disks.LookupStorageVolByName(diskName)
+			if errDef != nil {
 				return
 			}
-			err = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
-			if err != nil {
+			errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+			if errDef != nil {
 				return
 			}
 		}
 	}()
+
+	// 2 - resize disk
+	err = app.Libvirt.ResizeDisk(diskName, vmConfig.DiskSize, log)
+	if err != nil {
+		return nil, err
+	}
 
 	// if true {
 	// 	return nil, errors.New("Intentional error, for test")

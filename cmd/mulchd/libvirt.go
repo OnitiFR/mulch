@@ -181,7 +181,6 @@ func (lv *Libvirt) GetOrCreateNetwork(networkName string, templateFile string, l
 
 // CreateDiskFromSeed creates a disk (into "disks" pool) from seed image (from "seeds" pool)
 func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFile string, log *Log) error {
-
 	err := lv.Pools.Seeds.Refresh(0)
 	if err != nil {
 		return err
@@ -230,6 +229,29 @@ func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFi
 		return err
 	}
 
-	log.Infof("disk '%s' created from seed '%s' (transfered %d MiB)", disk, seed, bytesWritten/1024/1024)
+	log.Infof("disk '%s' created from seed '%s' (transfered %s)", disk, seed, FormatByteSize(bytesWritten))
+	return nil
+}
+
+// ResizeDisk will change volume ("disk") size
+// (do not reduce a volume without knowing what you are doing!)
+func (lv *Libvirt) ResizeDisk(disk string, size uint64, log *Log) error {
+
+	err := lv.Pools.Seeds.Refresh(0)
+	if err != nil {
+		return err
+	}
+
+	vol, err := lv.Pools.Disks.LookupStorageVolByName(disk)
+	if err != nil {
+		return err
+	}
+	defer vol.Free()
+
+	err = vol.Resize(size, 0)
+	if err != nil {
+		return err
+	}
+	log.Infof("disk '%s' resized to %s", disk, FormatByteSize(int64(size)))
 	return nil
 }
