@@ -1,0 +1,67 @@
+#cloud-config
+
+# Cloud Init configuration file
+# https://cloudinit.readthedocs.io/en/latest/topics/format.html#cloud-config-data
+
+#password: test
+#chpasswd: {expire: False}
+#ssh_pwauth: True
+
+# to speed up things during dev, comment this:
+# cost: Debian = 10s
+package_upgrade: true
+
+# Really needed? (since the domain stops when ready)
+phone_home:
+  url: $_PHONE_HOME_URL
+
+
+users:
+  - name: mulch
+    gecos: Mulch
+    #groups: users
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh_authorized_keys:
+    - $_SSH_PUBKEY
+
+packages:
+  - curl
+
+write_files:
+  - content: |
+      [Unit]
+      Description=Phone home on boot
+      After=network.target
+
+      [Service]
+      RemainAfterExit=yes
+      ExecStart=/usr/local/bin/phone_home
+      User=root
+
+      [Install]
+      WantedBy=multi-user.target
+    owner: root:root
+    path: /etc/systemd/system/phone_home.service
+
+  - content: |
+      #!/bin/bash
+      gw=$(ip -4 route list 0/0 | cut -d ' ' -f 3)
+      id=$(cat /var/lib/cloud/data/instance-id)
+      #uuid=$(dmidecode -s system-uuid)
+      /usr/bin/curl -d "instance_id=$id" -X POST $_PHONE_HOME_URL
+    owner: root:root
+    permissions: '0755'
+    path: /usr/local/bin/phone_home
+
+runcmd:
+  - [ systemctl, enable, phone_home ]
+
+#locale:
+timezone: Europe/Paris
+ntp:
+  enabled: true
+
+power_state:
+  mode: poweroff
+  message: Cloud-init first boot finished, rebooting.

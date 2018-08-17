@@ -50,6 +50,11 @@ func NewApp(config *AppConfig) (*App, error) {
 
 	app.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
+	// do all this in some sort of Setup()?
+	// check storage & network
+	// get storage & network? (or do it each time it's needed ?)
+	app.AddRoutes()
+
 	// dirty log broadcast tests
 	go func() {
 		for {
@@ -119,7 +124,7 @@ func (app *App) initLibvirtNetwork() error {
 		return fmt.Errorf("initLibvirtNetwork: %s", err)
 	}
 
-	app.Log.Info(fmt.Sprintf("Network '%s': %s (%s)", netcfg.Name, netcfg.IPs[0].Address, netcfg.Bridge.Name))
+	app.Log.Info(fmt.Sprintf("network '%s': %s (%s)", netcfg.Name, netcfg.IPs[0].Address, netcfg.Bridge.Name))
 
 	app.Libvirt.Network = net
 	app.Libvirt.NetworkXML = netcfg
@@ -129,14 +134,8 @@ func (app *App) initLibvirtNetwork() error {
 
 // Run will start the app (in the foreground)
 func (app *App) Run() {
-	// do this in some sort of Setup()?
-	// check storage & network
-	// get storage & network? (or do it each time it's needed ?)
-	app.AddRoutes()
 
-	// "hub" to broadcast logs per vm
-
-	app.Log.Info(fmt.Sprintf("Mulch listening on %s", app.Config.Listen))
+	app.Log.Infof("API server listening on %s", app.Config.Listen)
 	err := http.ListenAndServe(app.Config.Listen, app.Mux)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)

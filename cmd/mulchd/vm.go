@@ -51,7 +51,8 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		return nil, fmt.Errorf("Unexpected error: %s", err)
 	}
 
-	diskName := app.Config.VMPrefix + vmConfig.Name + ".qcow2"
+	ciName := "ci-" + vmConfig.Name + ".img"
+	diskName := vmConfig.Name + ".qcow2"
 
 	// 1 - copy from reference image
 	log.Infof("creating VM disk '%s'", diskName)
@@ -68,6 +69,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	// delete the created volume in case of failure of the rest of the VM creation
 	defer func() {
 		if !commit {
+			log.Infof("rollback, deleting '%s'", diskName)
 			vol, errDef := app.Libvirt.Pools.Disks.LookupStorageVolByName(diskName)
 			if errDef != nil {
 				return
@@ -84,6 +86,30 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// 3 - Cloud-Init files
+	log.Infof("creating Cloud-Init image for '%s'", vmConfig.Name)
+	err = CloudInitCreate(ciName,
+		app.Config.configPath+"/templates/volume.xml",
+		app,
+		log)
+	if err != nil {
+		return nil, err
+	}
+	// delete the created volume in case of failure of the rest of the VM creation
+	defer func() {
+		if !commit {
+			log.Infof("rollback, deleting '%s'", ciName)
+			vol, errDef := app.Libvirt.Pools.CloudInit.LookupStorageVolByName(ciName)
+			if errDef != nil {
+				return
+			}
+			errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+			if errDef != nil {
+				return
+			}
+		}
+	}()
 
 	// if true {
 	// 	return nil, errors.New("Intentional error, for test")

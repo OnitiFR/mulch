@@ -65,7 +65,7 @@ func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, temp
 	if errP != nil {
 		virtErr := errP.(libvirt.Error)
 		if virtErr.Domain == libvirt.FROM_STORAGE && virtErr.Code == libvirt.ERR_NO_STORAGE_POOL {
-			log.Info(fmt.Sprintf("pool '%s' not found, let's create it", poolName))
+			log.Info(fmt.Sprintf("storage pool '%s' not found, let's create it", poolName))
 
 			xml, err := ioutil.ReadFile(templateFile)
 			if err != nil {
@@ -230,6 +230,49 @@ func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFi
 	}
 
 	log.Infof("disk '%s' created from seed '%s' (transfered %s)", disk, seed, FormatByteSize(bytesWritten))
+	return nil
+}
+
+// UploadFileToLibvirt uploads a file to libvirt storage
+func (lv *Libvirt) UploadFileToLibvirt(pool *libvirt.StoragePool, poolXML *libvirtxml.StoragePool, template string, localSourceFile string, asName string, log *Log) error {
+
+	// create dest volume
+	xml, err := ioutil.ReadFile(template)
+	if err != nil {
+		return err
+	}
+
+	volcfg := &libvirtxml.StorageVolume{}
+	err = volcfg.Unmarshal(string(xml))
+	if err != nil {
+		return err
+	}
+	volcfg.Name = asName
+
+	volcfg.Target.Path = poolXML.Target.Path + "/" + asName
+	// volObj.Target.Format.Type = "raw"
+
+	xml2, err := volcfg.Marshal()
+	if err != nil {
+		return err
+	}
+	volDst, err := pool.StorageVolCreateXML(string(xml2), 0)
+	if err != nil {
+		return err
+	}
+	defer volDst.Free()
+
+	vu, err := NewVolumeUpload(localSourceFile, lv.conn, volDst)
+	if err != nil {
+		return err
+	}
+
+	bytesWritten, err := vu.Copy()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("upload '%s' to storage pool '%s' as '%s' (transfered %s)", localSourceFile, poolXML.Name, asName, FormatByteSize(bytesWritten))
 	return nil
 }
 

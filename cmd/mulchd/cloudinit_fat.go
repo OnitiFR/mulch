@@ -1,32 +1,35 @@
 package main
 
 import (
+	"bytes"
 	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/mitchellh/go-fs"
 	"github.com/mitchellh/go-fs/fat"
 )
 
-func cloudInitFatAddFile(dir fs.Directory, src string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
+// CIFFile means CloudInitFat File, it describes a file that will
+// be added to the FAT image
+type CIFFile struct {
+	Filename string
+	Content  []byte
+}
 
-	subEntry, err := dir.AddFile(filepath.Base(src))
-	if err != nil {
-		return err
-	}
-
-	file, err := subEntry.File()
+func cloudInitFatAddFile(dir fs.Directory, file CIFFile) error {
+	subEntry, err := dir.AddFile(file.Filename)
 	if err != nil {
 		return err
 	}
 
-	if _, err := io.Copy(file, in); err != nil {
+	sub, err := subEntry.File()
+	if err != nil {
+		return err
+	}
+
+	in := bytes.NewReader(file.Content)
+
+	if _, err := io.Copy(sub, in); err != nil {
 		return err
 	}
 
@@ -34,24 +37,19 @@ func cloudInitFatAddFile(dir fs.Directory, src string) error {
 }
 
 // CloudInitFatCreateImage creates a FAT12 image with inputFiles as a content
-func CloudInitFatCreateImage(outputFile string, size int64, inputFiles []string) error {
+func CloudInitFatCreateImage(outputFile *os.File, size int64, inputFiles []CIFFile) error {
 
-	f, err := os.Create(outputFile)
-	if err != nil {
-		return err
-	}
-
-	if err = f.Truncate(size); err != nil {
-		f.Close()
-		os.Remove(outputFile)
+	if err := outputFile.Truncate(size); err != nil {
+		outputFile.Close()
+		os.Remove(outputFile.Name())
 		return err
 	}
 
 	// BlockDevice backed by a file
-	device, err := fs.NewFileDisk(f)
+	device, err := fs.NewFileDisk(outputFile)
 	if err != nil {
-		f.Close()
-		os.Remove(outputFile)
+		outputFile.Close()
+		os.Remove(outputFile.Name())
 		return err
 	}
 
@@ -63,22 +61,22 @@ func CloudInitFatCreateImage(outputFile string, size int64, inputFiles []string)
 	}
 
 	if fat.FormatSuperFloppy(device, formatConfig); err != nil {
-		f.Close()
-		os.Remove(outputFile)
+		outputFile.Close()
+		os.Remove(outputFile.Name())
 		return err
 	}
 
 	filesys, err := fat.New(device)
 	if err != nil {
-		f.Close()
-		os.Remove(outputFile)
+		outputFile.Close()
+		os.Remove(outputFile.Name())
 		return err
 	}
 
 	rootDir, err := filesys.RootDir()
 	if err != nil {
-		f.Close()
-		os.Remove(outputFile)
+		outputFile.Close()
+		os.Remove(outputFile.Name())
 		return err
 	}
 
@@ -89,7 +87,6 @@ func CloudInitFatCreateImage(outputFile string, size int64, inputFiles []string)
 		}
 	}
 
-	f.Close()
+	outputFile.Close()
 	return nil
-
 }

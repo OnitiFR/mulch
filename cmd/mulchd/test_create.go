@@ -202,10 +202,10 @@ func createAndUploadCloudInitImage(imageName string, conn *libvirt.Connect) {
 	}
 	defer poolCi.Free()
 
-	err = CloudInitFatCreateImage(tmpFile, 256*1024, []string{"ci-sample/meta-data", "ci-sample/user-data"})
-	if err != nil {
-		log.Fatalf("CloudInitCreateFatImg: %s", err)
-	}
+	// err = CloudInitFatCreateImage(tmpFile, 256*1024, []string{"ci-sample/meta-data", "ci-sample/user-data"})
+	// if err != nil {
+	// 	log.Fatalf("CloudInitCreateFatImg: %s", err)
+	// }
 	defer os.Remove(tmpFile)
 
 	err = UploadCloudInitImageToLibvirt(tmpFile, imageName, conn)
