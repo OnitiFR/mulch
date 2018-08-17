@@ -1,6 +1,8 @@
 package main
 
-import "github.com/Xfennec/mulch"
+import (
+	"github.com/Xfennec/mulch"
+)
 
 // Hub structure allows multiple clients to receive messages
 // from mulchd.
@@ -35,9 +37,9 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.register:
 			h.clients[client] = true
-			// fmt.Printf("new client: %s\n", client.ClientInfo)
+			// fmt.Printf("new client: %s\n", client.clientInfo)
 		case client := <-h.unregister:
-			// fmt.Printf("del client: %s\n", client.ClientInfo)
+			// fmt.Printf("del client: %s\n", client.clientInfo)
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.Messages)
@@ -45,16 +47,17 @@ func (h *Hub) Run() {
 		case message := <-h.broadcast:
 			// fmt.Printf("broadcasting\n")
 			for client := range h.clients {
-				if client.target != message.Target && message.Target != mulch.MessageNoTarget {
+				if client.target != message.Target &&
+					message.Target != mulch.MessageNoTarget &&
+					client.target != mulch.MessageAllTargets {
 					continue // not for this client
 				}
 
-				select {
-				case client.Messages <- message:
-				default:
-					close(client.Messages)
-					delete(h.clients, client)
-				}
+				// Here was a 'select' with 'default' case, where
+				// the same things as 'h.unregister' were done.
+				// It was source of some race conditions, and it seems
+				// useless. Removed.
+				client.Messages <- message
 			}
 		}
 	}

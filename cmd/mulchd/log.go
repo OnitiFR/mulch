@@ -97,5 +97,10 @@ func (log *Log) Failuref(format string, args ...interface{}) {
 
 // SetTarget change the current "sending" target
 func (log *Log) SetTarget(target string) {
+	// You can't send to "*", only listen. But NoTarget does the same
+	// since since everybody receives it.
+	if target == mulch.MessageAllTargets {
+		target = mulch.MessageNoTarget
+	}
 	log.target = target
 }

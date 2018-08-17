@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"net"
-	"time"
+
+	"github.com/Xfennec/mulch"
 )
 
 // PhoneController receive "phone home" requests from instances
@@ -19,10 +20,10 @@ func PhoneController(req *Request) {
 
 // LogController sends logs to client
 func LogController(req *Request) {
-	req.SetTarget("instance-1")
-	req.Stream.Info("Hello from LogController")
-	time.Sleep(time.Duration(5000) * time.Millisecond)
-	req.Stream.Info("Bye from LogController")
+	req.Stream.Infof("Hi! You will receive all logs for all targets.")
+	req.SetTarget(mulch.MessageAllTargets)
+	// nothing to do, just wait forever…
+	select {}
 }
 
 // VMController is currently a test
