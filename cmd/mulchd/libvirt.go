@@ -22,10 +22,10 @@ type Libvirt struct {
 // LibvirtPools stores needed libvirt Pools for mulchd
 type LibvirtPools struct {
 	CloudInit    *libvirt.StoragePool
-	Releases     *libvirt.StoragePool
+	Seeds        *libvirt.StoragePool
 	Disks        *libvirt.StoragePool
 	CloudInitXML *libvirtxml.StoragePool
-	ReleasesXML  *libvirtxml.StoragePool
+	SeedsXML     *libvirtxml.StoragePool
 	DisksXML     *libvirtxml.StoragePool
 }
 
@@ -179,11 +179,11 @@ func (lv *Libvirt) GetOrCreateNetwork(networkName string, templateFile string, l
 	return net, netcfg, nil
 }
 
-// CreateDiskFromRelease creates a disk (into "disks" pool) from release image (from "releases" pool)
-func (lv *Libvirt) CreateDiskFromRelease(release string, disk string, volumeTemplateFile string, log *Log) error {
+// CreateDiskFromSeed creates a disk (into "disks" pool) from seed image (from "seeds" pool)
+func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFile string, log *Log) error {
 
 	// find source volume
-	volSrc, err := lv.Pools.Releases.LookupStorageVolByName(release)
+	volSrc, err := lv.Pools.Seeds.LookupStorageVolByName(seed)
 	if err != nil {
 		return err
 	}
@@ -225,6 +225,6 @@ func (lv *Libvirt) CreateDiskFromRelease(release string, disk string, volumeTemp
 		return err
 	}
 
-	log.Infof("done: %s → %s (transfered %d MiB)", release, disk, bytesWritten/1024/1024)
+	log.Infof("done: %s → %s (transfered %d MiB)", seed, disk, bytesWritten/1024/1024)
 	return nil
 }

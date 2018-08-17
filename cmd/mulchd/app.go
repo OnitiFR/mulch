@@ -84,14 +84,14 @@ func (app *App) initLibvirtStorage() error {
 		return fmt.Errorf("initLibvirtStorage (cloud-init/): %s", err)
 	}
 
-	pools.Releases, pools.ReleasesXML, err = app.Libvirt.GetOrCreateStoragePool(
-		"mulch-releases",
-		app.Config.StoragePath+"/releases",
+	pools.Seeds, pools.SeedsXML, err = app.Libvirt.GetOrCreateStoragePool(
+		"mulch-seeds",
+		app.Config.StoragePath+"/seeds",
 		app.Config.configPath+"/templates/storage.xml",
 		"",
 		app.Log)
 	if err != nil {
-		return fmt.Errorf("initLibvirtStorage (releases): %s", err)
+		return fmt.Errorf("initLibvirtStorage (seeds): %s", err)
 	}
 
 	pools.Disks, pools.DisksXML, err = app.Libvirt.GetOrCreateStoragePool(

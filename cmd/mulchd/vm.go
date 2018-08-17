@@ -44,7 +44,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	}
 
 	// 1 - copy from reference image
-	err = app.Libvirt.CreateDiskFromRelease(
+	err = app.Libvirt.CreateDiskFromSeed(
 		vmConfig.ReferenceImage,
 		app.Config.VMPrefix+vmConfig.Name+".qcow2",
 		app.Config.configPath+"/templates/volume.xml",
