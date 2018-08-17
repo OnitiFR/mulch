@@ -2,7 +2,9 @@ package mulch
 
 import "time"
 
-// TODO: add server timestamp
+// Messages are the glue between the client ('mulch' command) and the
+// server ('mulchd'), so this package is shared using a common package
+// named 'mulch'.
 
 // SUCCESS & FAILURE will end a client connection (no?)
 const (
