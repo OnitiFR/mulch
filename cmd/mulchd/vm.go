@@ -28,6 +28,8 @@ type VMConfig struct {
 
 // NewVM builds a new virtual machine from config
 func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
+	log.Infof("creating new VM '%s'", vmConfig.Name)
+
 	commit := false
 
 	vm := &VM{
@@ -57,7 +59,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		vmConfig.ReferenceImage,
 		diskName,
 		app.Config.configPath+"/templates/volume.xml",
-		app.Log)
+		log)
 
 	if err != nil {
 		return nil, err

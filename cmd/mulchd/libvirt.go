@@ -230,6 +230,6 @@ func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFi
 		return err
 	}
 
-	log.Infof("done: %s → %s (transfered %d MiB)", seed, disk, bytesWritten/1024/1024)
+	log.Infof("disk '%s' created from seed '%s' (transfered %d MiB)", disk, seed, bytesWritten/1024/1024)
 	return nil
 }
