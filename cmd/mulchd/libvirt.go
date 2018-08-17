@@ -182,6 +182,11 @@ func (lv *Libvirt) GetOrCreateNetwork(networkName string, templateFile string, l
 // CreateDiskFromSeed creates a disk (into "disks" pool) from seed image (from "seeds" pool)
 func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFile string, log *Log) error {
 
+	err := lv.Pools.Seeds.Refresh(0)
+	if err != nil {
+		return err
+	}
+
 	// find source volume
 	volSrc, err := lv.Pools.Seeds.LookupStorageVolByName(seed)
 	if err != nil {

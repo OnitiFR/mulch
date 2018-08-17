@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/libvirt/libvirt-go"
@@ -29,6 +28,13 @@ type VMConfig struct {
 
 // NewVM builds a new virtual machine from config
 func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
+	commit := false
+
+	vm := &VM{
+		App:    app,
+		Config: vmConfig, // copy()? (deep)
+	}
+
 	conn, err := app.Libvirt.GetConnection()
 	if err != nil {
 		return nil, err
@@ -43,10 +49,13 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		return nil, fmt.Errorf("Unexpected error: %s", err)
 	}
 
+	diskName := app.Config.VMPrefix + vmConfig.Name + ".qcow2"
+
 	// 1 - copy from reference image
+	log.Infof("creating VM disk '%s'", diskName)
 	err = app.Libvirt.CreateDiskFromSeed(
 		vmConfig.ReferenceImage,
-		app.Config.VMPrefix+vmConfig.Name+".qcow2",
+		diskName,
 		app.Config.configPath+"/templates/volume.xml",
 		app.Log)
 
@@ -54,5 +63,25 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		return nil, err
 	}
 
-	return nil, errors.New("Not implemented yet")
+	// delete the created volume in case of failure of the rest of the VM creation
+	defer func() {
+		if !commit {
+			vol, err := app.Libvirt.Pools.Disks.LookupStorageVolByName(diskName)
+			if err != nil {
+				return
+			}
+			err = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	// if true {
+	// 	return nil, errors.New("Intentional error, for test")
+	// }
+
+	// all is OK, commit (= no defer)
+	commit = true
+	return vm, nil
 }
