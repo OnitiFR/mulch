@@ -25,18 +25,21 @@ func cloudInitUserData(templateFile string, variables map[string]interface{}) ([
 }
 
 // CloudInitCreate will create (and upload ?) the CloudInit image
-func CloudInitCreate(volumeName string, template string, app *App, log *Log) error {
-	// 1 - create cidata file contents
-
-	metaData := cloudInitMetaData("testhost", "mulch-deadbeef")
+func CloudInitCreate(volumeName string, id string, hostname string, volTemplate string, userDataTemplate string, app *App, log *Log) error {
 
 	phURL := "http://" + app.Libvirt.NetworkXML.IPs[0].Address + app.Config.Listen + "/phone"
+	SSHPub, err := ioutil.ReadFile(app.Config.MulchSSHPublicKey)
+	if err != nil {
+		return err
+	}
+
+	// 1 - create cidata file contents
+	metaData := cloudInitMetaData(id, hostname)
 
 	userDataVariables := make(map[string]interface{})
-	userDataVariables["_SSH_PUBKEY"] = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCyJP5W0uB1M2AGSLesePNnBmPjUzu5ruJ1AswAWfghBwvqeJUOfj1lY1P/fqKxnS/K/KBrVu3f/QwvidB2JAWlRgux9iTY+PdJIbiNxKqJhCOrpJX+CrmhOrr4d+XK10VvtLDie7ArTapkOYUHmG5tB0/Iv9lYSvnee+cNK7HIem3UL3WilOxQ+UzR98jwsm1J6BDOsh0FcpLBkFYM8tF3/f/4F0oJ0OSVyUmUdlfHpuccQf4f4mZnHpltZdjc4/C6Auxf/uJcS3mW/Qz9F1I/0LLaHjQnp76zDmLfOdaQCBNthF7RlOXr9dAam91m41oz8jUQZU2Ydg7VtlRrZj8bAJtqxvq/9XLluvU7qYgFAXWoX25NV/X1gbmDv30KmNJ35EqUz/0nNdQp2a6bF+Hc1gnAKj4Jn8e0kVLoNV5XJoIQcJ8PY9FNG7YNTQpp3gqMNOQGLZnVwbE+DCC9+Psl9XIXWscwXNeIpi30IdnVMWYmabZgoXpLVl5+eTzVCy+e8kGuPadBh5o2TPj6sTzGmdPE2BymHPDJpxcgoAnLmtNp+jdGDJgcNrLY9zBjMmqfpCX8Y66qamESys79aKhbGSp6w+29U9sD37kkEMC5NydfCAmpclAJUOIX/Ya6DYqEEqO39l2v2qRj+LdS47abuk+lfThCiLhAlVH1JnE9SQ== test.xfennec@JulienDev"
+	userDataVariables["_SSH_PUBKEY"] = SSHPub
 	userDataVariables["_PHONE_HOME_URL"] = phURL
 
-	userDataTemplate := app.Config.configPath + "/templates/ci-user-data.yml"
 	userData, err := cloudInitUserData(userDataTemplate, userDataVariables)
 	if err != nil {
 		return err
@@ -63,7 +66,7 @@ func CloudInitCreate(volumeName string, template string, app *App, log *Log) err
 	err = app.Libvirt.UploadFileToLibvirt(
 		app.Libvirt.Pools.CloudInit,
 		app.Libvirt.Pools.CloudInitXML,
-		template,
+		volTemplate,
 		tmpfile.Name(),
 		volumeName,
 		log)

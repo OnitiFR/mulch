@@ -12,6 +12,10 @@ func PhoneController(req *Request) {
 	ip, _, _ := net.SplitHostPort(req.HTTP.RemoteAddr)
 	msg := fmt.Sprintf("phoning: id=%s, ip=%s", req.HTTP.PostFormValue("instance_id"), ip)
 
+	// fmt.Println(req.HTTP)
+	for key, val := range req.HTTP.Form {
+		req.App.Log.Tracef(" - %s = '%s'", key, val[0])
+	}
 	// We should lookup the machine and log over there, no?
 	req.App.Log.Info(msg)
 
@@ -29,11 +33,12 @@ func LogController(req *Request) {
 // VMController is currently a test
 func VMController(req *Request) {
 	conf := &VMConfig{
-		Name:           "test1",
-		ReferenceImage: "debian-9-openstack-amd64.qcow2",
-		DiskSize:       20 * 1024 * 1024 * 1024,
-		RAMSize:        1 * 1024 * 1024 * 1024,
-		CPUCount:       1,
+		Name:      "test1",
+		Hostname:  "test1.localdomain",
+		SeedImage: "debian-9-openstack-amd64.qcow2",
+		DiskSize:  20 * 1024 * 1024 * 1024,
+		RAMSize:   1 * 1024 * 1024 * 1024,
+		CPUCount:  1,
 	}
 
 	// TODO: check the name before doing that:

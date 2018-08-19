@@ -18,6 +18,10 @@ type AppConfig struct {
 	// prefix for VM names (in libvirt)
 	VMPrefix string
 
+	// SSH keys used by Mulch to control & command VMs
+	MulchSSHPrivateKey string
+	MulchSSHPublicKey  string
+
 	// global mulchd configuration path
 	configPath string
 }

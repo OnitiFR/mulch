@@ -2,6 +2,8 @@
 - API keys or challenge based auth
 - "DataBase" ?
 - mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
+- support passphrase for Mulch SSH key
+- check SSH key on startup? (warning?)
 
 - create a specific HTTP muxer for /phone (only listening on mulch's virbr)
 

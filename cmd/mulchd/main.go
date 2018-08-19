@@ -11,11 +11,13 @@ func main() {
 	flag.Parse()
 
 	config := &AppConfig{
-		Listen:      ":8585",
-		LibVirtURI:  "qemu:///system",
-		StoragePath: "./var/storage", // example: /srv/mulch
-		DataPath:    "./var/data",    // example: /var/lib/mulch
-		VMPrefix:    "mulch-",
+		Listen:             ":8585",
+		LibVirtURI:         "qemu:///system",
+		StoragePath:        "./var/storage", // example: /srv/mulch
+		DataPath:           "./var/data",    // example: /var/lib/mulch
+		VMPrefix:           "mulch-",
+		MulchSSHPrivateKey: "/home/xfennec/.ssh/id_rsa_mulch",
+		MulchSSHPublicKey:  "/home/xfennec/.ssh/id_rsa_mulch.pub",
 
 		configPath: *configPath, // example: /etc/mulch
 	}
