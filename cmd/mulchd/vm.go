@@ -1,18 +1,22 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"time"
 
 	"github.com/libvirt/libvirt-go"
 	"github.com/libvirt/libvirt-go-xml"
+	"github.com/satori/go.uuid"
 )
 
 // VM defines a virtual machine ("domain")
 type VM struct {
-	UUID   string
-	App    *App
-	Config *VMConfig
+	LibvirtUUID string
+	SecretUUID  string
+	App         *App
+	Config      *VMConfig
 }
 
 // VMConfig stores needed parameters for a new VM
@@ -34,9 +38,15 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 
 	commit := false
 
+	secretUUID, err := uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
+
 	vm := &VM{
-		App:    app,
-		Config: vmConfig, // copy()? (deep)
+		App:        app,
+		SecretUUID: secretUUID.String(),
+		Config:     vmConfig, // copy()? (deep)
 	}
 
 	conn, err := app.Libvirt.GetConnection()
@@ -94,7 +104,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	// 3 - Cloud-Init files
 	log.Infof("creating Cloud-Init image for '%s'", vmConfig.Name)
 	err = CloudInitCreate(ciName,
-		vmConfig.Name, // using this as instance-id, currently
+		vm.SecretUUID,
 		vm.Config.Hostname,
 		app.Config.configPath+"/templates/volume.xml",
 		app.Config.configPath+"/templates/ci-user-data.yml",
@@ -120,11 +130,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 
 	// 4 - define domain
 	// should dynamically define:
-	// - name
 	// - CPU count, RAM amount
-	// - CPU topology
-	// - main qcow2 disk path
-	// - cloud init disk path
 	// - bridge interface name
 	// - interface MAC address
 	log.Infof("defining vm domain (%s)", domainName)
@@ -176,23 +182,38 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		}
 	}()
 
-	uuid, err := dom.GetUUIDString()
+	libvirtUUID, err := dom.GetUUIDString()
 	if err != nil {
 		return nil, err
 	}
-	vm.UUID = uuid
+	vm.LibvirtUUID = libvirtUUID
 
-	// if true {
-	// 	return nil, errors.New("Intentional error, for test")
-	// }
-
-	log.Infof("starting vm for cloud-init step")
+	log.Infof("vm: first boot (cloud-init will upgrade package, please wait…)")
 	err = dom.Create()
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println(dom.GetState())
+	for done := false; done == false; {
+		select {
+		case <-time.After(15 * time.Minute):
+			return nil, errors.New("vm creation is too long, something probably went wrong")
+			// case for phoning
+		case <-time.After(1 * time.Second):
+			log.Trace("checking vm state")
+			state, _, err := dom.GetState()
+			if err != nil {
+				return nil, err
+			}
+			if state == libvirt.DOMAIN_CRASHED {
+				return nil, errors.New("vm crashed! (said libvirt)")
+			}
+			if state == libvirt.DOMAIN_SHUTOFF {
+				log.Info("vm is now down")
+				done = true
+			}
+		}
+	}
 
 	// all is OK, commit (= no defer)
 	commit = true

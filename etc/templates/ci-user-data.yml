@@ -11,7 +11,7 @@
 # cost: Debian = 10s
 package_upgrade: true
 
-# Really needed? (since the domain stops when ready)
+# we use this call to confirm Cloud-Init success
 phone_home:
   url: $_PHONE_HOME_URL
 

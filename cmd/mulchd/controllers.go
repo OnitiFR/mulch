@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/Xfennec/mulch"
 )
@@ -46,11 +47,13 @@ func VMController(req *Request) {
 	// Name is valid?
 	req.SetTarget(conf.Name)
 
+	before := time.Now()
 	vm, err := NewVM(conf, req.App, req.Stream)
 	if err != nil {
 		req.Stream.Failuref("Cannot create VM: %s", err)
 		return
 	}
+	after := time.Now()
 
-	req.Stream.Successf("VM '%s' created successfully (%s)", vm.Config.Name, vm.UUID)
+	req.Stream.Successf("VM '%s' created successfully (%s)", vm.Config.Name, after.Sub(before))
 }
