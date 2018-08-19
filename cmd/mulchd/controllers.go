@@ -37,9 +37,9 @@ func VMController(req *Request) {
 		Name:      "test1",
 		Hostname:  "test1.localdomain",
 		SeedImage: "debian-9-openstack-amd64.qcow2",
-		DiskSize:  20 * 1024 * 1024 * 1024,
-		RAMSize:   1 * 1024 * 1024 * 1024,
-		CPUCount:  1,
+		DiskSize:  50 * 1024 * 1024 * 1024,
+		RAMSize:   2 * 1024 * 1024 * 1024,
+		CPUCount:  2,
 	}
 
 	// TODO: check the name before doing that:

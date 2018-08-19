@@ -43,6 +43,8 @@ func InterfaceValueToString(iv interface{}) string {
 		return strconv.FormatFloat(iv.(float64), 'f', -1, 64)
 	case string:
 		return iv.(string)
+	case []byte:
+		return string(iv.([]byte))
 	case bool:
 		return strconv.FormatBool(iv.(bool))
 	}

@@ -129,10 +129,6 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	}()
 
 	// 4 - define domain
-	// should dynamically define:
-	// - CPU count, RAM amount
-	// - bridge interface name
-	// - interface MAC address
 	log.Infof("defining vm domain (%s)", domainName)
 	xml, err := ioutil.ReadFile(app.Config.configPath + "/templates/vm.xml")
 	if err != nil {
@@ -144,22 +140,43 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	if err != nil {
 		return nil, err
 	}
-	// fmt.Println(domcfg2.Memory, domcfg2.CurrentMemory, domcfg2.Devices.Interfaces)
 
 	domcfg.Name = domainName
 
+	domcfg.Memory.Unit = "bytes"
+	domcfg.Memory.Value = uint(vm.Config.RAMSize)
+	domcfg.CurrentMemory.Unit = "bytes"
+	domcfg.CurrentMemory.Value = uint(vm.Config.RAMSize)
+
+	domcfg.VCPU.Value = vm.Config.CPUCount
+
+	foundDisks := 0
 	for _, disk := range domcfg.Devices.Disks {
 		if disk.Alias != nil && disk.Alias.Name == "ua-mulch-disk" {
 			disk.Source.File.File = app.Libvirt.Pools.DisksXML.Target.Path + "/" + diskName
+			foundDisks++
 		}
 		if disk.Alias != nil && disk.Alias.Name == "ua-mulch-cloudinit" {
 			disk.Source.File.File = app.Libvirt.Pools.CloudInitXML.Target.Path + "/" + ciName
+			foundDisks++
 		}
 	}
 
+	if foundDisks != 2 {
+		return nil, errors.New("vm xml file: disks with 'ua-mulch-disk' and 'ua-mulch-cloudinit' aliases are required, see sample file")
+	}
+
+	foundInterfaces := 0
 	for _, intf := range domcfg.Devices.Interfaces {
-		fmt.Println(intf.Source.Bridge.Bridge) // change this to mulch net Bridge
-		fmt.Println(intf.MAC.Address)          // randomize that
+		if intf.Alias != nil && intf.Alias.Name == "ua-mulch-bridge" {
+			intf.Source.Bridge.Bridge = app.Libvirt.NetworkXML.Bridge.Name
+			intf.MAC.Address = fmt.Sprintf("52:54:00:%02x:%02x:%02x", app.Rand.Intn(255), app.Rand.Intn(255), app.Rand.Intn(255))
+			foundInterfaces++
+		}
+	}
+
+	if foundInterfaces != 1 {
+		return nil, fmt.Errorf("vm xml file: found %d interface(s) with 'ua-mulch-bridge' alias, one is needed", foundInterfaces)
 	}
 
 	xml2, err := domcfg.Marshal()

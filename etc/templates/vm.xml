@@ -1,10 +1,14 @@
+<!--
+    This sample file was generated with virt-install. You may want to do
+    the same so things like os/cpu matches more your own hardare.
+-->
 <domain type='kvm'>
   <name>undefined-name</name>
-  <memory unit='KiB'>1048576</memory>
-  <currentMemory unit='KiB'>1048576</currentMemory>
-  <vcpu placement='static'>1</vcpu>
+  <memory unit='KiB'>0</memory>
+  <!-- currentMemory is optional, defaults to 'memory' -->
+  <currentMemory unit='KiB'>0</currentMemory>
+  <vcpu placement='static'>0</vcpu>
   <os>
-    <!-- make arch dynamic? -->
     <type arch='x86_64' machine='pc-i440fx-2.11'>hvm</type>
     <boot dev='hd'/>
   </os>
@@ -13,7 +17,7 @@
     <apic/>
     <vmport state='off'/>
   </features>
-  <!-- not portable… -->
+  <!-- you may want to adjust that -->
   <cpu mode='custom' match='exact' check='partial'>
     <model fallback='allow'>Broadwell-noTSX-IBRS</model>
   </cpu>
@@ -30,10 +34,11 @@
     <suspend-to-disk enabled='no'/>
   </pm>
   <devices>
-    <!-- is this possible to make this more portable? -->
+    <!-- may be different for you -->
     <emulator>/usr/bin/qemu-kvm</emulator>
 
     <disk type='file' device='disk'>
+      <!-- the alias 'ua-mulch-disk' is required by Mulch-->
       <alias name="ua-mulch-disk"/>
       <driver name='qemu' type='qcow2'/>
       <source file='undefined-disk'/>
@@ -42,6 +47,7 @@
     </disk>
 
     <disk type='file' device='disk'>
+      <!-- the alias 'ua-mulch-cloudinit' is required by Mulch-->
       <alias name="ua-mulch-cloudinit"/>
       <driver name='qemu' type='raw'/>
       <source file='undefined-cloudinit'/>
@@ -72,8 +78,9 @@
       <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
     </controller>
     <interface type='bridge'>
-      <mac address='52:54:00:68:00:02'/>
-      <source bridge='virbr104'/>
+      <alias name="ua-mulch-bridge" />
+      <mac address='00:00:00:00:00:00'/>
+      <source bridge='virbrX'/>
       <model type='virtio'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
     </interface>
