@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -35,6 +36,11 @@ func NewApp(config *AppConfig) (*App, error) {
 	}
 	app.Log.Info(fmt.Sprintf("libvirt connection to '%s' OK", config.LibVirtURI))
 	app.Libvirt = lv
+
+	err = app.initSSH()
+	if err != nil {
+		return nil, err
+	}
 
 	err = app.initLibvirtStorage()
 	if err != nil {
@@ -73,6 +79,17 @@ func NewApp(config *AppConfig) (*App, error) {
 	// }()
 
 	return app, nil
+}
+
+func (app *App) initSSH() error {
+	if _, err := os.Stat(app.Config.MulchSSHPrivateKey); os.IsNotExist(err) {
+		app.Log.Warningf("SSH private key not found, mulch will fail to control VMs! (%s)", app.Config.MulchSSHPrivateKey)
+	}
+	if _, err := os.Stat(app.Config.MulchSSHPublicKey); os.IsNotExist(err) {
+		app.Log.Warningf("SSH public key not found, VM creation will fail! (%s)", app.Config.MulchSSHPublicKey)
+	}
+
+	return nil
 }
 
 func (app *App) initLibvirtStorage() error {
