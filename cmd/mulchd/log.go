@@ -23,11 +23,13 @@ func NewLog(target string, hub *Hub) *Log {
 
 // Log is a low-level function for sending a Message
 func (log *Log) Log(message *mulch.Message) {
+	message.Target = log.target
+
 	if !(message.Type == mulch.MessageTrace && *ConfigTrace == false) {
 		// TODO: use our own *log.Logger (see log.go in Nosee project)
 		fmt.Printf("%s(%s): %s\n", message.Type, message.Target, message.Message)
 	}
-	message.Target = log.target
+
 	log.hub.Broadcast(message)
 }
 

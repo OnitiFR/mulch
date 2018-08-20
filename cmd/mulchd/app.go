@@ -29,6 +29,7 @@ func NewApp(config *AppConfig) (*App, error) {
 	go app.Hub.Run()
 
 	app.Log = NewLog("", app.Hub)
+	app.Log.Trace("log system available")
 
 	lv, err := NewLibvirt(config.LibVirtURI)
 	if err != nil {

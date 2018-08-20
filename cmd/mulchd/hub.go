@@ -18,6 +18,7 @@ type HubClient struct {
 	Messages   chan *mulch.Message
 	clientInfo string
 	target     string
+	trace      bool
 	hub        *Hub
 }
 
@@ -52,6 +53,9 @@ func (h *Hub) Run() {
 					client.target != mulch.MessageAllTargets {
 					continue // not for this client
 				}
+				if message.Type == mulch.MessageTrace && client.trace == false {
+					continue // this client don't want traces
+				}
 
 				// Here was a 'select' with 'default' case, where
 				// the same things as 'h.unregister' were done.
@@ -72,11 +76,12 @@ func (h *Hub) Broadcast(message *mulch.Message) {
 // Register a new client of the Hub
 // clientInfo is not currently used but is supposed to differentiate
 // the client. Target may be mulch.MessageNoTarget.
-func (h *Hub) Register(info string, target string) *HubClient {
+func (h *Hub) Register(info string, target string, trace bool) *HubClient {
 	client := &HubClient{
 		Messages:   make(chan *mulch.Message),
 		clientInfo: info,
 		target:     target,
+		trace:      trace,
 		hub:        h,
 	}
 	h.register <- client

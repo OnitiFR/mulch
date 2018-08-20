@@ -62,6 +62,12 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 		return
 	}
 
+	trace := false
+	if r.FormValue("trace") == "true" {
+		trace = true
+	}
+
+	// Note: starting from here, request parameters are no more available
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
@@ -71,7 +77,7 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 	// plug ourselves into the hub
 	// TODO: use API key owner instead of "me"
 	tmpTarget := fmt.Sprintf(".tmp-%d", request.App.Rand.Int31())
-	client := request.App.Hub.Register("me", tmpTarget)
+	client := request.App.Hub.Register("me", tmpTarget, trace)
 
 	request.Stream = NewLog(tmpTarget, request.App.Hub)
 	request.HubClient = client

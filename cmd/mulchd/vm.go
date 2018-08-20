@@ -86,12 +86,12 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 			log.Infof("rollback, deleting disk '%s'", diskName)
 			vol, errDef := app.Libvirt.Pools.Disks.LookupStorageVolByName(diskName)
 			if errDef != nil {
-				log.Errorf("failed LookupStorageVolByName: %s (%s)", err, diskName)
+				log.Errorf("failed LookupStorageVolByName: %s (%s)", errDef, diskName)
 				return
 			}
 			errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
 			if errDef != nil {
-				log.Errorf("failed Delete: %s (%s)", err, diskName)
+				log.Errorf("failed Delete: %s (%s)", errDef, diskName)
 				return
 			}
 		}
@@ -121,12 +121,12 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 			log.Infof("rollback, deleting cloud-init image '%s'", ciName)
 			vol, errDef := app.Libvirt.Pools.CloudInit.LookupStorageVolByName(ciName)
 			if errDef != nil {
-				log.Errorf("failed LookupStorageVolByName: %s (%s)", err, ciName)
+				log.Errorf("failed LookupStorageVolByName: %s (%s)", errDef, ciName)
 				return
 			}
 			errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
 			if errDef != nil {
-				log.Errorf("failed Delete: %s (%s)", err, ciName)
+				log.Errorf("failed Delete: %s (%s)", errDef, ciName)
 				return
 			}
 		}
