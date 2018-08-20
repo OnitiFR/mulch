@@ -61,7 +61,12 @@ func (lv *Libvirt) CloseConnection() {
 // - Code=55, Domain=18, Message='Requested operation is not valid: storage pool 'mulch-cloud-init' is not active
 // Added more precise error messages to diagnose this.
 func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, templateFile string, mode string, log *Log) (*libvirt.StoragePool, *libvirtxml.StoragePool, error) {
-	pool, errP := lv.conn.LookupStoragePoolByName(poolName)
+	conn, errC := lv.GetConnection()
+	if errC != nil {
+		return nil, nil, errC
+	}
+
+	pool, errP := conn.LookupStoragePoolByName(poolName)
 	if errP != nil {
 		virtErr := errP.(libvirt.Error)
 		if virtErr.Domain == libvirt.FROM_STORAGE && virtErr.Code == libvirt.ERR_NO_STORAGE_POOL {
@@ -96,7 +101,7 @@ func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, temp
 				return nil, nil, fmt.Errorf("GetOrCreateStoragePool: poolcfg.Marshal: %s", err)
 			}
 
-			pool, err = lv.conn.StoragePoolDefineXML(string(out), 0)
+			pool, err = conn.StoragePoolDefineXML(string(out), 0)
 			if err != nil {
 				return nil, nil, fmt.Errorf("GetOrCreateStoragePool: StoragePoolDefineXML: %s", err)
 			}
@@ -135,7 +140,12 @@ func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, temp
 
 // GetOrCreateNetwork retreives (and create, if necessary) a libvirt network
 func (lv *Libvirt) GetOrCreateNetwork(networkName string, templateFile string, log *Log) (*libvirt.Network, *libvirtxml.Network, error) {
-	net, errN := lv.conn.LookupNetworkByName(networkName)
+	conn, errC := lv.GetConnection()
+	if errC != nil {
+		return nil, nil, errC
+	}
+
+	net, errN := conn.LookupNetworkByName(networkName)
 	if errN != nil {
 		virtErr := errN.(libvirt.Error)
 		if virtErr.Domain == libvirt.FROM_NETWORK && virtErr.Code == libvirt.ERR_NO_NETWORK {
@@ -146,7 +156,7 @@ func (lv *Libvirt) GetOrCreateNetwork(networkName string, templateFile string, l
 				return nil, nil, fmt.Errorf("GetOrCreateNetwork: %s: %s", templateFile, err)
 			}
 
-			net, err = lv.conn.NetworkDefineXML(string(xml))
+			net, err = conn.NetworkDefineXML(string(xml))
 			if err != nil {
 				return nil, nil, fmt.Errorf("GetOrCreateNetwork: NetworkDefineXML: %s", err)
 			}
@@ -181,6 +191,11 @@ func (lv *Libvirt) GetOrCreateNetwork(networkName string, templateFile string, l
 
 // CreateDiskFromSeed creates a disk (into "disks" pool) from seed image (from "seeds" pool)
 func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFile string, log *Log) error {
+	conn, errC := lv.GetConnection()
+	if errC != nil {
+		return errC
+	}
+
 	err := lv.Pools.Seeds.Refresh(0)
 	if err != nil {
 		return err
@@ -219,7 +234,7 @@ func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFi
 	}
 	defer volDst.Free()
 
-	vt, err := NewVolumeTransfert(lv.conn, volSrc, lv.conn, volDst)
+	vt, err := NewVolumeTransfert(conn, volSrc, conn, volDst)
 	if err != nil {
 		return err
 	}
@@ -235,6 +250,10 @@ func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFi
 
 // UploadFileToLibvirt uploads a file to libvirt storage
 func (lv *Libvirt) UploadFileToLibvirt(pool *libvirt.StoragePool, poolXML *libvirtxml.StoragePool, template string, localSourceFile string, asName string, log *Log) error {
+	conn, errC := lv.GetConnection()
+	if errC != nil {
+		return errC
+	}
 
 	// create dest volume
 	xml, err := ioutil.ReadFile(template)
@@ -262,7 +281,7 @@ func (lv *Libvirt) UploadFileToLibvirt(pool *libvirt.StoragePool, poolXML *libvi
 	}
 	defer volDst.Free()
 
-	vu, err := NewVolumeUpload(localSourceFile, lv.conn, volDst)
+	vu, err := NewVolumeUpload(localSourceFile, conn, volDst)
 	if err != nil {
 		return err
 	}

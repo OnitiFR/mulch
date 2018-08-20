@@ -19,7 +19,6 @@ type AppConfig struct {
 	VMPrefix string
 
 	// SSH keys used by Mulch to control & command VMs
-	// TODO: check files on startup? (warning? error?)
 	MulchSSHPrivateKey string
 	MulchSSHPublicKey  string
 
