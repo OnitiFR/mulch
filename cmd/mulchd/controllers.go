@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net"
 	"time"
 
@@ -10,16 +9,29 @@ import (
 
 // PhoneController receive "phone home" requests from instances
 func PhoneController(req *Request) {
+	instanceID := req.HTTP.PostFormValue("instance_id")
 	ip, _, _ := net.SplitHostPort(req.HTTP.RemoteAddr)
-	msg := fmt.Sprintf("phoning: id=%s, ip=%s", req.HTTP.PostFormValue("instance_id"), ip)
 
-	// fmt.Println(req.HTTP)
+	// Cloud-Init sends fqdn, hostname and SSH pub keys, but our "manual"
+	// call does not. It's an easy way to know who called us.
+	cloudInit := false
+	if req.HTTP.PostFormValue("fqdn") != "" {
+		cloudInit = true
+	}
+
+	if instanceID == "" {
+		req.App.Log.Errorf("invalid phone call from %s (no or empty instance_id)", ip)
+		req.Response.Write([]byte("FAILED"))
+		return
+	}
+
+	// We should lookup the machine and log over there, no?
+	req.App.Log.Infof("phoning: id=%s, ip=%s", instanceID, ip)
 	for key, val := range req.HTTP.Form {
 		req.App.Log.Tracef(" - %s = '%s'", key, val[0])
 	}
-	// We should lookup the machine and log over there, no?
-	req.App.Log.Info(msg)
 
+	req.App.PhoneHome.BroadcastPhoneCall(instanceID, ip, cloudInit)
 	req.Response.Write([]byte("OK"))
 }
 

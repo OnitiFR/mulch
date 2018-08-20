@@ -6,6 +6,8 @@ import "time"
 // server ('mulchd'), so this package is shared using a common package
 // named 'mulch'.
 
+// TODO: define types for Targets and Types
+
 // SUCCESS & FAILURE will end a client connection (no?)
 const (
 	MessageSuccess = "SUCCESS"

@@ -11,12 +11,13 @@ import (
 
 // App describes an (the?) application
 type App struct {
-	Config  *AppConfig
-	Libvirt *Libvirt
-	Hub     *Hub
-	Log     *Log
-	Mux     *http.ServeMux
-	Rand    *rand.Rand
+	Config    *AppConfig
+	Libvirt   *Libvirt
+	Hub       *Hub
+	PhoneHome *PhoneHomeHub
+	Log       *Log
+	Mux       *http.ServeMux
+	Rand      *rand.Rand
 }
 
 // NewApp creates a new application
@@ -53,6 +54,8 @@ func NewApp(config *AppConfig) (*App, error) {
 		return nil, err
 	}
 
+	app.PhoneHome = NewPhoneHomeHub()
+
 	app.Mux = http.NewServeMux()
 
 	app.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -63,13 +66,13 @@ func NewApp(config *AppConfig) (*App, error) {
 	app.AddRoutes()
 
 	// dirty log broadcast tests
-	go func() {
-		for {
-			delay := app.Rand.Intn(12000)
-			time.Sleep(time.Duration(delay) * time.Millisecond)
-			app.Log.Tracef("Test %d", delay)
-		}
-	}()
+	// go func() {
+	// 	for {
+	// 		delay := app.Rand.Intn(12000)
+	// 		time.Sleep(time.Duration(delay) * time.Millisecond)
+	// 		app.Log.Tracef("Test %d", delay)
+	// 	}
+	// }()
 	// go func() {
 	// 	for {
 	// 		delay := app.Rand.Intn(12000)

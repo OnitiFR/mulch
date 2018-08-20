@@ -33,6 +33,8 @@ type VMConfig struct {
 }
 
 // NewVM builds a new virtual machine from config
+// TODO: this function is HUUUGE and needs to be splitted. It's tricky
+// because there's a "transaction" here.
 func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	log.Infof("creating new VM '%s'", vmConfig.Name)
 
@@ -215,11 +217,16 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		return nil, err
 	}
 
+	phone := app.PhoneHome.Register()
+	defer phone.Unregister()
+
 	for done := false; done == false; {
 		select {
 		case <-time.After(15 * time.Minute):
 			return nil, errors.New("vm creation is too long, something probably went wrong")
 			// case for phoning
+		case call := <-phone.PhoneCalls:
+			fmt.Println(call)
 		case <-time.After(1 * time.Second):
 			log.Trace("checking vm state")
 			state, _, err := dom.GetState()
@@ -235,6 +242,8 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 			}
 		}
 	}
+
+	// TODO: if all is OK, remove and delete cloud-init image
 
 	// all is OK, commit (= no defer)
 	commit = true

@@ -25,10 +25,10 @@ type HubClient struct {
 // NewHub creates a new Hub
 func NewHub() *Hub {
 	return &Hub{
+		clients:    make(map[*HubClient]bool),
 		broadcast:  make(chan *mulch.Message),
 		register:   make(chan *HubClient),
 		unregister: make(chan *HubClient),
-		clients:    make(map[*HubClient]bool),
 	}
 }
 
