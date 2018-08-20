@@ -46,12 +46,13 @@ func LogController(req *Request) {
 // VMController is currently a test
 func VMController(req *Request) {
 	conf := &VMConfig{
-		Name:      "test1",
-		Hostname:  "test1.localdomain",
-		SeedImage: "debian-9-openstack-amd64.qcow2",
-		DiskSize:  50 * 1024 * 1024 * 1024,
-		RAMSize:   2 * 1024 * 1024 * 1024,
-		CPUCount:  2,
+		Name:        "test1",
+		Hostname:    "test1.localdomain",
+		SeedImage:   "debian-9-openstack-amd64.qcow2",
+		InitUpgrade: false,
+		DiskSize:    50 * 1024 * 1024 * 1024,
+		RAMSize:     2 * 1024 * 1024 * 1024,
+		CPUCount:    2,
 	}
 
 	// TODO: check the name before doing that:

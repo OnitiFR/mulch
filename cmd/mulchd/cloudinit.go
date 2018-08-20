@@ -25,7 +25,9 @@ func cloudInitUserData(templateFile string, variables map[string]interface{}) ([
 }
 
 // CloudInitCreate will create (and upload ?) the CloudInit image
-func CloudInitCreate(volumeName string, id string, hostname string, volTemplate string, userDataTemplate string, app *App, log *Log) error {
+func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
+	volTemplate := app.Config.configPath + "/templates/volume.xml"
+	userDataTemplate := app.Config.configPath + "/templates/ci-user-data.yml"
 
 	phURL := "http://" + app.Libvirt.NetworkXML.IPs[0].Address + app.Config.Listen + "/phone"
 	SSHPub, err := ioutil.ReadFile(app.Config.MulchSSHPublicKey)
@@ -34,11 +36,12 @@ func CloudInitCreate(volumeName string, id string, hostname string, volTemplate 
 	}
 
 	// 1 - create cidata file contents
-	metaData := cloudInitMetaData(id, hostname)
+	metaData := cloudInitMetaData(vm.SecretUUID, vm.Config.Hostname)
 
 	userDataVariables := make(map[string]interface{})
 	userDataVariables["_SSH_PUBKEY"] = SSHPub
 	userDataVariables["_PHONE_HOME_URL"] = phURL
+	userDataVariables["_PACKAGE_UPGRADE"] = vm.Config.InitUpgrade
 
 	userData, err := cloudInitUserData(userDataTemplate, userDataVariables)
 	if err != nil {

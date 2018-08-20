@@ -4,11 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"path"
 	"time"
 
 	"github.com/libvirt/libvirt-go"
 	"github.com/libvirt/libvirt-go-xml"
 	"github.com/satori/go.uuid"
+)
+
+// Aliases for vm.xml file
+const (
+	VMStorageAliasDisk      = "ua-mulch-disk"
+	VMStorageAliasCloudInit = "ua-mulch-cloudinit"
+	VMNetworkAliasBridge    = "ua-mulch-bridge"
 )
 
 // VM defines a virtual machine ("domain")
@@ -21,12 +29,13 @@ type VM struct {
 
 // VMConfig stores needed parameters for a new VM
 type VMConfig struct {
-	Name      string
-	Hostname  string
-	SeedImage string
-	DiskSize  uint64
-	RAMSize   uint64
-	CPUCount  int
+	Name        string
+	Hostname    string
+	SeedImage   string
+	InitUpgrade bool
+	DiskSize    uint64
+	RAMSize     uint64
+	CPUCount    int
 	// + prepare scripts
 	// + save scripts
 	// + restore scripts
@@ -91,6 +100,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 				log.Errorf("failed LookupStorageVolByName: %s (%s)", errDef, diskName)
 				return
 			}
+			defer vol.Free()
 			errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
 			if errDef != nil {
 				log.Errorf("failed Delete: %s (%s)", errDef, diskName)
@@ -107,13 +117,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 
 	// 3 - Cloud-Init files
 	log.Infof("creating Cloud-Init image for '%s'", vmConfig.Name)
-	err = CloudInitCreate(ciName,
-		vm.SecretUUID,
-		vm.Config.Hostname,
-		app.Config.configPath+"/templates/volume.xml",
-		app.Config.configPath+"/templates/ci-user-data.yml",
-		app,
-		log)
+	err = CloudInitCreate(ciName, vm, app, log)
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +130,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 				log.Errorf("failed LookupStorageVolByName: %s (%s)", errDef, ciName)
 				return
 			}
+			defer vol.Free()
 			errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
 			if errDef != nil {
 				log.Errorf("failed Delete: %s (%s)", errDef, ciName)
@@ -158,11 +163,11 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 
 	foundDisks := 0
 	for _, disk := range domcfg.Devices.Disks {
-		if disk.Alias != nil && disk.Alias.Name == "ua-mulch-disk" {
+		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasDisk {
 			disk.Source.File.File = app.Libvirt.Pools.DisksXML.Target.Path + "/" + diskName
 			foundDisks++
 		}
-		if disk.Alias != nil && disk.Alias.Name == "ua-mulch-cloudinit" {
+		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasCloudInit {
 			disk.Source.File.File = app.Libvirt.Pools.CloudInitXML.Target.Path + "/" + ciName
 			foundDisks++
 		}
@@ -174,7 +179,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 
 	foundInterfaces := 0
 	for _, intf := range domcfg.Devices.Interfaces {
-		if intf.Alias != nil && intf.Alias.Name == "ua-mulch-bridge" {
+		if intf.Alias != nil && intf.Alias.Name == VMNetworkAliasBridge {
 			intf.Source.Bridge.Bridge = app.Libvirt.NetworkXML.Bridge.Name
 			intf.MAC.Address = fmt.Sprintf("52:54:00:%02x:%02x:%02x", app.Rand.Intn(255), app.Rand.Intn(255), app.Rand.Intn(255))
 			foundInterfaces++
@@ -194,6 +199,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer dom.Free() // remember: "deferred calls are executed in last-in-first-out order"
 
 	defer func() {
 		if !commit {
@@ -211,27 +217,31 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	}
 	vm.LibvirtUUID = libvirtUUID
 
-	log.Infof("vm: first boot (cloud-init will upgrade package, please wait…)")
+	log.Infof("vm: first boot (cloud-init)")
+	if vmConfig.InitUpgrade {
+		log.Info("cloud-init will upgrade package, it may take a while…")
+	}
 	err = dom.Create()
 	if err != nil {
 		return nil, err
 	}
 
-	phone := app.PhoneHome.Register()
+	phone := app.PhoneHome.Register(secretUUID.String())
 	defer phone.Unregister()
 
+	phoned := false
 	for done := false; done == false; {
 		select {
-		case <-time.After(15 * time.Minute):
-			return nil, errors.New("vm creation is too long, something probably went wrong")
-			// case for phoning
-		case call := <-phone.PhoneCalls:
-			fmt.Println(call)
+		case <-time.After(10 * time.Minute):
+			return nil, errors.New("vm init is too long, something probably went wrong")
+		case <-phone.PhoneCalls:
+			phoned = true
+			log.Info("vm phoned home, cloud-init was successful")
 		case <-time.After(1 * time.Second):
 			log.Trace("checking vm state")
-			state, _, err := dom.GetState()
-			if err != nil {
-				return nil, err
+			state, _, errG := dom.GetState()
+			if errG != nil {
+				return nil, errG
 			}
 			if state == libvirt.DOMAIN_CRASHED {
 				return nil, errors.New("vm crashed! (said libvirt)")
@@ -243,9 +253,95 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		}
 	}
 
-	// TODO: if all is OK, remove and delete cloud-init image
+	if phoned == false {
+		return nil, errors.New("vm is down but didn't phoned home, something went wrong during cloud-init")
+	}
+
+	// if all is OK, remove and delete cloud-init image
+	// EDIT: no! Cloud-init service is screwed on next boot (at least on debian)
+	// log.Infof("removing cloud-init filesystem and volume")
+	// dom2, err := vmDeleteCloudInitDisk(dom, app.Libvirt.Pools.CloudInit, conn)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// defer dom2.Free()
+
+	// start the VM again
+	log.Infof("starting vm")
+	err = dom.Create()
+	if err != nil {
+		return nil, err
+	}
+
+	// wait the vm's phone call
+	for done := false; done == false; {
+		select {
+		case <-time.After(10 * 5 * time.Minute):
+			dom.Destroy()
+			return nil, errors.New("vm start is too long, something probably went wrong")
+		case <-phone.PhoneCalls:
+			done = true
+			log.Info("vm phoned home, boot successful")
+		}
+	}
+
+	// TODO: run prepare scripts
 
 	// all is OK, commit (= no defer)
 	commit = true
 	return vm, nil
+}
+
+func vmDeleteCloudInitDisk(dom *libvirt.Domain, pool *libvirt.StoragePool, conn *libvirt.Connect) (*libvirt.Domain, error) {
+	// 1 - remove filesystem from domain
+	xmldoc, err := dom.GetXMLDesc(0)
+	if err != nil {
+		return nil, err
+	}
+
+	domcfg := &libvirtxml.Domain{}
+	err = domcfg.Unmarshal(xmldoc)
+	if err != nil {
+		return nil, err
+	}
+
+	ciName := ""
+	tmp := domcfg.Devices.Disks[:0]
+	for _, disk := range domcfg.Devices.Disks {
+		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasCloudInit {
+			ciName = path.Base(disk.Source.File.File)
+		} else {
+			tmp = append(tmp, disk)
+		}
+	}
+	if ciName == "" {
+		return nil, fmt.Errorf("clound-init clean: disk with '%s' alias not found", VMStorageAliasCloudInit)
+	}
+
+	domcfg.Devices.Disks = tmp
+
+	out, err := domcfg.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	// update the domain
+	dom2, err := conn.DomainDefineXML(string(out))
+	if err != nil {
+		return nil, err
+	}
+
+	// 2 - delete volume
+	vol, err := pool.LookupStorageVolByName(ciName)
+	if err != nil {
+		return nil, err
+	}
+	defer vol.Free()
+	err = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+	if err != nil {
+		return nil, err
+	}
+
+	vol.Free()
+	return dom2, nil
 }

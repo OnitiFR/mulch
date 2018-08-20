@@ -11,8 +11,9 @@ type PhoneCall struct {
 
 // PhoneHomeHubClient describes a client of an PhoneHomeHub
 type PhoneHomeHubClient struct {
-	PhoneCalls chan *PhoneCall
-	Hub        *PhoneHomeHub
+	PhoneCalls      chan *PhoneCall
+	RequestedSecret string
+	Hub             *PhoneHomeHub
 }
 
 // PhoneHomeHub stores our internal channels and our client list
@@ -48,7 +49,9 @@ func NewPhoneHomeHub() *PhoneHomeHub {
 			case call := <-h.broadcast:
 				// fmt.Printf("broadcasting\n")
 				for client := range h.clients {
-					client.PhoneCalls <- call
+					if client.RequestedSecret == "" || client.RequestedSecret == call.SecretUUID {
+						client.PhoneCalls <- call
+					}
 				}
 			}
 
@@ -72,10 +75,11 @@ func (h *PhoneHomeHub) BroadcastPhoneCall(secretUUID string, remoteIP string, cl
 }
 
 // Register will create PhoneHomeHubClient attached to the hub
-func (h *PhoneHomeHub) Register() *PhoneHomeHubClient {
+func (h *PhoneHomeHub) Register(secretUUID string) *PhoneHomeHubClient {
 	client := &PhoneHomeHubClient{
-		PhoneCalls: make(chan *PhoneCall),
-		Hub:        h,
+		PhoneCalls:      make(chan *PhoneCall),
+		RequestedSecret: secretUUID,
+		Hub:             h,
 	}
 	h.register <- client
 	return client

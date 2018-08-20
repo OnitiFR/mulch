@@ -9,7 +9,7 @@
 
 # to speed up things during dev, comment this:
 # cost: Debian = 10s
-package_upgrade: true
+package_upgrade: $_PACKAGE_UPGRADE
 
 # we use this call to confirm Cloud-Init success
 phone_home:
