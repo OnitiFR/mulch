@@ -7,6 +7,9 @@ import (
 
 var configPath = flag.String("path", "./etc/", "configuration path")
 
+// ConfigTrace is a global setting, used by other files
+var ConfigTrace = flag.Bool("trace", false, "show trace message (debug)")
+
 func main() {
 	flag.Parse()
 

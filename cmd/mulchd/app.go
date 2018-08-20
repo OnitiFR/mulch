@@ -62,13 +62,13 @@ func NewApp(config *AppConfig) (*App, error) {
 	app.AddRoutes()
 
 	// dirty log broadcast tests
-	// go func() {
-	// 	for {
-	// 		delay := app.Rand.Intn(12000)
-	// 		time.Sleep(time.Duration(delay) * time.Millisecond)
-	// 		app.Log.Info(fmt.Sprintf("Test %d", delay))
-	// 	}
-	// }()
+	go func() {
+		for {
+			delay := app.Rand.Intn(12000)
+			time.Sleep(time.Duration(delay) * time.Millisecond)
+			app.Log.Tracef("Test %d", delay)
+		}
+	}()
 	// go func() {
 	// 	for {
 	// 		delay := app.Rand.Intn(12000)
