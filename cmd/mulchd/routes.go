@@ -24,4 +24,11 @@ func (app *App) AddRoutes() {
 		IsRestricted: true,
 		Handler:      VMController,
 	}, app)
+
+	AddRoute(&Route{
+		Methods: []string{"GET"},
+		Path:    "/test",
+		Type:    RouteTypeStream,
+		Handler: TestController,
+	}, app)
 }

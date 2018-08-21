@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Xfennec/mulch"
+	"golang.org/x/crypto/ssh"
 )
 
 // PhoneController receive "phone home" requests from instances
@@ -77,4 +78,26 @@ func VMController(req *Request) {
 	after := time.Now()
 
 	req.Stream.Successf("VM '%s' created successfully (%s)", vm.Config.Name, after.Sub(before))
+}
+
+// TestController is a test. Yep.
+func TestController(req *Request) {
+	run := &Run{
+		SSHConn: &SSHConnection{
+			User: "mulch",
+			Host: "10.104.53.91",
+			Port: 22,
+			Auths: []ssh.AuthMethod{
+				PublicKeyFile(req.App.Config.MulchSSHPrivateKey),
+			},
+			Log: req.Stream,
+		},
+		Tasks: []*RunTask{
+			&RunTask{Script: "a1.sh"},
+			&RunTask{Script: "a2.sh"},
+		},
+		Log: req.Stream,
+	}
+	run.Go()
+	req.Stream.Info("exit")
 }
