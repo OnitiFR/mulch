@@ -276,7 +276,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	// wait the vm's phone call
 	for done := false; done == false; {
 		select {
-		case <-time.After(10 * 5 * time.Minute):
+		case <-time.After(5 * time.Minute):
 			dom.Destroy()
 			return nil, errors.New("vm start is too long, something probably went wrong")
 		case <-phone.PhoneCalls:

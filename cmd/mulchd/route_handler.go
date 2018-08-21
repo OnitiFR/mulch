@@ -69,6 +69,7 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 
 	// Note: starting from here, request parameters are no more available
 	w.Header().Set("Transfer-Encoding", "chunked")
+	w.Header().Set("Content-Type", "application/x-ndjson")
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
 
