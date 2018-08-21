@@ -25,9 +25,17 @@ func PhoneController(req *Request) {
 		return
 	}
 
+	instanceAnon := "?"
+	if len(instanceID) > 4 {
+		instanceAnon = instanceID[:4] + "…"
+	}
+
 	// We should lookup the machine and log over there, no?
-	req.App.Log.Infof("phoning: id=%s, ip=%s", instanceID, ip)
+	req.App.Log.Infof("phoning: id=%s, ip=%s", instanceAnon, ip)
 	for key, val := range req.HTTP.Form {
+		if key == "instance_id" {
+			val[0] = instanceAnon
+		}
 		req.App.Log.Tracef(" - %s = '%s'", key, val[0])
 	}
 
