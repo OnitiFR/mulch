@@ -294,8 +294,12 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	// TODO: run prepare scripts
 
 	// all is OK, commit (= no defer) and save vm to DB
+	log.Infof("saving VM in database")
+	err = app.VMDB.Add(vm)
+	if err != nil {
+		return nil, err
+	}
 	commit = true
-	app.VMDB.Add(vm)
 	return vm, nil
 }
 

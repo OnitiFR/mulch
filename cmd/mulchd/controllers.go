@@ -43,7 +43,7 @@ func PhoneController(req *Request) {
 	vm, err := req.App.VMDB.GetBySecretUUID(instanceID)
 	if err != nil {
 		if cloudInit == false {
-			req.App.Log.Warningf("no VM found in the database with this instance_id (%s)", instanceAnon)
+			req.App.Log.Warningf("no VM found (yet?) in database with this instance_id (%s)", instanceAnon)
 		}
 	} else {
 		req.App.Log.Infof("phoning VM is '%s'", vm.Config.Name)
