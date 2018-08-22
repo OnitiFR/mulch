@@ -42,6 +42,7 @@ func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
 	userDataVariables["_SSH_PUBKEY"] = SSHPub
 	userDataVariables["_PHONE_HOME_URL"] = phURL
 	userDataVariables["_PACKAGE_UPGRADE"] = vm.Config.InitUpgrade
+	userDataVariables["_MULCH_SUPER_USER"] = app.Config.MulchSuperUser
 
 	userData, err := cloudInitUserData(userDataTemplate, userDataVariables)
 	if err != nil {

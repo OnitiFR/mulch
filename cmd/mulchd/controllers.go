@@ -84,8 +84,8 @@ func VMController(req *Request) {
 func TestController(req *Request) {
 	run := &Run{
 		SSHConn: &SSHConnection{
-			User: "mulch",
-			Host: "10.104.53.91",
+			User: req.App.Config.MulchSuperUser,
+			Host: "10.104.24.93",
 			Port: 22,
 			Auths: []ssh.AuthMethod{
 				PublicKeyFile(req.App.Config.MulchSSHPrivateKey),
@@ -98,6 +98,9 @@ func TestController(req *Request) {
 		},
 		Log: req.Stream,
 	}
-	run.Go()
+	err := run.Go()
+	if err != nil {
+		req.Stream.Error(err.Error())
+	}
 	req.Stream.Info("exit")
 }

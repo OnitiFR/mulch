@@ -3,6 +3,7 @@
 - "DataBase" ?
 - mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
 - support passphrase for Mulch SSH key
+- move SSK Keys and MulchSuperUser to VM level
 
 - create a specific HTTP muxer for /phone (only listening on mulch's virbr)
 

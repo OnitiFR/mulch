@@ -17,8 +17,8 @@ phone_home:
 
 
 users:
-  - name: mulch
-    gecos: Mulch
+  - name: $_MULCH_SUPER_USER
+    gecos: Mulch Control and Command
     #groups: users
     shell: /bin/bash
     sudo: ['ALL=(ALL) NOPASSWD:ALL']

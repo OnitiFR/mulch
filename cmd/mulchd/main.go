@@ -21,6 +21,7 @@ func main() {
 		VMPrefix:           "mulch-",
 		MulchSSHPrivateKey: "/home/xfennec/.ssh/id_rsa_mulch",
 		MulchSSHPublicKey:  "/home/xfennec/.ssh/id_rsa_mulch.pub",
+		MulchSuperUser:     "mulch-cc",
 
 		configPath: *configPath, // example: /etc/mulch
 	}

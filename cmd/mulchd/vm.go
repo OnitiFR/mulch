@@ -25,6 +25,7 @@ type VM struct {
 	SecretUUID  string
 	App         *App
 	Config      *VMConfig
+	LastIP      string
 }
 
 // VMConfig stores needed parameters for a new VM
@@ -234,9 +235,10 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		select {
 		case <-time.After(10 * time.Minute):
 			return nil, errors.New("vm init is too long, something probably went wrong")
-		case <-phone.PhoneCalls:
+		case call := <-phone.PhoneCalls:
 			phoned = true
 			log.Info("vm phoned home, cloud-init was successful")
+			vm.LastIP = call.RemoteIP
 		case <-time.After(1 * time.Second):
 			log.Trace("checking vm state")
 			state, _, errG := dom.GetState()
@@ -279,15 +281,19 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		case <-time.After(5 * time.Minute):
 			dom.Destroy()
 			return nil, errors.New("vm start is too long, something probably went wrong")
-		case <-phone.PhoneCalls:
+		case call := <-phone.PhoneCalls:
 			done = true
 			log.Info("vm phoned home, boot successful")
+			if call.RemoteIP != vm.LastIP {
+				log.Warningf("vm IP changed since last call (from '%s' to '%s')", vm.LastIP, call.RemoteIP)
+				vm.LastIP = call.RemoteIP
+			}
 		}
 	}
 
 	// TODO: run prepare scripts
 
-	// all is OK, commit (= no defer)
+	// all is OK, commit (= no defer) and save vm to DB
 	commit = true
 	return vm, nil
 }

@@ -22,6 +22,9 @@ type AppConfig struct {
 	MulchSSHPrivateKey string
 	MulchSSHPublicKey  string
 
+	// User (sudoer) created by Mulch in VMs
+	MulchSuperUser string
+
 	// global mulchd configuration path
 	configPath string
 }
