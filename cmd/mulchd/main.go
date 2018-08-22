@@ -28,7 +28,7 @@ func main() {
 
 	app, err := NewApp(config)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("Fatal error: %s", err)
 	}
 	app.Run()
 }

@@ -285,7 +285,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 			done = true
 			log.Info("vm phoned home, boot successful")
 			if call.RemoteIP != vm.LastIP {
-				log.Warningf("vm IP changed since last call (from '%s' to '%s')", vm.LastIP, call.RemoteIP)
+				log.Warningf("vm IP changed since cloud-init call (from '%s' to '%s')", vm.LastIP, call.RemoteIP)
 				vm.LastIP = call.RemoteIP
 			}
 		}
@@ -295,6 +295,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 
 	// all is OK, commit (= no defer) and save vm to DB
 	commit = true
+	app.VMDB.Add(vm)
 	return vm, nil
 }
 

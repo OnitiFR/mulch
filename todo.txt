@@ -5,6 +5,7 @@
 - support passphrase for Mulch SSH key
 - move SSK Keys and MulchSuperUser to VM level
 
+- see if it's possible for a VM to steal an IP from another VM (DoS)
 - create a specific HTTP muxer for /phone (only listening on mulch's virbr)
 
 - check connection and access rights

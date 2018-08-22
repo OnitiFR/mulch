@@ -317,3 +317,22 @@ func (lv *Libvirt) ResizeDisk(disk string, size uint64, log *Log) error {
 	log.Infof("disk '%s' resized to %s", disk, FormatByteSize(int64(size)))
 	return nil
 }
+
+// GetDomainByName returns a domain or nil if domain is not foud.
+// Remember to call dom.Free() after use.
+func (lv *Libvirt) GetDomainByName(domainName string) (*libvirt.Domain, error) {
+	conn, errC := lv.GetConnection()
+	if errC != nil {
+		return nil, errC
+	}
+
+	dom, err := conn.LookupDomainByName(domainName)
+	if err != nil {
+		errDetails := err.(libvirt.Error)
+		if errDetails.Domain == libvirt.FROM_QEMU && errDetails.Code == libvirt.ERR_NO_DOMAIN {
+			return nil, nil // not found, but no error
+		}
+		return nil, err
+	}
+	return dom, nil
+}

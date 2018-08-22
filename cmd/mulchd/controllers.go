@@ -40,6 +40,24 @@ func PhoneController(req *Request) {
 		req.App.Log.Tracef(" - %s = '%s'", key, val[0])
 	}
 
+	vm, err := req.App.VMDB.GetBySecretUUID(instanceID)
+	if err != nil {
+		if cloudInit == false {
+			req.App.Log.Warningf("no VM found in the database with this instance_id (%s)", instanceAnon)
+		}
+	} else {
+		req.App.Log.Infof("phoning VM is '%s'", vm.Config.Name)
+		if vm.LastIP != ip {
+			req.App.Log.Warningf("vm IP changed since last call (from '%s' to '%s')", vm.LastIP, ip)
+
+			vm.LastIP = ip
+			err = req.App.VMDB.Update()
+			if err != nil {
+				req.App.Log.Errorf("unable to update VM DB: %s", err)
+			}
+		}
+	}
+
 	req.App.PhoneHome.BroadcastPhoneCall(instanceID, ip, cloudInit)
 	req.Response.Write([]byte("OK"))
 }

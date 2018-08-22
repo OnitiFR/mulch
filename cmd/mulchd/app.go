@@ -18,6 +18,7 @@ type App struct {
 	Log       *Log
 	Mux       *http.ServeMux
 	Rand      *rand.Rand
+	VMDB      *VMDatabase
 }
 
 // NewApp creates a new application
@@ -38,6 +39,11 @@ func NewApp(config *AppConfig) (*App, error) {
 	}
 	app.Log.Info(fmt.Sprintf("libvirt connection to '%s' OK", config.LibVirtURI))
 	app.Libvirt = lv
+
+	err = app.initVMDB()
+	if err != nil {
+		return nil, err
+	}
 
 	err = app.initSSH()
 	if err != nil {
@@ -83,6 +89,58 @@ func NewApp(config *AppConfig) (*App, error) {
 	// }()
 
 	return app, nil
+}
+
+func (app *App) initVMDB() error {
+	// VMDB is currently only user of DataPath, so we check it here,
+	// but we may move this in the future.
+	if _, err := os.Stat(app.Config.DataPath); os.IsNotExist(err) {
+		return fmt.Errorf("data path (%s) does not exist", app.Config.DataPath)
+	}
+
+	dbPath := app.Config.DataPath + "/mulch-vm.db"
+
+	vmdb, err := NewVMDatabase(dbPath)
+	if err != nil {
+		return err
+	}
+	app.VMDB = vmdb
+
+	// remove old entries from DB
+	// + "rebuild" parts of the VM in the DB (ex : App)
+	vmNames := app.VMDB.GetNames()
+	for _, name := range vmNames {
+		domainName := app.Config.VMPrefix + name
+		dom, err := app.Libvirt.GetDomainByName(domainName)
+		if err != nil {
+			return err
+		}
+		if dom == nil {
+			app.Log.Warningf("VM '%s' does not exists in libvirt, deleting from Mulch DB", name)
+			app.VMDB.Delete(name)
+		} else {
+			vm, err2 := app.VMDB.GetByName(name)
+			uuid, err1 := dom.GetUUIDString()
+			dom.Free()
+
+			if err1 != nil || err2 != nil {
+				app.Log.Errorf("database checking failure: %s / %s", err1, err2)
+			}
+
+			if uuid != vm.LibvirtUUID {
+				app.Log.Warningf("libvirt UUID mismatch for VM '%s'", name)
+			}
+
+			// + "rebuild" parts of the VM in the DB? (ex : App)
+			// we are erasing original values like vm.App.Config that can be useful, no ?
+			vm.App = app
+		}
+	}
+
+	app.Log.Infof("found %d VM(s) in database %s", app.VMDB.Count(), dbPath)
+
+	// detect missing entries from DB?
+	return nil
 }
 
 func (app *App) initSSH() error {
