@@ -9,8 +9,9 @@ import (
 const stringWordSeparators = "[ \t\n,.;:\\(\\)\\[\\]{}'\"/\\\\!\\?<>@#|*+-=]"
 
 // IsValidTokenName returns true is argument use only allowed chars for a token
+// and does not start with a number
 func IsValidTokenName(token string) bool {
-	match, _ := regexp.MatchString("^[A-Za-z0-9_]+$", token)
+	match, _ := regexp.MatchString("^[A-Za-z_][A-Za-z0-9_]*$", token)
 	return match
 }
 

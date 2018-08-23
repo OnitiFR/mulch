@@ -66,11 +66,20 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		return nil, err
 	}
 
+	if !IsValidTokenName(vmConfig.Name) {
+		return nil, fmt.Errorf("name '%s' is invalid (need only letters, numbers and underscore, do not start with a number)", vmConfig.Name)
+	}
+
+	_, err = app.VMDB.GetByName(vmConfig.Name)
+	if err == nil {
+		return nil, fmt.Errorf("VM '%s' already exists in database", vmConfig.Name)
+	}
+
 	domainName := app.Config.VMPrefix + vmConfig.Name
 
 	_, err = conn.LookupDomainByName(domainName)
 	if err == nil {
-		return nil, fmt.Errorf("VM '%s' already exists", vmConfig.Name)
+		return nil, fmt.Errorf("VM '%s' already exists in libvirt", domainName)
 	}
 	errDetails := err.(libvirt.Error)
 	if errDetails.Domain != libvirt.FROM_QEMU || errDetails.Code != libvirt.ERR_NO_DOMAIN {
