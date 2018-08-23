@@ -9,6 +9,7 @@ import (
 
 	"github.com/Xfennec/mulch"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var logCmd = &cobra.Command{
@@ -25,14 +26,13 @@ Examples:
 	Run: func(cmd *cobra.Command, args []string) {
 
 		trace, _ := cmd.Flags().GetBool("trace")
-		host := "http://localhost:8585"
 
 		params := ""
 		if trace == true {
 			params = "?trace=true"
 		}
 
-		req, err := http.NewRequest("GET", host+"/log"+params, nil)
+		req, err := http.NewRequest("GET", viper.GetString("url")+"/log"+params, nil)
 		if err != nil {
 			log.Fatal(err)
 		}
