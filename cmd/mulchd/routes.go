@@ -31,4 +31,10 @@ func (app *App) AddRoutes() {
 		Type:    RouteTypeStream,
 		Handler: TestController,
 	}, app)
+	AddRoute(&Route{
+		Methods: []string{"POST"},
+		Path:    "/test2",
+		Type:    RouteTypeStream,
+		Handler: Test2Controller,
+	}, app)
 }

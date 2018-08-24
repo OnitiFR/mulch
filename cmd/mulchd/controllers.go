@@ -122,3 +122,15 @@ func TestController(req *Request) {
 	}
 	req.Stream.Info("exit")
 }
+
+// Test2Controller is another test.
+func Test2Controller(req *Request) {
+	req.Stream.Trace("test trace")
+	req.Stream.Infof("your version: %s", req.HTTP.PostFormValue("version"))
+	req.Stream.Info("test info")
+	req.Stream.Warning("test warning")
+	req.Stream.Error("test warning")
+
+	req.Stream.Success("test success")
+	req.Stream.Failure("test failure")
+}

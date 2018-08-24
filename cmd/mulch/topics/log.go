@@ -1,13 +1,7 @@
 package topics
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
-
-	"github.com/Xfennec/mulch"
+	"github.com/Xfennec/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -24,39 +18,10 @@ Examples:
   mulch log --trace`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-
 		trace, _ := cmd.Flags().GetBool("trace")
-
-		params := ""
-		if trace == true {
-			params = "?trace=true"
-		}
-
-		req, err := http.NewRequest("GET", viper.GetString("url")+"/log"+params, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if resp.StatusCode != http.StatusOK {
-			log.Fatalf("Status code is not OK: %v (%s)", resp.StatusCode, resp.Status)
-		}
-
-		dec := json.NewDecoder(resp.Body)
-		for {
-			var m mulch.Message
-			err := dec.Decode(&m)
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				log.Fatal(err)
-			}
-			fmt.Printf("%s: %s\n", m.Type, m.Message)
-		}
-
+		api := client.NewAPI(viper.GetString("url"), trace)
+		call := api.NewCall("GET", "/log", map[string]string{})
+		call.Do()
 	},
 }
 

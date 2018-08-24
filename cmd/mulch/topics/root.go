@@ -17,11 +17,9 @@ var globalHome string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "mulch",
-	Short: "mulch CLI client",
+	Short: "Mulch CLI client",
 	Long: `Mulch is a light and practical virtual machine manager, using
-libvirt API. It can share an existing libvirt server or use a
-dedicated one. It features a client-server architecture using
-a REST API. This is the client.`,
+libvirt API. This is the client.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("%s\n\n", cmd.Short)
 		fmt.Printf("%s\n\n", cmd.Long)
@@ -35,14 +33,14 @@ with the name '.mulch.xxx' using one of the following
 formats (replace xxx with the right extension of the list):
  - %s
 
-This config file must provide 'key' setting (with you' API
+This config file must provide 'key' setting (with your API
 key) and probably the mulchd API URL with the 'url' setting.
 
 Example: (~/.mulch.toml)
 url = "http://192.168.10.104"
 key = "gein2xah7keel5Ohpe9ahvaeg8suurae3Chue4riokooJ5Wu"
 
-Note: you can also use environment variables (URL, KEY, …).  
+Note: you can also use environment variables (URL, KEY, …).
 ------
 `, globalHome, strings.Join(viper.SupportedExts, ", "))
 		}
