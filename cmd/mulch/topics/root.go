@@ -5,14 +5,15 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Xfennec/mulch/cmd/mulch/client"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var globalCfgFile string
-var globalCfgFileFound bool
 var globalHome string
+var globalAPI *client.API
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -40,6 +41,7 @@ Example: (~/.mulch.toml)
 url = "http://192.168.10.104"
 key = "gein2xah7keel5Ohpe9ahvaeg8suurae3Chue4riokooJ5Wu"
 
+Available settings: trace, timestamps
 Note: you can also use environment variables (URL, KEY, …).
 ------
 `, globalHome, strings.Join(viper.SupportedExts, ", "))
@@ -62,7 +64,12 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&globalCfgFile, "config", "", "config file (default is $HOME/.mulch.yaml)")
 
 	rootCmd.PersistentFlags().StringP("url", "u", "http://localhost:8585", "mulchd URL (default is http://localhost:8585)")
+	rootCmd.PersistentFlags().BoolP("trace", "t", false, "also show server TRACE messages (debug)")
+	rootCmd.PersistentFlags().BoolP("time", "d", false, "show server timestamps on messages")
+
 	viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url"))
+	viper.BindPFlag("trace", rootCmd.PersistentFlags().Lookup("trace"))
+	viper.BindPFlag("time", rootCmd.PersistentFlags().Lookup("time"))
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -97,4 +104,8 @@ func initConfig() {
 			os.Exit(2)
 		}
 	}
+
+	// Init global vars
+	globalAPI = client.NewAPI(viper.GetString("url"), viper.GetBool("trace"))
+	// fmt.Printf("Server: %s\n", globalAPI.ServerURL)
 }

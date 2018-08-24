@@ -1,9 +1,7 @@
 package topics
 
 import (
-	"github.com/Xfennec/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var logCmd = &cobra.Command{
@@ -18,14 +16,14 @@ Examples:
   mulch log --trace`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		trace, _ := cmd.Flags().GetBool("trace")
-		api := client.NewAPI(viper.GetString("url"), trace)
-		call := api.NewCall("GET", "/log", map[string]string{})
+		// trace, _ := cmd.Flags().GetBool("trace")
+		// api := client.NewAPI(viper.GetString("url"), viper.GetBool("trace"))
+		call := globalAPI.NewCall("GET", "/log", map[string]string{})
 		call.Do()
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(logCmd)
-	logCmd.Flags().BoolP("trace", "t", false, "also show TRACE messages (debug)")
+	// logCmd.Flags().BoolP("trace", "t", false, "also show TRACE messages (debug)")
 }

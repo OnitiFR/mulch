@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/Xfennec/mulch"
+	"github.com/spf13/viper"
 )
 
 // API describes the basic elements to call the API
@@ -110,7 +111,11 @@ func (call *APICall) Do() {
 			}
 			log.Fatal(err)
 		}
-		fmt.Printf("%s: %s\n", m.Type, m.Message)
+		if viper.GetBool("time") {
+			fmt.Printf("%s %s: %s\n", m.Time, m.Type, m.Message)
+		} else {
+			fmt.Printf("%s: %s\n", m.Type, m.Message)
+		}
 	}
 
 }
