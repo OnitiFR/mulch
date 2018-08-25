@@ -59,6 +59,13 @@ func cleanURL(urlIn string) (string, error) {
 	return urlObj.String(), nil
 }
 
+// AddFile to the request (upload)
+func (call *APICall) AddFile(filename string) error {
+	// check file readability
+	// store filename (or content?)
+	return nil
+}
+
 // Do the actual API call
 func (call *APICall) Do() {
 	method := strings.ToUpper(call.Method)

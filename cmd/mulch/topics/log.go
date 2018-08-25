@@ -6,7 +6,7 @@ import (
 
 var logCmd = &cobra.Command{
 	Use:   "log",
-	Short: "display server logs",
+	Short: "Display server logs",
 	Long: `Display all logs from the server. It may be useful to monitor
 server activity, or if you need to resume VM creation after exiting
 the client. All logs from all targets ("vm") are displayed.

@@ -24,7 +24,7 @@ libvirt API. This is the client.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("%s\n\n", cmd.Short)
 		fmt.Printf("%s\n\n", cmd.Long)
-
+		fmt.Printf("Use --help to list commands and options.\n\n")
 		cfgFile := viper.ConfigFileUsed()
 		if cfgFile != "" {
 			fmt.Printf("configuration file: '%s'\n", cfgFile)
@@ -61,9 +61,9 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&globalCfgFile, "config", "", "config file (default is $HOME/.mulch.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&globalCfgFile, "config", "c", "", "config file (default is $HOME/.mulch.yaml)")
 
-	rootCmd.PersistentFlags().StringP("url", "u", "http://localhost:8585", "mulchd URL (default is http://localhost:8585)")
+	rootCmd.PersistentFlags().StringP("url", "u", "http://localhost:8585", "mulchd URL")
 	rootCmd.PersistentFlags().BoolP("trace", "t", false, "also show server TRACE messages (debug)")
 	rootCmd.PersistentFlags().BoolP("time", "d", false, "show server timestamps on messages")
 

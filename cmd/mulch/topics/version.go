@@ -10,7 +10,7 @@ import (
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "display version",
+	Short: "Display versions",
 	Long: `Display client and protocol versions. You can also add
 server version to the result.
 
