@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/Xfennec/mulch"
+	"github.com/fatih/color"
 	"github.com/spf13/viper"
 )
 
@@ -72,7 +75,8 @@ func (call *APICall) Do() {
 	if call.api.Trace == true {
 		data.Add("trace", "true")
 	}
-	data.Add("version", VERSION)
+	data.Add("version", Version)
+	data.Add("protocol", strconv.Itoa(ProtocolVersion))
 
 	var req *http.Request
 
@@ -98,10 +102,35 @@ func (call *APICall) Do() {
 		log.Fatal(err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		log.Fatalf("Status code is not OK: %v (%s)", resp.StatusCode, resp.Status)
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Fatalf("Status code is not OK: %v (%s)\n%s",
+			resp.StatusCode,
+			resp.Status,
+			string(body),
+		)
 	}
 
-	dec := json.NewDecoder(resp.Body)
+	mime := resp.Header.Get("Content-Type")
+
+	switch mime {
+	case "application/x-ndjson":
+		printJSONStream(resp.Body)
+	case "text/plain":
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Print(string(body))
+	default:
+		log.Fatalf("unsupported content type '%s'", mime)
+	}
+}
+
+func printJSONStream(body io.ReadCloser) {
+	dec := json.NewDecoder(body)
 	for {
 		var m mulch.Message
 		err := dec.Decode(&m)
@@ -111,11 +140,39 @@ func (call *APICall) Do() {
 			}
 			log.Fatal(err)
 		}
-		if viper.GetBool("time") {
-			fmt.Printf("%s %s: %s\n", m.Time, m.Type, m.Message)
-		} else {
-			fmt.Printf("%s: %s\n", m.Type, m.Message)
-		}
-	}
 
+		// the longest types are 7 chars wide
+		mtype := fmt.Sprintf("% -7s", m.Type)
+		content := m.Message
+
+		switch m.Type {
+		case mulch.MessageTrace:
+			c := color.New(color.FgWhite).SprintFunc()
+			content = c(content)
+			mtype = c(mtype)
+		case mulch.MessageInfo:
+		case mulch.MessageWarning:
+			c := color.New(color.FgYellow).SprintFunc()
+			content = c(content)
+			mtype = c(mtype)
+		case mulch.MessageError:
+			c := color.New(color.FgRed).SprintFunc()
+			content = c(content)
+			mtype = c(mtype)
+		case mulch.MessageFailure:
+			c := color.New(color.FgHiRed).SprintFunc()
+			content = c(content)
+			mtype = c(mtype)
+		case mulch.MessageSuccess:
+			c := color.New(color.FgHiGreen).SprintFunc()
+			content = c(content)
+			mtype = c(mtype)
+		}
+
+		time := ""
+		if viper.GetBool("time") {
+			time = m.Time.Format("15:04:05") + " "
+		}
+		fmt.Printf("%s%s: %s\n", time, mtype, content)
+	}
 }

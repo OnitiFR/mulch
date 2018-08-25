@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -134,12 +136,25 @@ func AddRoute(route *Route, app *App) error {
 	app.Mux.HandleFunc(route.Path, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 
+		ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+		app.Log.Tracef("API call: %s %s %s", ip, r.Method, route.Path)
+
+		clientProto, _ := strconv.Atoi(r.FormValue("protocol"))
+		if clientProto != ProtocolVersion {
+			errMsg := fmt.Sprintf("Protocol mismatch, server requires version %d", ProtocolVersion)
+			app.Log.Errorf("%d: %s", 400, errMsg)
+			http.Error(w, errMsg, 400)
+			return
+		}
+
 		if route.IsRestricted {
 			// TODO: API key checking (or a better challenge-based auth)
 		}
 
 		if !isRouteMethodAllowed(r.Method, route.Methods) {
-			http.Error(w, "Invalid request method.", 405)
+			errMsg := fmt.Sprintf("Method was %s", r.Method)
+			app.Log.Errorf("%d: %s", 405)
+			http.Error(w, errMsg, 405)
 			return
 		}
 

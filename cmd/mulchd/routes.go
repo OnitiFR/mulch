@@ -26,11 +26,20 @@ func (app *App) AddRoutes() {
 	}, app)
 
 	AddRoute(&Route{
+		Methods:      []string{"GET"},
+		Path:         "/version",
+		Type:         RouteTypeCustom,
+		IsRestricted: true,
+		Handler:      VersionController,
+	}, app)
+
+	AddRoute(&Route{
 		Methods: []string{"GET"},
 		Path:    "/test",
 		Type:    RouteTypeStream,
 		Handler: TestController,
 	}, app)
+
 	AddRoute(&Route{
 		Methods: []string{"POST"},
 		Path:    "/test2",

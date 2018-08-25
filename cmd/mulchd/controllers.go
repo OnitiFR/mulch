@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/Xfennec/mulch"
@@ -96,6 +98,13 @@ func VMController(req *Request) {
 	after := time.Now()
 
 	req.Stream.Successf("VM '%s' created successfully (%s)", vm.Config.Name, after.Sub(before))
+}
+
+// VersionController return versions
+func VersionController(req *Request) {
+	req.Response.Header().Set("Content-Type", "text/plain")
+	req.Response.Write([]byte(fmt.Sprintf("server version: %s\n", Version)))
+	req.Response.Write([]byte(fmt.Sprintf("server protocol: %s\n", strconv.Itoa(ProtocolVersion))))
 }
 
 // TestController is a test. Yep.
