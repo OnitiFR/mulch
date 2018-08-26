@@ -1,6 +1,8 @@
 package topics
 
 import (
+	"log"
+
 	"github.com/spf13/cobra"
 )
 
@@ -15,11 +17,12 @@ xxx
 `,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		// fmt.Printf("vmCreate called with %s\n", args[0])
 		call := globalAPI.NewCall("PUT", "/vm", map[string]string{})
-		call.AddFile(args[0])
+		err := call.AddFile("config", args[0])
+		if err != nil {
+			log.Fatal(err)
+		}
 		call.Do()
-
 	},
 }
 

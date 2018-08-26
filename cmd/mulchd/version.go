@@ -4,4 +4,4 @@ package main
 const Version = "0.1"
 
 // ProtocolVersion implemented by this server
-const ProtocolVersion = 2
+const ProtocolVersion = 1

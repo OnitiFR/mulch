@@ -24,7 +24,8 @@ type Route struct {
 	Methods      []string
 	Path         string
 	Type         int
-	IsRestricted bool
+	Public       bool
+	NoProtoCheck bool
 	Handler      func(*Request)
 }
 
@@ -139,15 +140,17 @@ func AddRoute(route *Route, app *App) error {
 		ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 		app.Log.Tracef("API call: %s %s %s", ip, r.Method, route.Path)
 
-		clientProto, _ := strconv.Atoi(r.FormValue("protocol"))
-		if clientProto != ProtocolVersion {
-			errMsg := fmt.Sprintf("Protocol mismatch, server requires version %d", ProtocolVersion)
-			app.Log.Errorf("%d: %s", 400, errMsg)
-			http.Error(w, errMsg, 400)
-			return
+		if route.NoProtoCheck == false {
+			clientProto, _ := strconv.Atoi(r.FormValue("protocol"))
+			if clientProto != ProtocolVersion {
+				errMsg := fmt.Sprintf("Protocol mismatch, server requires version %d", ProtocolVersion)
+				app.Log.Errorf("%d: %s", 400, errMsg)
+				http.Error(w, errMsg, 400)
+				return
+			}
 		}
 
-		if route.IsRestricted {
+		if !route.Public {
 			// TODO: API key checking (or a better challenge-based auth)
 		}
 
