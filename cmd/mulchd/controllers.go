@@ -11,6 +11,7 @@ import (
 )
 
 // PhoneController receive "phone home" requests from instances
+// (mulch client is not supposed to call this)
 func PhoneController(req *Request) {
 	instanceID := req.HTTP.PostFormValue("instance_id")
 	ip, _, _ := net.SplitHostPort(req.HTTP.RemoteAddr)
@@ -72,9 +73,8 @@ func LogController(req *Request) {
 	select {}
 }
 
-// VMController is currently a test
-func VMController(req *Request) {
-
+// NewVMController creates a new VM
+func NewVMController(req *Request) {
 	configFile, header, err := req.HTTP.FormFile("config")
 	if err != nil {
 		req.Stream.Failuref("'config' file field: %s", err)

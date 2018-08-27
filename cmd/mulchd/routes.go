@@ -22,7 +22,7 @@ func (app *App) AddRoutes() {
 		Methods: []string{"PUT"},
 		Path:    "/vm",
 		Type:    RouteTypeStream,
-		Handler: VMController,
+		Handler: NewVMController,
 	}, app)
 
 	AddRoute(&Route{
