@@ -245,7 +245,7 @@ func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFi
 		return err
 	}
 
-	log.Infof("disk '%s' created from seed '%s' (transfered %s)", disk, seed, (datasize.ByteSize(bytesWritten) * datasize.B).String())
+	log.Infof("disk '%s' created from seed '%s' (transfered %s)", disk, seed, (datasize.ByteSize(bytesWritten) * datasize.B).HR())
 	return nil
 }
 
@@ -292,7 +292,7 @@ func (lv *Libvirt) UploadFileToLibvirt(pool *libvirt.StoragePool, poolXML *libvi
 		return err
 	}
 
-	log.Infof("upload '%s' to storage pool '%s' as '%s' (transfered %s)", localSourceFile, poolXML.Name, asName, (datasize.ByteSize(bytesWritten) * datasize.B).String())
+	log.Infof("upload '%s' to storage pool '%s' as '%s' (transfered %s)", localSourceFile, poolXML.Name, asName, (datasize.ByteSize(bytesWritten) * datasize.B).HR())
 	return nil
 }
 
@@ -315,7 +315,7 @@ func (lv *Libvirt) ResizeDisk(disk string, size uint64, log *Log) error {
 	if err != nil {
 		return err
 	}
-	log.Infof("disk '%s' resized to %s", disk, (datasize.ByteSize(size) * datasize.B).String())
+	log.Infof("disk '%s' resized to %s", disk, (datasize.ByteSize(size) * datasize.B).HR())
 	return nil
 }
 
