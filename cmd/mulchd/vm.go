@@ -28,20 +28,6 @@ type VM struct {
 	LastIP      string
 }
 
-// VMConfig stores needed parameters for a new VM
-type VMConfig struct {
-	Name        string
-	Hostname    string
-	SeedImage   string
-	InitUpgrade bool
-	DiskSize    uint64
-	RAMSize     uint64
-	CPUCount    int
-	// + prepare scripts
-	// + save scripts
-	// + restore scripts
-}
-
 // NewVM builds a new virtual machine from config
 // TODO: this function is HUUUGE and needs to be splitted. It's tricky
 // because there's a "transaction" here.

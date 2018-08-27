@@ -8,6 +8,20 @@ import (
 	"github.com/c2h5oh/datasize"
 )
 
+// VMConfig stores needed parameters for a new VM
+type VMConfig struct {
+	Name        string
+	Hostname    string
+	SeedImage   string
+	InitUpgrade bool
+	DiskSize    uint64
+	RAMSize     uint64
+	CPUCount    int
+	// + prepare scripts
+	// + save scripts
+	// + restore scripts
+}
+
 type tomlVMConfig struct {
 	Name        string
 	Hostname    string

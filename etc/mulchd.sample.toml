@@ -1,0 +1,31 @@
+# Sample configuration file for Mulch server (mulchd)
+# Values here are defaults
+
+# Listen address (no IP = all interfaces)
+listen = ":8585"
+
+# URI libvirt will use to contact the hypervisor
+libvirt_uri = "qemu:///system"
+
+# Storage path for libvirt disk images and "seeds" (Linux distributions)
+# real world example: /srv/mulch
+storage_path = "./var/storage"
+
+# Mulch server (small) databases
+# real world example: /var/lib/mulch
+data_path = "./var/data"
+
+# Name prefix for Mulch VMs in libirt (so we don't collide with
+# some existing VMs)
+vm_prefix = "mulch-"
+
+# This user will be created with VMs as a sudoers, and used for
+# control and command of the VM by Mulch
+mulch_super_user = "mulch-cc"
+
+# SSH key for 'mulch_super_user'
+# No passphrase support yet
+# tip : ssh-keygen -b 4096 -C "mulch-cc@vms" -N "" -f path_to_new_key/mulch
+# Mulch may generate by itself in the future, we'll see.
+mulch_ssh_private_key = ""
+mulch_ssh_public_key = ""

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"path"
 )
 
 var configPath = flag.String("path", "./etc/", "configuration path")
@@ -12,18 +13,11 @@ var ConfigTrace = flag.Bool("trace", false, "show trace message (debug)")
 
 func main() {
 	flag.Parse()
+	configFile := path.Clean(*configPath + "/mulchd.toml")
 
-	config := &AppConfig{
-		Listen:             ":8585",
-		LibVirtURI:         "qemu:///system",
-		StoragePath:        "./var/storage", // example: /srv/mulch
-		DataPath:           "./var/data",    // example: /var/lib/mulch
-		VMPrefix:           "mulch-",
-		MulchSSHPrivateKey: "/home/xfennec/.ssh/id_rsa_mulch",
-		MulchSSHPublicKey:  "/home/xfennec/.ssh/id_rsa_mulch.pub",
-		MulchSuperUser:     "mulch-cc",
-
-		configPath: *configPath, // example: /etc/mulch
+	config, err := NewAppConfigFromTomlFile(configFile)
+	if err != nil {
+		log.Fatalf("config '%s': %s", configFile, err)
 	}
 
 	app, err := NewApp(config)
