@@ -31,3 +31,14 @@ func NewVMController(req *server.Request) {
 
 	req.Stream.Successf("VM '%s' created successfully (%s)", vm.Config.Name, after.Sub(before))
 }
+
+// ListVMsController list VMs
+func ListVMsController(req *server.Request) {
+	vmNames := req.App.VMDB.GetNames()
+	for _, vmName := range vmNames {
+		req.Response.Header().Set("Content-Type", "text/plain")
+		req.Responsef("bla: %s", vmName)
+	}
+	// http.Error(req.Response, errMsg, 500)
+
+}

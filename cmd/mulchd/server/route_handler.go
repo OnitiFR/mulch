@@ -188,3 +188,8 @@ func (req *Request) SetTarget(target string) {
 	req.Stream.SetTarget(target)
 	req.HubClient.SetTarget(target)
 }
+
+// Responsef is a Printf lile helper for req.Response.Write
+func (req *Request) Responsef(format string, args ...interface{}) {
+	req.Response.Write([]byte(fmt.Sprintf(format, args...)))
+}

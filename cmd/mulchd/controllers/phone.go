@@ -21,7 +21,7 @@ func PhoneController(req *server.Request) {
 
 	if instanceID == "" {
 		req.App.Log.Errorf("invalid phone call from %s (no or empty instance_id)", ip)
-		req.Response.Write([]byte("FAILED"))
+		req.Responsef("FAILED\n")
 		return
 	}
 
@@ -58,5 +58,5 @@ func PhoneController(req *server.Request) {
 	}
 
 	req.App.PhoneHome.BroadcastPhoneCall(instanceID, ip, cloudInit)
-	req.Response.Write([]byte("OK"))
+	req.Responsef("OK\n")
 }
