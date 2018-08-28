@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Xfennec/mulch"
+	"github.com/Xfennec/mulch/common"
 	"github.com/fatih/color"
 )
 
@@ -192,7 +192,7 @@ func (call *APICall) Do() {
 func printJSONStream(body io.ReadCloser, call *APICall) {
 	dec := json.NewDecoder(body)
 	for {
-		var m mulch.Message
+		var m common.Message
 		err := dec.Decode(&m)
 		if err != nil {
 			if err == io.EOF {
@@ -201,7 +201,7 @@ func printJSONStream(body io.ReadCloser, call *APICall) {
 			log.Fatal(err)
 		}
 
-		if m.Type == mulch.MessageNoop {
+		if m.Type == common.MessageNoop {
 			continue
 		}
 
@@ -210,24 +210,24 @@ func printJSONStream(body io.ReadCloser, call *APICall) {
 		content := m.Message
 
 		switch m.Type {
-		case mulch.MessageTrace:
+		case common.MessageTrace:
 			c := color.New(color.FgWhite).SprintFunc()
 			content = c(content)
 			mtype = c(mtype)
-		case mulch.MessageInfo:
-		case mulch.MessageWarning:
+		case common.MessageInfo:
+		case common.MessageWarning:
 			c := color.New(color.FgYellow).SprintFunc()
 			content = c(content)
 			mtype = c(mtype)
-		case mulch.MessageError:
+		case common.MessageError:
 			c := color.New(color.FgRed).SprintFunc()
 			content = c(content)
 			mtype = c(mtype)
-		case mulch.MessageFailure:
+		case common.MessageFailure:
 			c := color.New(color.FgHiRed).SprintFunc()
 			content = c(content)
 			mtype = c(mtype)
-		case mulch.MessageSuccess:
+		case common.MessageSuccess:
 			c := color.New(color.FgHiGreen).SprintFunc()
 			content = c(content)
 			mtype = c(mtype)

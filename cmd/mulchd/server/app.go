@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"fmt"
@@ -22,12 +22,12 @@ type App struct {
 }
 
 // NewApp creates a new application
-func NewApp(config *AppConfig) (*App, error) {
+func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app := &App{
 		Config: config,
 	}
 
-	app.Hub = NewHub()
+	app.Hub = NewHub(trace)
 	go app.Hub.Run()
 
 	app.Log = NewLog("", app.Hub)
@@ -69,7 +69,7 @@ func NewApp(config *AppConfig) (*App, error) {
 	// do all this in some sort of Setup()?
 	// check storage & network
 	// get storage & network? (or do it each time it's needed ?)
-	app.AddRoutes()
+	// app.AddRoutes()
 
 	// dirty log broadcast tests
 	// go func() {

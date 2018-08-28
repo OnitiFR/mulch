@@ -1,4 +1,4 @@
-package main
+package server
 
 // Version of the server
 const Version = "0.1"

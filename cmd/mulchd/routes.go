@@ -1,48 +1,51 @@
 package main
 
+import "github.com/Xfennec/mulch/cmd/mulchd/server"
+import "github.com/Xfennec/mulch/cmd/mulchd/controllers"
+
 // AddRoutes defines all API routes for the application
-func (app *App) AddRoutes() {
-	AddRoute(&Route{
+func AddRoutes(app *server.App) {
+	server.AddRoute(&server.Route{
 		Methods:      []string{"POST"},
 		Path:         "/phone",
-		Type:         RouteTypeCustom,
+		Type:         server.RouteTypeCustom,
 		Public:       true,
 		NoProtoCheck: true,
-		Handler:      PhoneController,
+		Handler:      controllers.PhoneController,
 	}, app)
 
-	AddRoute(&Route{
+	server.AddRoute(&server.Route{
 		Methods: []string{"GET"},
 		Path:    "/log",
-		Type:    RouteTypeStream,
-		Handler: LogController,
+		Type:    server.RouteTypeStream,
+		Handler: controllers.LogController,
 	}, app)
 
-	AddRoute(&Route{
+	server.AddRoute(&server.Route{
 		Methods: []string{"PUT"},
 		Path:    "/vm",
-		Type:    RouteTypeStream,
-		Handler: NewVMController,
+		Type:    server.RouteTypeStream,
+		Handler: controllers.NewVMController,
 	}, app)
 
-	AddRoute(&Route{
+	server.AddRoute(&server.Route{
 		Methods: []string{"GET"},
 		Path:    "/version",
-		Type:    RouteTypeCustom,
-		Handler: VersionController,
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.VersionController,
 	}, app)
 
-	AddRoute(&Route{
+	server.AddRoute(&server.Route{
 		Methods: []string{"GET"},
 		Path:    "/test",
-		Type:    RouteTypeStream,
-		Handler: TestController,
+		Type:    server.RouteTypeStream,
+		Handler: controllers.TestController,
 	}, app)
 
-	AddRoute(&Route{
+	server.AddRoute(&server.Route{
 		Methods: []string{"POST"},
 		Path:    "/test2",
-		Type:    RouteTypeStream,
-		Handler: Test2Controller,
+		Type:    server.RouteTypeStream,
+		Handler: controllers.Test2Controller,
 	}, app)
 }

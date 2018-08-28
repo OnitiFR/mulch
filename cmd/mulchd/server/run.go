@@ -1,4 +1,4 @@
-package main
+package server
 
 // RunTask is a task (script) for a Run
 type RunTask struct {

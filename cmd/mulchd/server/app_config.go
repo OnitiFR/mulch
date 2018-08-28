@@ -1,7 +1,8 @@
-package main
+package server
 
 import (
 	"errors"
+	"path"
 
 	"github.com/BurntSushi/toml"
 )
@@ -46,10 +47,15 @@ type tomlAppConfig struct {
 	MulchSuperUser     string `toml:"mulch_super_user"`
 }
 
-// NewAppConfigFromTomlFile return a AppConfig (from given filename)
-func NewAppConfigFromTomlFile(filename string) (*AppConfig, error) {
+// NewAppConfigFromTomlFile return a AppConfig using
+// mulchd.toml config file in the given configPath
+func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 
-	appConfig := &AppConfig{}
+	filename := path.Clean(configPath + "/mulchd.toml")
+
+	appConfig := &AppConfig{
+		configPath: configPath,
+	}
 
 	// defaults (if not in the file)
 	tConfig := &tomlAppConfig{

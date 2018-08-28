@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Xfennec/mulch"
+	"github.com/Xfennec/mulch/common"
 )
 
 // Route types
@@ -105,7 +105,7 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 		// TODO: make timeout configurable
 		case <-time.After(10 * time.Second):
 			// Keep-alive
-			m := mulch.NewMessage(mulch.MessageNoop, mulch.MessageNoTarget, "")
+			m := common.NewMessage(common.MessageNoop, common.MessageNoTarget, "")
 
 			err := enc.Encode(m)
 			if err != nil {

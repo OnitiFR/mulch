@@ -1,21 +1,22 @@
-package main
+package server
 
 import (
-	"github.com/Xfennec/mulch"
+	"github.com/Xfennec/mulch/common"
 )
 
 // Hub structure allows multiple clients to receive messages
 // from mulchd.
 type Hub struct {
 	clients    map[*HubClient]bool
-	broadcast  chan *mulch.Message
+	broadcast  chan *common.Message
 	register   chan *HubClient
 	unregister chan *HubClient
+	trace      bool
 }
 
 // HubClient describes a client of a Hub
 type HubClient struct {
-	Messages   chan *mulch.Message
+	Messages   chan *common.Message
 	clientInfo string
 	target     string
 	trace      bool
@@ -23,12 +24,13 @@ type HubClient struct {
 }
 
 // NewHub creates a new Hub
-func NewHub() *Hub {
+func NewHub(trace bool) *Hub {
 	return &Hub{
 		clients:    make(map[*HubClient]bool),
-		broadcast:  make(chan *mulch.Message),
+		broadcast:  make(chan *common.Message),
 		register:   make(chan *HubClient),
 		unregister: make(chan *HubClient),
+		trace:      trace,
 	}
 }
 
@@ -49,11 +51,11 @@ func (h *Hub) Run() {
 			// fmt.Printf("broadcasting\n")
 			for client := range h.clients {
 				if client.target != message.Target &&
-					message.Target != mulch.MessageNoTarget &&
-					client.target != mulch.MessageAllTargets {
+					message.Target != common.MessageNoTarget &&
+					client.target != common.MessageAllTargets {
 					continue // not for this client
 				}
-				if message.Type == mulch.MessageTrace && client.trace == false {
+				if message.Type == common.MessageTrace && client.trace == false {
 					continue // this client don't want traces
 				}
 
@@ -69,16 +71,16 @@ func (h *Hub) Run() {
 
 // Broadcast send a message to all clients of the Hub
 // (if the target matches)
-func (h *Hub) Broadcast(message *mulch.Message) {
+func (h *Hub) Broadcast(message *common.Message) {
 	h.broadcast <- message
 }
 
 // Register a new client of the Hub
 // clientInfo is not currently used but is supposed to differentiate
-// the client. Target may be mulch.MessageNoTarget.
+// the client. Target may be common.MessageNoTarget.
 func (h *Hub) Register(info string, target string, trace bool) *HubClient {
 	client := &HubClient{
-		Messages:   make(chan *mulch.Message),
+		Messages:   make(chan *common.Message),
 		clientInfo: info,
 		target:     target,
 		trace:      trace,

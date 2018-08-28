@@ -1,10 +1,11 @@
-package main
+package server
 
 import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/Xfennec/mulch/cmd/mulchd/volumes"
 	"github.com/c2h5oh/datasize"
 	"github.com/libvirt/libvirt-go"
 	"github.com/libvirt/libvirt-go-xml"
@@ -235,7 +236,7 @@ func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFi
 	}
 	defer volDst.Free()
 
-	vt, err := NewVolumeTransfert(conn, volSrc, conn, volDst)
+	vt, err := volumes.NewVolumeTransfert(conn, volSrc, conn, volDst)
 	if err != nil {
 		return err
 	}
@@ -282,7 +283,7 @@ func (lv *Libvirt) UploadFileToLibvirt(pool *libvirt.StoragePool, poolXML *libvi
 	}
 	defer volDst.Free()
 
-	vu, err := NewVolumeUpload(localSourceFile, conn, volDst)
+	vu, err := volumes.NewVolumeUpload(localSourceFile, conn, volDst)
 	if err != nil {
 		return err
 	}

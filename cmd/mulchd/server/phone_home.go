@@ -1,4 +1,4 @@
-package main
+package server
 
 // This Hub is derived from the Log hub (hub.go)
 
