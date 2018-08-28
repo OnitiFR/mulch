@@ -17,13 +17,13 @@ import (
 
 	"github.com/Xfennec/mulch"
 	"github.com/fatih/color"
-	"github.com/spf13/viper"
 )
 
 // API describes the basic elements to call the API
 type API struct {
 	ServerURL string
 	Trace     bool
+	Time      bool
 }
 
 // APICall describes a call to the API
@@ -36,10 +36,11 @@ type APICall struct {
 }
 
 // NewAPI create a new API instance
-func NewAPI(server string, trace bool) *API {
+func NewAPI(server string, trace bool, time bool) *API {
 	return &API{
 		ServerURL: server,
 		Trace:     trace,
+		Time:      time,
 	}
 }
 
@@ -176,7 +177,7 @@ func (call *APICall) Do() {
 
 	switch mime {
 	case "application/x-ndjson":
-		printJSONStream(resp.Body)
+		printJSONStream(resp.Body, call)
 	case "text/plain":
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
@@ -188,7 +189,7 @@ func (call *APICall) Do() {
 	}
 }
 
-func printJSONStream(body io.ReadCloser) {
+func printJSONStream(body io.ReadCloser, call *APICall) {
 	dec := json.NewDecoder(body)
 	for {
 		var m mulch.Message
@@ -233,7 +234,7 @@ func printJSONStream(body io.ReadCloser) {
 		}
 
 		time := ""
-		if viper.GetBool("time") {
+		if call.api.Time {
 			time = m.Time.Format("15:04:05") + " "
 		}
 		fmt.Printf("%s%s: %s\n", time, mtype, content)

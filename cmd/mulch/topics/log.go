@@ -17,7 +17,6 @@ Examples:
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		// trace, _ := cmd.Flags().GetBool("trace")
-		// api := client.NewAPI(viper.GetString("url"), viper.GetBool("trace"))
 		call := globalAPI.NewCall("GET", "/log", map[string]string{})
 		call.Do()
 	},

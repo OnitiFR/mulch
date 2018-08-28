@@ -2,18 +2,20 @@ package topics
 
 import (
 	"fmt"
+	"log"
 	"os"
-	"strings"
+	"path"
 
 	"github.com/Xfennec/mulch/cmd/mulch/client"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-var globalCfgFile string
 var globalHome string
+var globalCfgFile string
+
 var globalAPI *client.API
+var globalConfig *RootConfig
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -25,35 +27,38 @@ libvirt API. This is the client.`,
 		fmt.Printf("%s\n\n", cmd.Short)
 		fmt.Printf("%s\n\n", cmd.Long)
 		fmt.Printf("Use --help to list commands and options.\n\n")
-		cfgFile := viper.ConfigFileUsed()
-		if cfgFile != "" {
-			fmt.Printf("configuration file: '%s'\n", cfgFile)
+		if globalConfig.ConfigFile != "" {
+			fmt.Printf("configuration file: '%s'\n", globalConfig.ConfigFile)
 		} else {
-			fmt.Printf(`No configuration file found, you can create one in '%s'
-with the name '.mulch.xxx' using one of the following
-formats (replace xxx with the right extension of the list):
- - %s
+			fmt.Printf(`No configuration file found (%s).
 
 This config file must provide 'key' setting (with your API
 key) and probably the mulchd API URL with the 'url' setting.
 
-Example: (~/.mulch.toml)
-url = "http://192.168.10.104"
+Example:
+url = "http://192.168.10.104:8585"
 key = "gein2xah7keel5Ohpe9ahvaeg8suurae3Chue4riokooJ5Wu"
 
 Available settings: trace, timestamps
 Note: you can also use environment variables (URL, KEY, …).
 ------
-`, globalHome, strings.Join(viper.SupportedExts, ", "))
+`, path.Clean(globalHome+"/.mulch.toml"))
 		}
-		fmt.Printf("current URL to mulchd: %s\n", viper.GetString("url"))
+		fmt.Printf("current URL to mulchd: %s\n", globalConfig.URL)
 	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	var err error
+	globalHome, err = homedir.Dir()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	if err = rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
@@ -66,46 +71,25 @@ func init() {
 	rootCmd.PersistentFlags().StringP("url", "u", "http://localhost:8585", "mulchd URL")
 	rootCmd.PersistentFlags().BoolP("trace", "t", false, "also show server TRACE messages (debug)")
 	rootCmd.PersistentFlags().BoolP("time", "d", false, "show server timestamps on messages")
-
-	viper.BindPFlag("url", rootCmd.PersistentFlags().Lookup("url"))
-	viper.BindPFlag("trace", rootCmd.PersistentFlags().Lookup("trace"))
-	viper.BindPFlag("time", rootCmd.PersistentFlags().Lookup("time"))
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if globalCfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(globalCfgFile)
-	} else {
-		// Find home directory.
-		var err error
-		globalHome, err = homedir.Dir()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(1)
-		}
 
-		// Search config in home directory with name ".mulch" (without extension).
-		viper.AddConfigPath(globalHome)
-		viper.SetConfigName(".mulch")
+	cfgFile := globalCfgFile
+	if cfgFile == "" {
+		cfgFile = path.Clean(globalHome + "/.mulch.toml")
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		// fmt.Println("Using config file:", viper.ConfigFileUsed())
-	} else {
-		_, ok := err.(viper.ConfigFileNotFoundError)
-		if !ok {
-			fmt.Fprintf(os.Stderr, "Error while eading '%s':\n", viper.ConfigFileUsed())
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(2)
-		}
+	var err error
+	globalConfig, err = NewRootConfig(cfgFile)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	// Init global vars
-	globalAPI = client.NewAPI(viper.GetString("url"), viper.GetBool("trace"))
-	// fmt.Printf("Server: %s\n", globalAPI.ServerURL)
+	globalAPI = client.NewAPI(
+		globalConfig.URL,
+		globalConfig.Trace,
+		globalConfig.Time,
+	)
 }
