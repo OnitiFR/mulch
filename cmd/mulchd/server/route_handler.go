@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -21,12 +22,15 @@ const (
 
 // Route describes a route to a handler
 type Route struct {
-	Methods      []string
-	Path         string
+	Route        string
 	Type         int
 	Public       bool
 	NoProtoCheck bool
 	Handler      func(*Request)
+
+	// decomposed Route
+	method string
+	path   string
 }
 
 // Request describes a request and allows to build a response
@@ -127,59 +131,112 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 // AddRoute adds a new route to the muxer
 func (app *App) AddRoute(route *Route) error {
 
-	if route.Path == "" {
-		return errors.New("route path is not set")
+	if route.Route == "" {
+		return errors.New("field Route is not set")
 	}
 
-	// remove * (if any) from route.Path end
-	route.Path = strings.TrimRight(route.Path, "*")
+	parts := strings.Split(route.Route, " ")
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid Route '%s'", route.Route)
+	}
 
-	app.Mux.HandleFunc(route.Path, func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+	method := parts[0]
+	switch method {
+	case "GET":
+	case "PUT":
+	case "POST":
+	case "DELETE":
+	case "OPTIONS":
+	case "HEAD":
+	default:
+		return fmt.Errorf("unsupported method '%s'", method)
+	}
 
-		ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-		app.Log.Tracef("API call: %s %s %s", ip, r.Method, route.Path)
+	// remove * (if any) at the end of route path
+	path := strings.TrimRight(parts[1], "*")
+	if path == "" {
+		return errors.New("field Route path is invalid")
+	}
 
-		if route.NoProtoCheck == false {
-			clientProto, _ := strconv.Atoi(r.FormValue("protocol"))
-			if clientProto != ProtocolVersion {
-				errMsg := fmt.Sprintf("Protocol mismatch, server requires version %d", ProtocolVersion)
-				app.Log.Errorf("%d: %s", 400, errMsg)
-				http.Error(w, errMsg, 400)
-				return
+	route.method = method
+	route.path = path
+
+	app.routes[path] = append(app.routes[path], route)
+
+	return nil
+}
+
+func (app *App) registerRouteHandlers() {
+	for _path, _routes := range app.routes {
+		// capture _path, _routes in the closure
+		go func(path string, routes []*Route) {
+			// look for duplicated methods in routes
+			methods := make(map[string]bool)
+			for _, route := range routes {
+				_, exists := methods[route.method]
+				if exists {
+					log.Fatalf("router: duplicated method '%s' for path '%s'", route.method, path)
+				}
+				methods[route.method] = true
 			}
-		}
 
-		if !route.Public {
-			// TODO: API key checking (or a better challenge-based auth)
-		}
+			app.Mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+				var validRoute *Route
+				for _, route := range routes {
+					if route.method == r.Method {
+						validRoute = route
+					}
+				}
 
-		if !isRouteMethodAllowed(r.Method, route.Methods) {
-			errMsg := fmt.Sprintf("Method was %s", r.Method)
-			app.Log.Errorf("%d: %s", 405)
-			http.Error(w, errMsg, 405)
+				if validRoute == nil {
+					errMsg := fmt.Sprintf("Method was %s for route %s", r.Method, path)
+					app.Log.Errorf("%d: %s", 405, errMsg)
+					http.Error(w, errMsg, 405)
+					return
+				}
+				routeHandleFunc(validRoute, w, r, app)
+			})
+		}(_path, _routes)
+	}
+}
+
+func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *App) {
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+
+	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+	app.Log.Tracef("API call: %s %s %s", ip, r.Method, route.path)
+
+	if route.NoProtoCheck == false {
+		clientProto, _ := strconv.Atoi(r.FormValue("protocol"))
+		if clientProto != ProtocolVersion {
+			errMsg := fmt.Sprintf("Protocol mismatch, server requires version %d", ProtocolVersion)
+			app.Log.Errorf("%d: %s", 400, errMsg)
+			http.Error(w, errMsg, 400)
 			return
 		}
+	}
 
-		// extract relative path
-		subPath := r.URL.Path[len(route.Path):]
+	if !route.Public {
+		// TODO: API key checking (or a better challenge-based auth)
+	}
 
-		request := &Request{
-			Route:    route,
-			SubPath:  subPath,
-			HTTP:     r,
-			Response: w,
-			App:      app,
-		}
+	// extract relative path
+	subPath := r.URL.Path[len(route.path):]
 
-		switch route.Type {
-		case RouteTypeStream:
-			routeStreamHandler(w, r, request)
-		case RouteTypeCustom:
-			route.Handler(request)
-		}
-	})
-	return nil
+	request := &Request{
+		Route:    route,
+		SubPath:  subPath,
+		HTTP:     r,
+		Response: w,
+		App:      app,
+	}
+
+	switch route.Type {
+	case RouteTypeStream:
+		routeStreamHandler(w, r, request)
+	case RouteTypeCustom:
+		route.Handler(request)
+	}
 }
 
 // SetTarget define or change the default target for the request, for both
@@ -189,7 +246,12 @@ func (req *Request) SetTarget(target string) {
 	req.HubClient.SetTarget(target)
 }
 
-// Responsef is a Printf lile helper for req.Response.Write
-func (req *Request) Responsef(format string, args ...interface{}) {
+// Printf like helper for req.Response.Write
+func (req *Request) Printf(format string, args ...interface{}) {
 	req.Response.Write([]byte(fmt.Sprintf(format, args...)))
+}
+
+// Println like helper for req.Response.Write
+func (req *Request) Println(message string) {
+	req.Response.Write([]byte(fmt.Sprintf("%s\n", message)))
 }

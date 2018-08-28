@@ -6,8 +6,7 @@ import "github.com/Xfennec/mulch/cmd/mulchd/controllers"
 // AddRoutes defines all API routes for the application
 func AddRoutes(app *server.App) {
 	app.AddRoute(&server.Route{
-		Methods:      []string{"POST"},
-		Path:         "/phone",
+		Route:        "POST /phone",
 		Type:         server.RouteTypeCustom,
 		Public:       true,
 		NoProtoCheck: true,
@@ -15,36 +14,37 @@ func AddRoutes(app *server.App) {
 	})
 
 	app.AddRoute(&server.Route{
-		Methods: []string{"GET"},
-		Path:    "/log",
+		Route:   "GET /log",
 		Type:    server.RouteTypeStream,
 		Handler: controllers.LogController,
 	})
 
 	app.AddRoute(&server.Route{
-		Methods: []string{"PUT"},
-		Path:    "/vm",
+		Route:   "GET /vm",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.ListVMsController,
+	})
+
+	app.AddRoute(&server.Route{
+		Route:   "PUT /vm",
 		Type:    server.RouteTypeStream,
 		Handler: controllers.NewVMController,
 	})
 
 	app.AddRoute(&server.Route{
-		Methods: []string{"GET"},
-		Path:    "/version",
+		Route:   "GET /version",
 		Type:    server.RouteTypeCustom,
 		Handler: controllers.VersionController,
 	})
 
 	app.AddRoute(&server.Route{
-		Methods: []string{"GET"},
-		Path:    "/test",
+		Route:   "GET /test",
 		Type:    server.RouteTypeStream,
 		Handler: controllers.TestController,
 	})
 
 	app.AddRoute(&server.Route{
-		Methods: []string{"POST"},
-		Path:    "/test2",
+		Route:   "POST /test2",
 		Type:    server.RouteTypeStream,
 		Handler: controllers.Test2Controller,
 	})

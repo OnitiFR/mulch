@@ -19,12 +19,14 @@ type App struct {
 	Mux       *http.ServeMux
 	Rand      *rand.Rand
 	VMDB      *VMDatabase
+	routes    map[string][]*Route
 }
 
 // NewApp creates a new application
 func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app := &App{
 		Config: config,
+		routes: make(map[string][]*Route),
 	}
 
 	app.Hub = NewHub(trace)
@@ -65,11 +67,6 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app.Mux = http.NewServeMux()
 
 	app.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	// do all this in some sort of Setup()?
-	// check storage & network
-	// get storage & network? (or do it each time it's needed ?)
-	// app.AddRoutes()
 
 	// dirty log broadcast tests
 	// go func() {
@@ -215,6 +212,7 @@ func (app *App) initLibvirtNetwork() error {
 func (app *App) Run() {
 
 	app.Log.Infof("API server listening on %s", app.Config.Listen)
+	app.registerRouteHandlers()
 	err := http.ListenAndServe(app.Config.Listen, app.Mux)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)

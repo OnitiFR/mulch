@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
@@ -34,11 +36,52 @@ func NewVMController(req *server.Request) {
 
 // ListVMsController list VMs
 func ListVMsController(req *server.Request) {
+	req.Response.Header().Set("Content-Type", "text/plain")
 	vmNames := req.App.VMDB.GetNames()
+
+	if len(vmNames) == 0 {
+		req.Printf("Currently, no VM exists. You may use 'mulch vm create'.\n")
+		return
+	}
+
 	for _, vmName := range vmNames {
-		req.Response.Header().Set("Content-Type", "text/plain")
-		req.Responsef("bla: %s", vmName)
+		vm, err := req.App.VMDB.GetByName(vmName)
+		if err != nil {
+			msg := fmt.Sprintf("VM '%s': %s\n", vmName, err)
+			req.App.Log.Error(msg)
+			req.Println(msg)
+			return
+		}
+
+		domain, err := req.App.Libvirt.GetDomainByName(req.App.Config.VMPrefix + vmName)
+		if err != nil {
+			msg := fmt.Sprintf("VM '%s': %s\n", vmName, err)
+			req.App.Log.Error(msg)
+			http.Error(req.Response, msg, 500)
+			return
+		}
+		if domain == nil {
+			msg := fmt.Sprintf("VM '%s': does not exists in libvirt\n", vmName)
+			req.App.Log.Error(msg)
+			http.Error(req.Response, msg, 500)
+			return
+		}
+		defer domain.Free()
+
+		state, _, err := domain.GetState()
+		if err != nil {
+			msg := fmt.Sprintf("VM '%s': %s\n", vmName, err)
+			req.App.Log.Error(msg)
+			http.Error(req.Response, msg, 500)
+			return
+		}
+
+		// if state == libvirt.DOMAIN_RUNNING {
+		// 	// check if services are running? (SSH? port?)
+		// }
+
+		// print headers ? format cols ?
+		req.Printf("%s | %s | %s\n", vmName, vm.LastIP, server.LibvirtDomainStateToString(state))
 	}
 	// http.Error(req.Response, errMsg, 500)
-
 }

@@ -338,3 +338,27 @@ func (lv *Libvirt) GetDomainByName(domainName string) (*libvirt.Domain, error) {
 	}
 	return dom, nil
 }
+
+// LibvirtDomainStateToString translate a DomainState to string
+func LibvirtDomainStateToString(state libvirt.DomainState) string {
+	switch state {
+	case libvirt.DOMAIN_NOSTATE:
+		return "no state"
+	case libvirt.DOMAIN_RUNNING:
+		return "up"
+	case libvirt.DOMAIN_BLOCKED:
+		return "blocked on resource"
+	case libvirt.DOMAIN_PAUSED:
+		return "paused by user"
+	case libvirt.DOMAIN_SHUTDOWN:
+		return "going down"
+	case libvirt.DOMAIN_CRASHED:
+		return "crashed"
+	case libvirt.DOMAIN_PMSUSPENDED:
+		return "sleeping"
+	case libvirt.DOMAIN_SHUTOFF:
+		return "down"
+	default:
+		return "unknown"
+	}
+}
