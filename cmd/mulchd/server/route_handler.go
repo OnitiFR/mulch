@@ -125,7 +125,7 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 }
 
 // AddRoute adds a new route to the muxer
-func AddRoute(route *Route, app *App) error {
+func (app *App) AddRoute(route *Route) error {
 
 	if route.Path == "" {
 		return errors.New("route path is not set")
