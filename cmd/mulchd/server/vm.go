@@ -26,6 +26,7 @@ type VM struct {
 	App         *App
 	Config      *VMConfig
 	LastIP      string
+	Locked      bool
 }
 
 // NewVM builds a new virtual machine from config
@@ -45,6 +46,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		App:        app,
 		SecretUUID: secretUUID.String(),
 		Config:     vmConfig, // copy()? (deep)
+		Locked:     false,
 	}
 
 	conn, err := app.Libvirt.GetConnection()
@@ -443,5 +445,17 @@ func VMStartByName(name string, secretUUID string, app *App, log *Log) error {
 		}
 	}
 
+	return nil
+}
+
+// VMLockUnlock will lock or unlock a VM, preventing it from deletion
+func VMLockUnlock(vmName string, locked bool, vmdb *VMDatabase) error {
+	vm, err := vmdb.GetByName(vmName)
+	if err != nil {
+		return err
+	}
+
+	vm.Locked = locked
+	vmdb.Update()
 	return nil
 }

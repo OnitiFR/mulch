@@ -1,10 +1,10 @@
 package topics
 
 import (
-    "os"
-    "strconv"
+	"os"
+	"strconv"
 
-    "github.com/BurntSushi/toml"
+	"github.com/BurntSushi/toml"
 )
 
 // RootConfig describes client application config parameters
@@ -28,45 +28,45 @@ type tomlRootConfig struct {
 func NewRootConfig(filename string) (*RootConfig, error) {
 	rootConfig := &RootConfig{}
 
-    envTrace, _ := strconv.ParseBool(os.Getenv("TRACE"))
-    envTime, _ := strconv.ParseBool(os.Getenv("TIME"))
+	envTrace, _ := strconv.ParseBool(os.Getenv("TRACE"))
+	envTime, _ := strconv.ParseBool(os.Getenv("TIME"))
 
 	tConfig := &tomlRootConfig{
-        URL: os.Getenv("URL"),
-        Trace: envTrace,
-        Time: envTime,
-    }
+		URL:   os.Getenv("URL"),
+		Trace: envTrace,
+		Time:  envTime,
+	}
 
-    if _, err := os.Stat(filename); err == nil {
-        if _, err := toml.DecodeFile(filename, tConfig); err != nil {
-    		return nil, err
-    	}
-        rootConfig.ConfigFile = filename
-    }
+	if _, err := os.Stat(filename); err == nil {
+		if _, err := toml.DecodeFile(filename, tConfig); err != nil {
+			return nil, err
+		}
+		rootConfig.ConfigFile = filename
+	}
 
-    flagURL := rootCmd.PersistentFlags().Lookup("url")
-    flagTrace := rootCmd.PersistentFlags().Lookup("trace")
-    flagTime := rootCmd.PersistentFlags().Lookup("time")
+	flagURL := rootCmd.PersistentFlags().Lookup("url")
+	flagTrace := rootCmd.PersistentFlags().Lookup("trace")
+	flagTime := rootCmd.PersistentFlags().Lookup("time")
 
-    if flagURL.Changed {
-        tConfig.URL = flagURL.Value.String()
-    }
-    if tConfig.URL == "" {
-        tConfig.URL = flagURL.DefValue
-    }
+	if flagURL.Changed {
+		tConfig.URL = flagURL.Value.String()
+	}
+	if tConfig.URL == "" {
+		tConfig.URL = flagURL.DefValue
+	}
 
-    if flagTrace.Changed {
-        trace ,_ := strconv.ParseBool(flagTrace.Value.String())
-        tConfig.Trace = trace
-    }
-    if flagTime.Changed {
-        time, _ := strconv.ParseBool(flagTime.Value.String())
-        tConfig.Time = time
-    }
+	if flagTrace.Changed {
+		trace, _ := strconv.ParseBool(flagTrace.Value.String())
+		tConfig.Trace = trace
+	}
+	if flagTime.Changed {
+		time, _ := strconv.ParseBool(flagTime.Value.String())
+		tConfig.Time = time
+	}
 
-    rootConfig.URL = tConfig.URL
-    rootConfig.Trace = tConfig.Trace
-    rootConfig.Time = tConfig.Time
+	rootConfig.URL = tConfig.URL
+	rootConfig.Trace = tConfig.Trace
+	rootConfig.Time = tConfig.Time
 
 	return rootConfig, nil
 }

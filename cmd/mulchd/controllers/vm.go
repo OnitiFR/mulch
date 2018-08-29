@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
@@ -82,11 +83,16 @@ func ListVMsController(req *server.Request) {
 		// 	// check if services are running? (SSH? port?)
 		// }
 
-		tableData = append(tableData, []string{vmName, vm.LastIP, server.LibvirtDomainStateToString(state)})
+		tableData = append(tableData, []string{
+			vmName,
+			vm.LastIP,
+			server.LibvirtDomainStateToString(state),
+			strconv.FormatBool(vm.Locked),
+		})
 	}
 
 	table := tablewriter.NewWriter(req.Response)
-	table.SetHeader([]string{"Name", "Last known IP", "State"})
+	table.SetHeader([]string{"Name", "Last known IP", "State", "Locked"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	table.SetCenterSeparator("|")
 	table.AppendBulk(tableData)
@@ -111,6 +117,20 @@ func ActionVMController(req *server.Request) {
 
 	action := req.HTTP.FormValue("action")
 	switch action {
+	case "lock":
+		err := server.VMLockUnlock(vmName, true, req.App.VMDB)
+		if err != nil {
+			req.Stream.Failuref("unable to lock '%s': %s", vmName, err)
+		} else {
+			req.Stream.Successf("'%s' is now locked", vmName)
+		}
+	case "unlock":
+		err := server.VMLockUnlock(vmName, false, req.App.VMDB)
+		if err != nil {
+			req.Stream.Failuref("unable to unlock '%s': %s", vmName, err)
+		} else {
+			req.Stream.Successf("'%s' is now unlocked", vmName)
+		}
 	case "start":
 		req.Stream.Infof("starting %s", vmName)
 		err := server.VMStartByName(libvirtVMName, vm.SecretUUID, req.App, req.Stream)
