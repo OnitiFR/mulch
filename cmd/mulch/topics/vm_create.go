@@ -12,8 +12,8 @@ var vmCreateCmd = &cobra.Command{
 	Short: "Create a new VM",
 	Long: `Create a new VM from a description file.
 
-Example config:
-xxx
+See sample-vm.toml for an example, or get config
+from an existing VM using [unimplemented yet]
 `,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

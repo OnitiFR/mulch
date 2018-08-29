@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
+	"github.com/olekukonko/tablewriter"
 )
 
 // NewVMController creates a new VM
@@ -44,6 +45,7 @@ func ListVMsController(req *server.Request) {
 		return
 	}
 
+	tableData := [][]string{}
 	for _, vmName := range vmNames {
 		vm, err := req.App.VMDB.GetByName(vmName)
 		if err != nil {
@@ -80,8 +82,13 @@ func ListVMsController(req *server.Request) {
 		// 	// check if services are running? (SSH? port?)
 		// }
 
-		// print headers ? format cols ?
-		req.Printf("%s | %s | %s\n", vmName, vm.LastIP, server.LibvirtDomainStateToString(state))
+		tableData = append(tableData, []string{vmName, vm.LastIP, server.LibvirtDomainStateToString(state)})
 	}
-	// http.Error(req.Response, errMsg, 500)
+
+	table := tablewriter.NewWriter(req.Response)
+	table.SetHeader([]string{"Name", "Last known IP", "State"})
+	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
+	table.SetCenterSeparator("|")
+	table.AppendBulk(tableData)
+	table.Render()
 }
