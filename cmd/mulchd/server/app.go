@@ -159,7 +159,7 @@ func (app *App) initLibvirtStorage() error {
 		"mulch-cloud-init",
 		app.Config.StoragePath+"/cloud-init",
 		app.Config.configPath+"/templates/storage.xml",
-		"",
+		"0711",
 		app.Log)
 	if err != nil {
 		return fmt.Errorf("initLibvirtStorage (cloud-init/): %s", err)

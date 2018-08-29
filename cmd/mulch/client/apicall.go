@@ -99,9 +99,9 @@ func (call *APICall) Do() {
 	var req *http.Request
 
 	switch method {
-	case "GET":
+	case "GET", "DELETE":
 		if len(call.files) > 0 {
-			log.Fatalf("file upload is not supported using GET method")
+			log.Fatalf("file upload is not supported using this method")
 		}
 		finalURL := apiURL + "?" + data.Encode()
 		req, err = http.NewRequest(method, finalURL, nil)

@@ -38,6 +38,12 @@ func AddRoutes(app *server.App) {
 	})
 
 	app.AddRoute(&server.Route{
+		Route:   "DELETE /vm/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.DeleteVMController,
+	})
+
+	app.AddRoute(&server.Route{
 		Route:   "GET /version",
 		Type:    server.RouteTypeCustom,
 		Handler: controllers.VersionController,

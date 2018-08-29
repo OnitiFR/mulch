@@ -350,7 +350,6 @@ func vmDeleteCloudInitDisk(dom *libvirt.Domain, pool *libvirt.StoragePool, conn 
 		return nil, err
 	}
 
-	vol.Free()
 	return dom2, nil
 }
 
@@ -457,5 +456,119 @@ func VMLockUnlock(vmName string, locked bool, vmdb *VMDatabase) error {
 
 	vm.Locked = locked
 	vmdb.Update()
+	return nil
+}
+
+// VMDelete will delete a VM (using its name) and linked
+// storages.
+func VMDelete(vmName string, app *App, log *Log) error {
+	vm, err := app.VMDB.GetByName(vmName)
+	if err != nil {
+		return err
+	}
+
+	if vm.Locked == true {
+		return errors.New("VM is locked")
+	}
+
+	libvirtName := vm.App.Config.VMPrefix + vmName
+	domain, err := app.Libvirt.GetDomainByName(libvirtName)
+	if err != nil {
+		return err
+	}
+	if domain == nil {
+		return fmt.Errorf("VM '%s': does not exists in libvirt", libvirtName)
+	}
+	defer domain.Free()
+
+	// destroy (if running)
+	state, _, errG := domain.GetState()
+	if errG != nil {
+		return errG
+	}
+	if state != libvirt.DOMAIN_SHUTOFF {
+		log.Info("forcing VM shutdown")
+		if errD := domain.Destroy(); errD != nil {
+			return errD
+		}
+
+		state, _, errG := domain.GetState()
+		if errG != nil {
+			return errG
+		}
+		if state != libvirt.DOMAIN_SHUTOFF {
+			return errors.New("Unable to force stop (destroy) the VM")
+		}
+	}
+
+	// undefine storages
+	xmldoc, err := domain.GetXMLDesc(0)
+	if err != nil {
+		return err
+	}
+
+	domcfg := &libvirtxml.Domain{}
+	err = domcfg.Unmarshal(xmldoc)
+	if err != nil {
+		return err
+	}
+
+	ciName := ""
+	diskName := ""
+	for _, disk := range domcfg.Devices.Disks {
+		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasCloudInit {
+			ciName = path.Base(disk.Source.File.File)
+		}
+		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasDisk {
+			diskName = path.Base(disk.Source.File.File)
+		}
+	}
+
+	// Casuel refresh, without any error checking. Alacool.
+	app.Libvirt.Pools.Disks.Refresh(0)
+	app.Libvirt.Pools.CloudInit.Refresh(0)
+
+	// 2 - delete Disk volume
+	if diskName != "" {
+		log.Infof("removing disk volume '%s'", diskName)
+		diskVol, err := app.Libvirt.Pools.Disks.LookupStorageVolByName(diskName)
+		if err != nil {
+			return err
+		}
+		defer diskVol.Free()
+		err = diskVol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+		if err != nil {
+			return err
+		}
+	}
+
+	// 3 - delete CloudInit volume
+	if ciName != "" {
+		log.Infof("removing cloud-init volume '%s'", ciName)
+		ciVol, err := app.Libvirt.Pools.CloudInit.LookupStorageVolByName(ciName)
+		if err != nil {
+			return err
+		}
+		defer ciVol.Free()
+		err = ciVol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Infof("removing VM from libvirt and database")
+
+	// undefine domain
+	errU := domain.Undefine()
+	if errU != nil {
+		return errU
+	}
+
+	// remove from database
+	errD := app.VMDB.Delete(vmName)
+	if errD != nil {
+		return errD
+	}
+
 	return nil
 }
