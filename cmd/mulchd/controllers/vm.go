@@ -92,3 +92,43 @@ func ListVMsController(req *server.Request) {
 	table.AppendBulk(tableData)
 	table.Render()
 }
+
+// ActionVMController redirect to the correct action for the VM (start/stop)
+func ActionVMController(req *server.Request) {
+	vmName := req.SubPath
+
+	if vmName == "" {
+		req.Stream.Failuref("invalid VM name")
+		return
+	}
+	vm, err := req.App.VMDB.GetByName(vmName)
+	if err != nil {
+		req.Stream.Failure(err.Error())
+		return
+	}
+
+	libvirtVMName := vm.App.Config.VMPrefix + vmName
+
+	action := req.HTTP.FormValue("action")
+	switch action {
+	case "start":
+		req.Stream.Infof("starting %s", vmName)
+		err := server.VMStartByName(libvirtVMName, vm.SecretUUID, req.App, req.Stream)
+		if err != nil {
+			req.Stream.Failuref("unable to start '%s': %s", vmName, err)
+		} else {
+			req.Stream.Successf("VM '%s' is now up and running", vmName)
+		}
+	case "stop":
+		req.Stream.Infof("stoping %s", vmName)
+		err := server.VMStopByName(libvirtVMName, req.App, req.Stream)
+		if err != nil {
+			req.Stream.Failuref("unable to stop '%s': %s", vmName, err)
+		} else {
+			req.Stream.Successf("VM '%s' is now down", vmName)
+		}
+	default:
+		req.Stream.Failuref("missing or invalid action ('%s') for '%s'", action, vm.Config.Name)
+		return
+	}
+}

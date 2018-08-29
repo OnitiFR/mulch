@@ -32,6 +32,12 @@ func AddRoutes(app *server.App) {
 	})
 
 	app.AddRoute(&server.Route{
+		Route:   "POST /vm/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.ActionVMController,
+	})
+
+	app.AddRoute(&server.Route{
 		Route:   "GET /version",
 		Type:    server.RouteTypeCustom,
 		Handler: controllers.VersionController,

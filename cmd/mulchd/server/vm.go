@@ -351,3 +351,97 @@ func vmDeleteCloudInitDisk(dom *libvirt.Domain, pool *libvirt.StoragePool, conn 
 	vol.Free()
 	return dom2, nil
 }
+
+// VMStopByName stops a VM using its (libvirt) name
+// and waits until the VM is shutoff. (or timeouts)
+func VMStopByName(name string, app *App, log *Log) error {
+	domain, err := app.Libvirt.GetDomainByName(name)
+	if err != nil {
+		return err
+	}
+	if domain == nil {
+		return fmt.Errorf("VM '%s': does not exists in libvirt", name)
+	}
+	defer domain.Free()
+
+	// get current state
+	state, _, errG := domain.GetState()
+	if errG != nil {
+		return errG
+	}
+	if state != libvirt.DOMAIN_RUNNING {
+		return errors.New("VM is not up")
+	}
+
+	// shutdown
+	errS := domain.Shutdown()
+	if errS != nil {
+		return errS
+	}
+
+	// wait shutoff state
+	for done := false; done == false; {
+		select {
+		case <-time.After(5 * time.Minute):
+			return errors.New("vm shutdown is too long")
+		case <-time.After(1 * time.Second):
+			log.Trace("checking vm state")
+			state, _, errG := domain.GetState()
+			if errG != nil {
+				return errG
+			}
+			if state == libvirt.DOMAIN_CRASHED {
+				return errors.New("vm crashed! (said libvirt)")
+			}
+			if state == libvirt.DOMAIN_SHUTOFF {
+				done = true
+			}
+		}
+	}
+
+	return nil
+}
+
+// VMStartByName starts a VM using its (libvirt) name
+// and waits until the VM phones home. (or timeouts)
+func VMStartByName(name string, secretUUID string, app *App, log *Log) error {
+	domain, err := app.Libvirt.GetDomainByName(name)
+	if err != nil {
+		return err
+	}
+	if domain == nil {
+		return fmt.Errorf("VM '%s': does not exists in libvirt", name)
+	}
+	defer domain.Free()
+
+	// get current state
+	state, _, errG := domain.GetState()
+	if errG != nil {
+		return errG
+	}
+	if state != libvirt.DOMAIN_SHUTOFF {
+		return errors.New("VM is not down")
+	}
+
+	err = domain.Create()
+	if err != nil {
+		return err
+	}
+
+	log.Info("started, waiting phone call")
+
+	phone := app.PhoneHome.Register(secretUUID)
+	defer phone.Unregister()
+
+	for done := false; done == false; {
+		select {
+		case <-time.After(10 * time.Minute):
+			return errors.New("vm is too long to start, something probably went wrong")
+		case <-phone.PhoneCalls:
+			done = true
+			log.Info("vm phoned home")
+		}
+	}
+
+	return nil
+}
