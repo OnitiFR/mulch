@@ -19,6 +19,7 @@ type App struct {
 	Mux       *http.ServeMux
 	Rand      *rand.Rand
 	VMDB      *VMDatabase
+	APIKeysDB *APIKeyDatabase
 	routes    map[string][]*Route
 }
 
@@ -42,7 +43,17 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app.Log.Info(fmt.Sprintf("libvirt connection to '%s' OK", config.LibVirtURI))
 	app.Libvirt = lv
 
+	err = app.checkDataPath()
+	if err != nil {
+		return nil, err
+	}
+
 	err = app.initVMDB()
+	if err != nil {
+		return nil, err
+	}
+
+	err = app.initAPIKeysDB()
 	if err != nil {
 		return nil, err
 	}
@@ -88,13 +99,14 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	return app, nil
 }
 
-func (app *App) initVMDB() error {
-	// VMDB is currently only user of DataPath, so we check it here,
-	// but we may move this in the future.
+func (app *App) checkDataPath() error {
 	if _, err := os.Stat(app.Config.DataPath); os.IsNotExist(err) {
 		return fmt.Errorf("data path (%s) does not exist", app.Config.DataPath)
 	}
+	return nil
+}
 
+func (app *App) initVMDB() error {
 	dbPath := app.Config.DataPath + "/mulch-vm.db"
 
 	vmdb, err := NewVMDatabase(dbPath)
@@ -137,6 +149,17 @@ func (app *App) initVMDB() error {
 	app.Log.Infof("found %d VM(s) in database %s", app.VMDB.Count(), dbPath)
 
 	// detect missing entries from DB?
+	return nil
+}
+
+func (app *App) initAPIKeysDB() error {
+	dbPath := app.Config.DataPath + "/mulch-api-keys.db"
+
+	db, err := NewAPIKeyDatabase(dbPath, app.Log, app.Rand)
+	if err != nil {
+		return err
+	}
+	app.APIKeysDB = db
 	return nil
 }
 
