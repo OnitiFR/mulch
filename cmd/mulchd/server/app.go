@@ -27,6 +27,7 @@ type App struct {
 func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app := &App{
 		Config: config,
+		Rand:   rand.New(rand.NewSource(time.Now().UnixNano())),
 		routes: make(map[string][]*Route),
 	}
 
@@ -76,8 +77,6 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app.PhoneHome = NewPhoneHomeHub()
 
 	app.Mux = http.NewServeMux()
-
-	app.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// dirty log broadcast tests
 	// go func() {

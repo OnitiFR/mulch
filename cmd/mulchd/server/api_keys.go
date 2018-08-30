@@ -10,6 +10,8 @@ import (
 
 // TODO: lock this database with a mutex?
 
+const apiKeyMinLength = 64
+
 // APIKey describes an API key
 type APIKey struct {
 	Comment string
@@ -19,7 +21,7 @@ type APIKey struct {
 // APIKeyDatabase describes a persistent API Key database
 type APIKeyDatabase struct {
 	filename string
-	keys     []APIKey
+	keys     []*APIKey
 }
 
 // NewAPIKeyDatabase creates a new API key database
@@ -30,16 +32,16 @@ func NewAPIKeyDatabase(filename string, log *Log, rand *rand.Rand) (*APIKeyDatab
 
 	// if the file exists, load it
 	if _, err := os.Stat(db.filename); err == nil {
-		err = db.load()
+		err = db.load(log)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		log.Warningf("no API keys database found, creating a new one with a default key (%s)", filename)
-		db.keys = []APIKey{
-			APIKey{
+		db.keys = []*APIKey{
+			&APIKey{
 				Comment: "default-key",
-				Key:     "yeurae4eim1Ooqu0booS0zohH7queeju7ayohgh0baiFaeShohngoachaekahv7w",
+				Key:     RandString(64, rand),
 			},
 		}
 	}
@@ -53,7 +55,7 @@ func NewAPIKeyDatabase(filename string, log *Log, rand *rand.Rand) (*APIKeyDatab
 	return db, nil
 }
 
-func (db *APIKeyDatabase) load() error {
+func (db *APIKeyDatabase) load(log *Log) error {
 	f, err := os.Open(db.filename)
 	if err != nil {
 		return err
@@ -79,6 +81,16 @@ func (db *APIKeyDatabase) load() error {
 	if err != nil {
 		return err
 	}
+
+	log.Infof("found %d API key(s) in database %s", len(db.keys), db.filename)
+
+	for _, key := range db.keys {
+		if len(key.Key) < apiKeyMinLength {
+			log.Warningf("API key '%s' is too short, disabling it (minimum length: %d)", key.Comment, apiKeyMinLength)
+			key.Key = "INVALID"
+		}
+	}
+
 	return nil
 }
 
@@ -97,4 +109,19 @@ func (db *APIKeyDatabase) Save() error {
 		return err
 	}
 	return nil
+}
+
+// IsValidKey return true if the key exists in the database
+// (and returns the key as the second return value)
+func (db *APIKeyDatabase) IsValidKey(key string) (bool, *APIKey) {
+	if len(key) < apiKeyMinLength {
+		return false, nil
+	}
+
+	for _, candidate := range db.keys {
+		if candidate.Key == key {
+			return true, candidate
+		}
+	}
+	return false, nil
 }
