@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 )
 
@@ -42,7 +43,7 @@ func NewVMDatabase(filename string) (*VMDatabase, error) {
 // but we can't lock it here, since save() is called by functions that
 // are already locking the mutex.
 func (vmdb *VMDatabase) save() error {
-	f, err := os.Create(vmdb.filename)
+	f, err := os.OpenFile(vmdb.filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
@@ -62,6 +63,20 @@ func (vmdb *VMDatabase) load() error {
 		return err
 	}
 	defer f.Close()
+
+	stat, err := f.Stat()
+	if err != nil {
+		return err
+	}
+
+	requiredMode, err := strconv.ParseInt("0600", 8, 32)
+	if err != nil {
+		return err
+	}
+
+	if stat.Mode() != os.FileMode(requiredMode) {
+		return fmt.Errorf("%s: only the owner should be able to read/write this file (mode 0600)", vmdb.filename)
+	}
 
 	dec := json.NewDecoder(f)
 	err = dec.Decode(&vmdb.db)
