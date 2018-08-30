@@ -12,12 +12,14 @@ type RootConfig struct {
 	ConfigFile string
 
 	URL   string
+	Key   string
 	Trace bool
 	Time  bool
 }
 
 type tomlRootConfig struct {
 	URL   string
+	Key   string
 	Trace bool
 	Time  bool
 }
@@ -33,6 +35,7 @@ func NewRootConfig(filename string) (*RootConfig, error) {
 
 	tConfig := &tomlRootConfig{
 		URL:   os.Getenv("URL"),
+		Key:   os.Getenv("KEY"),
 		Trace: envTrace,
 		Time:  envTime,
 	}
@@ -65,6 +68,7 @@ func NewRootConfig(filename string) (*RootConfig, error) {
 	}
 
 	rootConfig.URL = tConfig.URL
+	rootConfig.Key = tConfig.Key
 	rootConfig.Trace = tConfig.Trace
 	rootConfig.Time = tConfig.Time
 

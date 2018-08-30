@@ -32,19 +32,22 @@ libvirt API. This is the client.`,
 		} else {
 			fmt.Printf(`No configuration file found (%s).
 
-This config file must provide 'key' setting (with your API
-key) and probably the mulchd API URL with the 'url' setting.
+This config file can provide 'key' setting (with your API
+key) and mulchd API URL with the 'url' setting.
 
 Example:
 url = "http://192.168.10.104:8585"
 key = "gein2xah7keel5Ohpe9ahvaeg8suurae3Chue4riokooJ5Wu"
 
-Available settings: trace, timestamps
+Others available settings: trace, time
 Note: you can also use environment variables (URL, KEY, …).
 ------
 `, path.Clean(globalHome+"/.mulch.toml"))
 		}
 		fmt.Printf("current URL to mulchd: %s\n", globalConfig.URL)
+		if globalConfig.Key == "" {
+			fmt.Printf("\nWARNING: no API key defined! Add 'key' line to\nconfig file ordefine KEY environment variable.\n")
+		}
 	},
 }
 
@@ -89,6 +92,7 @@ func initConfig() {
 
 	globalAPI = client.NewAPI(
 		globalConfig.URL,
+		globalConfig.Key,
 		globalConfig.Trace,
 		globalConfig.Time,
 	)

@@ -42,6 +42,7 @@ type Request struct {
 	App       *App
 	Stream    *Log
 	HubClient *HubClient
+	APIKey    *APIKey
 }
 
 func isRouteMethodAllowed(method string, methods []string) bool {
@@ -181,6 +182,9 @@ func (app *App) registerRouteHandlers() {
 			}
 
 			app.Mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+				ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+				app.Log.Tracef("HTTP call: %s %s %s [%s]", ip, r.Method, path, r.UserAgent())
+
 				var validRoute *Route
 				for _, route := range routes {
 					if route.method == r.Method {
@@ -204,7 +208,6 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-	app.Log.Tracef("API call: %s %s %s", ip, r.Method, route.path)
 
 	if route.NoProtoCheck == false {
 		clientProto, _ := strconv.Atoi(r.FormValue("protocol"))
@@ -216,10 +219,6 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 		}
 	}
 
-	if !route.Public {
-		// TODO: API key checking (or a better challenge-based auth)
-	}
-
 	// extract relative path
 	subPath := r.URL.Path[len(route.path):]
 
@@ -229,6 +228,20 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 		HTTP:     r,
 		Response: w,
 		App:      app,
+	}
+
+	if route.Public == false {
+		valid, key := app.APIKeysDB.IsValidKey(r.FormValue("key"))
+		if valid == false {
+			errMsg := "invalid key"
+			app.Log.Errorf("%d: %s", 403, errMsg)
+			http.Error(w, errMsg, 403)
+			return
+		}
+		request.APIKey = key
+		app.Log.Infof("API call: %s %s %s (key: %s)", ip, r.Method, route.path, key.Comment)
+	} else {
+		app.Log.Infof("API call: %s %s %s", ip, r.Method, route.path)
 	}
 
 	switch route.Type {

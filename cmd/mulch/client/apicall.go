@@ -22,6 +22,7 @@ import (
 // API describes the basic elements to call the API
 type API struct {
 	ServerURL string
+	APIKey    string
 	Trace     bool
 	Time      bool
 }
@@ -36,9 +37,10 @@ type APICall struct {
 }
 
 // NewAPI create a new API instance
-func NewAPI(server string, trace bool, time bool) *API {
+func NewAPI(server string, apiKey string, trace bool, time bool) *API {
 	return &API{
 		ServerURL: server,
+		APIKey:    apiKey,
 		Trace:     trace,
 		Time:      time,
 	}
@@ -93,6 +95,7 @@ func (call *APICall) Do() {
 	if call.api.Trace == true {
 		data.Add("trace", "true")
 	}
+	data.Add("key", call.api.APIKey)
 	data.Add("version", Version)
 	data.Add("protocol", strconv.Itoa(ProtocolVersion))
 
@@ -166,9 +169,9 @@ func (call *APICall) Do() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Fatalf("Status code is not OK: %v (%s)\n%s",
-			resp.StatusCode,
+		log.Fatalf("Error: %s (%v)\nMessage: %s",
 			resp.Status,
+			resp.StatusCode,
 			string(body),
 		)
 	}
