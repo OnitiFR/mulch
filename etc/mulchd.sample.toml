@@ -21,11 +21,11 @@ vm_prefix = "mulch-"
 
 # This user will be created with VMs as a sudoers, and used for
 # control and command of the VM by Mulch
-mulch_super_user = "mulch-cc"
+mulch_super_user = "admin"
 
 # SSH key for 'mulch_super_user'
 # No passphrase support yet
-# tip : ssh-keygen -b 4096 -C "mulch-cc@vms" -N "" -f path_to_new_key/mulch
+# tip : ssh-keygen -b 4096 -C "admin@vms" -N "" -f path_to_new_key/mulch
 # Mulch may generate by itself in the future, we'll see.
 mulch_ssh_private_key = ""
 mulch_ssh_public_key = ""

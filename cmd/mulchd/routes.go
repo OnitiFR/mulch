@@ -50,7 +50,7 @@ func AddRoutes(app *server.App) {
 	})
 
 	app.AddRoute(&server.Route{
-		Route:   "GET /test",
+		Route:   "POST /test/*",
 		Type:    server.RouteTypeStream,
 		Handler: controllers.TestController,
 	})

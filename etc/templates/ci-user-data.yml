@@ -18,13 +18,17 @@ phone_home:
 
 users:
   - name: $_MULCH_SUPER_USER
-    gecos: Mulch Control and Command
+    gecos: Mulch Control and Command admin account
     #groups: users
     shell: /bin/bash
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
     ssh_authorized_keys:
     - $_SSH_PUBKEY
+  - name: $_APP_USER
+    gecos: Application user account
+    shell: /bin/bash
 
+# Need when we phone home
 packages:
   - curl
 
@@ -58,7 +62,7 @@ runcmd:
   - [ systemctl, enable, phone_home ]
 
 #locale:
-timezone: Europe/Paris
+timezone: $_TIMEZONE
 ntp:
   enabled: true
 

@@ -15,9 +15,8 @@ func (run *Run) readStdout(std io.Reader, exitStatus chan int) {
 	for scanner.Scan() {
 		text := scanner.Text()
 
-		run.Log.Tracef("stdout=%s", text)
-
 		if len(text) > 2 && text[0:2] == "__" {
+			run.Log.Trace(text)
 			parts := strings.Split(text, "=")
 			switch parts[0] {
 			case "__EXIT":
@@ -36,6 +35,8 @@ func (run *Run) readStdout(std io.Reader, exitStatus chan int) {
 				run.Log.Errorf("unknown keyword: %s", text)
 			}
 			continue
+		} else {
+			run.Log.Info(text)
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -49,7 +50,7 @@ func (run *Run) readStderr(std io.Reader) {
 
 	for scanner.Scan() {
 		text := scanner.Text()
-		run.Log.Tracef("stderr=%s", text)
+		run.Log.Error(text)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -63,12 +64,7 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) {
 
 	defer out.Close()
 
-	// "pkill" dependency or Linux "ps"? (ie: not Cygwin)
-	_, err := out.Write([]byte("export __MAIN_PID=$$\nfunction __kill_subshells() { pkill -TERM -P $__MAIN_PID cat; }\nexport -f __kill_subshells\n"))
-	if err != nil {
-		run.Log.Errorf("error writing (setup parent bash): %s", err)
-		return
-	}
+	var err error
 
 	for num, task := range run.Tasks {
 
@@ -92,7 +88,8 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) {
 		args := ""
 
 		// cat is needed to "focus" stdin only on the child bash
-		str := fmt.Sprintf("cat | __SCRIPT_ID=%d bash -s -- %s ; echo __EXIT=$?\n", num, args)
+		// cat is "sudoed" so it can be killed by __kill_subshell bellow
+		str := fmt.Sprintf("sudo -u %s cat | sudo -u %s __SCRIPT_ID=%d bash -s -- %s ; echo __EXIT=$?\n", task.As, task.As, num, args)
 		run.Log.Tracef("child=%s", str)
 
 		_, err = out.Write([]byte(str))
@@ -101,10 +98,10 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) {
 			return
 		}
 
+		// pkill -og0 cat: we kill the oldest "cat" of our process group (see above)
 		// no newline so we dont change line numbers
-		_, err = out.Write([]byte("trap __kill_subshells EXIT ; "))
+		_, err = out.Write([]byte("function __kill_subshell() { pkill -og0 cat ; } ; export -f __kill_subshell ; trap __kill_subshell EXIT ; "))
 		if err != nil {
-
 			run.Log.Errorf("error writing (init child bash): %s", err)
 			return
 		}
@@ -120,13 +117,13 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) {
 		}
 
 		run.Log.Tracef("killing subshell")
-		_, err = out.Write([]byte("__kill_subshells\n"))
+		_, err = out.Write([]byte("__kill_subshell\n"))
 		if err != nil {
 			run.Log.Errorf("error writing (while killing subshell): %s", err)
 			return
 		}
 
-		if err := scanner.Err(); err != nil {
+		if err = scanner.Err(); err != nil {
 			run.Log.Errorf("error scanner: %s", err)
 			return
 		}

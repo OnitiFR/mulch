@@ -43,6 +43,8 @@ func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
 	userDataVariables["_PHONE_HOME_URL"] = phURL
 	userDataVariables["_PACKAGE_UPGRADE"] = vm.Config.InitUpgrade
 	userDataVariables["_MULCH_SUPER_USER"] = app.Config.MulchSuperUser
+	userDataVariables["_TIMEZONE"] = vm.Config.Timezone
+	userDataVariables["_APP_USER"] = vm.Config.AppUser
 
 	userData, err := cloudInitUserData(userDataTemplate, userDataVariables)
 	if err != nil {

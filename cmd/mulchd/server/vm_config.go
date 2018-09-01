@@ -12,6 +12,8 @@ import (
 type VMConfig struct {
 	Name        string
 	Hostname    string
+	Timezone    string
+	AppUser     string
 	SeedImage   string
 	InitUpgrade bool
 	DiskSize    uint64
@@ -25,6 +27,8 @@ type VMConfig struct {
 type tomlVMConfig struct {
 	Name        string
 	Hostname    string
+	Timezone    string
+	AppUser     string            `toml:"app_user"`
 	SeedImage   string            `toml:"seed_image"`
 	InitUpgrade bool              `toml:"init_upgrade"`
 	DiskSize    datasize.ByteSize `toml:"disk_size"`
@@ -40,6 +44,8 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 	// defaults (if not in the file)
 	tConfig := &tomlVMConfig{
 		Hostname:    "localhost.localdomain",
+		Timezone:    "Europe/Paris",
+		AppUser:     "app",
 		InitUpgrade: true,
 		CPUCount:    1,
 	}
@@ -54,6 +60,12 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 	vmConfig.Name = tConfig.Name
 
 	vmConfig.Hostname = tConfig.Hostname
+	vmConfig.Timezone = tConfig.Timezone
+
+	if tConfig.AppUser == "" {
+		return nil, fmt.Errorf("invalid app_user name '%s'", tConfig.AppUser)
+	}
+	vmConfig.AppUser = tConfig.AppUser
 
 	// TODO: check the seed image exists
 	if tConfig.SeedImage == "" {

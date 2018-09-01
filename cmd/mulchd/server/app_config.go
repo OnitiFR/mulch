@@ -64,7 +64,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		StoragePath:    "./var/storage", // example: /srv/mulch
 		DataPath:       "./var/data",    // example: /var/lib/mulch
 		VMPrefix:       "mulch-",
-		MulchSuperUser: "mulch-cc",
+		MulchSuperUser: "admin",
 	}
 
 	if _, err := toml.DecodeFile(filename, tConfig); err != nil {

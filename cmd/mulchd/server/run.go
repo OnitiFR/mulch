@@ -3,6 +3,7 @@ package server
 // RunTask is a task (script) for a Run
 type RunTask struct {
 	Script string
+	As     string
 }
 
 // Run is a list of Tasks on Host, including task results

@@ -1,6 +1,11 @@
 #!/bin/bash
 
-date
-lsb_release -a
-ls fail
-echo "Hello."
+cat &
+
+echo "a2:"
+#date
+#lsb_release -a
+#ls fail
+#echo "Hello."
+id
+sudo id
