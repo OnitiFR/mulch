@@ -4,12 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"time"
 
 	"github.com/libvirt/libvirt-go"
 	"github.com/libvirt/libvirt-go-xml"
 	"github.com/satori/go.uuid"
+	"golang.org/x/crypto/ssh"
 )
 
 // Aliases for vm.xml file
@@ -288,7 +290,41 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		}
 	}
 
-	// TODO: run prepare scripts
+	// 5 - run prepare scripts
+	log.Infof("running 'prepare' scripts")
+	tasks := []*RunTask{}
+	for _, confTask := range vm.Config.Prepare {
+		file, errF := os.Open(confTask.ScriptFile)
+		if errF != nil {
+			return nil, errF
+		}
+		defer file.Close()
+
+		task := &RunTask{
+			ScriptName:   confTask.ScriptFile,
+			ScriptReader: file,
+			As:           confTask.As,
+		}
+		tasks = append(tasks, task)
+	}
+
+	run := &Run{
+		SSHConn: &SSHConnection{
+			User: vm.App.Config.MulchSuperUser,
+			Host: vm.LastIP,
+			Port: 22,
+			Auths: []ssh.AuthMethod{
+				PublicKeyFile(vm.App.Config.MulchSSHPrivateKey),
+			},
+			Log: log,
+		},
+		Tasks: tasks,
+		Log:   log,
+	}
+	err = run.Go()
+	if err != nil {
+		return nil, err
+	}
 
 	// all is OK, commit (= no defer) and save vm to DB
 	log.Infof("saving VM in database")

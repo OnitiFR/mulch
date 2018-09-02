@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/BurntSushi/toml"
 	"github.com/c2h5oh/datasize"
@@ -20,8 +21,15 @@ type VMConfig struct {
 	RAMSize     uint64
 	CPUCount    int
 	// + prepare scripts
+	Prepare []*VMConfigScript
 	// + save scripts
 	// + restore scripts
+}
+
+// VMConfigScript is a script for prepare, save and restore steps
+type VMConfigScript struct {
+	ScriptFile string
+	As         string
 }
 
 type tomlVMConfig struct {
@@ -34,6 +42,12 @@ type tomlVMConfig struct {
 	DiskSize    datasize.ByteSize `toml:"disk_size"`
 	RAMSize     datasize.ByteSize `toml:"ram_size"`
 	CPUCount    int               `toml:"cpu_count"`
+	Prepare     []tomlVMConfigScript
+}
+
+type tomlVMConfigScript struct {
+	ScriptFile string `toml:"script_file"`
+	As         string
 }
 
 // NewVMConfigFromTomlReader cretes a new VMConfig instance from
@@ -89,6 +103,25 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 		return nil, fmt.Errorf("need a least one CPU")
 	}
 	vmConfig.CPUCount = tConfig.CPUCount
+
+	for _, tScript := range tConfig.Prepare {
+		script := &VMConfigScript{}
+
+		if !IsValidTokenName(tScript.As) {
+			return nil, fmt.Errorf("'%s' is not a valid user name", tScript.As)
+		}
+		script.As = tScript.As
+
+		// test readability
+		file, err := os.Open(tScript.ScriptFile)
+		if err != nil {
+			return nil, err
+		}
+		defer file.Close()
+		script.ScriptFile = tScript.ScriptFile
+
+		vmConfig.Prepare = append(vmConfig.Prepare, script)
+	}
 
 	return vmConfig, nil
 }

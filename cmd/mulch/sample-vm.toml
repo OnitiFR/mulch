@@ -17,3 +17,7 @@ init_upgrade = false
 disk_size = "20G"
 ram_size = "2G"
 cpu_count = 1
+
+[[prepare]]
+script_file = "./comfort.sh"
+as = "admin"

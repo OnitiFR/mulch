@@ -1,8 +1,7 @@
 #!/bin/bash
 
 export DEBIAN_FRONTEND="noninteractive"
-
-sudo -E apt-get -y -qq install progress mc powerline locate man
+sudo -E apt-get -y -qq install progress mc powerline locate man || exit $?
 
 sudo bash -c "cat >> /etc/bash.bashrc" <<- EOS
 
