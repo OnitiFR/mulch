@@ -33,21 +33,21 @@ func TestController(req *server.Request) {
 		},
 		Tasks: []*server.RunTask{
 			&server.RunTask{
-				Script: "a1.sh",
+				Script: "comfort.sh",
 				As:     "admin",
 			},
-			&server.RunTask{
-				Script: "a2.sh",
-				As:     "app",
-			},
-			&server.RunTask{
-				Script: "a1.sh",
-				As:     "admin",
-			},
-			&server.RunTask{
-				Script: "a2.sh",
-				As:     "app",
-			},
+			// &server.RunTask{
+			// 	Script: "a2.sh",
+			// 	As:     "app",
+			// },
+			// &server.RunTask{
+			// 	Script: "a1.sh",
+			// 	As:     "admin",
+			// },
+			// &server.RunTask{
+			// 	Script: "a2.sh",
+			// 	As:     "app",
+			// },
 		},
 		Log: req.Stream,
 	}
