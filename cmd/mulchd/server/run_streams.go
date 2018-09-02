@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -69,18 +68,11 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) {
 	for num, task := range run.Tasks {
 
 		// trace current script!
-		run.Log.Tracef("------ script: %s ------", task.Script)
+		run.Log.Tracef("------ script: %s ------", task.ScriptName)
 
 		var scanner *bufio.Scanner
 
-		file, erro := os.Open(task.Script)
-		if erro != nil {
-			run.Log.Errorf("Failed to open script: %s", erro)
-			continue
-		}
-		defer file.Close()
-
-		scanner = bufio.NewScanner(file)
+		scanner = bufio.NewScanner(task.ScriptReader)
 
 		// args := task.Probe.Arguments
 		// params := make(map[string]interface{})
@@ -89,10 +81,10 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) {
 
 		// cat is needed to "focus" stdin only on the child bash
 		// cat is "sudoed" so it can be killed by __kill_subshell bellow
-		str := fmt.Sprintf("sudo -u %s cat | sudo -u %s __SCRIPT_ID=%d bash -s -- %s ; echo __EXIT=$?\n", task.As, task.As, num, args)
+		str := fmt.Sprintf("sudo -u %s cat | sudo -u %s __SCRIPT_ID=%d bash -s -- %s ; echo __EXIT=$?", task.As, task.As, num, args)
 		run.Log.Tracef("child=%s", str)
 
-		_, err = out.Write([]byte(str))
+		_, err = out.Write([]byte(str + "\n"))
 		if err != nil {
 			run.Log.Errorf("error writing (starting child bash): %s", err)
 			return
@@ -108,7 +100,7 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) {
 
 		for scanner.Scan() {
 			text := scanner.Text()
-			run.Log.Tracef("stdin=%s\n", text)
+			run.Log.Tracef("stdin=%s", text)
 			_, errw := out.Write([]byte(text + "\n"))
 			if errw != nil {
 				run.Log.Errorf("error writing: %s", errw)

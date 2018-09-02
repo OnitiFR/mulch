@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
 	"github.com/olekukonko/tablewriter"
+	"golang.org/x/crypto/ssh"
 )
 
 // NewVMController creates a new VM
@@ -147,6 +149,12 @@ func ActionVMController(req *server.Request) {
 		} else {
 			req.Stream.Successf("VM '%s' is now down", vmName)
 		}
+	case "exec":
+		req.Stream.Infof("executing script (%s)", vmName)
+		err := ExecScriptVM(req)
+		if err != nil {
+			req.Stream.Failuref("error: %s", err)
+		}
 	default:
 		req.Stream.Failuref("missing or invalid action ('%s') for '%s'", action, vm.Config.Name)
 		return
@@ -163,4 +171,56 @@ func DeleteVMController(req *server.Request) {
 	} else {
 		req.Stream.Successf("'%s' successfully deleted", vmName)
 	}
+}
+
+// ExecScriptVM will execute a script inside the VM
+func ExecScriptVM(req *server.Request) error {
+	vmName := req.SubPath
+
+	if vmName == "" {
+		return errors.New("invalid VM name")
+	}
+	vm, err := req.App.VMDB.GetByName(vmName)
+	if err != nil {
+		return err
+	}
+
+	script, header, err := req.HTTP.FormFile("script")
+	if err != nil {
+		return fmt.Errorf("'script' field: %s", err)
+	}
+	// TODO: check shebang? (and then rewind the reader ?)
+
+	// Some sort of "security" check (even if we're root on the VM…)
+	as := req.HTTP.FormValue("as")
+	if !server.IsValidTokenName(as) {
+		return fmt.Errorf("'%s' is not a valid username", as)
+	}
+
+	run := &server.Run{
+		SSHConn: &server.SSHConnection{
+			User: vm.App.Config.MulchSuperUser,
+			Host: vm.LastIP,
+			Port: 22,
+			Auths: []ssh.AuthMethod{
+				server.PublicKeyFile(vm.App.Config.MulchSSHPrivateKey),
+			},
+			Log: req.Stream,
+		},
+		Tasks: []*server.RunTask{
+			&server.RunTask{
+				ScriptName:   header.Filename,
+				ScriptReader: script,
+				As:           as,
+			},
+		},
+		Log: req.Stream,
+	}
+	err = run.Go()
+	if err != nil {
+		return err
+	}
+
+	req.Stream.Successf("script '%s' returned 0", header.Filename)
+	return nil
 }

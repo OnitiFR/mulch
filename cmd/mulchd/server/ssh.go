@@ -89,7 +89,7 @@ func (connection *SSHConnection) Connect() error {
 	// }
 
 	dial, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", connection.Host, connection.Port), sshConfig)
-	connection.Log.Infof("SSH connection to %s@%s:%d", connection.User, connection.Host, connection.Port)
+	connection.Log.Tracef("SSH connection to %s@%s:%d", connection.User, connection.Host, connection.Port)
 	if err != nil {
 		return fmt.Errorf("failed to dial: %s", err)
 	}

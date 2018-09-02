@@ -1,9 +1,12 @@
 package server
 
+import "io"
+
 // RunTask is a task (script) for a Run
 type RunTask struct {
-	Script string
-	As     string
+	ScriptName   string
+	ScriptReader io.Reader
+	As           string
 }
 
 // Run is a list of Tasks on Host, including task results
