@@ -3,6 +3,7 @@
 - support passphrase for Mulch SSH key
 - move SSK Keys and MulchSuperUser to VM level?
 - check for missing response.Body.Close() (or things like that)
+- remove API key from client error messages
 
 - change HTTP code from 200 to 4XXX in controllers when things fails (ex: req.Stream.Failure)
     - in client, make the non-200 error message silent in stream mode?

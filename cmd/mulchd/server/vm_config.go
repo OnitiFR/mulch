@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/BurntSushi/toml"
 	"github.com/c2h5oh/datasize"
@@ -28,8 +27,8 @@ type VMConfig struct {
 
 // VMConfigScript is a script for prepare, save and restore steps
 type VMConfigScript struct {
-	ScriptFile string
-	As         string
+	ScriptURL string
+	As        string
 }
 
 type tomlVMConfig struct {
@@ -46,8 +45,8 @@ type tomlVMConfig struct {
 }
 
 type tomlVMConfigScript struct {
-	ScriptFile string `toml:"script_file"`
-	As         string
+	ScriptURL string `toml:"script_url"`
+	As        string
 }
 
 // NewVMConfigFromTomlReader cretes a new VMConfig instance from
@@ -113,12 +112,23 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 		script.As = tScript.As
 
 		// test readability
-		file, err := os.Open(tScript.ScriptFile)
-		if err != nil {
-			return nil, err
+		stream, errG := GetScriptFromURL(tScript.ScriptURL)
+		if errG != nil {
+			return nil, fmt.Errorf("unable to get script '%s': %s", tScript.ScriptURL, errG)
 		}
-		defer file.Close()
-		script.ScriptFile = tScript.ScriptFile
+		defer stream.Close()
+
+		// check script signature
+		signature := make([]byte, 2)
+		n, errR := stream.Read(signature)
+		if n != 2 || errR != nil {
+			return nil, fmt.Errorf("error reading script '%s' (n=%d)", tScript.ScriptURL, n)
+		}
+		if string(signature) != "#!" {
+			return nil, fmt.Errorf("script '%s': no shebang found, is it really a shell script?", tScript.ScriptURL)
+		}
+
+		script.ScriptURL = tScript.ScriptURL
 
 		vmConfig.Prepare = append(vmConfig.Prepare, script)
 	}

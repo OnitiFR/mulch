@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path"
 	"time"
 
@@ -296,15 +295,15 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	log.Infof("running 'prepare' scripts")
 	tasks := []*RunTask{}
 	for _, confTask := range vm.Config.Prepare {
-		file, errF := os.Open(confTask.ScriptFile)
-		if errF != nil {
-			return nil, errF
+		stream, errG := GetScriptFromURL(confTask.ScriptURL)
+		if errG != nil {
+			return nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 		}
-		defer file.Close()
+		defer stream.Close()
 
 		task := &RunTask{
-			ScriptName:   confTask.ScriptFile,
-			ScriptReader: file,
+			ScriptName:   path.Base(confTask.ScriptURL),
+			ScriptReader: stream,
 			As:           confTask.As,
 		}
 		tasks = append(tasks, task)
