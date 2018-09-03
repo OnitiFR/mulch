@@ -21,3 +21,7 @@ cpu_count = 1
 [[prepare]]
 script_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/comfort.sh"
 as = "admin"
+
+[[prepare]]
+script_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/lamp.sh"
+as = "admin"
