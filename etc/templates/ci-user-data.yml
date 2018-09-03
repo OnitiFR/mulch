@@ -61,17 +61,17 @@ write_files:
 
   - content: |
       # Created by Mulch as a template, add your own settings if needed.
-      _MULCH_SUPER_USER=$_MULCH_SUPER_USER
-      _APP_USER=$_APP_USER
-      _VM_NAME=$_VM_NAME
-      _MULCH_VERSION=$_MULCH_VERSION
-      _VM_INIT_DATE=$_VM_INIT_DATE
+      export _MULCH_SUPER_USER=$_MULCH_SUPER_USER
+      export _APP_USER=$_APP_USER
+      export _VM_NAME=$_VM_NAME
+      export _MULCH_VERSION=$_MULCH_VERSION
+      export _VM_INIT_DATE=$_VM_INIT_DATE
     owner: root:root
     permissions: '0644'
     path: /etc/mulch.env
 
   - content: |
-      . /etc/vm.env
+      . /etc/mulch.env
     owner: root:root
     permissions: '0644'
     path: /etc/profile.d/mulch-env.sh

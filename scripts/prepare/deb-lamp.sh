@@ -10,7 +10,7 @@ html_dir="/home/$_APP_USER/public_html/"
 
 sudo mkdir -p $html_dir
 echo "creating/overwriting index.php..."
-sudo bash -c "echo '<?php echo \"App Server Ready!\";' > $html_dir/index.php"
+sudo bash -c "echo '<?php echo getenv(\"_VM_NAME\").\" is ready!\";' > $html_dir/index.php"
 
 sudo chown -R $_APP_USER:$_APP_USER $html_dir
 sudo chmod 710 /home/$_APP_USER/
