@@ -35,7 +35,7 @@ EOS
 sudo bash -c "echo '. /etc/mulch.env' >> /etc/apache2/envvars"
 
 sudo a2enmod rewrite || exit $?
-sudo apachectl restart || exit $?
+sudo systemctl restart apache2 || exit $?
 
 # mysql_secure_installation
 # create mysql user and db (use args?)
