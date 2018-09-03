@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func (run *Run) readStdout(std io.Reader, exitStatus chan int) {
+func (run *Run) readStdout(std io.Reader, exitStatus chan int) error {
 	scanner := bufio.NewScanner(std)
 
 	for scanner.Scan() {
@@ -39,12 +39,13 @@ func (run *Run) readStdout(std io.Reader, exitStatus chan int) {
 		}
 
 		if err := scanner.Err(); err != nil {
-			run.Log.Errorf("error reading stdout: %s", err)
+			return fmt.Errorf("error reading stdout: %s", err)
 		}
 	}
+	return nil
 }
 
-func (run *Run) readStderr(std io.Reader) {
+func (run *Run) readStderr(std io.Reader) error {
 	scanner := bufio.NewScanner(std)
 
 	for scanner.Scan() {
@@ -53,13 +54,13 @@ func (run *Run) readStderr(std io.Reader) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		run.Log.Errorf("error reading stderr: %s", err)
-		return // !!!
+		return fmt.Errorf("error reading stderr: %s", err)
 	}
+	return nil
 }
 
 // scripts -> ssh
-func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) {
+func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) error {
 
 	defer out.Close()
 
@@ -86,16 +87,14 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) {
 
 		_, err = out.Write([]byte(str + "\n"))
 		if err != nil {
-			run.Log.Errorf("error writing (starting child bash): %s", err)
-			return
+			return fmt.Errorf("error writing (starting child bash): %s", err)
 		}
 
 		// pkill -og0 cat: we kill the oldest "cat" of our process group (see above)
 		// no newline so we dont change line numbers
 		_, err = out.Write([]byte("function __kill_subshell() { pkill -og0 cat ; } ; export -f __kill_subshell ; trap __kill_subshell EXIT ; "))
 		if err != nil {
-			run.Log.Errorf("error writing (init child bash): %s", err)
-			return
+			return fmt.Errorf("error writing (init child bash): %s", err)
 		}
 
 		for scanner.Scan() {
@@ -103,31 +102,29 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) {
 			run.Log.Tracef("stdin=%s", text)
 			_, errw := out.Write([]byte(text + "\n"))
 			if errw != nil {
-				run.Log.Errorf("error writing: %s", errw)
-				return
+				return fmt.Errorf("error writing: %s", errw)
 			}
 		}
 
 		run.Log.Tracef("killing subshell")
 		_, err = out.Write([]byte("__kill_subshell\n"))
 		if err != nil {
-			run.Log.Errorf("error writing (while killing subshell): %s", err)
-			return
+			return fmt.Errorf("error writing (while killing subshell): %s", err)
 		}
 
 		if err = scanner.Err(); err != nil {
-			run.Log.Errorf("error scanner: %s", err)
-			return
+			return fmt.Errorf("error scanner: %s", err)
 		}
 
 		status := <-exitStatus
 		if status != 0 {
-			run.Log.Errorf("detected non-zero exit status: %d", status)
-			return
+			return fmt.Errorf("detected non-zero exit status: %d", status)
 		}
 	}
+	return nil
 }
-func (run *Run) preparePipes() error {
+
+func (run *Run) preparePipes(errorChan chan error) error {
 	exitStatus := make(chan int)
 	session := run.SSHConn.Session
 
@@ -135,19 +132,28 @@ func (run *Run) preparePipes() error {
 	if err != nil {
 		return fmt.Errorf("Unable to setup stdin for session: %v", err)
 	}
-	go run.stdinInject(stdin, exitStatus)
+	go func() {
+		errI := run.stdinInject(stdin, exitStatus)
+		errorChan <- errI
+	}()
 
 	stdout, err := session.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("Unable to setup stdout for session: %v", err)
 	}
-	go run.readStdout(stdout, exitStatus)
+	go func() {
+		errI := run.readStdout(stdout, exitStatus)
+		errorChan <- errI
+	}()
 
 	stderr, err := session.StderrPipe()
 	if err != nil {
 		return fmt.Errorf("Unable to setup stderr for session: %v", err)
 	}
-	go run.readStderr(stderr)
+	go func() {
+		errI := run.readStderr(stderr)
+		errorChan <- errI
+	}()
 
 	return nil
 }
