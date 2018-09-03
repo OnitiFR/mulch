@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Unlike RedHat/CentOS, Debian does not source profile for non-login shells:
-. /etc/profile.d/vm.sh
+. /etc/mulch.env
 
 export DEBIAN_FRONTEND="noninteractive"
 sudo -E apt-get -y -qq install apache2 php mariadb-server phpmyadmin pwgen || exit $?
@@ -31,6 +31,8 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
     CustomLog \${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 EOS
+
+sudo bash -c "echo '. /etc/mulch.env' >> /etc/apache2/envvars"
 
 sudo a2enmod rewrite || exit $?
 sudo apachectl restart || exit $?

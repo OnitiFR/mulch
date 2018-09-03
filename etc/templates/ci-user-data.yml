@@ -68,7 +68,13 @@ write_files:
       _VM_INIT_DATE=$_VM_INIT_DATE
     owner: root:root
     permissions: '0644'
-    path: /etc/profile.d/vm.sh
+    path: /etc/mulch.env
+
+  - content: |
+      . /etc/vm.env
+    owner: root:root
+    permissions: '0644'
+    path: /etc/profile.d/mulch-env.sh
 
 runcmd:
   - [ systemctl, enable, phone_home ]
