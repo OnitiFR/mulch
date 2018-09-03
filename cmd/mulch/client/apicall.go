@@ -109,7 +109,7 @@ func (call *APICall) Do() {
 		finalURL := apiURL + "?" + data.Encode()
 		req, err = http.NewRequest(method, finalURL, nil)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal(removeAPIKeyFromString(err.Error(), call.api.APIKey))
 		}
 	case "POST", "PUT":
 		if len(call.files) == 0 {
@@ -162,7 +162,7 @@ func (call *APICall) Do() {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(removeAPIKeyFromString(err.Error(), call.api.APIKey))
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, err := ioutil.ReadAll(resp.Body)
@@ -190,6 +190,10 @@ func (call *APICall) Do() {
 	default:
 		log.Fatalf("unsupported content type '%s'", mime)
 	}
+}
+
+func removeAPIKeyFromString(in string, key string) string {
+	return strings.Replace(in, key, "xxx", -1)
 }
 
 func printJSONStream(body io.ReadCloser, call *APICall) {
