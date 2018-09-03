@@ -150,7 +150,7 @@ func ActionVMController(req *server.Request) {
 			req.Stream.Successf("VM '%s' is now down", vmName)
 		}
 	case "exec":
-		req.Stream.Infof("executing script (%s)", vmName)
+		// req.Stream.Infof("executing script (%s)", vmName)
 		err := ExecScriptVM(req)
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)

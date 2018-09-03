@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 )
 
 func cloudInitMetaData(id string, hostname string) []byte {
@@ -45,6 +46,9 @@ func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
 	userDataVariables["_MULCH_SUPER_USER"] = app.Config.MulchSuperUser
 	userDataVariables["_TIMEZONE"] = vm.Config.Timezone
 	userDataVariables["_APP_USER"] = vm.Config.AppUser
+	userDataVariables["_VM_NAME"] = vm.Config.Name
+	userDataVariables["_MULCH_VERSION"] = Version
+	userDataVariables["_VM_INIT_DATE"] = time.Now().Format(time.RFC3339)
 
 	userData, err := cloudInitUserData(userDataTemplate, userDataVariables)
 	if err != nil {

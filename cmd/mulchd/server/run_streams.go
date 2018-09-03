@@ -68,8 +68,7 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) error {
 
 	for num, task := range run.Tasks {
 
-		// trace current script!
-		run.Log.Tracef("------ script: %s ------", task.ScriptName)
+		run.Log.Infof("------ script: %s ------", task.ScriptName)
 
 		var scanner *bufio.Scanner
 

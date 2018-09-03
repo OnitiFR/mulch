@@ -59,6 +59,17 @@ write_files:
     permissions: '0755'
     path: /usr/local/bin/phone_home
 
+  - content: |
+      # Created by Mulch as a template, add your own settings if needed.
+      _MULCH_SUPER_USER=$_MULCH_SUPER_USER
+      _APP_USER=$_APP_USER
+      _VM_NAME=$_VM_NAME
+      _MULCH_VERSION=$_MULCH_VERSION
+      _VM_INIT_DATE=$_VM_INIT_DATE
+    owner: root:root
+    permissions: '0644'
+    path: /etc/profile.d/vm.sh
+
 runcmd:
   - [ systemctl, enable, phone_home ]
 
