@@ -1,7 +1,8 @@
 - API keys or challenge based auth
 - mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
 - support passphrase for Mulch SSH key
-- move SSK Keys and MulchSuperUser to VM level
+- move SSK Keys and MulchSuperUser to VM level?
+- check for missing response.Body.Close() (or things like that)
 
 - change HTTP code from 200 to 4XXX in controllers when things fails (ex: req.Stream.Failure)
     - in client, make the non-200 error message silent in stream mode?

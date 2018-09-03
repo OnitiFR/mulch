@@ -204,8 +204,10 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	defer func() {
 		if !commit {
 			log.Infof("rollback, deleting vm '%s'", vm.Config.Name)
+			dom.Destroy() // stop (if needed)
 			errDef := dom.Undefine()
 			if errDef != nil {
+				log.Errorf("can't delete vm: %s", errDef)
 				return
 			}
 		}

@@ -36,7 +36,8 @@ write_files:
   - content: |
       [Unit]
       Description=Phone home on boot
-      After=network.target
+      After=network-online.target sshd.service
+      Wants=network-online.target
 
       [Service]
       RemainAfterExit=yes
