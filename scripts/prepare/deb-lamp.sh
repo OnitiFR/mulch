@@ -43,6 +43,9 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
     CustomLog \${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 EOS
+
+sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
+sudo a2enconf phpmyadmin || exit $?
 sudo a2enmod rewrite || exit $?
 
 # mysql_secure_installation
@@ -58,11 +61,13 @@ EOS
 
 # create mysql user and db (use args?)
 sudo bash -c "cat | mysql -su root" <<- EOS
-CREATE DATABASE $_APP_USER;
-CREATE USER '$_APP_USER'@'localhost' IDENTIFIED BY '$MYSQL_PASSWORD';
+CREATE DATABASE IF NOT EXISTS $_APP_USER;
+CREATE USER IF NOT EXISTS '$_APP_USER'@'localhost';
+SET PASSWORD FOR '$_APP_USER'@'localhost' = PASSWORD('$MYSQL_PASSWORD');
 GRANT ALL ON $_APP_USER.* TO '$_APP_USER'@'localhost';
 FLUSH PRIVILEGES;
 EOS
+[ $? -eq 0 ] || exit $?
 
 echo "restart apache2"
 sudo bash -c "echo '. /etc/mulch.env' >> /etc/apache2/envvars"
