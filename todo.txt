@@ -3,6 +3,8 @@
 * Reverse-Proxy Webserver with SSL
 * interactive SSH to VM from mulch client
 
++ Oniti: Sparkpost
+
 - challenge based auth?
 - mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
 - support passphrase for Mulch SSH key

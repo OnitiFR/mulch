@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# -- Run with sudo privileges
+
 # Unlike RedHat/CentOS, Debian does not source profile for non-login shells:
 . /etc/mulch.env
 
@@ -18,6 +20,7 @@ MYSQL_HOST="127.0.0.1"
 MYSQL_DB="$_APP_USER"
 MYSQL_USER="$_APP_USER"
 MYSQL_PASSWORD="$MYSQL_PASSWORD"
+HTML_DIR="$html_dir"
 EOS
 
 sudo mkdir -p $html_dir

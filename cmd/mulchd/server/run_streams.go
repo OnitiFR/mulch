@@ -91,7 +91,7 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) error {
 
 		// pkill -og0 cat: we kill the oldest "cat" of our process group (see above)
 		// no newline so we dont change line numbers
-		_, err = out.Write([]byte("function __kill_subshell() { pkill -og0 cat ; } ; export -f __kill_subshell ; trap __kill_subshell EXIT ; "))
+		_, err = out.Write([]byte("function __kill_subshell() { pkill -og0 cat ; } ; export -f __kill_subshell ; trap __kill_subshell EXIT ; cd ; "))
 		if err != nil {
 			return fmt.Errorf("error writing (init child bash): %s", err)
 		}

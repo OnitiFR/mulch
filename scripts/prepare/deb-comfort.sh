@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# -- Run with sudo privileges
+
 # Unlike RedHat/CentOS, Debian does not source profile for non-login shells:
 . /etc/mulch.env
 
