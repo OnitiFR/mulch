@@ -25,6 +25,14 @@ func cloudInitUserData(templateFile string, variables map[string]interface{}) ([
 	return []byte(expanded), nil
 }
 
+func cloudInitExtraEnv(envMap map[string]string) string {
+	res := ""
+	for key, val := range envMap {
+		res = res + fmt.Sprintf("export %s=\"%s\"; ", key, val)
+	}
+	return res
+}
+
 // CloudInitCreate will create (and upload ?) the CloudInit image
 func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
 	volTemplate := app.Config.configPath + "/templates/volume.xml"
@@ -49,6 +57,7 @@ func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
 	userDataVariables["_VM_NAME"] = vm.Config.Name
 	userDataVariables["_MULCH_VERSION"] = Version
 	userDataVariables["_VM_INIT_DATE"] = time.Now().Format(time.RFC3339)
+	userDataVariables["__EXTRA_ENV"] = cloudInitExtraEnv(vm.Config.Env)
 
 	userData, err := cloudInitUserData(userDataTemplate, userDataVariables)
 	if err != nil {

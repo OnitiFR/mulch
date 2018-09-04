@@ -1,4 +1,9 @@
-- API keys or challenge based auth
+* Seeder (automatic download of images)
+* save / restore feature
+* Reverse-Proxy Webserver with SSL
+* interactive SSH to VM from mulch client
+
+- challenge based auth?
 - mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
 - support passphrase for Mulch SSH key
 - move SSK Keys and MulchSuperUser to VM level?
@@ -10,8 +15,7 @@
 - see if it's possible for a VM to steal an IP from another VM (DoS)
 - create a specific HTTP muxer for /phone (only listening on mulch's virbr)
 
+- deal with libvirtd restart
 - check connection and access rights
 - differentiate "rights issues" from  "libvirtd not running" issues
-- deal with libvirtd restart
-- long run connection test to libvirt
 - check libvirt group / qemu user for storage?

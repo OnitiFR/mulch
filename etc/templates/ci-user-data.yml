@@ -7,8 +7,6 @@
 #chpasswd: {expire: False}
 #ssh_pwauth: True
 
-# to speed up things during dev, comment this:
-# cost: Debian = 10s
 package_upgrade: $_PACKAGE_UPGRADE
 
 # we use this call to confirm Cloud-Init success
@@ -19,7 +17,6 @@ phone_home:
 users:
   - name: $_MULCH_SUPER_USER
     gecos: Mulch Control and Command admin account
-    #groups: users
     shell: /bin/bash
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
     ssh_authorized_keys:
@@ -66,6 +63,7 @@ write_files:
       export _VM_NAME=$_VM_NAME
       export _MULCH_VERSION=$_MULCH_VERSION
       export _VM_INIT_DATE=$_VM_INIT_DATE
+      $__EXTRA_ENV
     owner: root:root
     permissions: '0644'
     path: /etc/mulch.env

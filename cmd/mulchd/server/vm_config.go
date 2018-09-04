@@ -19,6 +19,7 @@ type VMConfig struct {
 	DiskSize    uint64
 	RAMSize     uint64
 	CPUCount    int
+	Env         map[string]string
 	// + prepare scripts
 	Prepare []*VMConfigScript
 	// + save scripts
@@ -41,6 +42,7 @@ type tomlVMConfig struct {
 	DiskSize    datasize.ByteSize `toml:"disk_size"`
 	RAMSize     datasize.ByteSize `toml:"ram_size"`
 	CPUCount    int               `toml:"cpu_count"`
+	Env         [][]string
 	Prepare     []tomlVMConfigScript
 }
 
@@ -52,7 +54,9 @@ type tomlVMConfigScript struct {
 // NewVMConfigFromTomlReader cretes a new VMConfig instance from
 // a io.Reader containing VM configuration description
 func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
-	vmConfig := &VMConfig{}
+	vmConfig := &VMConfig{
+		Env: make(map[string]string),
+	}
 
 	// defaults (if not in the file)
 	tConfig := &tomlVMConfig{
@@ -102,6 +106,27 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 		return nil, fmt.Errorf("need a least one CPU")
 	}
 	vmConfig.CPUCount = tConfig.CPUCount
+
+	for _, line := range tConfig.Env {
+		if len(line) != 2 {
+			return nil, fmt.Errorf("invalid 'env' line, need two values (key, val), found %d", len(line))
+		}
+
+		key := line[0]
+		val := line[1]
+		if !IsValidTokenName(key) {
+			return nil, fmt.Errorf("invalid 'env' name '%s'", key)
+		}
+
+		// TODO: check for reserved names?
+
+		_, exists := vmConfig.Env[key]
+		if exists == true {
+			return nil, fmt.Errorf("duplicated 'env' name '%s'", key)
+		}
+
+		vmConfig.Env[key] = val
+	}
 
 	for _, tScript := range tConfig.Prepare {
 		script := &VMConfigScript{}

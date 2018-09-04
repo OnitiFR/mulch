@@ -142,7 +142,7 @@ func ActionVMController(req *server.Request) {
 			req.Stream.Successf("VM '%s' is now up and running", vmName)
 		}
 	case "stop":
-		req.Stream.Infof("stoping %s", vmName)
+		req.Stream.Infof("stopping %s", vmName)
 		err := server.VMStopByName(libvirtVMName, req.App, req.Stream)
 		if err != nil {
 			req.Stream.Failuref("unable to stop '%s': %s", vmName, err)
