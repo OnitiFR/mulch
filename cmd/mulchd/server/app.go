@@ -20,6 +20,7 @@ type App struct {
 	Rand      *rand.Rand
 	VMDB      *VMDatabase
 	APIKeysDB *APIKeyDatabase
+	Seeder    *SeedDatabase
 	routes    map[string][]*Route
 }
 
@@ -73,6 +74,12 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	err = app.initSeedsDB()
+	if err != nil {
+		return nil, err
+	}
+	go app.Seeder.Run()
 
 	app.PhoneHome = NewPhoneHomeHub()
 
@@ -162,6 +169,18 @@ func (app *App) initAPIKeysDB() error {
 	return nil
 }
 
+func (app *App) initSeedsDB() error {
+	dbPath := app.Config.DataPath + "/mulch-seeds.db"
+
+	seeder, err := NewSeeder(dbPath, app)
+	if err != nil {
+		return err
+	}
+	app.Seeder = seeder
+
+	return nil
+}
+
 func (app *App) initSSH() error {
 	if _, err := os.Stat(app.Config.MulchSSHPrivateKey); os.IsNotExist(err) {
 		app.Log.Warningf("SSH private key not found, mulch will fail to control VMs! (%s)", app.Config.MulchSSHPrivateKey)
@@ -232,7 +251,6 @@ func (app *App) initLibvirtNetwork() error {
 
 // Run will start the app (in the foreground)
 func (app *App) Run() {
-
 	app.Log.Infof("API server listening on %s", app.Config.Listen)
 	app.registerRouteHandlers()
 	err := http.ListenAndServe(app.Config.Listen, app.Mux)

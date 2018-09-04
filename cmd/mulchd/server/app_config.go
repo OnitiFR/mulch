@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"path"
 
 	"github.com/BurntSushi/toml"
@@ -32,8 +33,17 @@ type AppConfig struct {
 	// User (sudoer) created by Mulch in VMs
 	MulchSuperUser string
 
+	// Seeds
+	Seeds map[string]ConfigSeed
+
 	// global mulchd configuration path
 	configPath string
+}
+
+// ConfigSeed describes a OS seed
+type ConfigSeed struct {
+	CurrentURL string
+	As         string
 }
 
 type tomlAppConfig struct {
@@ -45,6 +55,13 @@ type tomlAppConfig struct {
 	MulchSSHPrivateKey string `toml:"mulch_ssh_private_key"`
 	MulchSSHPublicKey  string `toml:"mulch_ssh_public_key"`
 	MulchSuperUser     string `toml:"mulch_super_user"`
+	Seed               []tomlConfigSeed
+}
+
+type tomlConfigSeed struct {
+	Name       string
+	CurrentURL string `toml:"current_url"`
+	As         string
 }
 
 // NewAppConfigFromTomlFile return a AppConfig using
@@ -55,6 +72,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 
 	appConfig := &AppConfig{
 		configPath: configPath,
+		Seeds:      make(map[string]ConfigSeed),
 	}
 
 	// defaults (if not in the file)
@@ -88,6 +106,36 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		return nil, errors.New("'mulch_ssh_public_key' config param must be defined")
 	}
 	appConfig.MulchSSHPublicKey = tConfig.MulchSSHPublicKey
+
+	for _, seed := range tConfig.Seed {
+		if seed.Name == "" {
+			return nil, fmt.Errorf("seed 'name' not defined")
+		}
+
+		if IsValidTokenName(seed.Name) == false {
+			return nil, fmt.Errorf("'%s' is not a valid seed name", seed.Name)
+		}
+
+		_, exists := appConfig.Seeds[seed.Name]
+		if exists == true {
+			return nil, fmt.Errorf("seed name '%s' already defined", seed.Name)
+		}
+
+		if seed.CurrentURL == "" {
+			return nil, fmt.Errorf("seed '%s': 'current_url' not defined", seed.Name)
+
+		}
+
+		if seed.As == "" {
+			return nil, fmt.Errorf("seed '%s': 'as' not defined", seed.Name)
+		}
+
+		appConfig.Seeds[seed.Name] = ConfigSeed{
+			CurrentURL: seed.CurrentURL,
+			As:         seed.As,
+		}
+
+	}
 
 	return appConfig, nil
 }

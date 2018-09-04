@@ -1,5 +1,5 @@
 # Sample configuration file for Mulch server (mulchd)
-# Values here are defaults
+# Values here are defaults (except for seeds)
 
 # Listen address (no IP = all interfaces)
 listen = ":8585"
@@ -29,3 +29,19 @@ mulch_super_user = "admin"
 # Mulch may generate by itself in the future, we'll see.
 mulch_ssh_private_key = ""
 mulch_ssh_public_key = ""
+
+# Sample seeds
+[[seed]]
+name = "debian-9"
+current_url = "http://cdimage.debian.org/cdimage/openstack/current-9/debian-9-openstack-amd64.qcow2"
+as = "debian-9-openstack-amd64.qcow2"
+
+[[seed]]
+name = "centos-7"
+current_url = "http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
+as = "centos-7-x86_64.qcow2"
+
+[[seed]]
+name = "ubuntu-1810"
+current_url = "http://cloud-images.ubuntu.com/cosmic/current/cosmic-server-cloudimg-amd64.img"
+as = "ubuntu-1810-amd64.qcow2"
