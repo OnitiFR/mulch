@@ -77,6 +77,7 @@ set_config 'DB_NAME' "$MYSQL_DB"
 # set_config 'DB_CHARSET' "$WORDPRESS_DB_CHARSET"
 # set_config 'DB_COLLATE' "$WORDPRESS_DB_COLLATE"
 
+# Note: Added at the end of wp-config.php, it seems.
 # // If we're behind a proxy server and using HTTPS, we need to alert Wordpress of that fact
 # // see also http://codex.wordpress.org/Administration_Over_SSL#Using_a_Reverse_Proxy
 # if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
