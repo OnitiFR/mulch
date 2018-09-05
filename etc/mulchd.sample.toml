@@ -32,16 +32,16 @@ mulch_ssh_public_key = ""
 
 # Sample seeds
 [[seed]]
-name = "debian-9"
+name = "debian_9"
 current_url = "http://cdimage.debian.org/cdimage/openstack/current-9/debian-9-openstack-amd64.qcow2"
 as = "debian-9-openstack-amd64.qcow2"
 
 [[seed]]
-name = "centos-7"
+name = "centos_7"
 current_url = "http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
 as = "centos-7-x86_64.qcow2"
 
 [[seed]]
-name = "ubuntu-1810"
+name = "ubuntu_1810"
 current_url = "http://cloud-images.ubuntu.com/cosmic/current/cosmic-server-cloudimg-amd64.img"
 as = "ubuntu-1810-amd64.qcow2"

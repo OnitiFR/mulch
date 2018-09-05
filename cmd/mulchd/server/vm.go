@@ -78,10 +78,19 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	ciName := "ci-" + vmConfig.Name + ".img"
 	diskName := vmConfig.Name + ".qcow2"
 
+	seed, err := app.Seeder.GetByName(vmConfig.Seed)
+	if err != nil {
+		return nil, err
+	}
+
+	if seed.Ready == false {
+		return nil, fmt.Errorf("seed %s is not ready", vmConfig.Seed)
+	}
+
 	// 1 - copy from reference image
 	log.Infof("creating VM disk '%s'", diskName)
 	err = app.Libvirt.CreateDiskFromSeed(
-		vmConfig.SeedImage,
+		seed.As,
 		diskName,
 		app.Config.configPath+"/templates/volume.xml",
 		log)

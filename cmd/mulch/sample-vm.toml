@@ -8,7 +8,7 @@ hostname = "testvm.localdomain"
 timezone = "Europe/Paris" # default
 app_user = "app" # default
 
-seed_image = "debian-9-openstack-amd64.qcow2"
+seed = "debian_9"
 
 # Will speed up creation for this test (no update/upgrade)
 # (but install will not be up to date, don't do this in production!)

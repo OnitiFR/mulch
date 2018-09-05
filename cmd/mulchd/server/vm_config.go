@@ -14,7 +14,7 @@ type VMConfig struct {
 	Hostname    string
 	Timezone    string
 	AppUser     string
-	SeedImage   string
+	Seed        string
 	InitUpgrade bool
 	DiskSize    uint64
 	RAMSize     uint64
@@ -36,8 +36,8 @@ type tomlVMConfig struct {
 	Name        string
 	Hostname    string
 	Timezone    string
-	AppUser     string            `toml:"app_user"`
-	SeedImage   string            `toml:"seed_image"`
+	AppUser     string `toml:"app_user"`
+	Seed        string
 	InitUpgrade bool              `toml:"init_upgrade"`
 	DiskSize    datasize.ByteSize `toml:"disk_size"`
 	RAMSize     datasize.ByteSize `toml:"ram_size"`
@@ -84,11 +84,10 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 	}
 	vmConfig.AppUser = tConfig.AppUser
 
-	// TODO: check the seed image exists
-	if tConfig.SeedImage == "" {
-		return nil, fmt.Errorf("invalid seed image '%s'", tConfig.SeedImage)
+	if tConfig.Seed == "" || !IsValidTokenName(tConfig.Seed) {
+		return nil, fmt.Errorf("invalid seed image '%s'", tConfig.Seed)
 	}
-	vmConfig.SeedImage = tConfig.SeedImage
+	vmConfig.Seed = tConfig.Seed
 
 	vmConfig.InitUpgrade = tConfig.InitUpgrade
 

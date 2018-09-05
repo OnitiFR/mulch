@@ -362,3 +362,17 @@ func LibvirtDomainStateToString(state libvirt.DomainState) string {
 		return "unknown"
 	}
 }
+
+// RemoveVolume for specified pool
+func (lv *Libvirt) RemoveVolume(name string, pool *libvirt.StoragePool) error {
+	vol, errDef := pool.LookupStorageVolByName(name)
+	if errDef != nil {
+		return errDef
+	}
+	defer vol.Free()
+	errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+	if errDef != nil {
+		return errDef
+	}
+	return nil
+}

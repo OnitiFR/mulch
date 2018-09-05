@@ -2,9 +2,14 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/libvirt/libvirt-go"
 )
 
 // SeedDatabase describes a persistent DataBase of Seed structures
@@ -43,7 +48,9 @@ func NewSeeder(filename string, app *App) (*SeedDatabase, error) {
 	for name, configEntry := range app.Config.Seeds {
 		seed, exists := db.db[name]
 		if exists {
-			seed.As = configEntry.As
+			if seed.As != configEntry.As {
+				app.Log.Warningf("changing seed 'as' setting is not supported yet! (remove seed %s, launch mulchd, re-create seed)", name)
+			}
 			seed.CurrentURL = configEntry.CurrentURL
 		} else {
 			app.Log.Infof("adding a new seed '%s'", name)
@@ -56,12 +63,12 @@ func NewSeeder(filename string, app *App) (*SeedDatabase, error) {
 	}
 
 	// 2 - remove old entries
-	for name := range db.db {
+	for name, oldSeed := range db.db {
 		_, exists := app.Config.Seeds[name]
 		if exists == false {
 			app.Log.Infof("removing old seed '%s'", name)
 			delete(db.db, name)
-			// TODO: delete from storage
+			app.Libvirt.RemoveVolume(oldSeed.As, app.Libvirt.Pools.Seeds)
 		}
 	}
 
@@ -104,40 +111,105 @@ func (db *SeedDatabase) load() error {
 	return nil
 }
 
+// GetByName returns a seed using its name (or an error)
+func (db *SeedDatabase) GetByName(name string) (*Seed, error) {
+	seed, exits := db.db[name]
+	if exits == false {
+		return nil, fmt.Errorf("seed %s does not exists", name)
+	}
+	return seed, nil
+}
+
 // Run the seeder (check Last-Modified dates, download new releases)
 func (db *SeedDatabase) Run() {
 	// small cooldown (app init)
 	time.Sleep(1 * time.Second)
 
 	for {
-		modified := false
-		for name, seed := range db.db {
-			res, err := http.Head(seed.CurrentURL)
-			if err != nil {
-				db.app.Log.Errorf("seeder '%s': %s", name, err)
-				continue
-			}
-			lm := res.Header.Get("Last-Modified")
-			if lm == "" {
-				db.app.Log.Errorf("seeder '%s': undefined Last-Modified header", name)
-				continue
-			}
-			t, err := http.ParseTime(lm)
-			if err != nil {
-				db.app.Log.Errorf("seeder '%s': can't parse Last-Modified header: %s", name, err)
-				continue
-			}
-			if seed.LastModified != t {
-				db.app.Log.Infof("update needed for seed '%s'", name)
-				seed.LastModified = t
-				seed.Ready = false
-				modified = true
-				// TODO: download file + upload to libvirt
-			}
-		}
-		if modified {
-			db.save()
-		}
+		db.runStep()
 		time.Sleep(1 * time.Hour)
 	}
+}
+
+func (db *SeedDatabase) runStep() {
+	for name, seed := range db.db {
+		res, err := http.Head(seed.CurrentURL)
+		if err != nil {
+			db.app.Log.Errorf("seeder '%s': %s", name, err)
+			continue
+		}
+		lm := res.Header.Get("Last-Modified")
+		if lm == "" {
+			db.app.Log.Errorf("seeder '%s': undefined Last-Modified header", name)
+			continue
+		}
+		t, err := http.ParseTime(lm)
+		if err != nil {
+			db.app.Log.Errorf("seeder '%s': can't parse Last-Modified header: %s", name, err)
+			continue
+		}
+		if seed.LastModified != t {
+			db.app.Log.Infof("downloading seed '%s'", name)
+			seed.Ready = false
+			db.save()
+
+			tmpFile, err := db.seedDownload(seed)
+			if err != nil {
+				db.app.Log.Errorf("seeder '%s': unable to download image: %s", name, err)
+				continue
+			}
+			defer os.Remove(tmpFile)
+
+			// upload to libvirt seed storage
+			db.app.Log.Infof("moving seed '%s' to storage", name)
+
+			errR := db.app.Libvirt.RemoveVolume(seed.As, db.app.Libvirt.Pools.Seeds)
+			if err != nil {
+				virtErr := errR.(libvirt.Error)
+				if !(virtErr.Domain == libvirt.FROM_STORAGE && virtErr.Code == libvirt.ERR_NO_STORAGE_VOL) {
+					db.app.Log.Errorf("seeder '%s': unable to delete old image: %s", name, errR)
+					continue
+				}
+			}
+
+			err = db.app.Libvirt.UploadFileToLibvirt(
+				db.app.Libvirt.Pools.Seeds,
+				db.app.Libvirt.Pools.SeedsXML,
+				db.app.Config.configPath+"/templates/volume.xml",
+				tmpFile,
+				seed.As,
+				db.app.Log)
+			if err != nil {
+				db.app.Log.Errorf("seeder '%s': unable to move image to storage: %s", name, err)
+				continue
+			}
+
+			seed.Ready = true
+			seed.LastModified = t
+			db.save()
+			db.app.Log.Infof("seed '%s' is now ready", name)
+		}
+	}
+}
+
+func (db *SeedDatabase) seedDownload(seed *Seed) (string, error) {
+
+	tmpfile, err := ioutil.TempFile("", "mulch-seed-image")
+	if err != nil {
+		return "", err
+	}
+	defer tmpfile.Close()
+
+	resp, err := http.Get(seed.CurrentURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	_, err = io.Copy(tmpfile, resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return tmpfile.Name(), nil
 }
