@@ -29,11 +29,12 @@ type API struct {
 
 // APICall describes a call to the API
 type APICall struct {
-	api    *API
-	Method string
-	Path   string
-	Args   map[string]string
-	files  map[string]string
+	api          *API
+	Method       string
+	Path         string
+	Args         map[string]string
+	JSONCallback func(io.Reader)
+	files        map[string]string
 }
 
 // NewAPI create a new API instance
@@ -104,7 +105,7 @@ func (call *APICall) Do() {
 	switch method {
 	case "GET", "DELETE":
 		if len(call.files) > 0 {
-			log.Fatalf("file upload is not supported using this method")
+			log.Fatal("file upload is not supported using this method")
 		}
 		finalURL := apiURL + "?" + data.Encode()
 		req, err = http.NewRequest(method, finalURL, nil)
@@ -157,13 +158,15 @@ func (call *APICall) Do() {
 			req.Header.Set("Content-Type", multipartWriter.FormDataContentType())
 		}
 	default:
-		log.Fatal(fmt.Errorf("apicall does not support '%s' yet", method))
+		log.Fatalf("apicall does not support '%s' yet", method)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Fatal(removeAPIKeyFromString(err.Error(), call.api.APIKey))
 	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
@@ -187,6 +190,12 @@ func (call *APICall) Do() {
 			log.Fatal(err)
 		}
 		fmt.Print(string(body))
+	case "application/json":
+		if call.JSONCallback == nil {
+			log.Fatalf("no JSON callback defined for %s %s", call.Method, call.Path)
+		}
+		call.JSONCallback(resp.Body)
+		// return? call.callback?
 	default:
 		log.Fatalf("unsupported content type '%s'", mime)
 	}

@@ -1,14 +1,14 @@
 package controllers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
-	"github.com/olekukonko/tablewriter"
+	"github.com/Xfennec/mulch/common"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -40,21 +40,16 @@ func NewVMController(req *server.Request) {
 
 // ListVMsController list VMs
 func ListVMsController(req *server.Request) {
-	req.Response.Header().Set("Content-Type", "text/plain")
+	req.Response.Header().Set("Content-Type", "application/json")
 	vmNames := req.App.VMDB.GetNames()
 
-	if len(vmNames) == 0 {
-		req.Printf("Currently, no VM exists. You may use 'mulch vm create'.\n")
-		return
-	}
-
-	tableData := [][]string{}
+	var retData common.APIVmListEntries
 	for _, vmName := range vmNames {
 		vm, err := req.App.VMDB.GetByName(vmName)
 		if err != nil {
 			msg := fmt.Sprintf("VM '%s': %s\n", vmName, err)
 			req.App.Log.Error(msg)
-			req.Println(msg)
+			http.Error(req.Response, msg, 500)
 			return
 		}
 
@@ -85,20 +80,20 @@ func ListVMsController(req *server.Request) {
 		// 	// check if services are running? (SSH? port?)
 		// }
 
-		tableData = append(tableData, []string{
-			vmName,
-			vm.LastIP,
-			server.LibvirtDomainStateToString(state),
-			strconv.FormatBool(vm.Locked),
+		retData = append(retData, common.APIVmListEntry{
+			Name:   vmName,
+			LastIP: vm.LastIP,
+			State:  server.LibvirtDomainStateToString(state),
+			Locked: vm.Locked,
 		})
 	}
 
-	table := tablewriter.NewWriter(req.Response)
-	table.SetHeader([]string{"Name", "Last known IP", "State", "Locked"})
-	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-	table.SetCenterSeparator("|")
-	table.AppendBulk(tableData)
-	table.Render()
+	enc := json.NewEncoder(req.Response)
+	err := enc.Encode(&retData)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+	}
 }
 
 // ActionVMController redirect to the correct action for the VM (start/stop)
