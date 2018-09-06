@@ -29,6 +29,10 @@ script_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/pre
 as = "admin"
 
 [[prepare]]
+script_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/test-warn.sh"
+as = "admin"
+
+[[prepare]]
 script_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/deb-lamp.sh"
 as = "admin"
 

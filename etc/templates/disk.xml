@@ -1,0 +1,6 @@
+<disk type='file' device='disk'>
+  <alias name="ua-mulch-xyz"/>
+  <driver name='qemu' type='qcow2'/>
+  <source file='undefined-disk'/>
+  <target dev='vdx' bus='virtio'/>
+</disk>

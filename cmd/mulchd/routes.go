@@ -60,4 +60,12 @@ func AddRoutes(app *server.App) {
 		Type:    server.RouteTypeStream,
 		Handler: controllers.Test2Controller,
 	})
+
+	app.AddRoute(&server.Route{
+		Route:        "POST /test3/*",
+		Type:         server.RouteTypeStream,
+		Public:       true,
+		NoProtoCheck: true,
+		Handler:      controllers.Test3Controller,
+	})
 }

@@ -43,6 +43,13 @@ func NewSeeder(filename string, app *App) (*SeedDatabase, error) {
 		}
 	}
 
+	for _, seed := range db.db {
+		if seed.Ready == false {
+			// Reset LastModified to restart download
+			seed.LastModified = time.Time{}
+		}
+	}
+
 	// reconciliate the DB with the config:
 	// 1 - add new entries and refresh existing ones
 	for name, configEntry := range app.Config.Seeds {
@@ -188,6 +195,7 @@ func (db *SeedDatabase) runStep() {
 			seed.LastModified = t
 			db.save()
 			db.app.Log.Infof("seed '%s' is now ready", name)
+			os.Remove(tmpFile) // remove now (already deferred, but let's free disk space)
 		}
 	}
 }

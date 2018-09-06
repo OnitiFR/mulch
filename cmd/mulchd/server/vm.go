@@ -17,6 +17,7 @@ import (
 const (
 	VMStorageAliasDisk      = "ua-mulch-disk"
 	VMStorageAliasCloudInit = "ua-mulch-cloudinit"
+	VMStorageAliasTest      = "ua-mulch-test"
 	VMNetworkAliasBridge    = "ua-mulch-bridge"
 )
 
@@ -205,7 +206,6 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 
 	dom, err := conn.DomainDefineXML(string(xml2))
 	if err != nil {
-		template
 		return nil, err
 	}
 	defer dom.Free() // remember: "deferred calls are executed in last-in-first-out order"
@@ -624,13 +624,64 @@ func VMDelete(vmName string, app *App, log *Log) error {
 // this volume to VM.
 // For test, we're using "disks" storage, a dedicated one should be used
 // should format (+partition?) the empty disk (using sudo+SSH, probably)
-func VMAttachNewBackup(vmName string) error {
+func VMAttachNewBackup(vmName string, app *App, log *Log) error {
 	// check if vm exists (in libvirt only?)
-	// check for previous attached backup
-	// UploadFileToLibvirt
-	// ResizeDisk
+	dom, err := app.Libvirt.GetDomainByName(app.Config.VMPrefix + vmName)
+	if err != nil {
+		return err
+	}
+	if dom == nil {
+		return fmt.Errorf("can't find domain '%s'", vmName)
+	}
+	defer dom.Free()
+
+	// TODO: check for previous attached backup
+
+	volName := vmName + "-backup.qcow2"
+
+	err = app.Libvirt.UploadFileToLibvirt(
+		app.Libvirt.Pools.Disks,
+		app.Libvirt.Pools.DisksXML,
+		app.Config.configPath+"/templates/volume.xml",
+		app.Config.configPath+"/templates/empty.qcow2",
+		volName,
+		log)
+	if err != nil {
+		return err
+	}
+
+	err = app.Libvirt.ResizeDisk(volName, 2*1024*1024*1024, log)
+	if err != nil {
+		return err
+	}
+
+	xml, err := ioutil.ReadFile(app.Config.configPath + "/templates/disk.xml")
+	if err != nil {
+		return err
+	}
+
+	diskcfg := &libvirtxml.DomainDisk{}
+	err = diskcfg.Unmarshal(string(xml))
+	if err != nil {
+		return err
+	}
+	diskcfg.Alias.Name = VMStorageAliasTest
+	diskcfg.Source.File.File = app.Libvirt.Pools.DisksXML.Target.Path + "/" + volName
+	diskcfg.Target.Dev = "vdb"
+
+	xml2, err := diskcfg.Marshal()
+	if err != nil {
+		return err
+	}
+
 	// Attach disk to VM (how?) → virsh attach-disk
 	// 	https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainPtr
 	// 	virDomainAttachDevice(Flags)
+
+	err = dom.AttachDevice(string(xml2))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
