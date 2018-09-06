@@ -205,6 +205,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 
 	dom, err := conn.DomainDefineXML(string(xml2))
 	if err != nil {
+		template
 		return nil, err
 	}
 	defer dom.Free() // remember: "deferred calls are executed in last-in-first-out order"
@@ -616,5 +617,20 @@ func VMDelete(vmName string, app *App, log *Log) error {
 		return errD
 	}
 
+	return nil
+}
+
+// VMAttachNewBackup create a new backup volume and attach
+// this volume to VM.
+// For test, we're using "disks" storage, a dedicated one should be used
+// should format (+partition?) the empty disk (using sudo+SSH, probably)
+func VMAttachNewBackup(vmName string) error {
+	// check if vm exists (in libvirt only?)
+	// check for previous attached backup
+	// UploadFileToLibvirt
+	// ResizeDisk
+	// Attach disk to VM (how?) → virsh attach-disk
+	// 	https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainPtr
+	// 	virDomainAttachDevice(Flags)
 	return nil
 }
