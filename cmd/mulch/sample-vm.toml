@@ -18,24 +18,20 @@ disk_size = "20G"
 ram_size = "2G"
 cpu_count = 1
 
-# Define system wide environment variables
+# Define system-wide environment variables
 env = [
-    ['TEST1', 'foo'],
-    ['TEST2', 'bar'],
+    ["TEST1", "foo"],
+    ["TEST2", "bar"],
 ]
 
-[[prepare]]
-script_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/deb-comfort.sh"
-as = "admin"
+# If all prepare scripts share the same base URL, you can use prepare_prefix_url.
+# Otherwise, use absolute URL in 'prepare': admin@https://server/script.sh
+prepare_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/"
 
-[[prepare]]
-script_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/test-warn.sh"
-as = "admin"
-
-[[prepare]]
-script_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/deb-lamp.sh"
-as = "admin"
-
-[[prepare]]
-script_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/deb-wordpress.sh"
-as = "app"
+# user@script
+prepare = [
+    "admin@deb-comfort.sh",
+    "admin@test-warn.sh",
+    "admin@deb-lamp.sh",
+    "app@deb-wordpress.sh",
+]

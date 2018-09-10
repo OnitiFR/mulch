@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/c2h5oh/datasize"
@@ -23,7 +24,7 @@ type VMConfig struct {
 	RAMSize     uint64
 	CPUCount    int
 	Env         map[string]string
-	// + prepare scripts
+
 	Prepare []*VMConfigScript
 	// + save scripts
 	// + restore scripts
@@ -46,12 +47,9 @@ type tomlVMConfig struct {
 	RAMSize     datasize.ByteSize `toml:"ram_size"`
 	CPUCount    int               `toml:"cpu_count"`
 	Env         [][]string
-	Prepare     []tomlVMConfigScript
-}
 
-type tomlVMConfigScript struct {
-	ScriptURL string `toml:"script_url"`
-	As        string
+	PreparePrefixURL string `toml:"prepare_prefix_url"`
+	Prepare          []string
 }
 
 // NewVMConfigFromTomlReader cretes a new VMConfig instance from
@@ -141,15 +139,23 @@ func NewVMConfigFromTomlReader(configIn io.Reader, KeyComment string) (*VMConfig
 	for _, tScript := range tConfig.Prepare {
 		script := &VMConfigScript{}
 
-		if !IsValidTokenName(tScript.As) {
-			return nil, fmt.Errorf("'%s' is not a valid user name", tScript.As)
+		sepPlace := strings.Index(tScript, "@")
+		if sepPlace == -1 {
+			return nil, fmt.Errorf("prepre line should use the 'user@url' format ('%s')", tScript)
 		}
-		script.As = tScript.As
+
+		as := tScript[:sepPlace]
+		scriptURL := tConfig.PreparePrefixURL + tScript[sepPlace+1:]
+
+		if !IsValidTokenName(as) {
+			return nil, fmt.Errorf("'%s' is not a valid user name", as)
+		}
+		script.As = as
 
 		// test readability
-		stream, errG := GetScriptFromURL(tScript.ScriptURL)
+		stream, errG := GetScriptFromURL(scriptURL)
 		if errG != nil {
-			return nil, fmt.Errorf("unable to get script '%s': %s", tScript.ScriptURL, errG)
+			return nil, fmt.Errorf("unable to get script '%s': %s", scriptURL, errG)
 		}
 		defer stream.Close()
 
@@ -157,13 +163,13 @@ func NewVMConfigFromTomlReader(configIn io.Reader, KeyComment string) (*VMConfig
 		signature := make([]byte, 2)
 		n, errR := stream.Read(signature)
 		if n != 2 || errR != nil {
-			return nil, fmt.Errorf("error reading script '%s' (n=%d)", tScript.ScriptURL, n)
+			return nil, fmt.Errorf("error reading script '%s' (n=%d)", scriptURL, n)
 		}
 		if string(signature) != "#!" {
-			return nil, fmt.Errorf("script '%s': no shebang found, is it really a shell script?", tScript.ScriptURL)
+			return nil, fmt.Errorf("script '%s': no shebang found, is it really a shell script?", scriptURL)
 		}
 
-		script.ScriptURL = tScript.ScriptURL
+		script.ScriptURL = scriptURL
 
 		vmConfig.Prepare = append(vmConfig.Prepare, script)
 	}
