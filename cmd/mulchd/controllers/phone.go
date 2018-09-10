@@ -58,5 +58,9 @@ func PhoneController(req *server.Request) {
 	}
 
 	req.App.PhoneHome.BroadcastPhoneCall(instanceID, ip, cloudInit)
-	req.Println("OK")
+	if req.HTTP.PostFormValue("dump_config") == "true" {
+		req.Println(vm.Config.FileContent)
+	} else {
+		req.Println("OK")
+	}
 }

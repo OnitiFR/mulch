@@ -219,3 +219,25 @@ func ExecScriptVM(req *server.Request) error {
 	req.Stream.Successf("script '%s' returned 0", header.Filename)
 	return nil
 }
+
+// GetVMConfigController return a VM config file content
+func GetVMConfigController(req *server.Request) {
+	vmName := req.SubPath
+
+	if vmName == "" {
+		msg := fmt.Sprintf("no VM name given\n")
+		req.App.Log.Error(msg)
+		http.Error(req.Response, msg, 404)
+		return
+	}
+	vm, err := req.App.VMDB.GetByName(vmName)
+	if err != nil {
+		msg := fmt.Sprintf("VM '%s' not found\n", vmName)
+		req.App.Log.Error(msg)
+		http.Error(req.Response, msg, 404)
+		return
+	}
+
+	req.Response.Header().Set("Content-Type", "text/plain")
+	req.Println(vm.Config.FileContent)
+}
