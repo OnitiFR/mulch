@@ -127,6 +127,15 @@ func (db *SeedDatabase) GetByName(name string) (*Seed, error) {
 	return seed, nil
 }
 
+// GetNames returns a list of seed names
+func (db *SeedDatabase) GetNames() []string {
+	keys := make([]string, 0, len(db.db))
+	for key := range db.db {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
 // Run the seeder (check Last-Modified dates, download new releases)
 func (db *SeedDatabase) Run() {
 	// small cooldown (app init)
