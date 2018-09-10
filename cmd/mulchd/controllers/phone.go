@@ -55,12 +55,10 @@ func PhoneController(req *server.Request) {
 				req.App.Log.Errorf("unable to update VM DB: %s", err)
 			}
 		}
+		if req.HTTP.PostFormValue("dump_config") == "true" {
+			req.Println(vm.Config.FileContent)
+		}
 	}
 
 	req.App.PhoneHome.BroadcastPhoneCall(instanceID, ip, cloudInit)
-	if req.HTTP.PostFormValue("dump_config") == "true" {
-		req.Println(vm.Config.FileContent)
-	} else {
-		req.Println("OK")
-	}
 }
