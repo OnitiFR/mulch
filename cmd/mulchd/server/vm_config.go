@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 
 	"github.com/BurntSushi/toml"
 	"github.com/c2h5oh/datasize"
@@ -10,6 +11,8 @@ import (
 
 // VMConfig stores needed parameters for a new VM
 type VMConfig struct {
+	FileContent string // config file content, for reference
+	KeyComment  string
 	Name        string
 	Hostname    string
 	Timezone    string
@@ -53,9 +56,17 @@ type tomlVMConfigScript struct {
 
 // NewVMConfigFromTomlReader cretes a new VMConfig instance from
 // a io.Reader containing VM configuration description
-func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
+func NewVMConfigFromTomlReader(configIn io.Reader, KeyComment string) (*VMConfig, error) {
+
+	content, err := ioutil.ReadAll(configIn)
+	if err != nil {
+		return nil, err
+	}
+
 	vmConfig := &VMConfig{
-		Env: make(map[string]string),
+		Env:         make(map[string]string),
+		FileContent: string(content),
+		KeyComment:  KeyComment,
 	}
 
 	// defaults (if not in the file)
@@ -67,7 +78,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 		CPUCount:    1,
 	}
 
-	if _, err := toml.DecodeReader(configIn, tConfig); err != nil {
+	if _, err := toml.Decode(vmConfig.FileContent, tConfig); err != nil {
 		return nil, err
 	}
 
