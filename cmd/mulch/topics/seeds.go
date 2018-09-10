@@ -44,7 +44,7 @@ func vmSeedsCB(reader io.Reader) {
 	red := color.New(color.FgHiRed).SprintFunc()
 	green := color.New(color.FgHiGreen).SprintFunc()
 	for _, line := range data {
-		state := red("not ready")
+		state := red("not-ready")
 		if line.Ready == true {
 			state = green("ready")
 		}
