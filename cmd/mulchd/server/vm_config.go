@@ -12,18 +12,20 @@ import (
 
 // VMConfig stores needed parameters for a new VM
 type VMConfig struct {
-	FileContent string // config file content, for reference
+	FileContent string // config file content
 	KeyComment  string
-	Name        string
-	Hostname    string
-	Timezone    string
-	AppUser     string
-	Seed        string
-	InitUpgrade bool
-	DiskSize    uint64
-	RAMSize     uint64
-	CPUCount    int
-	Env         map[string]string
+
+	Name           string
+	Hostname       string
+	Timezone       string
+	AppUser        string
+	Seed           string
+	InitUpgrade    bool
+	DiskSize       uint64
+	RAMSize        uint64
+	CPUCount       int
+	Env            map[string]string
+	BackupDiskSize uint64
 
 	Prepare []*VMConfigScript
 	// + save scripts
@@ -37,16 +39,17 @@ type VMConfigScript struct {
 }
 
 type tomlVMConfig struct {
-	Name        string
-	Hostname    string
-	Timezone    string
-	AppUser     string `toml:"app_user"`
-	Seed        string
-	InitUpgrade bool              `toml:"init_upgrade"`
-	DiskSize    datasize.ByteSize `toml:"disk_size"`
-	RAMSize     datasize.ByteSize `toml:"ram_size"`
-	CPUCount    int               `toml:"cpu_count"`
-	Env         [][]string
+	Name           string
+	Hostname       string
+	Timezone       string
+	AppUser        string `toml:"app_user"`
+	Seed           string
+	InitUpgrade    bool              `toml:"init_upgrade"`
+	DiskSize       datasize.ByteSize `toml:"disk_size"`
+	RAMSize        datasize.ByteSize `toml:"ram_size"`
+	CPUCount       int               `toml:"cpu_count"`
+	Env            [][]string
+	BackupDiskSize datasize.ByteSize `toml:"backup_disk_size"`
 
 	PreparePrefixURL string `toml:"prepare_prefix_url"`
 	Prepare          []string
@@ -69,11 +72,12 @@ func NewVMConfigFromTomlReader(configIn io.Reader, KeyComment string) (*VMConfig
 
 	// defaults (if not in the file)
 	tConfig := &tomlVMConfig{
-		Hostname:    "localhost.localdomain",
-		Timezone:    "Europe/Paris",
-		AppUser:     "app",
-		InitUpgrade: true,
-		CPUCount:    1,
+		Hostname:       "localhost.localdomain",
+		Timezone:       "Europe/Paris",
+		AppUser:        "app",
+		InitUpgrade:    true,
+		CPUCount:       1,
+		BackupDiskSize: 2 * datasize.GB,
 	}
 
 	if _, err := toml.Decode(vmConfig.FileContent, tConfig); err != nil {
@@ -135,6 +139,11 @@ func NewVMConfigFromTomlReader(configIn io.Reader, KeyComment string) (*VMConfig
 
 		vmConfig.Env[key] = val
 	}
+
+	if tConfig.BackupDiskSize < 32*datasize.MB {
+		return nil, fmt.Errorf("looks like a too small back disk (%s)", tConfig.BackupDiskSize)
+	}
+	vmConfig.BackupDiskSize = tConfig.BackupDiskSize.Bytes()
 
 	for _, tScript := range tConfig.Prepare {
 		script := &VMConfigScript{}

@@ -21,6 +21,16 @@ const (
 	VMNetworkAliasBridge    = "ua-mulch-bridge"
 )
 
+// VMOperation defines heavy operations in the VM
+type VMOperation string
+
+// VMOperation values
+const (
+	VMOperationNone    = ""
+	VMOperationBackup  = "backup"
+	VMOperationRestore = "restore"
+)
+
 // VM defines a virtual machine ("domain")
 type VM struct {
 	LibvirtUUID string
@@ -29,6 +39,12 @@ type VM struct {
 	Config      *VMConfig
 	LastIP      string
 	Locked      bool
+	WIP         VMOperation
+}
+
+// SetOperation change VM WIP
+func (vm *VM) SetOperation(op VMOperation) {
+	vm.WIP = op
 }
 
 // NewVM builds a new virtual machine from config
@@ -49,6 +65,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		SecretUUID: secretUUID.String(),
 		Config:     vmConfig, // copy()? (deep)
 		Locked:     false,
+		WIP:        VMOperationNone,
 	}
 
 	conn, err := app.Libvirt.GetConnection()
@@ -643,7 +660,8 @@ func VMIsRunning(vmName string, app *App) (bool, error) {
 // VMAttachNewBackup create a new backup volume and attach this volume to VM.
 // We're using "disks" storage, but a dedicated one should be used.
 // TODO: split this function in two: VMCreateBackupDisk and VMAttachBackup
-func VMAttachNewBackup(vmName string, app *App, log *Log) error {
+// (will help for restore operation)
+func VMAttachNewBackup(vmName string, volName string, volSize uint64, app *App, log *Log) error {
 	dom, err := app.Libvirt.GetDomainByName(app.Config.VMPrefix + vmName)
 	if err != nil {
 		return err
@@ -653,23 +671,19 @@ func VMAttachNewBackup(vmName string, app *App, log *Log) error {
 	}
 	defer dom.Free()
 
-	// TODO: check for any previously attached backup
-
-	volName := vmName + "-backup.qcow2"
-
 	err = app.Libvirt.UploadFileToLibvirt(
 		app.Libvirt.Pools.Disks,
 		app.Libvirt.Pools.DisksXML,
-		app.Config.configPath+"/templates/volume.xml",
-		app.Config.configPath+"/templates/empty.qcow2",
+		path.Clean(app.Config.configPath+"/templates/volume.xml"),
+		path.Clean(app.Config.configPath+"/templates/empty.qcow2"),
 		volName,
 		log)
 	if err != nil {
 		return err
 	}
 
-	// TODO: add a param somewhere for backup disk size
-	err = app.Libvirt.ResizeDisk(volName, 2*1024*1024*1024, log)
+	// TODO: add a param somewhere for backup disk size (at VM level)
+	err = app.Libvirt.ResizeDisk(volName, volSize, log)
 	if err != nil {
 		return err
 	}
@@ -729,7 +743,7 @@ func VMDetachBackup(vmName string, app *App) error {
 	for _, disk := range domcfg.Devices.Disks {
 		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasBackup {
 			found = true
-			diskcfg = &disk
+			*diskcfg = disk
 		}
 	}
 

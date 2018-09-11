@@ -139,3 +139,8 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 
 	return appConfig, nil
 }
+
+// GetTemplateFilepath returns a path to a etc/template file
+func (conf *AppConfig) GetTemplateFilepath(name string) string {
+	return path.Clean(conf.configPath + "/templates/" + name)
+}

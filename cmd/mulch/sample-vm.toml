@@ -24,6 +24,9 @@ env = [
     ["TEST2", "bar"],
 ]
 
+# TODO: allow this value to be changed afterward!
+backup_disk_size = "2G"
+
 # If all prepare scripts share the same base URL, you can use prepare_prefix_url.
 # Otherwise, use absolute URL in 'prepare': admin@https://server/script.sh
 prepare_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/"

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
@@ -86,6 +87,7 @@ func ListVMsController(req *server.Request) {
 			LastIP: vm.LastIP,
 			State:  server.LibvirtDomainStateToString(state),
 			Locked: vm.Locked,
+			WIP:    string(vm.WIP),
 		})
 	}
 
@@ -242,35 +244,84 @@ func GetVMConfigController(req *server.Request) {
 
 // BackupVM launch the backup proccess
 func BackupVM(req *server.Request, vm *server.VM) error {
-	vmName := req.SubPath
 
-	// TODO: detect if there is any other backup/restore proccess already running
-	// Note : should restrict other action, then (like "stop"?)
+	if vm.WIP != server.VMOperationNone {
+		return fmt.Errorf("VM already have a work in progress (%s)", string(vm.WIP))
+	}
 
-	running, _ := server.VMIsRunning(vmName, req.App)
+	vm.SetOperation(server.VMOperationBackup)
+	defer vm.SetOperation(server.VMOperationNone)
+
+	running, _ := server.VMIsRunning(vm.Config.Name, req.App)
 	if running == false {
 		return errors.New("VM should be up and running to do a backup")
 	}
 
-	// attach backup disk : VMAttachNewBackup
-	// TODO: check if it's really transient!
-	err := server.VMAttachNewBackup(vmName, req.App, req.Stream)
+	// TODO: generate a random/timed name
+	volName := vm.Config.Name + "-backup.qcow2"
+
+	// NOTE: this attachement is transient
+	err := server.VMAttachNewBackup(vm.Config.Name, volName, vm.Config.BackupDiskSize, req.App, req.Stream)
 	if err != nil {
 		return err
 	}
+	// TODO: defer detach + vol delete (with commit system to cancel, see VM creation)
 
-	// scripts: pre-backup + backup + post-backup
-	req.Stream.Info("attached")
-	time.Sleep(5 * time.Second)
-	req.Stream.Info("will detach")
+	req.Stream.Info("backup disk attached")
+
+	pre, err := os.Open(req.App.Config.GetTemplateFilepath("pre-backup.sh"))
+	if err != nil {
+		return err
+	}
+	defer pre.Close()
+
+	post, err := os.Open(req.App.Config.GetTemplateFilepath("post-backup.sh"))
+	if err != nil {
+		return err
+	}
+	defer pre.Close()
+
+	// pre-backup + backup + post-backup
+	tasks := []*server.RunTask{}
+	tasks = append(tasks, &server.RunTask{
+		ScriptName:   "pre-backup.sh",
+		ScriptReader: pre,
+		As:           vm.App.Config.MulchSuperUser,
+	})
+	tasks = append(tasks, &server.RunTask{
+		ScriptName:   "post-backup.sh",
+		ScriptReader: post,
+		As:           vm.App.Config.MulchSuperUser,
+	})
+
+	run := &server.Run{
+		SSHConn: &server.SSHConnection{
+			User: vm.App.Config.MulchSuperUser,
+			Host: vm.LastIP,
+			Port: 22,
+			Auths: []ssh.AuthMethod{
+				server.PublicKeyFile(vm.App.Config.MulchSSHPrivateKey),
+			},
+			Log: req.Stream,
+		},
+		Tasks: tasks,
+		Log:   req.Stream,
+	}
+	err = run.Go()
+	if err != nil {
+		return err
+	}
 
 	// detach backup disk
-	err = server.VMDetachBackup(vmName, req.App)
+	// TODO: check if this operation is synchronous with QEMU!
+	err = server.VMDetachBackup(vm.Config.Name, req.App)
 	if err != nil {
 		return err
 	}
+	req.Stream.Info("backup disk detached")
 
 	// "export" backup? (ex: compress)
 
+	req.Stream.Success("backup complete")
 	return nil
 }

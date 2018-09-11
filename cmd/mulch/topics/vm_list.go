@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"log"
+	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/Xfennec/mulch/common"
-	"github.com/olekukonko/tablewriter"
 	"github.com/fatih/color"
+	"github.com/olekukonko/tablewriter"
+	"github.com/spf13/cobra"
 )
 
 // vmListCmd represents the vmList command
@@ -54,15 +54,16 @@ func vmListCB(reader io.Reader) {
 			locked = yellow("locked")
 		}
 
-		strData = append(strData, []string {
+		strData = append(strData, []string{
 			line.Name,
 			line.LastIP,
 			state,
 			locked,
+			yellow(line.WIP),
 		})
 	}
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Last known IP", "State", "Locked"})
+	table.SetHeader([]string{"Name", "Last known IP", "State", "Locked", "Operation"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	table.SetCenterSeparator("|")
 	table.AppendBulk(strData)

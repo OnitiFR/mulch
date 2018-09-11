@@ -9,4 +9,5 @@ type APIVmListEntry struct {
 	LastIP string `json:"last_ip"`
 	State  string
 	Locked bool
+	WIP    string
 }
