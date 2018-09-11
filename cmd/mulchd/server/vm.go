@@ -17,7 +17,7 @@ import (
 const (
 	VMStorageAliasDisk      = "ua-mulch-disk"
 	VMStorageAliasCloudInit = "ua-mulch-cloudinit"
-	VMStorageAliasTest      = "ua-mulch-test"
+	VMStorageAliasBackup    = "ua-mulch-backup"
 	VMNetworkAliasBridge    = "ua-mulch-bridge"
 )
 
@@ -506,8 +506,7 @@ func VMLockUnlock(vmName string, locked bool, vmdb *VMDatabase) error {
 	return nil
 }
 
-// VMDelete will delete a VM (using its name) and linked
-// storages.
+// VMDelete will delete a VM (using its name) and linked storages.
 func VMDelete(vmName string, app *App, log *Log) error {
 	vm, err := app.VMDB.GetByName(vmName)
 	if err != nil {
@@ -620,12 +619,31 @@ func VMDelete(vmName string, app *App, log *Log) error {
 	return nil
 }
 
-// VMAttachNewBackup create a new backup volume and attach
-// this volume to VM.
-// For test, we're using "disks" storage, a dedicated one should be used
-// should format (+partition?) the empty disk (using sudo+SSH, probably)
+// VMIsRunning returns true if VM is up and running
+func VMIsRunning(vmName string, app *App) (bool, error) {
+	dom, err := app.Libvirt.GetDomainByName(app.Config.VMPrefix + vmName)
+	if err != nil {
+		return false, err
+	}
+	if dom == nil {
+		return false, fmt.Errorf("can't find domain '%s'", vmName)
+	}
+	defer dom.Free()
+
+	state, _, errG := dom.GetState()
+	if errG != nil {
+		return false, errG
+	}
+	if state == libvirt.DOMAIN_RUNNING {
+		return true, nil
+	}
+	return false, nil
+}
+
+// VMAttachNewBackup create a new backup volume and attach this volume to VM.
+// We're using "disks" storage, but a dedicated one should be used.
+// TODO: split this function in two: VMCreateBackupDisk and VMAttachBackup
 func VMAttachNewBackup(vmName string, app *App, log *Log) error {
-	// check if vm exists (in libvirt only?)
 	dom, err := app.Libvirt.GetDomainByName(app.Config.VMPrefix + vmName)
 	if err != nil {
 		return err
@@ -635,7 +653,7 @@ func VMAttachNewBackup(vmName string, app *App, log *Log) error {
 	}
 	defer dom.Free()
 
-	// TODO: check for previous attached backup
+	// TODO: check for any previously attached backup
 
 	volName := vmName + "-backup.qcow2"
 
@@ -650,6 +668,7 @@ func VMAttachNewBackup(vmName string, app *App, log *Log) error {
 		return err
 	}
 
+	// TODO: add a param somewhere for backup disk size
 	err = app.Libvirt.ResizeDisk(volName, 2*1024*1024*1024, log)
 	if err != nil {
 		return err
@@ -665,7 +684,7 @@ func VMAttachNewBackup(vmName string, app *App, log *Log) error {
 	if err != nil {
 		return err
 	}
-	diskcfg.Alias.Name = VMStorageAliasTest
+	diskcfg.Alias.Name = VMStorageAliasBackup
 	diskcfg.Source.File.File = app.Libvirt.Pools.DisksXML.Target.Path + "/" + volName
 	diskcfg.Target.Dev = "vdb"
 
@@ -674,11 +693,56 @@ func VMAttachNewBackup(vmName string, app *App, log *Log) error {
 		return err
 	}
 
-	// Attach disk to VM (how?) → virsh attach-disk
-	// 	https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainPtr
-	// 	virDomainAttachDevice(Flags)
-
 	err = dom.AttachDevice(string(xml2))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// VMDetachBackup detach the backup volume from the VM
+func VMDetachBackup(vmName string, app *App) error {
+	dom, err := app.Libvirt.GetDomainByName(app.Config.VMPrefix + vmName)
+	if err != nil {
+		return err
+	}
+	if dom == nil {
+		return fmt.Errorf("can't find domain '%s'", vmName)
+	}
+	defer dom.Free()
+
+	// get disk from domain XML
+	xmldoc, err := dom.GetXMLDesc(0)
+	if err != nil {
+		return err
+	}
+
+	domcfg := &libvirtxml.Domain{}
+	err = domcfg.Unmarshal(xmldoc)
+	if err != nil {
+		return err
+	}
+
+	diskcfg := &libvirtxml.DomainDisk{}
+	found := false
+	for _, disk := range domcfg.Devices.Disks {
+		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasBackup {
+			found = true
+			diskcfg = &disk
+		}
+	}
+
+	if found == false {
+		return errors.New("can't find backup disk")
+	}
+
+	xml2, err := diskcfg.Marshal()
+	if err != nil {
+		return err
+	}
+
+	err = dom.DetachDeviceFlags(xml2, libvirt.DOMAIN_DEVICE_MODIFY_CURRENT)
 	if err != nil {
 		return err
 	}

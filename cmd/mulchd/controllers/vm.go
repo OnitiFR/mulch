@@ -27,6 +27,7 @@ func NewVMController(req *server.Request) {
 		return
 	}
 
+	req.SetTarget(conf.Name)
 	before := time.Now()
 	vm, err := server.NewVM(conf, req.App, req.Stream)
 	if err != nil {
@@ -47,7 +48,7 @@ func ListVMsController(req *server.Request) {
 	for _, vmName := range vmNames {
 		vm, err := req.App.VMDB.GetByName(vmName)
 		if err != nil {
-			msg := fmt.Sprintf("VM '%s': %s\n", vmName, err)
+			msg := fmt.Sprintf("VM '%s': %s", vmName, err)
 			req.App.Log.Error(msg)
 			http.Error(req.Response, msg, 500)
 			return
@@ -55,13 +56,13 @@ func ListVMsController(req *server.Request) {
 
 		domain, err := req.App.Libvirt.GetDomainByName(req.App.Config.VMPrefix + vmName)
 		if err != nil {
-			msg := fmt.Sprintf("VM '%s': %s\n", vmName, err)
+			msg := fmt.Sprintf("VM '%s': %s", vmName, err)
 			req.App.Log.Error(msg)
 			http.Error(req.Response, msg, 500)
 			return
 		}
 		if domain == nil {
-			msg := fmt.Sprintf("VM '%s': does not exists in libvirt\n", vmName)
+			msg := fmt.Sprintf("VM '%s': does not exists in libvirt", vmName)
 			req.App.Log.Error(msg)
 			http.Error(req.Response, msg, 500)
 			return
@@ -70,7 +71,7 @@ func ListVMsController(req *server.Request) {
 
 		state, _, err := domain.GetState()
 		if err != nil {
-			msg := fmt.Sprintf("VM '%s': %s\n", vmName, err)
+			msg := fmt.Sprintf("VM '%s': %s", vmName, err)
 			req.App.Log.Error(msg)
 			http.Error(req.Response, msg, 500)
 			return
@@ -96,7 +97,7 @@ func ListVMsController(req *server.Request) {
 	}
 }
 
-// ActionVMController redirect to the correct action for the VM (start/stop)
+// ActionVMController redirect to the correct action for the VM (start/stop/…)
 func ActionVMController(req *server.Request) {
 	vmName := req.SubPath
 
@@ -109,6 +110,8 @@ func ActionVMController(req *server.Request) {
 		req.Stream.Failure(err.Error())
 		return
 	}
+
+	req.SetTarget(vmName)
 
 	libvirtVMName := vm.App.Config.VMPrefix + vmName
 
@@ -146,7 +149,12 @@ func ActionVMController(req *server.Request) {
 		}
 	case "exec":
 		// req.Stream.Infof("executing script (%s)", vmName)
-		err := ExecScriptVM(req)
+		err := ExecScriptVM(req, vm)
+		if err != nil {
+			req.Stream.Failuref("error: %s", err)
+		}
+	case "backup":
+		err := BackupVM(req, vm)
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
 		}
@@ -169,17 +177,7 @@ func DeleteVMController(req *server.Request) {
 }
 
 // ExecScriptVM will execute a script inside the VM
-func ExecScriptVM(req *server.Request) error {
-	vmName := req.SubPath
-
-	if vmName == "" {
-		return errors.New("invalid VM name")
-	}
-	vm, err := req.App.VMDB.GetByName(vmName)
-	if err != nil {
-		return err
-	}
-
+func ExecScriptVM(req *server.Request, vm *server.VM) error {
 	script, header, err := req.HTTP.FormFile("script")
 	if err != nil {
 		return fmt.Errorf("'script' field: %s", err)
@@ -225,14 +223,14 @@ func GetVMConfigController(req *server.Request) {
 	vmName := req.SubPath
 
 	if vmName == "" {
-		msg := fmt.Sprintf("no VM name given\n")
+		msg := fmt.Sprintf("no VM name given")
 		req.App.Log.Error(msg)
 		http.Error(req.Response, msg, 404)
 		return
 	}
 	vm, err := req.App.VMDB.GetByName(vmName)
 	if err != nil {
-		msg := fmt.Sprintf("VM '%s' not found\n", vmName)
+		msg := fmt.Sprintf("VM '%s' not found", vmName)
 		req.App.Log.Error(msg)
 		http.Error(req.Response, msg, 404)
 		return
@@ -240,4 +238,39 @@ func GetVMConfigController(req *server.Request) {
 
 	req.Response.Header().Set("Content-Type", "text/plain")
 	req.Println(vm.Config.FileContent)
+}
+
+// BackupVM launch the backup proccess
+func BackupVM(req *server.Request, vm *server.VM) error {
+	vmName := req.SubPath
+
+	// TODO: detect if there is any other backup/restore proccess already running
+	// Note : should restrict other action, then (like "stop"?)
+
+	running, _ := server.VMIsRunning(vmName, req.App)
+	if running == false {
+		return errors.New("VM should be up and running to do a backup")
+	}
+
+	// attach backup disk : VMAttachNewBackup
+	// TODO: check if it's really transient!
+	err := server.VMAttachNewBackup(vmName, req.App, req.Stream)
+	if err != nil {
+		return err
+	}
+
+	// scripts: pre-backup + backup + post-backup
+	req.Stream.Info("attached")
+	time.Sleep(5 * time.Second)
+	req.Stream.Info("will detach")
+
+	// detach backup disk
+	err = server.VMDetachBackup(vmName, req.App)
+	if err != nil {
+		return err
+	}
+
+	// "export" backup? (ex: compress)
+
+	return nil
 }

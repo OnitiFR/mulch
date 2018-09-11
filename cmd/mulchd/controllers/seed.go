@@ -18,7 +18,7 @@ func ListSeedController(req *server.Request) {
 	for _, name := range req.App.Seeder.GetNames() {
 		seed, err := req.App.Seeder.GetByName(name)
 		if err != nil {
-			msg := fmt.Sprintf("Seed '%s': %s\n", name, err)
+			msg := fmt.Sprintf("Seed '%s': %s", name, err)
 			req.App.Log.Error(msg)
 			http.Error(req.Response, msg, 500)
 			return
