@@ -64,5 +64,5 @@ func vmSeedsCB(reader io.Reader) {
 }
 
 func init() {
-	vmCmd.AddCommand(vmSeedsCmd)
+	rootCmd.AddCommand(vmSeedsCmd)
 }
