@@ -1,10 +1,19 @@
 #!/bin/bash
 
-# TODO: look dynamically for this disk
-part="/dev/vdb"
+part="/dev/disk/by-label/backup"
 
-# TODO: check if we should sleep so the system detects the new disk?
+tests=0
+while [ ! -e "$part" ]; do
+    echo "waiting backup disk…"
+    tests=$[$tests+1]
+    sleep 1
 
-sudo mkfs.ext2 "$part" || exit $?
+    if [ $tests -eq 5 ]; then
+        >&2 echo "can't find backup disk $part"
+        exit 10
+    fi
+done
+
+sudo resize2fs "$part" || exit $?
 sudo mkdir -p /mnt/backup || exit $?
 sudo mount "$part" /mnt/backup || exit $?

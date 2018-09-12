@@ -10,6 +10,7 @@ import (
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
 	"github.com/Xfennec/mulch/common"
+	"github.com/libvirt/libvirt-go"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -265,7 +266,29 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 	if err != nil {
 		return err
 	}
-	// TODO: defer detach + vol delete (with commit system to cancel, see VM creation)
+	// defer detach + vol delete in case of failure
+	commit := false
+	defer func() {
+		if commit == false {
+			req.Stream.Info("rollback backup disk creation")
+			errDet := server.VMDetachBackup(vm.Config.Name, req.App)
+			if errDet != nil {
+				req.Stream.Errorf("failed VMDetachBackup: %s (%s)", errDet, volName)
+				return
+			}
+			vol, errDef := req.App.Libvirt.Pools.Disks.LookupStorageVolByName(volName)
+			if errDef != nil {
+				req.Stream.Errorf("failed LookupStorageVolByName: %s (%s)", errDef, volName)
+				return
+			}
+			defer vol.Free()
+			errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+			if errDef != nil {
+				req.Stream.Errorf("failed Delete: %s (%s)", errDef, volName)
+				return
+			}
+		}
+	}()
 
 	req.Stream.Info("backup disk attached")
 
@@ -323,5 +346,6 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 	// "export" backup? (ex: compress)
 
 	req.Stream.Success("backup complete")
+	commit = true
 	return nil
 }
