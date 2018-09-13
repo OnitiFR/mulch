@@ -28,6 +28,7 @@ type VMConfig struct {
 	BackupDiskSize uint64
 
 	Prepare []*VMConfigScript
+	Backup  []*VMConfigScript
 	// + save scripts
 	// + restore scripts
 }
@@ -53,12 +54,50 @@ type tomlVMConfig struct {
 
 	PreparePrefixURL string `toml:"prepare_prefix_url"`
 	Prepare          []string
+	BackupPrefixURL  string `toml:"backup_prefix_url"`
+	Backup           []string
+}
+
+func vmConfigGetScript(tScript string, prefixURL string) (*VMConfigScript, error) {
+	script := &VMConfigScript{}
+
+	sepPlace := strings.Index(tScript, "@")
+	if sepPlace == -1 {
+		return nil, fmt.Errorf("prepre line should use the 'user@url' format ('%s')", tScript)
+	}
+
+	as := tScript[:sepPlace]
+	scriptURL := prefixURL + tScript[sepPlace+1:]
+
+	if !IsValidTokenName(as) {
+		return nil, fmt.Errorf("'%s' is not a valid user name", as)
+	}
+	script.As = as
+
+	// test readability
+	stream, errG := GetScriptFromURL(scriptURL)
+	if errG != nil {
+		return nil, fmt.Errorf("unable to get script '%s': %s", scriptURL, errG)
+	}
+	defer stream.Close()
+
+	// check script signature
+	signature := make([]byte, 2)
+	n, errR := stream.Read(signature)
+	if n != 2 || errR != nil {
+		return nil, fmt.Errorf("error reading script '%s' (n=%d)", scriptURL, n)
+	}
+	if string(signature) != "#!" {
+		return nil, fmt.Errorf("script '%s': no shebang found, is it really a shell script?", scriptURL)
+	}
+
+	script.ScriptURL = scriptURL
+	return script, nil
 }
 
 // NewVMConfigFromTomlReader cretes a new VMConfig instance from
 // a io.Reader containing VM configuration description
 func NewVMConfigFromTomlReader(configIn io.Reader, KeyComment string) (*VMConfig, error) {
-
 	content, err := ioutil.ReadAll(configIn)
 	if err != nil {
 		return nil, err
@@ -141,46 +180,24 @@ func NewVMConfigFromTomlReader(configIn io.Reader, KeyComment string) (*VMConfig
 	}
 
 	if tConfig.BackupDiskSize < 32*datasize.MB {
-		return nil, fmt.Errorf("looks like a too small back disk (%s)", tConfig.BackupDiskSize)
+		return nil, fmt.Errorf("looks like a too small backup disk (%s)", tConfig.BackupDiskSize)
 	}
 	vmConfig.BackupDiskSize = tConfig.BackupDiskSize.Bytes()
 
 	for _, tScript := range tConfig.Prepare {
-		script := &VMConfigScript{}
-
-		sepPlace := strings.Index(tScript, "@")
-		if sepPlace == -1 {
-			return nil, fmt.Errorf("prepre line should use the 'user@url' format ('%s')", tScript)
+		script, err := vmConfigGetScript(tScript, tConfig.PreparePrefixURL)
+		if err != nil {
+			return nil, err
 		}
-
-		as := tScript[:sepPlace]
-		scriptURL := tConfig.PreparePrefixURL + tScript[sepPlace+1:]
-
-		if !IsValidTokenName(as) {
-			return nil, fmt.Errorf("'%s' is not a valid user name", as)
-		}
-		script.As = as
-
-		// test readability
-		stream, errG := GetScriptFromURL(scriptURL)
-		if errG != nil {
-			return nil, fmt.Errorf("unable to get script '%s': %s", scriptURL, errG)
-		}
-		defer stream.Close()
-
-		// check script signature
-		signature := make([]byte, 2)
-		n, errR := stream.Read(signature)
-		if n != 2 || errR != nil {
-			return nil, fmt.Errorf("error reading script '%s' (n=%d)", scriptURL, n)
-		}
-		if string(signature) != "#!" {
-			return nil, fmt.Errorf("script '%s': no shebang found, is it really a shell script?", scriptURL)
-		}
-
-		script.ScriptURL = scriptURL
-
 		vmConfig.Prepare = append(vmConfig.Prepare, script)
+	}
+
+	for _, tScript := range tConfig.Backup {
+		script, err := vmConfigGetScript(tScript, tConfig.BackupPrefixURL)
+		if err != nil {
+			return nil, err
+		}
+		vmConfig.Backup = append(vmConfig.Backup, script)
 	}
 
 	return vmConfig, nil

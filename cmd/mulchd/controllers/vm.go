@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"time"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
@@ -314,6 +315,22 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 		ScriptReader: pre,
 		As:           vm.App.Config.MulchSuperUser,
 	})
+
+	for _, confTask := range vm.Config.Backup {
+		stream, errG := server.GetScriptFromURL(confTask.ScriptURL)
+		if errG != nil {
+			return fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
+		}
+		defer stream.Close()
+
+		task := &server.RunTask{
+			ScriptName:   path.Base(confTask.ScriptURL),
+			ScriptReader: stream,
+			As:           confTask.As,
+		}
+		tasks = append(tasks, task)
+	}
+
 	tasks = append(tasks, &server.RunTask{
 		ScriptName:   "post-backup.sh",
 		ScriptReader: post,
