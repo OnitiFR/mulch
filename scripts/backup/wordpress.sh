@@ -1,3 +1,3 @@
 #!/bin/bash
 
-touch /mnt/backup/I_WAS_HERE.tag
+touch /mnt/backup/I_WAS_HERE.tag || exit $?

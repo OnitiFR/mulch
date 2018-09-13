@@ -17,3 +17,4 @@ done
 sudo resize2fs "$part" || exit $?
 sudo mkdir -p /mnt/backup || exit $?
 sudo mount "$part" /mnt/backup || exit $?
+sudo chmod 0777 /mnt/backup || exit $?
