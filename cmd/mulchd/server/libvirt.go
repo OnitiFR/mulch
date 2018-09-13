@@ -23,12 +23,15 @@ type Libvirt struct {
 
 // LibvirtPools stores needed libvirt Pools for mulchd
 type LibvirtPools struct {
-	CloudInit    *libvirt.StoragePool
-	Seeds        *libvirt.StoragePool
-	Disks        *libvirt.StoragePool
+	CloudInit *libvirt.StoragePool
+	Seeds     *libvirt.StoragePool
+	Disks     *libvirt.StoragePool
+	Backups   *libvirt.StoragePool
+
 	CloudInitXML *libvirtxml.StoragePool
 	SeedsXML     *libvirtxml.StoragePool
 	DisksXML     *libvirtxml.StoragePool
+	BackupsXML   *libvirtxml.StoragePool
 }
 
 // NewLibvirt create a new Libvirt instance
@@ -299,14 +302,14 @@ func (lv *Libvirt) UploadFileToLibvirt(pool *libvirt.StoragePool, poolXML *libvi
 
 // ResizeDisk will change volume ("disk") size
 // (do not reduce a volume without knowing what you are doing!)
-func (lv *Libvirt) ResizeDisk(disk string, size uint64, log *Log) error {
+func (lv *Libvirt) ResizeDisk(disk string, size uint64, pool *libvirt.StoragePool, log *Log) error {
 
 	err := lv.Pools.Seeds.Refresh(0)
 	if err != nil {
 		return err
 	}
 
-	vol, err := lv.Pools.Disks.LookupStorageVolByName(disk)
+	vol, err := pool.LookupStorageVolByName(disk)
 	if err != nil {
 		return err
 	}

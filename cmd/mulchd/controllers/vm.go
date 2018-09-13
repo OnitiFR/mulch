@@ -276,7 +276,7 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 				req.Stream.Errorf("failed VMDetachBackup: %s (%s)", errDet, volName)
 				return
 			}
-			vol, errDef := req.App.Libvirt.Pools.Disks.LookupStorageVolByName(volName)
+			vol, errDef := req.App.Libvirt.Pools.Backups.LookupStorageVolByName(volName)
 			if errDef != nil {
 				req.Stream.Errorf("failed LookupStorageVolByName: %s (%s)", errDef, volName)
 				return

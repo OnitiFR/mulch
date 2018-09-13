@@ -136,7 +136,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 	}()
 
 	// 2 - resize disk
-	err = app.Libvirt.ResizeDisk(diskName, vmConfig.DiskSize, log)
+	err = app.Libvirt.ResizeDisk(diskName, vmConfig.DiskSize, app.Libvirt.Pools.Disks, log)
 	if err != nil {
 		return nil, err
 	}
@@ -658,7 +658,6 @@ func VMIsRunning(vmName string, app *App) (bool, error) {
 }
 
 // VMAttachNewBackup create a new backup volume and attach this volume to VM.
-// We're using "disks" storage, but a dedicated one should be used.
 // TODO: split this function in two: VMCreateBackupDisk and VMAttachBackup
 // (will help for restore operation)
 func VMAttachNewBackup(vmName string, volName string, volSize uint64, app *App, log *Log) error {
@@ -672,8 +671,8 @@ func VMAttachNewBackup(vmName string, volName string, volSize uint64, app *App, 
 	defer dom.Free()
 
 	err = app.Libvirt.UploadFileToLibvirt(
-		app.Libvirt.Pools.Disks,
-		app.Libvirt.Pools.DisksXML,
+		app.Libvirt.Pools.Backups,
+		app.Libvirt.Pools.BackupsXML,
 		path.Clean(app.Config.configPath+"/templates/volume.xml"),
 		path.Clean(app.Config.configPath+"/templates/empty.qcow2"),
 		volName,
@@ -683,7 +682,7 @@ func VMAttachNewBackup(vmName string, volName string, volSize uint64, app *App, 
 	}
 
 	// TODO: add a param somewhere for backup disk size (at VM level)
-	err = app.Libvirt.ResizeDisk(volName, volSize, log)
+	err = app.Libvirt.ResizeDisk(volName, volSize, app.Libvirt.Pools.Backups, log)
 	if err != nil {
 		return err
 	}
@@ -699,7 +698,7 @@ func VMAttachNewBackup(vmName string, volName string, volSize uint64, app *App, 
 		return err
 	}
 	diskcfg.Alias.Name = VMStorageAliasBackup
-	diskcfg.Source.File.File = app.Libvirt.Pools.DisksXML.Target.Path + "/" + volName
+	diskcfg.Source.File.File = app.Libvirt.Pools.BackupsXML.Target.Path + "/" + volName
 	diskcfg.Target.Dev = "vdb"
 
 	xml2, err := diskcfg.Marshal()

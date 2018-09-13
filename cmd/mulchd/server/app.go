@@ -216,14 +216,14 @@ func (app *App) initLibvirtStorage() error {
 		return fmt.Errorf("initLibvirtStorage (seeds): %s", err)
 	}
 
-	pools.Disks, pools.DisksXML, err = app.Libvirt.GetOrCreateStoragePool(
-		"mulch-disks",
-		app.Config.StoragePath+"/disks",
+	pools.Backups, pools.BackupsXML, err = app.Libvirt.GetOrCreateStoragePool(
+		"mulch-backups",
+		app.Config.StoragePath+"/backups",
 		app.Config.configPath+"/templates/storage.xml",
 		"0711",
 		app.Log)
 	if err != nil {
-		return fmt.Errorf("initLibvirtStorage (disks): %s", err)
+		return fmt.Errorf("initLibvirtStorage (backups): %s", err)
 	}
 
 	return nil
