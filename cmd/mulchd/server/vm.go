@@ -681,7 +681,6 @@ func VMAttachNewBackup(vmName string, volName string, volSize uint64, app *App, 
 		return err
 	}
 
-	// TODO: add a param somewhere for backup disk size (at VM level)
 	err = app.Libvirt.ResizeDisk(volName, volSize, app.Libvirt.Pools.Backups, log)
 	if err != nil {
 		return err

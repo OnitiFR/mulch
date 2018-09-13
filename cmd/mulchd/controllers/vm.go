@@ -259,7 +259,10 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 	}
 
 	// TODO: generate a random/timed name
-	volName := vm.Config.Name + "-backup.qcow2"
+	volName := fmt.Sprintf("%s-backup-%s.qcow2",
+		vm.Config.Name,
+		time.Now().Format("20060102-150405"),
+	)
 
 	// NOTE: this attachement is transient
 	err := server.VMAttachNewBackup(vm.Config.Name, volName, vm.Config.BackupDiskSize, req.App, req.Stream)
