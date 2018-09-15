@@ -24,7 +24,7 @@ func NewVMController(req *server.Request) {
 	}
 	req.Stream.Tracef("reading '%s' config file", header.Filename)
 
-	conf, err := server.NewVMConfigFromTomlReader(configFile, req.APIKey.Comment)
+	conf, err := server.NewVMConfigFromTomlReader(configFile)
 	if err != nil {
 		req.Stream.Failuref("decoding config: %s", err)
 		return
@@ -32,7 +32,7 @@ func NewVMController(req *server.Request) {
 
 	req.SetTarget(conf.Name)
 	before := time.Now()
-	vm, err := server.NewVM(conf, req.App, req.Stream)
+	vm, err := server.NewVM(conf, req.APIKey.Comment, req.App, req.Stream)
 	if err != nil {
 		req.Stream.Failuref("Cannot create VM: %s", err)
 		return
@@ -259,11 +259,14 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 		return errors.New("VM should be up and running to do a backup")
 	}
 
-	// TODO: generate a random/timed name
 	volName := fmt.Sprintf("%s-backup-%s.qcow2",
 		vm.Config.Name,
 		time.Now().Format("20060102-150405"),
 	)
+
+	if req.App.BackupsDB.GetByName(volName) != nil {
+		return fmt.Errorf("a backup with the same name already exists (%s)", volName)
+	}
 
 	// NOTE: this attachement is transient
 	err := server.VMAttachNewBackup(vm.Config.Name, volName, vm.Config.BackupDiskSize, req.App, req.Stream)
@@ -364,6 +367,12 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 	req.Stream.Info("backup disk detached")
 
 	// "export" backup? (ex: compress)
+
+	req.App.BackupsDB.Add(&server.Backup{
+		DiskName: volName,
+		Created:  time.Now(),
+		VM:       vm,
+	})
 
 	req.Stream.Success("backup complete")
 	commit = true

@@ -13,7 +13,6 @@ import (
 // VMConfig stores needed parameters for a new VM
 type VMConfig struct {
 	FileContent string // config file content
-	KeyComment  string
 
 	Name           string
 	Hostname       string
@@ -97,7 +96,7 @@ func vmConfigGetScript(tScript string, prefixURL string) (*VMConfigScript, error
 
 // NewVMConfigFromTomlReader cretes a new VMConfig instance from
 // a io.Reader containing VM configuration description
-func NewVMConfigFromTomlReader(configIn io.Reader, KeyComment string) (*VMConfig, error) {
+func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 	content, err := ioutil.ReadAll(configIn)
 	if err != nil {
 		return nil, err
@@ -106,7 +105,6 @@ func NewVMConfigFromTomlReader(configIn io.Reader, KeyComment string) (*VMConfig
 	vmConfig := &VMConfig{
 		Env:         make(map[string]string),
 		FileContent: string(content),
-		KeyComment:  KeyComment,
 	}
 
 	// defaults (if not in the file)

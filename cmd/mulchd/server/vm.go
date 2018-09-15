@@ -37,6 +37,7 @@ type VM struct {
 	SecretUUID  string
 	App         *App
 	Config      *VMConfig
+	AuthorKey   string
 	LastIP      string
 	Locked      bool
 	WIP         VMOperation
@@ -50,7 +51,7 @@ func (vm *VM) SetOperation(op VMOperation) {
 // NewVM builds a new virtual machine from config
 // TODO: this function is HUUUGE and needs to be splitted. It's tricky
 // because there's a "transaction" here.
-func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
+func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error) {
 	log.Infof("creating new VM '%s'", vmConfig.Name)
 
 	commit := false
@@ -64,6 +65,7 @@ func NewVM(vmConfig *VMConfig, app *App, log *Log) (*VM, error) {
 		App:        app,
 		SecretUUID: secretUUID.String(),
 		Config:     vmConfig, // copy()? (deep)
+		AuthorKey:  authorKey,
 		Locked:     false,
 		WIP:        VMOperationNone,
 	}

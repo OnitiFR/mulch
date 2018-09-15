@@ -19,6 +19,7 @@ type App struct {
 	Mux       *http.ServeMux
 	Rand      *rand.Rand
 	VMDB      *VMDatabase
+	BackupsDB *BackupDatabase
 	APIKeysDB *APIKeyDatabase
 	Seeder    *SeedDatabase
 	routes    map[string][]*Route
@@ -51,6 +52,11 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	}
 
 	err = app.initVMDB()
+	if err != nil {
+		return nil, err
+	}
+
+	err = app.initBackupDB()
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +161,20 @@ func (app *App) initVMDB() error {
 	app.Log.Infof("found %d VM(s) in database %s", app.VMDB.Count(), dbPath)
 
 	// detect missing entries from DB?
+	return nil
+}
+
+func (app *App) initBackupDB() error {
+	dbPath := app.Config.DataPath + "/mulch-backups.db"
+
+	db, err := NewBackupDatabase(dbPath)
+	if err != nil {
+		return err
+	}
+	app.BackupsDB = db
+
+	app.Log.Infof("found %d backup(s) in database %s", app.BackupsDB.Count(), dbPath)
+
 	return nil
 }
 
