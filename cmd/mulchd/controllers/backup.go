@@ -7,6 +7,7 @@ import (
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
 	"github.com/Xfennec/mulch/common"
+	"github.com/libvirt/libvirt-go"
 )
 
 // ListBackupsController list Backups
@@ -53,4 +54,35 @@ func ListBackupsController(req *server.Request) {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)
 	}
+}
+
+// DeleteBackupController will delete a backup
+func DeleteBackupController(req *server.Request) {
+	backupName := req.SubPath
+	req.Stream.Infof("deleting backup '%s'", backupName)
+
+	backup := req.App.BackupsDB.GetByName(backupName)
+	if backup == nil {
+		req.Stream.Failuref("backup '%s' not found in database", backupName)
+		return
+	}
+
+	vol, errDef := req.App.Libvirt.Pools.Backups.LookupStorageVolByName(backupName)
+	if errDef != nil {
+		req.Stream.Failuref("failed LookupStorageVolByName: %s (%s)", errDef, backupName)
+		return
+	}
+	defer vol.Free()
+	errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+	if errDef != nil {
+		req.Stream.Failuref("failed Delete: %s (%s)", errDef, backupName)
+		return
+	}
+
+	err := req.App.BackupsDB.Delete(backupName)
+	if err != nil {
+		req.Stream.Failuref("unable remove '%s' backup from DB: %s", backupName, err)
+	}
+
+	req.Stream.Successf("backup '%s' successfully deleted", backupName)
 }

@@ -67,6 +67,12 @@ func AddRoutes(app *server.App) {
 		Handler: controllers.ListBackupsController,
 	})
 
+	app.AddRoute(&server.Route{
+		Route:   "DELETE /backup/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.DeleteBackupController,
+	})
+
 	// app.AddRoute(&server.Route{
 	// 	Route:   "POST /test/*",
 	// 	Type:    server.RouteTypeStream,

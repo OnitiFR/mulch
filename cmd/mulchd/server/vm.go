@@ -660,6 +660,7 @@ func VMIsRunning(vmName string, app *App) (bool, error) {
 }
 
 // VMAttachNewBackup create a new backup volume and attach this volume to VM.
+// TODO: make this function transactional: remove disk if we fail in last steps
 // TODO: split this function in two: VMCreateBackupDisk and VMAttachBackup
 // (will help for restore operation)
 func VMAttachNewBackup(vmName string, volName string, volSize uint64, app *App, log *Log) error {
