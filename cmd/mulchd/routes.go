@@ -61,6 +61,12 @@ func AddRoutes(app *server.App) {
 		Handler: controllers.ListSeedController,
 	})
 
+	app.AddRoute(&server.Route{
+		Route:   "GET /backup",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.ListBackupsController,
+	})
+
 	// app.AddRoute(&server.Route{
 	// 	Route:   "POST /test/*",
 	// 	Type:    server.RouteTypeStream,
