@@ -51,8 +51,8 @@ write_files:
       gw=$(ip -4 route list 0/0 | cut -d ' ' -f 3)
       id=$(cat /var/lib/cloud/data/instance-id)
       #uuid=$(dmidecode -s system-uuid)
-      # will not dump config on 1st boot
-      /usr/bin/curl -s -d "dump_config=true&instance_id=$id" -X POST $_PHONE_HOME_URL > /etc/mulch-vm-config.toml
+      # will not dump config on stdout
+      /usr/bin/curl -s -d "dump_config=true&instance_id=$id" -X POST $_PHONE_HOME_URL
     owner: root:root
     permissions: '0755'
     path: /usr/local/bin/phone_home

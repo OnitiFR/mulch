@@ -43,5 +43,6 @@ prepare = [
 backup_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/backup/"
 
 backup = [
+    "app@infos.sh",
     "app@wordpress.sh",
 ]
