@@ -8,6 +8,20 @@ import (
 var backupCmd = &cobra.Command{
 	Use:   "backup",
 	Short: "Backups management",
+	Long: `Manage VM backups.
+
+Example of how to access data inside a backup:
+
+ * using NBD: (modprobe nbd)
+  - qemu-nbd -c /dev/nbd0 <my-backup.qcow2>
+  - mount /dev/nbd0 </mnt/backup>
+  - …profit…
+  - umount </mnt/backup> && qemu-nbd -c /dev/nbd0
+
+ * using guestmount / libguestfs:
+  - guestmount -a <my-backup.qcow2> -m /dev/sda </mnt/backup>
+  - use guestunmount to unmount
+`,
 }
 
 func init() {
