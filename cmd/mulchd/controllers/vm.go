@@ -268,11 +268,17 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 		return fmt.Errorf("a backup with the same name already exists (%s)", volName)
 	}
 
-	// NOTE: this attachement is transient
-	err := server.VMAttachNewBackup(vm.Config.Name, volName, vm.Config.BackupDiskSize, req.App, req.Stream)
+	err := server.VMCreateBackupDisk(vm.Config.Name, volName, vm.Config.BackupDiskSize, req.App, req.Stream)
 	if err != nil {
 		return err
 	}
+
+	// NOTE: this attachement is transient
+	err = server.VMAttachBackup(vm.Config.Name, volName, req.App)
+	if err != nil {
+		return err
+	}
+
 	// defer detach + vol delete in case of failure
 	commit := false
 	defer func() {
@@ -361,7 +367,7 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 	}
 
 	// detach backup disk
-	// TODO: check if this operation is synchronous with QEMU!
+	// TODO: check if this operation is synchronous for QEMU!
 	err = server.VMDetachBackup(vm.Config.Name, req.App)
 	if err != nil {
 		return err

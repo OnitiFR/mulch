@@ -25,9 +25,11 @@ type VMConfig struct {
 	CPUCount       int
 	Env            map[string]string
 	BackupDiskSize uint64
+	RestoreBackup  string
 
 	Prepare []*VMConfigScript
 	Backup  []*VMConfigScript
+	Restore []*VMConfigScript
 	// + save scripts
 	// + restore scripts
 }
@@ -50,11 +52,14 @@ type tomlVMConfig struct {
 	CPUCount       int               `toml:"cpu_count"`
 	Env            [][]string
 	BackupDiskSize datasize.ByteSize `toml:"backup_disk_size"`
+	RestoreBackup  string            `toml:"restore_backup"`
 
 	PreparePrefixURL string `toml:"prepare_prefix_url"`
 	Prepare          []string
 	BackupPrefixURL  string `toml:"backup_prefix_url"`
 	Backup           []string
+	RestorePrefixURL string `toml:"restore_prefix_url"`
+	Restore          []string
 }
 
 func vmConfigGetScript(tScript string, prefixURL string) (*VMConfigScript, error) {
@@ -197,6 +202,15 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 		}
 		vmConfig.Backup = append(vmConfig.Backup, script)
 	}
+
+	for _, tScript := range tConfig.Restore {
+		script, err := vmConfigGetScript(tScript, tConfig.RestorePrefixURL)
+		if err != nil {
+			return nil, err
+		}
+		vmConfig.Restore = append(vmConfig.Restore, script)
+	}
+	vmConfig.RestoreBackup = tConfig.RestoreBackup
 
 	return vmConfig, nil
 }

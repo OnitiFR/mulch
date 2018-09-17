@@ -356,6 +356,68 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 		return nil, err
 	}
 
+	if vm.Config.RestoreBackup != "" {
+		// 6 - restore
+		log.Infof("restoring from '%s'", vm.Config.RestoreBackup)
+
+		// check if backup exists
+		backup := app.BackupsDB.GetByName(vm.Config.RestoreBackup)
+		if backup == nil {
+			return nil, fmt.Errorf("backup '%s' not found in database", vm.Config.RestoreBackup)
+		}
+
+		// attach backup
+		err = VMAttachBackup(vm.Config.Name, backup.DiskName, app)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			// detach backup
+			err = VMDetachBackup(vm.Config.Name, app)
+			if err != nil {
+				log.Errorf("VMDetachBackup: %s", err)
+			} else {
+				log.Info("backup disk detached")
+			}
+		}()
+
+		log.Infof("running 'restore' scripts")
+		tasks := []*RunTask{}
+		for _, confTask := range vm.Config.Restore {
+			stream, errG := GetScriptFromURL(confTask.ScriptURL)
+			if errG != nil {
+				return nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
+			}
+			defer stream.Close()
+
+			task := &RunTask{
+				ScriptName:   path.Base(confTask.ScriptURL),
+				ScriptReader: stream,
+				As:           confTask.As,
+			}
+			tasks = append(tasks, task)
+		}
+
+		run := &Run{
+			SSHConn: &SSHConnection{
+				User: vm.App.Config.MulchSuperUser,
+				Host: vm.LastIP,
+				Port: 22,
+				Auths: []ssh.AuthMethod{
+					PublicKeyFile(vm.App.Config.MulchSSHPrivateKey),
+				},
+				Log: log,
+			},
+			Tasks: tasks,
+			Log:   log,
+		}
+		err = run.Go()
+		if err != nil {
+			return nil, err
+		}
+		log.Info("restore completed")
+	}
+
 	// all is OK, commit (= no defer) and save vm to DB
 	log.Infof("saving VM in database")
 	err = app.VMDB.Add(vm)
@@ -659,11 +721,9 @@ func VMIsRunning(vmName string, app *App) (bool, error) {
 	return false, nil
 }
 
-// VMAttachNewBackup create a new backup volume and attach this volume to VM.
+// VMCreateBackupDisk create a new backup volume
 // TODO: make this function transactional: remove disk if we fail in last steps
-// TODO: split this function in two: VMCreateBackupDisk and VMAttachBackup
-// (will help for restore operation)
-func VMAttachNewBackup(vmName string, volName string, volSize uint64, app *App, log *Log) error {
+func VMCreateBackupDisk(vmName string, volName string, volSize uint64, app *App, log *Log) error {
 	dom, err := app.Libvirt.GetDomainByName(app.Config.VMPrefix + vmName)
 	if err != nil {
 		return err
@@ -688,6 +748,20 @@ func VMAttachNewBackup(vmName string, volName string, volSize uint64, app *App, 
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// VMAttachBackup attach a backup volume to the VM
+func VMAttachBackup(vmName string, volName string, app *App) error {
+	dom, err := app.Libvirt.GetDomainByName(app.Config.VMPrefix + vmName)
+	if err != nil {
+		return err
+	}
+	if dom == nil {
+		return fmt.Errorf("can't find domain '%s'", vmName)
+	}
+	defer dom.Free()
 
 	xml, err := ioutil.ReadFile(app.Config.configPath + "/templates/disk.xml")
 	if err != nil {

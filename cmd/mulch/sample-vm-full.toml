@@ -30,9 +30,8 @@ backup_disk_size = "2G"
 # If all prepare scripts share the same base URL, you can use prepare_prefix_url.
 # Otherwise, use absolute URL in 'prepare': admin@https://server/script.sh
 prepare_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/"
-
-# user@script
 prepare = [
+    # user@script
     "admin@deb-comfort.sh",
     "admin@test-warn.sh",
     "admin@deb-lamp.sh",
@@ -41,17 +40,14 @@ prepare = [
 
 # Backup
 backup_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/backup/"
-
 backup = [
     "app@infos.sh",
     "app@wordpress.sh",
 ]
 
 # Restore (if needed)
-restore_backup = "xxxx.qcow2"
-backup_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/backup/"
-
+restore_backup = "testvm-backup-20180917-172324.qcow2"
+backup_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/restore/"
 backup = [
-    "app@infos.sh",
     "app@wordpress.sh",
 ]
