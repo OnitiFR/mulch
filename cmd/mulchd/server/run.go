@@ -29,6 +29,11 @@ func (run *Run) Go() error {
 	const bootstrap = "bash -s --"
 	errorChan := make(chan error)
 
+	if len(run.Tasks) == 0 {
+		run.Log.Info("nothing to run")
+		return nil
+	}
+
 	if err := run.SSHConn.Connect(); err != nil {
 		return err
 	}
