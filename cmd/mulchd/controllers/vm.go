@@ -311,6 +311,8 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 	}
 	defer pre.Close()
 
+	before := time.Now()
+
 	// pre-backup + backup + post-backup
 	tasks := []*server.RunTask{}
 	tasks = append(tasks, &server.RunTask{
@@ -373,8 +375,9 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 		Created:  time.Now(),
 		VM:       vm,
 	})
+	after := time.Now()
 
-	req.Stream.Success("backup complete")
+	req.Stream.Successf("backup completed (%s)", after.Sub(before))
 	commit = true
 	return nil
 }
