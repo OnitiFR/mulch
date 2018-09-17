@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"time"
 
@@ -382,7 +383,26 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 		}()
 
 		log.Infof("running 'restore' scripts")
+		// pre-restore + restore + post-restore
+		pre, errO := os.Open(app.Config.GetTemplateFilepath("pre-restore.sh"))
+		if errO != nil {
+			return nil, errO
+		}
+		defer pre.Close()
+
+		post, errO := os.Open(app.Config.GetTemplateFilepath("post-restore.sh"))
+		if errO != nil {
+			return nil, errO
+		}
+		defer post.Close()
+
 		tasks := []*RunTask{}
+		tasks = append(tasks, &RunTask{
+			ScriptName:   "pre-restore.sh",
+			ScriptReader: pre,
+			As:           vm.App.Config.MulchSuperUser,
+		})
+
 		for _, confTask := range vm.Config.Restore {
 			stream, errG := GetScriptFromURL(confTask.ScriptURL)
 			if errG != nil {
@@ -398,6 +418,11 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 			tasks = append(tasks, task)
 		}
 
+		tasks = append(tasks, &RunTask{
+			ScriptName:   "post-restore.sh",
+			ScriptReader: post,
+			As:           vm.App.Config.MulchSuperUser,
+		})
 		run := &Run{
 			SSHConn: &SSHConnection{
 				User: vm.App.Config.MulchSuperUser,

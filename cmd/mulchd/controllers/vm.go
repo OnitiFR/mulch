@@ -278,6 +278,7 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 	if err != nil {
 		return err
 	}
+	req.Stream.Info("backup disk attached")
 
 	// defer detach + vol delete in case of failure
 	commit := false
@@ -303,8 +304,6 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 		}
 	}()
 
-	req.Stream.Info("backup disk attached")
-
 	pre, err := os.Open(req.App.Config.GetTemplateFilepath("pre-backup.sh"))
 	if err != nil {
 		return err
@@ -315,7 +314,7 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 	if err != nil {
 		return err
 	}
-	defer pre.Close()
+	defer post.Close()
 
 	before := time.Now()
 

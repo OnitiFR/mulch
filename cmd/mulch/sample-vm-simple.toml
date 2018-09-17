@@ -15,3 +15,10 @@ init_upgrade = false
 disk_size = "20G"
 ram_size = "1G"
 cpu_count = 1
+
+# Restore (if needed)
+restore_backup = "testvm-backup-20180917-172346.qcow2"
+backup_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/restore/"
+backup = [
+    "app@wordpress.sh",
+]

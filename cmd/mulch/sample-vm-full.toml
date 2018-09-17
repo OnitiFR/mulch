@@ -46,7 +46,7 @@ backup = [
 ]
 
 # Restore (if needed)
-restore_backup = "testvm-backup-20180917-172324.qcow2"
+restore_backup = "vm-backup-xyz.qcow2"
 backup_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/restore/"
 backup = [
     "app@wordpress.sh",
