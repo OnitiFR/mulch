@@ -1,11 +1,11 @@
 #!/bin/bash
 
-echo "hello world!"
+. ~/env
 
-# . ~/env
+cd "$HTML_DIR" || exit $?
+rm "$HTML_DIR/index.php"
 
-# move this definition to cloudinit generated env
-source="/mnt/backup"
+tar xf "$_BACKUP/wordpress.tar" || exit $?
 
-# cd "$HTML_DIR" || exit $?
-find "$source" || exit $?
+# password on the command line? brrr…
+mysqldump -u $MYSQL_USER -h $MYSQL_HOST "-p$MYSQL_PASSWORD" $MYSQL_DB < "$_BACKUP/wordpress.sql" || exit $?

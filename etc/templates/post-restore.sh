@@ -1,3 +1,5 @@
 #!/bin/bash
 
-sudo umount /mnt/backup || exit $?
+. /etc/mulch.env
+
+sudo umount "$_BACKUP" || exit $?

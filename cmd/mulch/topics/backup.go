@@ -14,12 +14,12 @@ Example of how to access data inside a backup:
 
  * using NBD: (modprobe nbd)
   - qemu-nbd -c /dev/nbd0 <my-backup.qcow2>
-  - mount /dev/nbd0 </mnt/backup>
+  - mount /dev/nbd0 </mnt/disk>
   - …profit…
-  - umount </mnt/backup> && qemu-nbd -c /dev/nbd0
+  - umount </mnt/disk> && qemu-nbd -c /dev/nbd0
 
  * using guestmount / libguestfs:
-  - guestmount -a <my-backup.qcow2> -m /dev/sda </mnt/backup>
+  - guestmount -a <my-backup.qcow2> -m /dev/sda </mnt/disk>
   - use guestunmount to unmount
 `,
 }

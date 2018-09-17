@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. /etc/mulch.env
+
 part="/dev/disk/by-label/backup"
 
 tests=0
@@ -14,6 +16,6 @@ while [ ! -e "$part" ]; do
     fi
 done
 
-sudo mkdir -p /mnt/backup || exit $?
-sudo mount "$part" /mnt/backup || exit $?
-sudo chmod 0777 /mnt/backup || exit $?
+sudo mkdir -p "$_BACKUP" || exit $?
+sudo mount "$part" "$_BACKUP" || exit $?
+sudo chmod 0777 "$_BACKUP" || exit $?

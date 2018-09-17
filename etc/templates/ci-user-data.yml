@@ -65,6 +65,7 @@ write_files:
       export _MULCH_VERSION='$_MULCH_VERSION'
       export _VM_INIT_DATE='$_VM_INIT_DATE'
       export _KEY_DESC='$_KEY_DESC'
+      export _BACKUP='/mnt/backup'
       $__EXTRA_ENV
     owner: root:root
     permissions: '0644'

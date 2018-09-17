@@ -1,5 +1,7 @@
 #!/bin/bash
 
+. /etc/mulch.env
+
 part="/dev/disk/by-label/backup"
 
 tests=0
@@ -26,8 +28,12 @@ if [ $? -ne 0 ]; then
     exit 99
 fi
 
-sudo mkdir -p /mnt/backup || exit $?
-sudo mount "$part" /mnt/backup || exit $?
-sudo chmod 0777 /mnt/backup || exit $?
+sudo mkdir -p "$_BACKUP" || exit $?
+sudo mount "$part" "$_BACKUP" || exit $?
+sudo chmod 0777 "$_BACKUP" || exit $?
+
+mkdir "$_BACKUP/mulch"
+cp /etc/mulch.env "$_BACKUP/mulch"
+/usr/local/bin/phone_home > "$_BACKUP/mulch/vm-config.toml"
 
 rm "$tmpfile"
