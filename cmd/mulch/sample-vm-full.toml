@@ -1,7 +1,7 @@
-# This is a (working) sample VM definition
+# This is a (complete but working) sample VM definition
 
 # Usage:
-#  mulch vm create sample-vm.toml
+#  mulch vm create sample-vm-full.toml
 
 name = "testvm"
 hostname = "testvm.localdomain"
@@ -40,6 +40,15 @@ prepare = [
 ]
 
 # Backup
+backup_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/backup/"
+
+backup = [
+    "app@infos.sh",
+    "app@wordpress.sh",
+]
+
+# Restore (if needed)
+restore_backup = "xxxx.qcow2"
 backup_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/backup/"
 
 backup = [

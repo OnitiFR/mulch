@@ -14,7 +14,20 @@ while [ ! -e "$part" ]; do
     fi
 done
 
-sudo resize2fs "$part" || exit $?
+# create temporary handle
+tmpfile=$(mktemp)
+rm "$tmpfile"
+
+echo "resizing FS $part…"
+sudo resize2fs "$part" > "$tmpfile" 2>&1
+if [ $? -ne 0 ]; then
+    cat "$tmpfile"
+    rm "$tmpfile"
+    exit 99
+fi
+
 sudo mkdir -p /mnt/backup || exit $?
 sudo mount "$part" /mnt/backup || exit $?
 sudo chmod 0777 /mnt/backup || exit $?
+
+rm "$tmpfile"
