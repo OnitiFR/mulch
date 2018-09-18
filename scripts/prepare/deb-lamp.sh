@@ -48,7 +48,7 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 EOS
 
 # change to /_mysql instead of /phpmyadmin
-sudo sed -i 's|Alias /phpmyadmin|Alias /_mysql|' /etc/phpmyadmin/apache.conf
+sudo sed -i 's|Alias /phpmyadmin|Alias /_sql|' /etc/phpmyadmin/apache.conf
 sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
 sudo a2enconf phpmyadmin || exit $?
 sudo a2enmod rewrite || exit $?

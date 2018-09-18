@@ -256,7 +256,7 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 
 	log.Infof("vm: first boot (cloud-init)")
 	if vmConfig.InitUpgrade {
-		log.Info("cloud-init will upgrade package, it may take a while…")
+		log.Info("cloud-init will upgrade packages, it may take a while…")
 	}
 	err = dom.Create()
 	if err != nil {

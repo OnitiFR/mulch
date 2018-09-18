@@ -5,46 +5,29 @@
 
 name = "restore"
 hostname = "testvm.localdomain"
-timezone = "Europe/Paris" # default
-app_user = "app" # default
 
 seed = "debian_9"
 
-# Will speed up creation for this test (no update/upgrade)
-# (but install will not be up to date, don't do this in production!)
-init_upgrade = false
+init_upgrade = true
 
 disk_size = "20G"
 ram_size = "2G"
 cpu_count = 1
 
-# Define system-wide environment variables
-env = [
-    ["TEST1", "foo"],
-    ["TEST2", "bar"],
-]
-
-# TODO: allow this value to be changed afterward!
 backup_disk_size = "2G"
 
-# If all prepare scripts share the same base URL, you can use prepare_prefix_url.
-# Otherwise, use absolute URL in 'prepare': admin@https://server/script.sh
 prepare_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/"
 prepare = [
-    # user@script
     "admin@deb-comfort.sh",
-    "admin@test-warn.sh",
     "admin@deb-lamp.sh",
 ]
 
-# Backup
 backup_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/backup/"
 backup = [
     "app@wordpress.sh",
 ]
 
-# Restore (if needed)
-restore_backup = "testvm-backup-20180917-172346.qcow2"
+restore_backup = "test.qcow2c"
 restore_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/restore/"
 restore = [
     "app@wordpress.sh",
