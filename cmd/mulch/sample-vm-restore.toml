@@ -3,7 +3,7 @@
 # Usage:
 #  mulch vm create sample-vm-restore.toml
 
-name = "testvm"
+name = "restore"
 hostname = "testvm.localdomain"
 timezone = "Europe/Paris" # default
 app_user = "app" # default
@@ -44,7 +44,7 @@ backup = [
 ]
 
 # Restore (if needed)
-restore_backup = "testvm-backup-20180917-200840.qcow2"
+restore_backup = "testvm-backup-20180917-172346.qcow2"
 restore_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/restore/"
 restore = [
     "app@wordpress.sh",

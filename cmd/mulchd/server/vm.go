@@ -108,6 +108,12 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 		return nil, fmt.Errorf("seed %s is not ready", vmConfig.Seed)
 	}
 
+	// check if backup exists (if a restore was requested)
+	backup := app.BackupsDB.GetByName(vm.Config.RestoreBackup)
+	if vm.Config.RestoreBackup != "" && backup == nil {
+		return nil, fmt.Errorf("backup '%s' not found in database", vm.Config.RestoreBackup)
+	}
+
 	// 1 - copy from reference image
 	log.Infof("creating VM disk '%s'", diskName)
 	err = app.Libvirt.CreateDiskFromSeed(
@@ -360,12 +366,6 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 	if vm.Config.RestoreBackup != "" {
 		// 6 - restore
 		log.Infof("restoring from '%s'", vm.Config.RestoreBackup)
-
-		// check if backup exists
-		backup := app.BackupsDB.GetByName(vm.Config.RestoreBackup)
-		if backup == nil {
-			return nil, fmt.Errorf("backup '%s' not found in database", vm.Config.RestoreBackup)
-		}
 
 		// attach backup
 		err = VMAttachBackup(vm.Config.Name, backup.DiskName, app)
