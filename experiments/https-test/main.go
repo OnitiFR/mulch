@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -68,6 +69,11 @@ func main() {
 		Prompt:     autocert.AcceptTOS,
 		HostPolicy: hostPolicy,
 		Cache:      autocert.DirCache(dataDir),
+		Email:      "julien+cobaye1@oniti.fr",
+		// RenewBefore: …,
+		Client: &acme.Client{
+			DirectoryURL: "https://acme-staging.api.letsencrypt.org/directory",
+		},
 	}
 
 	httpsSrv = makeHTTPServer()
@@ -85,7 +91,7 @@ func main() {
 	var httpSrv *http.Server
 	httpSrv = makeHTTPToHTTPSRedirectServer()
 
-	// allow autocert handle Let's Encrypt callbacks over http
+	// inject autocert handler before our own handler (for Let's Encrypt callbacks)
 	if m != nil {
 		httpSrv.Handler = m.HTTPHandler(httpSrv.Handler)
 	}

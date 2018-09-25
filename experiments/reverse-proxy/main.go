@@ -28,10 +28,12 @@ func serveReverseProxy(targeturl string, res http.ResponseWriter, req *http.Requ
 func handleRequest(res http.ResponseWriter, req *http.Request) {
 	url := "http://localhost"
 
+	// with port: "test1.localhost:8080":
+
 	switch req.Host {
-	case "test1.localhost:8080":
+	case "test1.cobaye1.oniti.me":
 		url = "http://localhost:8081"
-	case "test2.localhost:8080":
+	case "test2.cobaye1.oniti.me":
 		url = "http://localhost:8082"
 	}
 
@@ -40,7 +42,7 @@ func handleRequest(res http.ResponseWriter, req *http.Request) {
 
 func main() {
 	http.HandleFunc("/", handleRequest)
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := http.ListenAndServe(":80", nil); err != nil {
 		panic(err)
 	}
 }
