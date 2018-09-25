@@ -1,5 +1,7 @@
 package main
 
+// setcap 'cap_net_bind_service=+ep' https-test
+
 import (
 	"context"
 	"crypto/tls"
@@ -54,8 +56,7 @@ func main() {
 
 	var httpsSrv *http.Server
 	hostPolicy := func(ctx context.Context, host string) error {
-		// Note: change to your real host
-		allowedHost := "test1.cqfd-corp.org"
+		allowedHost := "cobaye1.oniti.me"
 		if host == allowedHost {
 			return nil
 		}
