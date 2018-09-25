@@ -46,7 +46,7 @@ Note: you can also use environment variables (URL, KEY, …).
 		}
 		fmt.Printf("current URL to mulchd: %s\n", globalConfig.URL)
 		if globalConfig.Key == "" {
-			fmt.Printf("\nWARNING: no API key defined! Add 'key' line to\nconfig file ordefine KEY environment variable.\n")
+			fmt.Printf("\nWARNING: no API key defined! Add 'key' line to\nconfig file or define KEY environment variable.\n")
 		}
 	},
 }
