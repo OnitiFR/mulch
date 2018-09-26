@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -26,7 +27,7 @@ func serveReverseProxy(targeturl string, res http.ResponseWriter, req *http.Requ
 }
 
 func handleRequest(res http.ResponseWriter, req *http.Request) {
-	url := "http://localhost"
+	url := "http://www.perdu.com"
 
 	// with port: "test1.localhost:8080":
 
@@ -36,6 +37,7 @@ func handleRequest(res http.ResponseWriter, req *http.Request) {
 	case "test2.cobaye1.oniti.me":
 		url = "http://localhost:8082"
 	}
+	fmt.Println(url)
 
 	serveReverseProxy(url, res, req)
 }
