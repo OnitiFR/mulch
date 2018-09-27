@@ -52,8 +52,11 @@ func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 type Route struct {
 	Domain          string
 	RedirectTo      string
+	DestinationHost string
 	DestinationPort int
 	RedirectToHTTPS bool
+	reverseProxy    *httputil.ReverseProxy
+	targetURL       string
 }
 
 var routes []*Route
@@ -81,20 +84,15 @@ func reverseProxyErrorHandler(rw http.ResponseWriter, req *http.Request, err err
 	rw.WriteHeader(http.StatusBadGateway)
 }
 
-func serveReverseProxy(targeturl string, res http.ResponseWriter, req *http.Request) {
-	url, _ := url.Parse(targeturl)
-
-	// we should not create a new SHRP for each request!
-	reverseProxy := httputil.NewSingleHostReverseProxy(url)
-	// reverseProxy.ErrorHandler = reverseProxyErrorHandler
-	reverseProxy.Transport = &errorHandlingRoundTripper{}
+func serveReverseProxy(route *Route, res http.ResponseWriter, req *http.Request) {
+	url, _ := url.Parse(route.targetURL)
 
 	req.URL.Host = url.Host
 	req.URL.Scheme = url.Scheme
 	req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
 	req.Host = url.Host
 
-	reverseProxy.ServeHTTP(res, req)
+	route.reverseProxy.ServeHTTP(res, req)
 }
 
 func handleRequest(res http.ResponseWriter, req *http.Request) {
@@ -129,19 +127,32 @@ func handleRequest(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// now, do our proxy job
-	// TODO: change localhost to VM ip, of course
-	url := fmt.Sprintf("http://localhost:%d", route.DestinationPort)
-	serveReverseProxy(url, res, req)
+	serveReverseProxy(route, res, req)
+}
+
+func initReverseProxies() {
+	for _, route := range routes {
+		route.targetURL = fmt.Sprintf("http://%s:%d", route.DestinationHost, route.DestinationPort)
+
+		pURL, _ := url.Parse(route.targetURL)
+		reverseProxy := httputil.NewSingleHostReverseProxy(pURL)
+		// reverseProxy.ErrorHandler = reverseProxyErrorHandler
+		reverseProxy.Transport = &errorHandlingRoundTripper{}
+
+		route.reverseProxy = reverseProxy
+	}
 }
 
 func initRoutes() {
 	routes = append(routes, &Route{
 		Domain:          "test1.cobaye1.oniti.me",
+		DestinationHost: "localhost",
 		DestinationPort: 8081,
 		RedirectToHTTPS: true,
 	})
 	routes = append(routes, &Route{
 		Domain:          "test2.cobaye1.oniti.me",
+		DestinationHost: "localhost",
 		DestinationPort: 8082,
 		RedirectToHTTPS: false,
 	})
@@ -154,6 +165,7 @@ func initRoutes() {
 
 func main() {
 	initRoutes()
+	initReverseProxies()
 
 	manager := &autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
