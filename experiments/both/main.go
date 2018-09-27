@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
 
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
@@ -97,11 +98,16 @@ func serveReverseProxy(targeturl string, res http.ResponseWriter, req *http.Requ
 }
 
 func handleRequest(res http.ResponseWriter, req *http.Request) {
-	// with port: req.Host = "test1.localhost:8080":
-	route, err := getRouteByDomain(req.Host)
+	// remove any port info from req.Host for the lookup
+	parts := strings.Split(req.Host, ":")
+	host := strings.ToLower(parts[0])
+	fmt.Printf("%s → %s\n", req.Host, host)
+
+	route, err := getRouteByDomain(host)
 	if err != nil {
 		// default route?
 		fmt.Printf("woops: %s\n", err)
+		return
 	}
 
 	// redirect to another URL?
