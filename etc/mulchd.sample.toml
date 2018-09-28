@@ -1,7 +1,7 @@
 # Sample configuration file for Mulch server (mulchd)
 # Values here are defaults (except for seeds)
 
-# Listen address (no IP = all interfaces)
+# Listen address of Mulchd API server (no IP = all interfaces)
 listen = ":8585"
 
 # URI libvirt will use to contact the hypervisor
@@ -29,6 +29,24 @@ mulch_super_user = "admin"
 # Mulch may generate by itself in the future, we'll see.
 mulch_ssh_private_key = ""
 mulch_ssh_public_key = ""
+
+# ACME protocol directory server
+#
+# We use Let's Encrypt *staging* directory by default.
+# See https://letsencrypt.org/docs/staging-environment/ to get the
+# staging "Fake LE Root X1" root certificate during tests.
+#
+# For Let's Encrypt production URL, you can use:
+# proxy_acme_url = "LETS_ENCRYPT_PRODUCTION"
+proxy_acme_url = "https://acme-staging.api.letsencrypt.org/directory"
+
+# Email will be used by CAs, such as Let's Encrypt, to notify about
+# problems with issued certificates.
+proxy_acme_email = "root@localhost.localdomain"
+
+# Listen addresses (HTTP/HTTPS) for the Resverse Proxy
+proxy_listen_http = ":80"
+proxy_listen_https = ":443"
 
 # Sample seeds
 [[seed]]

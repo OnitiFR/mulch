@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -25,17 +24,27 @@ import (
 // 	["www.dev.toto.com", "dev.toto.com"],
 // ]
 
+// ProxyServer describe a Mulch proxy server
+type ProxyServer struct {
+	DomainDB *DomainDatabase
+	Log      *Log
+	HTTP     *http.Server
+	HTTPS    *http.Server
+}
+
 // Until Go 1.11 and his reverseProxy.ErrorHandler is mainstream, let's
 // have our own error generator
 type errorHandlingRoundTripper struct {
-	Tr http.RoundTripper
+	ProxyServer *ProxyServer
+	Domain      *Domain
+	Log         *Log
 }
 
 func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	tr := http.DefaultTransport
 	res, err := tr.RoundTrip(req)
 	if err != nil {
-		fmt.Println(err)
+		rt.ProxyServer.Log.Errorf("%s: %s", rt.Domain.Name, err)
 		body := fmt.Sprintf("Error 502 (%s)", err)
 		return &http.Response{
 			StatusCode:    http.StatusBadGateway,
@@ -48,24 +57,43 @@ func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 	return res, err
 }
 
-////////////////////////////////
-// all this will be replaced by DomainDatabase
+// NewProxyServer instanciates a new ProxyServer
+func NewProxyServer(dirCache string, email string, listenHTTP string, listenHTTPS string, directoryURL string) *ProxyServer {
+	var proxy ProxyServer
 
-var domains []*Domain
+	manager := &autocert.Manager{
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: proxy.hostPolicy,
+		Cache:      autocert.DirCache(dirCache),
+		Email:      email,
+		// RenewBefore: …,
+	}
 
-func getDomainByName(name string) (*Domain, error) {
-	for _, domain := range domains {
-		if domain.Name == name {
-			return domain, nil
+	if directoryURL != "" {
+		manager.Client = &acme.Client{
+			DirectoryURL: directoryURL,
 		}
 	}
-	return nil, fmt.Errorf("domain '%s' not found", name)
+
+	mux := &http.ServeMux{}
+	mux.HandleFunc("/", proxy.handleRequest)
+
+	proxy.HTTP = &http.Server{
+		Handler: manager.HTTPHandler(mux),
+		Addr:    listenHTTP,
+	}
+
+	proxy.HTTPS = &http.Server{
+		Handler:   mux,
+		Addr:      listenHTTPS,
+		TLSConfig: &tls.Config{GetCertificate: manager.GetCertificate},
+	}
+
+	return &proxy
 }
 
-//////////////////////////////////////
-
-func hostPolicy(ctx context.Context, host string) error {
-	_, err := getDomainByName(host)
+func (proxy *ProxyServer) hostPolicy(ctx context.Context, host string) error {
+	_, err := proxy.DomainDB.GetByName(host)
 
 	if err == nil {
 		return nil
@@ -74,11 +102,11 @@ func hostPolicy(ctx context.Context, host string) error {
 	return fmt.Errorf("No configuration found for host '%s' ", host)
 }
 
-func reverseProxyErrorHandler(rw http.ResponseWriter, req *http.Request, err error) {
-	rw.WriteHeader(http.StatusBadGateway)
-}
+// func reverseProxyErrorHandler(rw http.ResponseWriter, req *http.Request, err error) {
+// 	rw.WriteHeader(http.StatusBadGateway)
+// }
 
-func serveReverseProxy(domain *Domain, res http.ResponseWriter, req *http.Request) {
+func (proxy *ProxyServer) serveReverseProxy(domain *Domain, res http.ResponseWriter, req *http.Request) {
 	url, _ := url.Parse(domain.targetURL)
 
 	req.URL.Host = url.Host
@@ -89,13 +117,13 @@ func serveReverseProxy(domain *Domain, res http.ResponseWriter, req *http.Reques
 	domain.reverseProxy.ServeHTTP(res, req)
 }
 
-func handleRequest(res http.ResponseWriter, req *http.Request) {
+func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Request) {
 	// remove any port info from req.Host for the lookup
 	parts := strings.Split(req.Host, ":")
 	host := strings.ToLower(parts[0])
 	fmt.Printf("%s → %s\n", req.Host, host)
 
-	domain, err := getDomainByName(host)
+	domain, err := proxy.DomainDB.GetByName(host)
 	if err != nil {
 		// default route?
 		fmt.Printf("woops: %s\n", err)
@@ -121,86 +149,75 @@ func handleRequest(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// now, do our proxy job
-	serveReverseProxy(domain, res, req)
+	proxy.serveReverseProxy(domain, res, req)
 }
 
-func initReverseProxies() {
-	for _, domain := range domains {
+// RefreshReverseProxies create new (internal) ReverseProxy instances
+// This function should be called when DomainDB is updated
+func (proxy *ProxyServer) RefreshReverseProxies() {
+	domains := proxy.DomainDB.GetDomains()
+
+	for _, domainName := range domains {
+		domain, err := proxy.DomainDB.GetByName(domainName)
+		if err != nil {
+			proxy.Log.Errorf("initReverseProxies: %s", err)
+			continue
+		}
+
 		domain.targetURL = fmt.Sprintf("http://%s:%d", domain.DestinationHost, domain.DestinationPort)
 
 		pURL, _ := url.Parse(domain.targetURL)
-		reverseProxy := httputil.NewSingleHostReverseProxy(pURL)
-		// reverseProxy.ErrorHandler = reverseProxyErrorHandler
-		reverseProxy.Transport = &errorHandlingRoundTripper{}
+		domain.reverseProxy = httputil.NewSingleHostReverseProxy(pURL)
 
-		domain.reverseProxy = reverseProxy
+		// domain.reverseProxy.ErrorHandler = reverseProxyErrorHandler
+		domain.reverseProxy.Transport = &errorHandlingRoundTripper{
+			Domain: domain,
+			Log:    proxy.Log,
+		}
 	}
 }
 
-func initRoutes() {
-	domains = append(domains, &Domain{
-		Name:            "test1.cobaye1.oniti.me",
-		DestinationHost: "localhost",
-		DestinationPort: 8081,
-		RedirectToHTTPS: true,
-	})
-	domains = append(domains, &Domain{
-		Name:            "test2.cobaye1.oniti.me",
-		DestinationHost: "localhost",
-		DestinationPort: 8082,
-		RedirectToHTTPS: false,
-	})
-	domains = append(domains, &Domain{
-		Name:       "test3.cobaye1.oniti.me",
-		RedirectTo: "www.perdu.com",
-		// RedirectToHTTPS has no effect here
-	})
-}
+// func initRoutes() {
+// 	domains = append(domains, &Domain{
+// 		Name:            "test1.cobaye1.oniti.me",
+// 		DestinationHost: "localhost",
+// 		DestinationPort: 8081,
+// 		RedirectToHTTPS: true,
+// 	})
+// 	domains = append(domains, &Domain{
+// 		Name:            "test2.cobaye1.oniti.me",
+// 		DestinationHost: "localhost",
+// 		DestinationPort: 8082,
+// 		RedirectToHTTPS: false,
+// 	})
+// 	domains = append(domains, &Domain{
+// 		Name:       "test3.cobaye1.oniti.me",
+// 		RedirectTo: "www.perdu.com",
+// 		// RedirectToHTTPS has no effect here
+// 	})
+// }
 
-func main0() {
-	initRoutes()
-	initReverseProxies()
+// Run the ProxyServer (foreground)
+func (proxy *ProxyServer) Run() error {
 
-	manager := &autocert.Manager{
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: hostPolicy,
-		Cache:      autocert.DirCache("."),
-		Email:      "julien+cobaye1@oniti.fr",
-		// RenewBefore: …,
-		Client: &acme.Client{
-			DirectoryURL: "https://acme-staging.api.letsencrypt.org/directory",
-		},
-	}
-
-	mux := &http.ServeMux{}
-	mux.HandleFunc("/", handleRequest)
-
-	httpServer := &http.Server{
-		Handler: manager.HTTPHandler(mux),
-		Addr:    ":80",
-	}
-
-	httpsServer := &http.Server{
-		Handler:   mux,
-		Addr:      ":443",
-		TLSConfig: &tls.Config{GetCertificate: manager.GetCertificate},
-	}
+	errorChan := make(chan error)
 
 	go func() {
-		fmt.Printf("Starting HTTPS server on %s\n", httpsServer.Addr)
-		err := httpsServer.ListenAndServeTLS("", "")
+		proxy.Log.Infof("HTTPS server on %s", proxy.HTTPS.Addr)
+		err := proxy.HTTPS.ListenAndServeTLS("", "")
 		if err != nil {
-			log.Fatalf("ListendAndServeTLS: %s", err)
+			errorChan <- fmt.Errorf("ListendAndServeTLS: %s", err)
 		}
 	}()
 
 	go func() {
-		fmt.Printf("Starting HTTP server on %s\n", httpServer.Addr)
-		err := httpServer.ListenAndServe()
+		proxy.Log.Infof("HTTP server on %s", proxy.HTTP.Addr)
+		err := proxy.HTTP.ListenAndServe()
 		if err != nil {
-			log.Fatalf("ListenAndServe: %s", err)
+			errorChan <- fmt.Errorf("ListenAndServe: %s", err)
 		}
 	}()
 
-	select {}
+	err := <-errorChan
+	return err
 }
