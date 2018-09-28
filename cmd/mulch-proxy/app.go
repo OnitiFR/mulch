@@ -103,6 +103,8 @@ func (app *App) Run() {
 	err := app.ProxyServer.Run()
 	if err != nil {
 		app.Log.Error(err.Error())
+		app.Log.Info("For 'bind: permission denied' on lower ports, you may use setcap:")
+		app.Log.Info("Ex: setcap 'cap_net_bind_service=+ep' mulch-proxy")
 		os.Exit(99)
 	}
 }

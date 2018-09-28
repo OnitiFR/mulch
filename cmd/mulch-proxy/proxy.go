@@ -15,15 +15,6 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
-// setcap 'cap_net_bind_service=+ep' mulch-proxy
-
-// domains = ['toto.com', 'dev.toto.com::8080']
-// redirect_http_to_https = true (false = proxy also from tcp/80)
-// redirects = [
-// 	["www.toto.com", "toto.com"],
-// 	["www.dev.toto.com", "dev.toto.com"],
-// ]
-
 // ProxyServer describe a Mulch proxy server
 type ProxyServer struct {
 	DomainDB *DomainDatabase
@@ -176,26 +167,6 @@ func (proxy *ProxyServer) RefreshReverseProxies() {
 		}
 	}
 }
-
-// func initRoutes() {
-// 	domains = append(domains, &Domain{
-// 		Name:            "test1.cobaye1.oniti.me",
-// 		DestinationHost: "localhost",
-// 		DestinationPort: 8081,
-// 		RedirectToHTTPS: true,
-// 	})
-// 	domains = append(domains, &Domain{
-// 		Name:            "test2.cobaye1.oniti.me",
-// 		DestinationHost: "localhost",
-// 		DestinationPort: 8082,
-// 		RedirectToHTTPS: false,
-// 	})
-// 	domains = append(domains, &Domain{
-// 		Name:       "test3.cobaye1.oniti.me",
-// 		RedirectTo: "www.perdu.com",
-// 		// RedirectToHTTPS has no effect here
-// 	})
-// }
 
 // Run the ProxyServer (foreground)
 func (proxy *ProxyServer) Run() error {
