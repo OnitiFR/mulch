@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strconv"
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/Xfennec/mulch/common"
 	"github.com/c2h5oh/datasize"
 )
 
@@ -23,6 +25,7 @@ type VMConfig struct {
 	DiskSize       uint64
 	RAMSize        uint64
 	CPUCount       int
+	Domains        []*common.Domain
 	Env            map[string]string
 	BackupDiskSize uint64
 	RestoreBackup  string
@@ -30,8 +33,6 @@ type VMConfig struct {
 	Prepare []*VMConfigScript
 	Backup  []*VMConfigScript
 	Restore []*VMConfigScript
-	// + save scripts
-	// + restore scripts
 }
 
 // VMConfigScript is a script for prepare, save and restore steps
@@ -41,18 +42,21 @@ type VMConfigScript struct {
 }
 
 type tomlVMConfig struct {
-	Name           string
-	Hostname       string
-	Timezone       string
-	AppUser        string `toml:"app_user"`
-	Seed           string
-	InitUpgrade    bool              `toml:"init_upgrade"`
-	DiskSize       datasize.ByteSize `toml:"disk_size"`
-	RAMSize        datasize.ByteSize `toml:"ram_size"`
-	CPUCount       int               `toml:"cpu_count"`
-	Env            [][]string
-	BackupDiskSize datasize.ByteSize `toml:"backup_disk_size"`
-	RestoreBackup  string            `toml:"restore_backup"`
+	Name            string
+	Hostname        string
+	Timezone        string
+	AppUser         string `toml:"app_user"`
+	Seed            string
+	InitUpgrade     bool              `toml:"init_upgrade"`
+	DiskSize        datasize.ByteSize `toml:"disk_size"`
+	RAMSize         datasize.ByteSize `toml:"ram_size"`
+	CPUCount        int               `toml:"cpu_count"`
+	Domains         []string
+	RedirectToHTTPS bool `toml:"redirect_to_https"`
+	Redirects       [][]string
+	Env             [][]string
+	BackupDiskSize  datasize.ByteSize `toml:"backup_disk_size"`
+	RestoreBackup   string            `toml:"restore_backup"`
 
 	PreparePrefixURL string `toml:"prepare_prefix_url"`
 	Prepare          []string
@@ -101,7 +105,7 @@ func vmConfigGetScript(tScript string, prefixURL string) (*VMConfigScript, error
 
 // NewVMConfigFromTomlReader cretes a new VMConfig instance from
 // a io.Reader containing VM configuration description
-func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
+func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) {
 	content, err := ioutil.ReadAll(configIn)
 	if err != nil {
 		return nil, err
@@ -114,15 +118,16 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 
 	// defaults (if not in the file)
 	tConfig := &tomlVMConfig{
-		Hostname:       "localhost.localdomain",
-		Timezone:       "Europe/Paris",
-		AppUser:        "app",
-		InitUpgrade:    true,
-		CPUCount:       1,
-		BackupDiskSize: 2 * datasize.GB,
+		Hostname:        "localhost.localdomain",
+		Timezone:        "Europe/Paris",
+		AppUser:         "app",
+		InitUpgrade:     true,
+		CPUCount:        1,
+		RedirectToHTTPS: true,
+		BackupDiskSize:  2 * datasize.GB,
 	}
 
-	if _, err := toml.Decode(vmConfig.FileContent, tConfig); err != nil {
+	if _, err = toml.Decode(vmConfig.FileContent, tConfig); err != nil {
 		return nil, err
 	}
 
@@ -160,6 +165,69 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 		return nil, fmt.Errorf("need a least one CPU")
 	}
 	vmConfig.CPUCount = tConfig.CPUCount
+
+	if len(tConfig.Domains) == 0 {
+		log.Warningf("no domain defined for this VM")
+	}
+
+	var domainList []string
+	for _, domainName := range tConfig.Domains {
+		parts := strings.Split(domainName, "->")
+		if len(parts) != 1 && len(parts) != 2 {
+			return nil, fmt.Errorf("invalid domain string '%s'", domainName)
+		}
+		hostName := strings.TrimSpace(strings.ToLower(parts[0]))
+		portNum := 80
+		if len(parts) == 2 {
+			portNum, err = strconv.Atoi(parts[1])
+			if err != nil {
+				return nil, fmt.Errorf("invalid port number '%s'", parts[1])
+			}
+		}
+		domain := common.Domain{
+			Name:            hostName,
+			DestinationPort: portNum,
+			RedirectToHTTPS: tConfig.RedirectToHTTPS,
+		}
+		vmConfig.Domains = append(vmConfig.Domains, &domain)
+		domainList = append(domainList, hostName)
+	}
+
+	for _, redirectParts := range tConfig.Redirects {
+		if len(redirectParts) != 2 {
+			return nil, fmt.Errorf("values for 'redirects' setting must be two string arrays (['a', 'b'] will redirect a to b)")
+		}
+		from := strings.TrimSpace(strings.ToLower(redirectParts[0]))
+		dest := strings.TrimSpace(strings.ToLower(redirectParts[1]))
+
+		// check if dest is one of our domains
+		found := false
+		for _, dom := range domainList {
+			if dom == dest {
+				found = true
+				break
+			}
+		}
+		if found == false {
+			return nil, fmt.Errorf("cannot redirect to '%s', it's not one of VM's domains", dest)
+		}
+
+		domain := common.Domain{
+			Name:       from,
+			RedirectTo: dest,
+		}
+		vmConfig.Domains = append(vmConfig.Domains, &domain)
+	}
+
+	// check for ducplicated domain
+	domainMap := make(map[string]bool)
+	for _, domain := range vmConfig.Domains {
+		_, exist := domainMap[domain.Name]
+		if exist == true {
+			return nil, fmt.Errorf("domain '%s' is duplicated in this VM", domain.Name)
+		}
+		domainMap[domain.Name] = true
+	}
 
 	for _, line := range tConfig.Env {
 		if len(line) != 2 {

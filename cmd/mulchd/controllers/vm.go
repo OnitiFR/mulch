@@ -24,7 +24,7 @@ func NewVMController(req *server.Request) {
 	}
 	req.Stream.Tracef("reading '%s' config file", header.Filename)
 
-	conf, err := server.NewVMConfigFromTomlReader(configFile)
+	conf, err := server.NewVMConfigFromTomlReader(configFile, req.Stream)
 	if err != nil {
 		req.Stream.Failuref("decoding config: %s", err)
 		return

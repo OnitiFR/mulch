@@ -15,3 +15,11 @@ init_upgrade = false
 disk_size = "20G"
 ram_size = "1G"
 cpu_count = 1
+
+
+# Dev test, will be changed soon
+domains = ['test1.localhost', 'dev.localhost->8080']
+#redirect_to_https = true # (false = proxy also from tcp/80)
+redirects = [
+    ["www.test1.localhost", "test1.localhost"],
+]

@@ -8,6 +8,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/Xfennec/mulch/common"
 	"github.com/libvirt/libvirt-go"
 	"github.com/libvirt/libvirt-go-xml"
 	"github.com/satori/go.uuid"
@@ -47,6 +48,29 @@ type VM struct {
 // SetOperation change VM WIP
 func (vm *VM) SetOperation(op VMOperation) {
 	vm.WIP = op
+}
+
+func checkAllDomains(db *VMDatabase, domains []*common.Domain) error {
+	domainMap := make(map[string]*VM)
+	vmNames := db.GetNames()
+	for _, vmName := range vmNames {
+		vm, err := db.GetByName(vmName)
+		if err != nil {
+			return err
+		}
+		for _, domain := range vm.Config.Domains {
+			domainMap[domain.Name] = vm
+		}
+	}
+
+	for _, domain := range domains {
+		vm, exist := domainMap[domain.Name]
+		if exist == true {
+			return fmt.Errorf("vm '%s' already registered domain '%s'", vm.Config.Name, domain.Name)
+		}
+	}
+
+	return nil
 }
 
 // NewVM builds a new virtual machine from config
@@ -106,6 +130,12 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 
 	if seed.Ready == false {
 		return nil, fmt.Errorf("seed %s is not ready", vmConfig.Seed)
+	}
+
+	// check for conclicting domains (will also be done later while saving vm database)
+	err = checkAllDomains(app.VMDB, vmConfig.Domains)
+	if err != nil {
+		return nil, err
 	}
 
 	// check if backup exists (if a restore was requested)
@@ -257,6 +287,8 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 	log.Infof("vm: first boot (cloud-init)")
 	if vmConfig.InitUpgrade {
 		log.Info("cloud-init will upgrade packages, it may take a while…")
+	} else {
+		log.Warning("security: VM packages will not be up to date (init_upgrade = false)")
 	}
 	err = dom.Create()
 	if err != nil {

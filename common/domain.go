@@ -1,4 +1,4 @@
-package main
+package common
 
 import "net/http/httputil"
 
@@ -9,6 +9,8 @@ type Domain struct {
 	DestinationHost string
 	DestinationPort int
 	RedirectToHTTPS bool
-	reverseProxy    *httputil.ReverseProxy
-	targetURL       string
+
+	// used internaly by Mulch reverse proxy server
+	ReverseProxy *httputil.ReverseProxy
+	TargetURL    string
 }

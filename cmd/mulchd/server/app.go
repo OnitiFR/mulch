@@ -120,8 +120,9 @@ func (app *App) checkDataPath() error {
 
 func (app *App) initVMDB() error {
 	dbPath := app.Config.DataPath + "/mulch-vm.db"
+	domainDbPath := app.Config.DataPath + "/mulch-proxy-domains.db"
 
-	vmdb, err := NewVMDatabase(dbPath)
+	vmdb, err := NewVMDatabase(dbPath, domainDbPath)
 	if err != nil {
 		return err
 	}

@@ -6,20 +6,24 @@ import (
 	"os"
 	"strconv"
 	"sync"
+
+	"github.com/Xfennec/mulch/common"
 )
 
 // VMDatabase describes a persistent DataBase of VMs structures
 type VMDatabase struct {
-	filename string
-	db       map[string]*VM
-	mutex    sync.Mutex
+	filename       string
+	domainFilename string
+	db             map[string]*VM
+	mutex          sync.Mutex
 }
 
 // NewVMDatabase instanciates a new VMDatabase
-func NewVMDatabase(filename string) (*VMDatabase, error) {
+func NewVMDatabase(filename string, domainFilename string) (*VMDatabase, error) {
 	vmdb := &VMDatabase{
-		filename: filename,
-		db:       make(map[string]*VM),
+		filename:       filename,
+		domainFilename: domainFilename,
+		db:             make(map[string]*VM),
 	}
 
 	// if the file exists, load it
@@ -39,6 +43,33 @@ func NewVMDatabase(filename string) (*VMDatabase, error) {
 	return vmdb, nil
 }
 
+func (vmdb *VMDatabase) genDomainsDB() error {
+	// build domain database, updated with each vm.LastIP
+	var domains []*common.Domain
+	for _, vm := range vmdb.db {
+		for _, domain := range vm.Config.Domains {
+			if domain.RedirectTo == "" {
+				domain.DestinationHost = vm.LastIP
+			}
+			domains = append(domains, domain)
+		}
+	}
+
+	f, err := os.OpenFile(vmdb.domainFilename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	enc := json.NewEncoder(f)
+	err = enc.Encode(&domains)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // This is done internaly, because it must be done with the mutex locked,
 // but we can't lock it here, since save() is called by functions that
 // are already locking the mutex.
@@ -54,6 +85,12 @@ func (vmdb *VMDatabase) save() error {
 	if err != nil {
 		return err
 	}
+
+	err = vmdb.genDomainsDB()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

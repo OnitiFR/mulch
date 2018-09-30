@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/Xfennec/mulch/common"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -27,7 +28,7 @@ type ProxyServer struct {
 // have our own error generator
 type errorHandlingRoundTripper struct {
 	ProxyServer *ProxyServer
-	Domain      *Domain
+	Domain      *common.Domain
 	Log         *Log
 }
 
@@ -97,15 +98,15 @@ func (proxy *ProxyServer) hostPolicy(ctx context.Context, host string) error {
 // 	rw.WriteHeader(http.StatusBadGateway)
 // }
 
-func (proxy *ProxyServer) serveReverseProxy(domain *Domain, res http.ResponseWriter, req *http.Request) {
-	url, _ := url.Parse(domain.targetURL)
+func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, res http.ResponseWriter, req *http.Request) {
+	url, _ := url.Parse(domain.TargetURL)
 
 	req.URL.Host = url.Host
 	req.URL.Scheme = url.Scheme
 	req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
 	req.Host = url.Host
 
-	domain.reverseProxy.ServeHTTP(res, req)
+	domain.ReverseProxy.ServeHTTP(res, req)
 }
 
 func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Request) {
@@ -155,13 +156,13 @@ func (proxy *ProxyServer) RefreshReverseProxies() {
 			continue
 		}
 
-		domain.targetURL = fmt.Sprintf("http://%s:%d", domain.DestinationHost, domain.DestinationPort)
+		domain.TargetURL = fmt.Sprintf("http://%s:%d", domain.DestinationHost, domain.DestinationPort)
 
-		pURL, _ := url.Parse(domain.targetURL)
-		domain.reverseProxy = httputil.NewSingleHostReverseProxy(pURL)
+		pURL, _ := url.Parse(domain.TargetURL)
+		domain.ReverseProxy = httputil.NewSingleHostReverseProxy(pURL)
 
 		// domain.reverseProxy.ErrorHandler = reverseProxyErrorHandler
-		domain.reverseProxy.Transport = &errorHandlingRoundTripper{
+		domain.ReverseProxy.Transport = &errorHandlingRoundTripper{
 			Domain: domain,
 			Log:    proxy.Log,
 		}
