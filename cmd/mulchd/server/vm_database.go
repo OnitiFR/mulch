@@ -43,15 +43,22 @@ func NewVMDatabase(filename string, domainFilename string) (*VMDatabase, error) 
 	return vmdb, nil
 }
 
+// build domain database, updated with each vm.LastIP
 func (vmdb *VMDatabase) genDomainsDB() error {
-	// build domain database, updated with each vm.LastIP
-	var domains []*common.Domain
+	domains := make(map[string]*common.Domain)
+
 	for _, vm := range vmdb.db {
 		for _, domain := range vm.Config.Domains {
 			if domain.RedirectTo == "" {
 				domain.DestinationHost = vm.LastIP
 			}
-			domains = append(domains, domain)
+
+			otherDomain, exist := domains[domain.Name]
+			if exist == true {
+				return fmt.Errorf("domain '%s' is duplicated in '%s' and '%s' VMs", domain.Name, otherDomain.VMName, domain.VMName)
+			}
+
+			domains[domain.Name] = domain
 		}
 	}
 

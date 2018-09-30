@@ -9,7 +9,6 @@ import (
 	"github.com/Xfennec/mulch/common"
 )
 
-// TODO: fix the reading of the new format (or switch from map to array here to)
 // TODO: watch the file, re-create proxies on refresh
 
 // DomainDatabase describes a persistent DataBase of Domain structures
