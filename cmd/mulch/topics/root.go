@@ -69,7 +69,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVarP(&globalCfgFile, "config", "c", "", "config file (default is $HOME/.mulch.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&globalCfgFile, "config", "c", "", "config file (default is $HOME/.mulch.toml)")
 
 	rootCmd.PersistentFlags().StringP("url", "u", "http://localhost:8585", "mulchd URL")
 	rootCmd.PersistentFlags().BoolP("trace", "t", false, "also show server TRACE messages (debug)")
