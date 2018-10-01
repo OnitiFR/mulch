@@ -2,8 +2,12 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/signal"
 	"path"
+	"strconv"
+	"syscall"
 )
 
 // App describes an the application
@@ -45,6 +49,8 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		app.Config.HTTPSAddress,
 		app.Config.AcmeURL)
 
+	app.initSigHUPHandler()
+
 	return app, nil
 }
 
@@ -52,11 +58,14 @@ func (app *App) checkDataPath() error {
 	if _, err := os.Stat(app.Config.DataPath); os.IsNotExist(err) {
 		return fmt.Errorf("data path (%s) does not exist", app.Config.DataPath)
 	}
+	lastPidFilename := path.Clean(app.Config.DataPath + "/mulch-proxy-last.pid")
+	pid := os.Getpid()
+	ioutil.WriteFile(lastPidFilename, []byte(strconv.Itoa(pid)), 0644)
 	return nil
 }
 
 func (app *App) initRouteDB() error {
-	dbPath := app.Config.DataPath + "/mulch-proxy-domains.db"
+	dbPath := path.Clean(app.Config.DataPath + "/mulch-proxy-domains.db")
 
 	ddb, err := NewDomainDatabase(dbPath)
 	if err != nil {
@@ -95,6 +104,17 @@ func (app *App) initCertCache() (string, error) {
 	}
 
 	return cacheDir, nil
+}
+
+func (app *App) initSigHUPHandler() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGHUP)
+
+	go func() {
+		for sig := range c {
+			app.Log.Infof("HUP Signal, reloading domains (%s)", sig)
+		}
+	}()
 }
 
 // Run will start the app (in the foreground)

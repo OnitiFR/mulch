@@ -10,20 +10,24 @@ import (
 	"github.com/Xfennec/mulch/common"
 )
 
+type updateCallback func()
+
 // VMDatabase describes a persistent DataBase of VMs structures
 type VMDatabase struct {
 	filename       string
 	domainFilename string
 	db             map[string]*VM
 	mutex          sync.Mutex
+	onUpdate       updateCallback
 }
 
 // NewVMDatabase instanciates a new VMDatabase
-func NewVMDatabase(filename string, domainFilename string) (*VMDatabase, error) {
+func NewVMDatabase(filename string, domainFilename string, onUpdate updateCallback) (*VMDatabase, error) {
 	vmdb := &VMDatabase{
 		filename:       filename,
 		domainFilename: domainFilename,
 		db:             make(map[string]*VM),
+		onUpdate:       onUpdate,
 	}
 
 	// if the file exists, load it
@@ -96,6 +100,10 @@ func (vmdb *VMDatabase) save() error {
 	err = vmdb.genDomainsDB()
 	if err != nil {
 		return err
+	}
+
+	if vmdb.onUpdate != nil {
+		vmdb.onUpdate()
 	}
 
 	return nil
