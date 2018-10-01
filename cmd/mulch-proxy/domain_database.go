@@ -22,7 +22,6 @@ type DomainDatabase struct {
 func NewDomainDatabase(filename string) (*DomainDatabase, error) {
 	ddb := &DomainDatabase{
 		filename: filename,
-		db:       make(map[string]*common.Domain),
 	}
 
 	err := ddb.load()
@@ -40,12 +39,23 @@ func (ddb *DomainDatabase) load() error {
 	}
 	defer f.Close()
 
+	// clear any previous map
+	ddb.db = make(map[string]*common.Domain)
+
 	dec := json.NewDecoder(f)
 	err = dec.Decode(&ddb.db)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// Reload is the mutex-protected variant of load()
+func (ddb *DomainDatabase) Reload() error {
+	ddb.mutex.Lock()
+	defer ddb.mutex.Unlock()
+
+	return ddb.load()
 }
 
 // GetDomains return all domain names in the database

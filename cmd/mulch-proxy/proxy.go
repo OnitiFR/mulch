@@ -50,8 +50,11 @@ func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 }
 
 // NewProxyServer instanciates a new ProxyServer
-func NewProxyServer(dirCache string, email string, listenHTTP string, listenHTTPS string, directoryURL string) *ProxyServer {
-	var proxy ProxyServer
+func NewProxyServer(dirCache string, email string, listenHTTP string, listenHTTPS string, directoryURL string, domainDB *DomainDatabase, log *Log) *ProxyServer {
+	proxy := ProxyServer{
+		DomainDB: domainDB,
+		Log:      log,
+	}
 
 	manager := &autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
@@ -113,21 +116,27 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	// remove any port info from req.Host for the lookup
 	parts := strings.Split(req.Host, ":")
 	host := strings.ToLower(parts[0])
-	fmt.Printf("%s → %s\n", req.Host, host)
+	proto := "http"
+	if req.TLS != nil {
+		proto = "https"
+	}
+
+	// User-Agent? Datetime?
+	proxy.Log.Tracef("%s %s %s %s", req.RemoteAddr, proto, req.Host, req.RequestURI)
 
 	domain, err := proxy.DomainDB.GetByName(host)
 	if err != nil {
 		// default route?
-		fmt.Printf("woops: %s\n", err)
+		// fmt.Printf("woops: %s\n", err)
+		body := fmt.Sprintf("Error 500 (%s)", err)
+		proxy.Log.Error(body)
+		res.WriteHeader(500)
+		res.Write([]byte(body))
 		return
 	}
 
 	// redirect to another URL?
 	if domain.RedirectTo != "" {
-		proto := "http"
-		if req.TLS != nil {
-			proto = "https"
-		}
 		newURI := proto + "://" + domain.RedirectTo + req.URL.String()
 		http.Redirect(res, req, newURI, http.StatusFound)
 		return
@@ -148,6 +157,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 // This function should be called when DomainDB is updated
 func (proxy *ProxyServer) RefreshReverseProxies() {
 	domains := proxy.DomainDB.GetDomains()
+	count := 0
 
 	for _, domainName := range domains {
 		domain, err := proxy.DomainDB.GetByName(domainName)
@@ -163,10 +173,19 @@ func (proxy *ProxyServer) RefreshReverseProxies() {
 
 		// domain.reverseProxy.ErrorHandler = reverseProxyErrorHandler
 		domain.ReverseProxy.Transport = &errorHandlingRoundTripper{
-			Domain: domain,
-			Log:    proxy.Log,
+			ProxyServer: proxy,
+			Domain:      domain,
+			Log:         proxy.Log,
 		}
+		count++
 	}
+	proxy.Log.Infof("refresh: %d domain(s)", count)
+}
+
+// ReloadDomains reload domains config file
+func (proxy *ProxyServer) ReloadDomains() {
+	proxy.DomainDB.Reload()
+	proxy.RefreshReverseProxies()
 }
 
 // Run the ProxyServer (foreground)

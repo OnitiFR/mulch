@@ -14,7 +14,6 @@ import (
 type App struct {
 	Config      *AppConfig
 	Log         *Log
-	DomainDB    *DomainDatabase
 	ProxyServer *ProxyServer
 }
 
@@ -32,7 +31,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		return nil, err
 	}
 
-	err = app.initRouteDB()
+	ddb, err := app.createDomainDB()
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +46,12 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		app.Config.AcmeEmail,
 		app.Config.HTTPAddress,
 		app.Config.HTTPSAddress,
-		app.Config.AcmeURL)
+		app.Config.AcmeURL,
+		ddb,
+		app.Log,
+	)
+
+	app.ProxyServer.RefreshReverseProxies()
 
 	app.initSigHUPHandler()
 
@@ -64,18 +68,17 @@ func (app *App) checkDataPath() error {
 	return nil
 }
 
-func (app *App) initRouteDB() error {
+func (app *App) createDomainDB() (*DomainDatabase, error) {
 	dbPath := path.Clean(app.Config.DataPath + "/mulch-proxy-domains.db")
 
 	ddb, err := NewDomainDatabase(dbPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	app.DomainDB = ddb
 
-	app.Log.Infof("found %d domain(s) in database %s", app.DomainDB.Count(), dbPath)
+	app.Log.Infof("found %d domain(s) in database %s", ddb.Count(), dbPath)
 
-	return nil
+	return ddb, nil
 }
 
 func (app *App) initCertCache() (string, error) {
@@ -112,7 +115,10 @@ func (app *App) initSigHUPHandler() {
 
 	go func() {
 		for sig := range c {
-			app.Log.Infof("HUP Signal, reloading domains (%s)", sig)
+			if sig == syscall.SIGHUP {
+				app.Log.Infof("HUP Signal, reloading domains")
+				app.ProxyServer.ReloadDomains()
+			}
 		}
 	}()
 }
