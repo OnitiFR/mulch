@@ -1,14 +1,13 @@
-* save / restore feature
-* Reverse-Proxy Webserver with SSL
 * interactive SSH to VM from mulch client
 
 + Oniti: Sparkpost
 
+- compress qcow2 backups (if possible)
 - last N log lines buffer, seen by "mulch log" (useful for seeder messages)
 - challenge based auth?
 - mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
 - support passphrase for Mulch SSH key
-- move SSK Keys and MulchSuperUser to VM level?
+- move SSH Keys and MulchSuperUser to VM level?
 - check for missing response.Body.Close() (or things like that)
 
 - change HTTP code from 200 to 4XXX in controllers when things fails (ex: req.Stream.Failure)
@@ -20,4 +19,3 @@
 - deal with libvirtd restart
 - check connection and access rights
 - differentiate "rights issues" from  "libvirtd not running" issues
-- check libvirt group / qemu user for storage?
