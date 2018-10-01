@@ -171,6 +171,7 @@ func ActionVMController(req *server.Request) {
 // DeleteVMController will delete a (unlocked) VM
 func DeleteVMController(req *server.Request) {
 	vmName := req.SubPath
+	req.SetTarget(vmName)
 	req.Stream.Infof("deleting vm '%s'", vmName)
 	err := server.VMDelete(vmName, req.App, req.Stream)
 	if err != nil {
