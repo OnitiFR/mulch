@@ -8,15 +8,24 @@
 ETC="/etc/mulch"
 VAR_DATA="/var/lib/mulch"
 VAR_STORAGE="/srv/mulch"
+FORCE="false"
 
 function main() {
     parse_args "$@"
 
     check_noroot # show warning if UID 0
 
+    check_libvirt_access
+
     is_dir_writable "$ETC"
     is_dir_writable "$VAR_DATA"
     is_dir_writable "$VAR_STORAGE"
+
+    check_if_existing_config
+
+    copy_config
+    gen_ssh_key
+    update_config_ssh
 }
 
 function check() {
@@ -44,16 +53,19 @@ function parse_args() {
             VAR_STORAGE="$1"
             shift
             ;;
+        -f|--force)
+            FORCE="true"
+            shift
+            ;;
         -h|--help)
             echo "** Install mulchd and mulch-proxy. **"
-            echo "Options and defaults:"
-            echo "  --etc $ETC"
-            echo "  --data $VAR_DATA"
-            echo "  --storage $VAR_STORAGE"
+            echo "Options and defaults (short options available too):"
+            echo "  --etc $ETC (-e)"
+            echo "  --data $VAR_DATA (-d)"
+            echo "  --storage $VAR_STORAGE (-s)"
+            echo "  --force (-f)"
             exit 1
             ;;
-        "")
-        ;;
         *)
             echo "Unknown option $1"
             exit 2
@@ -81,21 +93,75 @@ function check_noroot() {
     fi
 }
 
+function check_if_existing_config() {
+    if [ -f "$ETC/mulchd.toml" ]; then
+        echo "Existing configuration found!"
+        if [ $FORCE == "false" ]; then
+            echo "This script is intentend to do a new install, not to upgrade an existing one."
+            echo "If you know what you are doing, you may use --force option."
+            echo "Exiting."
+            exit 1
+        fi
+    fi
+}
+
+function copy_config() {
+    echo "copying config…"
+    cp -Rp etc/* "$ETC/"
+    check $?
+    mv "$ETC/mulchd.sample.toml" "$ETC/mulchd.toml"
+    check $?
+}
+
+function gen_ssh_key() {
+    echo "generating SSH key…"
+
+    priv_key="$ETC/ssh/id_rsa_mulchd"
+    pub_key="$priv_key.pub"
+
+    mkdir -pm 0700 "$ETC/ssh"
+    check $?
+    if [ $FORCE == "true" ]; then
+        rm -f "$priv_key" "$pub_key"
+        check $?
+    fi
+    ssh-keygen -b 4096 -C "admin@vms" -N "" -q -f "$priv_key"
+    check $?
+}
+
+function check_libvirt_access() {
+    echo "checking libvirt access…"
+    virsh -c qemu:///system version
+    ret=$?
+    if [ "$ret" -ne 0 ]; then
+        echo "Failed."
+        echo " - check that libvirtd is running"
+        echo "   - systemd: systemctl status libvirtd"
+        echo "   - sysv: service libvirtd status"
+        echo " - check that $USER is allowed to connect to qemu:///system"
+        echo "   - check that your user is in 'libvirt' group"
+        echo "   - some distributions do this automatically on package install"
+        echo "   - you may have to disconnect / reconnect your user"
+        echo "   - if needed: 'usermod -aG libvirt \$USER'"
+    fi
+    check $ret
+}
+
+function update_config_ssh() {
+    r_priv_key=$(realpath "$priv_key")
+    r_pub_key=$(realpath "$pub_key")
+
+    # mulch_ssh_private_key = ""
+    # mulch_ssh_public_key = ""
+    sed -i'' "s|^mulch_ssh_private_key =.*|mulch_ssh_private_key = \"$r_priv_key\"|" "$ETC/mulchd.toml"
+    sed -i'' "s|^mulch_ssh_public_key =.*|mulch_ssh_public_key = \"$r_pub_key\"|" "$ETC/mulchd.toml"
+}
+
+cd "$(dirname "$0")"
 main "$@"
 
 # go install ./cmd... ?
-# generate ssh key (if needed?)
-# copy binaries?
-# copy etc/ with templates (ex: /etc/mulch)
-    # do not overwrite (in this case, warn the user)
 # create services?
+# copy mulch client binary? mulchd & mulch-proxy?
 # API key? (generate a new one?)
-# check storage accessibility (minimum: --x) for libvirt
-# check user privileges about libvirt (= is in libvirt group?)
-# check if libvirt is running?
-# → for last two checks: virsh -c qemu:///system
-
-# - check that your user is in `libvirt` group
-#    - some distributions do this automatically on package install
-#    - you may have to disconnect / reconnect your user
-#    - if needed: `usermod -aG libvirt $USER`
+# check storage accessibility (minimum: --x) for libvirt?
