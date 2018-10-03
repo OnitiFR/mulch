@@ -14,21 +14,10 @@
   </sysinfo>
 
 
-# Now let's edit the IP + SSH config from the new image
-# First, virt-edit for the %IP% -> a free IP to provision
-virt-edit -a testing.qcow2 "/etc/sysconfig/network-scripts/ifcfg-eth0" -e 's/%IP%/EXTERNAL_IP_HERE/'
+virt-edit -a test.qcow2 "/etc/sysconfig/network-scripts/ifcfg-eth0" -e 's/%IP%/EXTERNAL_IP_HERE/'
+guestfish -a test.qcow2 -i write /root/.ssh/authorized_keys "ssh-rsa xxx"
 
-# Then, let's add our SSH key with guestfish
-guestfish -a testing.qcow2 -i write /root/.ssh/authorized_keys "ssh-rsa sshkeyhere"
-
-# eject media after/during first boot ?
 virsh change-media testing hda --eject --config
-
-# allow a user to connect to qemu://system without any password
-usermod --append --groups libvirt `whoami`
-
-# libvirt dynamic ownership allows qemu on disk files, but qemu needs at least 'x' on the path
-# setfacl -m g:qemu:x /home/xfennec/
 
 ssh -i ~/.ssh/id_rsa_test -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no mulch@10.104.99.232
 

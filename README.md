@@ -7,8 +7,8 @@ dedicated one. It features a client-server architecture using
 a REST API.
 
 Install:
- - libvirt-bin / libvirt(?)
- - libvirt-dev / libvirt-devel package needed
+ - libvirt daemon packages: libvirt-bin / libvirt(?)
+ - development packages: libvirt-dev / libvirt-devel package needed
  - go get -u github.com/Xfennec/mulch/cmd/...
  - cd go/src/github.com/Xfennec/mulch
  - ./install.sh

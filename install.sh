@@ -16,6 +16,7 @@ SOURCE=$(dirname "$0")
 # create services?
 # API key? (generate a new one?)
 # check storage accessibility (minimum: --x) for libvirt?
+#   setfacl -m g:qemu:x /…/…
 
 function main() {
     parse_args "$@"
@@ -33,6 +34,8 @@ function main() {
     copy_config
     gen_ssh_key
     update_config_ssh
+
+    infos_next
 }
 
 function check() {
@@ -163,7 +166,18 @@ function update_config_ssh() {
     r_pub_key=$(realpath "$pub_key")
 
     sed -i'' "s|^mulch_ssh_private_key =.*|mulch_ssh_private_key = \"$r_priv_key\"|" "$ETC/mulchd.toml"
+    check $?
     sed -i'' "s|^mulch_ssh_public_key =.*|mulch_ssh_public_key = \"$r_pub_key\"|" "$ETC/mulchd.toml"
+    check $?
+}
+
+function infos_next() {
+    echo ""
+    echo "Install OK."
+    echo ""
+    echo "Now, you can:"
+    echo " - update $ETC/mulchd.toml"
+    echo " - install+start services (mulchd, mulch-proxy)"
 }
 
 main "$@"
