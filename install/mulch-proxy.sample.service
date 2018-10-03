@@ -1,0 +1,12 @@
+[Unit]
+Description=Mulch Reverse Proxy
+After=network-online.target
+
+[Service]
+User={USER}
+ExecStart={MULCH_PROXY}
+Type=simple
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -13,8 +13,6 @@ FORCE="false"
 SOURCE=$(dirname "$0")
 
 # TODO:
-# create services?
-# API key? (generate a new one?)
 # check storage accessibility (minimum: --x) for libvirt?
 #   setfacl -m g:qemu:x /…/…
 
@@ -34,6 +32,7 @@ function main() {
     copy_config
     gen_ssh_key
     update_config_ssh
+    gen_services
 
     infos_next
 }
@@ -177,7 +176,53 @@ function infos_next() {
     echo ""
     echo "Now, you can:"
     echo " - update $ETC/mulchd.toml"
-    echo " - install+start services (mulchd, mulch-proxy)"
+    echo " - test manually mulchd and mulch-proxy"
+    echo "   - $mulchd_bin -path \"$ETC\""
+    echo "   - $proxy_bin -path \"$ETC\""
+    echo " - install+start services (root)"
+    echo "   - cp mulchd.service mulch-proxy.service /etc/systemd/system/ (no symlink)"
+    echo "   - systemctl daemon-reload"
+    echo "   - systemctl enable --now mulchd"
+    echo "   - systemctl enable --now mulch-proxy"
+    echo " - get/set API key(s) in $VAR_DATA/mulch-api-keys.db"
+    echo " - have fun with mulch client"
+}
+
+function gen_services() {
+    echo "generating systemd unit service files…"
+    go_bin=$(go env GOBIN)
+    if [ -z "$go_bin" ]; then
+        go_bin="$(go env GOPATH)/bin"
+    fi
+
+    # should apply systemd-escape ?
+    mulchd_bin="$go_bin/mulchd"
+    proxy_bin="$go_bin/mulch-proxy"
+
+    if [ ! -x "$mulchd_bin" ]; then
+        echo "Unable to find $mulchd_bin (compilation was OK?)"
+        check 20
+    fi
+
+    if [ ! -x "$proxy_bin" ]; then
+        echo "Unable to find $proxy_bin (compilation was OK?)"
+        check 20
+    fi
+
+    cp -p "$SOURCE/install/mulchd.sample.service" "$SOURCE/mulchd.service"
+    check $?
+    cp -p "$SOURCE/install/mulch-proxy.sample.service" "$SOURCE/mulch-proxy.service"
+    check $?
+
+    sed -i'' "s|{USER}|$USER|" "$SOURCE/mulchd.service"
+    check $?
+    sed -i'' "s|{USER}|$USER|" "$SOURCE/mulch-proxy.service"
+    check $?
+
+    sed -i'' "s|{MULCHD}|$mulchd_bin -path \"$ETC\"|" "$SOURCE/mulchd.service"
+    check $?
+    sed -i'' "s|{MULCH_PROXY}|$proxy_bin -path \"$ETC\"|" "$SOURCE/mulch-proxy.service"
+    check $?
 }
 
 main "$@"

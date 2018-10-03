@@ -1,0 +1,12 @@
+[Unit]
+Description=Mulch VM Management Service
+After=network-online.target
+
+[Service]
+User={USER}
+ExecStart={MULCHD}
+Type=simple
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -1,5 +1,7 @@
 var/*
 etc/mulchd.toml
+mulchd.service
+mulch-proxy.service
 
 # Binaries for programs and plugins
 *.exe
