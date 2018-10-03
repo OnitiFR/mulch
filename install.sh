@@ -10,6 +10,13 @@ VAR_DATA="/var/lib/mulch"
 VAR_STORAGE="/srv/mulch"
 FORCE="false"
 
+SOURCE=$(dirname "$0")
+
+# TODO:
+# create services?
+# API key? (generate a new one?)
+# check storage accessibility (minimum: --x) for libvirt?
+
 function main() {
     parse_args "$@"
 
@@ -58,12 +65,16 @@ function parse_args() {
             shift
             ;;
         -h|--help)
-            echo "** Install mulchd and mulch-proxy. **"
+            echo ""
+            echo "** Helper script: install mulchd and mulch-proxy **"
+            echo ""
+            echo "Note: mulch client is not installed/configured by this script."
+            echo ""
             echo "Options and defaults (short options available too):"
-            echo "  --etc $ETC (-e)"
-            echo "  --data $VAR_DATA (-d)"
-            echo "  --storage $VAR_STORAGE (-s)"
-            echo "  --force (-f)"
+            echo "  --etc $ETC (-e, config files)"
+            echo "  --data $VAR_DATA (-d, state [small] databases)"
+            echo "  --storage $VAR_STORAGE (-s, disks storage)"
+            echo "  --force (-f, erase old install)"
             exit 1
             ;;
         *)
@@ -107,7 +118,7 @@ function check_if_existing_config() {
 
 function copy_config() {
     echo "copying config…"
-    cp -Rp etc/* "$ETC/"
+    cp -Rp $SOURCE/etc/* "$ETC/"
     check $?
     mv "$ETC/mulchd.sample.toml" "$ETC/mulchd.toml"
     check $?
@@ -151,17 +162,8 @@ function update_config_ssh() {
     r_priv_key=$(realpath "$priv_key")
     r_pub_key=$(realpath "$pub_key")
 
-    # mulch_ssh_private_key = ""
-    # mulch_ssh_public_key = ""
     sed -i'' "s|^mulch_ssh_private_key =.*|mulch_ssh_private_key = \"$r_priv_key\"|" "$ETC/mulchd.toml"
     sed -i'' "s|^mulch_ssh_public_key =.*|mulch_ssh_public_key = \"$r_pub_key\"|" "$ETC/mulchd.toml"
 }
 
-cd "$(dirname "$0")"
 main "$@"
-
-# go install ./cmd... ?
-# create services?
-# copy mulch client binary? mulchd & mulch-proxy?
-# API key? (generate a new one?)
-# check storage accessibility (minimum: --x) for libvirt?
