@@ -39,9 +39,10 @@ RewriteRule . /index.php [L]
 # END WordPress
 EOS
 
+echo "configuring Wordpress"
+
 # version 4.4.1 decided to switch to windows line endings
 sed -ri -e 's/\r$//' wp-config*
-
 
 # used as a test for next step ("awk HTTPS thingy")
 cp -f wp-config-sample.php wp-config.php || exit $?
