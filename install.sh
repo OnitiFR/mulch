@@ -13,8 +13,10 @@ FORCE="false"
 SOURCE=$(dirname "$0")
 
 # TODO:
+# check for /usr/bin/kvm or /usr/bin/qemu-kvm and update VM XML template?
 # check storage accessibility (minimum: --x) for libvirt?
-#   setfacl -m g:qemu:x /…/…
+#   setfacl -m g:qemu:x /home/mulch/
+#   setfacl -m g:libvirt-qemu:x /home/mulch/ 
 
 function main() {
     parse_args "$@"

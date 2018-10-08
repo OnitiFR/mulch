@@ -101,12 +101,14 @@ func (proxy *ProxyServer) hostPolicy(ctx context.Context, host string) error {
 // 	rw.WriteHeader(http.StatusBadGateway)
 // }
 
-func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, res http.ResponseWriter, req *http.Request) {
+func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string, res http.ResponseWriter, req *http.Request) {
 	url, _ := url.Parse(domain.TargetURL)
 
 	req.URL.Host = url.Host
 	req.URL.Scheme = url.Scheme
-	req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
+	// TODO: have a look at https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded
+	req.Header.Set("X-Forwarded-Host", req.Host)
+	req.Header.Set("X-Forwarded-Proto", proto)
 	req.Host = url.Host
 
 	domain.ReverseProxy.ServeHTTP(res, req)
@@ -150,7 +152,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	}
 
 	// now, do our proxy job
-	proxy.serveReverseProxy(domain, res, req)
+	proxy.serveReverseProxy(domain, proto, res, req)
 }
 
 // RefreshReverseProxies create new (internal) ReverseProxy instances
