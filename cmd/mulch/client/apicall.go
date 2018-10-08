@@ -202,6 +202,9 @@ func (call *APICall) Do() {
 }
 
 func removeAPIKeyFromString(in string, key string) string {
+	if key == "" {
+		return in
+	}
 	return strings.Replace(in, key, "xxx", -1)
 }
 
