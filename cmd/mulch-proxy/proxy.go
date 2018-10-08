@@ -107,9 +107,12 @@ func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string,
 	req.URL.Host = url.Host
 	req.URL.Scheme = url.Scheme
 	// TODO: have a look at https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded
-	req.Header.Set("X-Forwarded-Host", req.Host)
 	req.Header.Set("X-Forwarded-Proto", proto)
-	req.Host = url.Host
+
+	// No, we don't rewrite Host header anymore, let's lie all the way to the
+	// destination server (usual wp-nginx-reverse-proxy behavior)
+	// req.Header.Set("X-Forwarded-Host", req.Host)
+	// req.Host = url.Host
 
 	domain.ReverseProxy.ServeHTTP(res, req)
 }
