@@ -32,6 +32,7 @@ function main() {
     copy_config
     gen_ssh_key
     update_config_ssh
+    update_config_path
     gen_services
 
     infos_next
@@ -167,6 +168,13 @@ function update_config_ssh() {
     sed -i'' "s|^mulch_ssh_private_key =.*|mulch_ssh_private_key = \"$r_priv_key\"|" "$ETC/mulchd.toml"
     check $?
     sed -i'' "s|^mulch_ssh_public_key =.*|mulch_ssh_public_key = \"$r_pub_key\"|" "$ETC/mulchd.toml"
+    check $?
+}
+
+function update_config_path() {
+    sed -i'' "s|^data_path =.*|data_path = \"$VAR_DATA\"|" "$ETC/mulchd.toml"
+    check $?
+    sed -i'' "s|^storage_path =.*|storage_path = \"$VAR_STORAGE\"|" "$ETC/mulchd.toml"
     check $?
 }
 
