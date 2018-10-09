@@ -3,7 +3,10 @@ package server
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/volumes"
 	"github.com/c2h5oh/datasize"
@@ -392,4 +395,93 @@ func (lv *Libvirt) VolumeInfos(name string, pool *libvirt.StoragePool) (*libvirt
 		return nil, err
 	}
 	return info, nil
+}
+
+// BackupCompress will TRY to compress backup
+func (lv *Libvirt) BackupCompress(volName string, template string, log *Log) error {
+	conn, err := lv.GetConnection()
+	if err != nil {
+		return err
+	}
+
+	infos, err := lv.VolumeInfos(volName, lv.Pools.Backups)
+	if err != nil {
+		return err
+	}
+
+	// is qemu-img available?
+	_, err = exec.Command("qemu-img", "-V").CombinedOutput()
+	if err != nil {
+		log.Error(err.Error())
+		log.Info("qemu-img test failure, cancel compression")
+		return nil
+	}
+
+	tmpfileUncomp, err := ioutil.TempFile("", "mulch-backup-uncomp")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmpfileUncomp.Name())
+	tmpfileUncomp.Close()
+
+	tmpfileComp, err := ioutil.TempFile("", "mulch-backup-comp")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmpfileComp.Name())
+	tmpfileComp.Close()
+
+	volSrc, err := lv.Pools.Backups.LookupStorageVolByName(volName)
+	if err != nil {
+		return nil
+	}
+	defer volSrc.Free()
+
+	vd, err := volumes.NewVolumeDownload(volSrc, conn, tmpfileUncomp.Name())
+	if err != nil {
+		return err
+	}
+
+	_, err = vd.Copy()
+	if err != nil {
+		return err
+	}
+
+	log.Infof("compressing backup")
+	output, err := exec.Command("qemu-img", "convert", "-O", "qcow2", "-c", tmpfileUncomp.Name(), tmpfileComp.Name()).CombinedOutput()
+	if err != nil {
+		log.Error(err.Error())
+		log.Error(strings.TrimSpace(string(output)))
+		log.Info("qemu-img failure, cancel compression")
+		return nil
+	}
+
+	err = volSrc.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+	if err != nil {
+		return err
+	}
+
+	err = lv.UploadFileToLibvirt(
+		lv.Pools.Backups,
+		lv.Pools.BackupsXML,
+		template,
+		tmpfileComp.Name(),
+		volName,
+		log,
+	)
+	if err != nil {
+		return err
+	}
+	// get new size
+	infos2, err := lv.VolumeInfos(volName, lv.Pools.Backups)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("backup compression: from %s to %s",
+		(datasize.ByteSize(infos.Allocation) * datasize.B).HR(),
+		(datasize.ByteSize(infos2.Allocation) * datasize.B).HR(),
+	)
+
+	return nil
 }

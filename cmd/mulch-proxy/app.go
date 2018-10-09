@@ -8,6 +8,8 @@ import (
 	"path"
 	"strconv"
 	"syscall"
+
+	"github.com/Xfennec/mulch/common"
 )
 
 // App describes an the application
@@ -59,7 +61,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 }
 
 func (app *App) checkDataPath() error {
-	if _, err := os.Stat(app.Config.DataPath); os.IsNotExist(err) {
+	if common.PathExist(app.Config.DataPath) == false {
 		return fmt.Errorf("data path (%s) does not exist", app.Config.DataPath)
 	}
 	lastPidFilename := path.Clean(app.Config.DataPath + "/mulch-proxy-last.pid")

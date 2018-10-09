@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/Xfennec/mulch/common"
 )
 
 // App describes an (the?) application
@@ -116,7 +118,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 }
 
 func (app *App) checkDataPath() error {
-	if _, err := os.Stat(app.Config.DataPath); os.IsNotExist(err) {
+	if common.PathExist(app.Config.DataPath) == false {
 		return fmt.Errorf("data path (%s) does not exist", app.Config.DataPath)
 	}
 	return nil
@@ -207,10 +209,10 @@ func (app *App) initSeedsDB() error {
 }
 
 func (app *App) initSSH() error {
-	if _, err := os.Stat(app.Config.MulchSSHPrivateKey); os.IsNotExist(err) {
+	if common.PathExist(app.Config.MulchSSHPrivateKey) == false {
 		app.Log.Warningf("SSH private key not found, mulch will fail to control VMs! (%s)", app.Config.MulchSSHPrivateKey)
 	}
-	if _, err := os.Stat(app.Config.MulchSSHPublicKey); os.IsNotExist(err) {
+	if common.PathExist(app.Config.MulchSSHPublicKey) == false {
 		app.Log.Warningf("SSH public key not found, VM creation will fail! (%s)", app.Config.MulchSSHPublicKey)
 	}
 

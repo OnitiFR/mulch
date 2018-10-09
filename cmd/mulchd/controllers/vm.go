@@ -288,8 +288,8 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 			req.Stream.Info("rollback backup disk creation")
 			errDet := server.VMDetachBackup(vm.Config.Name, req.App)
 			if errDet != nil {
-				req.Stream.Errorf("failed VMDetachBackup: %s (%s)", errDet, volName)
-				return
+				req.Stream.Errorf("failed trying VMDetachBackup: %s (%s)", errDet, volName)
+				// no return, it may be already detached
 			}
 			vol, errDef := req.App.Libvirt.Pools.Backups.LookupStorageVolByName(volName)
 			if errDef != nil {
@@ -374,7 +374,10 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 	}
 	req.Stream.Info("backup disk detached")
 
-	// "export" backup? (ex: compress)
+	err = req.App.Libvirt.BackupCompress(volName, req.App.Config.GetTemplateFilepath("volume.xml"), req.Stream)
+	if err != nil {
+		return err
+	}
 
 	req.App.BackupsDB.Add(&server.Backup{
 		DiskName: volName,
