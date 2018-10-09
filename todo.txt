@@ -2,6 +2,7 @@
 
 + Oniti: Sparkpost
 
+- download / upload backups from client
 - https://github.com/spf13/cobra/blob/master/bash_completions.md
 - last N log lines buffer, seen by "mulch log" (useful for seeder messages)
 - challenge based auth?
@@ -10,7 +11,7 @@
 - move SSH Keys and MulchSuperUser to VM level?
 - check for missing response.Body.Close() (or things like that)
 
-- change HTTP code from 200 to 4XXX in controllers when things fails (ex: req.Stream.Failure)
+- change HTTP code from 200 to 4XX in controllers when things fails (ex: req.Stream.Failure)
     - in client, make the non-200 error message silent in stream mode?
 
 - see if it's possible for a VM to steal an IP from another VM (DoS)
