@@ -41,10 +41,19 @@ func ListBackupsController(req *server.Request) {
 			continue
 		}
 
+		infos, err := req.App.Libvirt.VolumeInfos(backupName, req.App.Libvirt.Pools.Backups)
+		if err != nil {
+			req.App.Log.Error(err.Error())
+			http.Error(req.Response, err.Error(), 500)
+			return
+		}
+
 		retData = append(retData, common.APIBackupListEntry{
-			DiskName: backup.DiskName,
-			VMName:   backup.VM.Config.Name,
-			Created:  backup.Created,
+			DiskName:  backup.DiskName,
+			VMName:    backup.VM.Config.Name,
+			Created:   backup.Created,
+			Size:      infos.Capacity,
+			AllocSize: infos.Allocation,
 		})
 	}
 

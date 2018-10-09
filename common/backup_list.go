@@ -7,7 +7,9 @@ type APIBackupListEntries []APIBackupListEntry
 
 // APIBackupListEntry is an entry for a backup
 type APIBackupListEntry struct {
-	DiskName string
-	VMName   string
-	Created  time.Time
+	DiskName  string
+	VMName    string
+	Created   time.Time
+	Size      uint64
+	AllocSize uint64
 }

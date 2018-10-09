@@ -2,7 +2,9 @@
 
 + Oniti: Sparkpost
 
+- create new key
 - compress qcow2 backups (if possible)
+- https://github.com/spf13/cobra/blob/master/bash_completions.md
 - last N log lines buffer, seen by "mulch log" (useful for seeder messages)
 - challenge based auth?
 - mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)

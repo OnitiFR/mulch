@@ -379,3 +379,17 @@ func (lv *Libvirt) RemoveVolume(name string, pool *libvirt.StoragePool) error {
 	}
 	return nil
 }
+
+// VolumeInfos returns volume informations, like physical allocated size
+func (lv *Libvirt) VolumeInfos(name string, pool *libvirt.StoragePool) (*libvirt.StorageVolInfo, error) {
+	vol, err := pool.LookupStorageVolByName(name)
+	if err != nil {
+		return nil, err
+	}
+	defer vol.Free()
+	info, err := vol.GetInfo()
+	if err != nil {
+		return nil, err
+	}
+	return info, nil
+}
