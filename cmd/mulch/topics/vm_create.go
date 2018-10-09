@@ -17,7 +17,7 @@ from an existing VM using [unimplemented yet]
 `,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		call := globalAPI.NewCall("PUT", "/vm", map[string]string{})
+		call := globalAPI.NewCall("POST", "/vm", map[string]string{})
 		err := call.AddFile("config", args[0])
 		if err != nil {
 			log.Fatal(err)

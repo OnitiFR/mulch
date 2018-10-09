@@ -22,12 +22,14 @@ type APIKey struct {
 type APIKeyDatabase struct {
 	filename string
 	keys     []*APIKey
+	rand     *rand.Rand
 }
 
 // NewAPIKeyDatabase creates a new API key database
 func NewAPIKeyDatabase(filename string, log *Log, rand *rand.Rand) (*APIKeyDatabase, error) {
 	db := &APIKeyDatabase{
 		filename: filename,
+		rand:     rand,
 	}
 
 	// if the file exists, load it
@@ -41,7 +43,7 @@ func NewAPIKeyDatabase(filename string, log *Log, rand *rand.Rand) (*APIKeyDatab
 		db.keys = []*APIKey{
 			&APIKey{
 				Comment: "default-key",
-				Key:     RandString(64, rand),
+				Key:     db.GenKey(),
 			},
 		}
 	}
@@ -124,4 +126,31 @@ func (db *APIKeyDatabase) IsValidKey(key string) (bool, *APIKey) {
 		}
 	}
 	return false, nil
+}
+
+// List returns all keys
+// NOTE: This function signature may change in the future, since
+// the current one does not offer much safety to interal structures.
+func (db *APIKeyDatabase) List() []*APIKey {
+	return db.keys
+}
+
+// GenKey generates a new random API key
+func (db *APIKeyDatabase) GenKey() string {
+	return RandString(apiKeyMinLength, db.rand)
+}
+
+// Add a new key to the database
+func (db *APIKeyDatabase) Add(comment string, key string) error {
+	db.keys = append(db.keys, &APIKey{
+		Comment: comment,
+		Key:     key,
+	})
+
+	err := db.Save()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

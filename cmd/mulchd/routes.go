@@ -32,7 +32,7 @@ func AddRoutes(app *server.App) {
 	})
 
 	app.AddRoute(&server.Route{
-		Route:   "PUT /vm",
+		Route:   "POST /vm",
 		Type:    server.RouteTypeStream,
 		Handler: controllers.NewVMController,
 	})
@@ -84,4 +84,17 @@ func AddRoutes(app *server.App) {
 		Type:    server.RouteTypeStream,
 		Handler: controllers.Test2Controller,
 	})
+
+	app.AddRoute(&server.Route{
+		Route:   "GET /key",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.ListKeysController,
+	})
+
+	app.AddRoute(&server.Route{
+		Route:   "POST /key",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.NewKeyController,
+	})
+
 }
