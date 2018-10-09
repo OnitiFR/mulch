@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"sort"
 	"time"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
@@ -92,6 +93,10 @@ func ListVMsController(req *server.Request) {
 			WIP:    string(vm.WIP),
 		})
 	}
+
+	sort.Slice(retData, func(i, j int) bool {
+		return retData[i].Name < retData[j].Name
+	})
 
 	enc := json.NewEncoder(req.Response)
 	err := enc.Encode(&retData)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
 	"github.com/Xfennec/mulch/common"
@@ -30,6 +31,10 @@ func ListSeedController(req *server.Request) {
 			LastModified: seed.LastModified,
 		})
 	}
+
+	sort.Slice(retData, func(i, j int) bool {
+		return retData[i].Name < retData[j].Name
+	})
 
 	enc := json.NewEncoder(req.Response)
 	err := enc.Encode(&retData)

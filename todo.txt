@@ -3,7 +3,6 @@
 + Oniti: Sparkpost
 
 - create new key
-- sort REST lists (ex: backups & vms)
 - https://github.com/spf13/cobra/blob/master/bash_completions.md
 - last N log lines buffer, seen by "mulch log" (useful for seeder messages)
 - challenge based auth?

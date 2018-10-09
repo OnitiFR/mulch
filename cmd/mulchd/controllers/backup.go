@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
 	"github.com/Xfennec/mulch/common"
@@ -56,6 +57,10 @@ func ListBackupsController(req *server.Request) {
 			AllocSize: infos.Allocation,
 		})
 	}
+
+	sort.Slice(retData, func(i, j int) bool {
+		return retData[i].Created.Before(retData[j].Created)
+	})
 
 	enc := json.NewEncoder(req.Response)
 	err := enc.Encode(&retData)
