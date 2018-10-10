@@ -28,8 +28,10 @@ echo "creating/overwriting index.php..."
 sudo bash -c "echo '<?php echo getenv(\"_VM_NAME\").\" is ready!\";' > $html_dir/index.php"
 
 sudo chown -R $_APP_USER:$_APP_USER $html_dir $appenv
-sudo chmod 710 /home/$_APP_USER/
-sudo chgrp www-data /home/$_APP_USER/
+
+# run Apache as $_APP_USER
+sudo sed -i "s/APACHE_RUN_USER=www-data/APACHE_RUN_USER=$_APP_USER/" /etc/apache2/envvars
+sudo sed -i "s/APACHE_RUN_GROUP=www-data/APACHE_RUN_GROUP=$_APP_USER/" /etc/apache2/envvars
 
 sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 <Directory $html_dir>
