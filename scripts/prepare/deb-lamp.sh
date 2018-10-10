@@ -36,7 +36,8 @@ sudo sed -i "s/APACHE_RUN_GROUP=www-data/APACHE_RUN_GROUP=$_APP_USER/" /etc/apac
 sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 <Directory $html_dir>
     Options Indexes FollowSymLinks
-    AllowOverride None
+    # Options is for .htaccess PHP settings
+    AllowOverride Options
     Require all granted
 </Directory>
 

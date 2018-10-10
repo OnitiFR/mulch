@@ -27,6 +27,9 @@ mv -f tmp/wordpress/* $HTML_DIR || exit $?
 cd $HTML_DIR || exit $?
 
 cat > .htaccess <<- EOS
+php_value upload_max_filesize 64M
+php_value post_max_size 64M
+
 # BEGIN WordPress
 <IfModule mod_rewrite.c>
 RewriteEngine On
