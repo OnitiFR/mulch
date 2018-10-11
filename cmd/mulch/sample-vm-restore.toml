@@ -24,7 +24,7 @@ prepare = [
 
 backup_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/backup/"
 backup = [
-    "app@wordpress.sh",
+    "app@lamp.sh",
 ]
 
 restore_backup = "test.qcow2c"

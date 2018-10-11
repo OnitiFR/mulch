@@ -6,7 +6,7 @@
 cd "$HTML_DIR" || exit $?
 rm -f index.php
 
-tar xf "$_BACKUP/wordpress.tar" || exit $?
+tar xf "$_BACKUP/app.tar" || exit $?
 
 # version 4.4.1 decided to switch to windows line endings
 sed -ri -e 's/\r$//' wp-config*
@@ -43,7 +43,7 @@ set_config 'DB_PASSWORD' "$MYSQL_PASSWORD"
 set_config 'DB_NAME' "$MYSQL_DB"
 
 # password on the command line? brrr…
-mysql -u $MYSQL_USER -h $MYSQL_HOST "-p$MYSQL_PASSWORD" $MYSQL_DB < "$_BACKUP/wordpress.sql" || exit $?
+mysql -u $MYSQL_USER -h $MYSQL_HOST "-p$MYSQL_PASSWORD" $MYSQL_DB < "$_BACKUP/app.sql" || exit $?
 
 # Should also set SITEURL and HOME (in option table? in wp-config?)
 # (using URL provided by: lamp script? mulch itself?)
