@@ -38,23 +38,16 @@ func ListKeysController(req *server.Request) {
 // NewKeyController creates and add a new API key to the DB
 func NewKeyController(req *server.Request) {
 	keyComment := req.HTTP.FormValue("comment")
-	newKey := req.App.APIKeysDB.GenKey()
-
 	keyComment = strings.TrimSpace(keyComment)
-	keys := req.App.APIKeysDB.List()
-	for _, key := range keys {
-		if key.Comment == keyComment {
-			req.Stream.Failuref("Cannot create Key: duplicated comment '%s'", keyComment)
-			return
-		}
-	}
 
-	err := req.App.APIKeysDB.Add(keyComment, newKey)
+	req.Stream.Info("creating key")
+
+	key, err := req.App.APIKeysDB.AddNew(keyComment)
 	if err != nil {
 		req.Stream.Failuref("Cannot create Key: %s", err)
 		return
 	}
 
-	req.Stream.Infof("key = %s", newKey)
-	req.Stream.Successf("Key '%s' created", keyComment)
+	req.Stream.Infof("key = %s", key.Key)
+	req.Stream.Successf("Key '%s' created", key.Comment)
 }
