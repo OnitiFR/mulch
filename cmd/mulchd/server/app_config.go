@@ -30,6 +30,9 @@ type AppConfig struct {
 	MulchSSHPrivateKey string
 	MulchSSHPublicKey  string
 
+	// SSH proxy listen address
+	ProxyListenSSH string
+
 	// User (sudoer) created by Mulch in VMs
 	MulchSuperUser string
 
@@ -54,6 +57,7 @@ type tomlAppConfig struct {
 	VMPrefix           string `toml:"vm_prefix"`
 	MulchSSHPrivateKey string `toml:"mulch_ssh_private_key"`
 	MulchSSHPublicKey  string `toml:"mulch_ssh_public_key"`
+	ProxyListenSSH     string `toml:"proxy_listen_ssh"`
 	MulchSuperUser     string `toml:"mulch_super_user"`
 	Seed               []tomlConfigSeed
 }
@@ -82,6 +86,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		StoragePath:    "./var/storage", // example: /srv/mulch
 		DataPath:       "./var/data",    // example: /var/lib/mulch
 		VMPrefix:       "mulch-",
+		ProxyListenSSH: ":8022",
 		MulchSuperUser: "admin",
 	}
 
@@ -106,6 +111,8 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		return nil, errors.New("'mulch_ssh_public_key' config param must be defined")
 	}
 	appConfig.MulchSSHPublicKey = tConfig.MulchSSHPublicKey
+
+	appConfig.ProxyListenSSH = tConfig.ProxyListenSSH
 
 	for _, seed := range tConfig.Seed {
 		if seed.Name == "" {
