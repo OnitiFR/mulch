@@ -144,6 +144,11 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 		return nil, fmt.Errorf("backup '%s' not found in database", vm.Config.RestoreBackup)
 	}
 
+	SSHSuperUserAuth, err := app.SSHPairDB.GetPublicKeyAuth(SSHSuperUserPair)
+	if err != nil {
+		return nil, err
+	}
+
 	// 1 - copy from reference image
 	log.Infof("creating VM disk '%s'", diskName)
 	err = app.Libvirt.CreateDiskFromSeed(
@@ -383,7 +388,7 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 			Host: vm.LastIP,
 			Port: 22,
 			Auths: []ssh.AuthMethod{
-				PublicKeyFile(vm.App.Config.MulchSSHPrivateKey),
+				SSHSuperUserAuth,
 			},
 			Log: log,
 		},
@@ -461,7 +466,7 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 				Host: vm.LastIP,
 				Port: 22,
 				Auths: []ssh.AuthMethod{
-					PublicKeyFile(vm.App.Config.MulchSSHPrivateKey),
+					SSHSuperUserAuth,
 				},
 				Log: log,
 			},

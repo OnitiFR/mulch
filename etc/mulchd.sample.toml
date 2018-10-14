@@ -23,13 +23,6 @@ vm_prefix = "mulch-"
 # control and command of the VM by Mulch
 mulch_super_user = "admin"
 
-# SSH key for 'mulch_super_user'
-# No passphrase support yet
-# tip : ssh-keygen -b 4096 -C "admin@vms" -N "" -f path_to_new_key/mulch
-# Mulch may generate by itself in the future, we'll see.
-mulch_ssh_private_key = ""
-mulch_ssh_public_key = ""
-
 # Listen address for SSH proxy
 proxy_listen_ssh = ":8022"
 

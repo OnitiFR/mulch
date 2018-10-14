@@ -200,13 +200,18 @@ func ExecScriptVM(req *server.Request, vm *server.VM) error {
 		return fmt.Errorf("'%s' is not a valid username", as)
 	}
 
+	SSHSuperUserAuth, err := req.App.SSHPairDB.GetPublicKeyAuth(server.SSHSuperUserPair)
+	if err != nil {
+		return err
+	}
+
 	run := &server.Run{
 		SSHConn: &server.SSHConnection{
 			User: vm.App.Config.MulchSuperUser,
 			Host: vm.LastIP,
 			Port: 22,
 			Auths: []ssh.AuthMethod{
-				server.PublicKeyFile(vm.App.Config.MulchSSHPrivateKey),
+				SSHSuperUserAuth,
 			},
 			Log: req.Stream,
 		},
@@ -274,7 +279,12 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 		return fmt.Errorf("a backup with the same name already exists (%s)", volName)
 	}
 
-	err := server.VMCreateBackupDisk(vm.Config.Name, volName, vm.Config.BackupDiskSize, req.App, req.Stream)
+	SSHSuperUserAuth, err := req.App.SSHPairDB.GetPublicKeyAuth(server.SSHSuperUserPair)
+	if err != nil {
+		return err
+	}
+
+	err = server.VMCreateBackupDisk(vm.Config.Name, volName, vm.Config.BackupDiskSize, req.App, req.Stream)
 	if err != nil {
 		return err
 	}
@@ -359,7 +369,7 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 			Host: vm.LastIP,
 			Port: 22,
 			Auths: []ssh.AuthMethod{
-				server.PublicKeyFile(vm.App.Config.MulchSSHPrivateKey),
+				SSHSuperUserAuth,
 			},
 			Log: req.Stream,
 		},

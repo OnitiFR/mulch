@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -39,16 +40,17 @@ func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
 	userDataTemplate := app.Config.configPath + "/templates/ci-user-data.yml"
 
 	phURL := "http://" + app.Libvirt.NetworkXML.IPs[0].Address + app.Config.Listen + "/phone"
-	SSHPub, err := ioutil.ReadFile(app.Config.MulchSSHPublicKey)
-	if err != nil {
-		return err
+
+	sshKeyPair := app.SSHPairDB.GetByName(SSHSuperUserPair)
+	if sshKeyPair == nil {
+		return errors.New("can't find SSH super user key pair")
 	}
 
 	// 1 - create cidata file contents
 	metaData := cloudInitMetaData(vm.SecretUUID, vm.Config.Hostname)
 
 	userDataVariables := make(map[string]interface{})
-	userDataVariables["_SSH_PUBKEY"] = SSHPub
+	userDataVariables["_SSH_PUBKEY"] = sshKeyPair.Public
 	userDataVariables["_PHONE_HOME_URL"] = phURL
 	userDataVariables["_PACKAGE_UPGRADE"] = vm.Config.InitUpgrade
 	userDataVariables["_MULCH_SUPER_USER"] = app.Config.MulchSuperUser
