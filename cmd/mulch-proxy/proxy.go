@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/Xfennec/mulch/common"
@@ -22,6 +23,19 @@ type ProxyServer struct {
 	Log      *Log
 	HTTP     *http.Server
 	HTTPS    *http.Server
+	config   *ProxyServerConfig
+}
+
+// ProxyServerConfig is needed to create a ProxyServer
+type ProxyServerConfig struct {
+	DirCache              string
+	Email                 string
+	ListenHTTP            string
+	ListenHTTPS           string
+	DirectoryURL          string
+	DomainDB              *DomainDatabase
+	ErrorHTMLTemplateFile string
+	Log                   *Log
 }
 
 // Until Go 1.11 and his reverseProxy.ErrorHandler is mainstream, let's
@@ -37,7 +51,10 @@ func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 	res, err := tr.RoundTrip(req)
 	if err != nil {
 		rt.ProxyServer.Log.Errorf("%s: %s", rt.Domain.Name, err)
-		body := fmt.Sprintf("Error 502 (%s)", err)
+		body, errG := rt.ProxyServer.genErrorPage(502, err.Error())
+		if errG != nil {
+			rt.ProxyServer.Log.Errorf("Error with the error page: %s", errG)
+		}
 		return &http.Response{
 			StatusCode:    http.StatusBadGateway,
 			Body:          ioutil.NopCloser(bytes.NewBufferString(body)),
@@ -50,23 +67,24 @@ func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 }
 
 // NewProxyServer instanciates a new ProxyServer
-func NewProxyServer(dirCache string, email string, listenHTTP string, listenHTTPS string, directoryURL string, domainDB *DomainDatabase, log *Log) *ProxyServer {
+func NewProxyServer(config *ProxyServerConfig) *ProxyServer {
 	proxy := ProxyServer{
-		DomainDB: domainDB,
-		Log:      log,
+		DomainDB: config.DomainDB,
+		Log:      config.Log,
+		config:   config,
 	}
 
 	manager := &autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
 		HostPolicy: proxy.hostPolicy,
-		Cache:      autocert.DirCache(dirCache),
-		Email:      email,
+		Cache:      autocert.DirCache(config.DirCache),
+		Email:      config.Email,
 		// RenewBefore: …,
 	}
 
-	if directoryURL != "" {
+	if config.DirectoryURL != "" {
 		manager.Client = &acme.Client{
-			DirectoryURL: directoryURL,
+			DirectoryURL: config.DirectoryURL,
 		}
 	}
 
@@ -75,16 +93,32 @@ func NewProxyServer(dirCache string, email string, listenHTTP string, listenHTTP
 
 	proxy.HTTP = &http.Server{
 		Handler: manager.HTTPHandler(mux),
-		Addr:    listenHTTP,
+		Addr:    config.ListenHTTP,
 	}
 
 	proxy.HTTPS = &http.Server{
 		Handler:   mux,
-		Addr:      listenHTTPS,
+		Addr:      config.ListenHTTPS,
 		TLSConfig: &tls.Config{GetCertificate: manager.GetCertificate},
 	}
 
 	return &proxy
+}
+
+func (proxy *ProxyServer) genErrorPage(code int, message string) (string, error) {
+	htmlBytes, err := ioutil.ReadFile(proxy.config.ErrorHTMLTemplateFile)
+	if err != nil {
+		return err.Error(), err
+	}
+	html := string(htmlBytes)
+
+	variables := make(map[string]interface{})
+	variables["ERROR_CODE"] = strconv.Itoa(code)
+	variables["ERROR_MESSAGE"] = message
+
+	expanded := common.StringExpandVariables(html, variables)
+
+	return expanded, nil
 }
 
 func (proxy *ProxyServer) hostPolicy(ctx context.Context, host string) error {
@@ -131,10 +165,11 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 
 	domain, err := proxy.DomainDB.GetByName(host)
 	if err != nil {
-		// default route?
-		// fmt.Printf("woops: %s\n", err)
-		body := fmt.Sprintf("Error 500 (%s)", err)
-		proxy.Log.Error(body)
+		body, errG := proxy.genErrorPage(500, err.Error())
+		if errG != nil {
+			proxy.Log.Errorf("Error with the error page: %s", errG)
+		}
+		proxy.Log.Errorf("Error 500 (%s)", err)
 		res.WriteHeader(500)
 		res.Write([]byte(body))
 		return

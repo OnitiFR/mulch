@@ -43,15 +43,16 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		return nil, err
 	}
 
-	app.ProxyServer = NewProxyServer(
-		cacheDir,
-		app.Config.AcmeEmail,
-		app.Config.HTTPAddress,
-		app.Config.HTTPSAddress,
-		app.Config.AcmeURL,
-		ddb,
-		app.Log,
-	)
+	app.ProxyServer = NewProxyServer(&ProxyServerConfig{
+		DirCache:              cacheDir,
+		Email:                 app.Config.AcmeEmail,
+		ListenHTTP:            app.Config.HTTPAddress,
+		ListenHTTPS:           app.Config.HTTPSAddress,
+		DirectoryURL:          app.Config.AcmeURL,
+		DomainDB:              ddb,
+		ErrorHTMLTemplateFile: path.Clean(app.Config.configPath + "/templates/error_page.html"),
+		Log: app.Log,
+	})
 
 	app.ProxyServer.RefreshReverseProxies()
 

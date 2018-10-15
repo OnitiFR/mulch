@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"os"
 	"time"
+
+	"github.com/Xfennec/mulch/common"
 )
 
 func cloudInitMetaData(id string, hostname string) []byte {
@@ -21,7 +23,7 @@ func cloudInitUserData(templateFile string, variables map[string]interface{}) ([
 	if err != nil {
 		return nil, err
 	}
-	expanded := StringExpandVariables(string(data), variables)
+	expanded := common.StringExpandVariables(string(data), variables)
 
 	return []byte(expanded), nil
 }
