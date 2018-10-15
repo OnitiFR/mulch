@@ -16,7 +16,7 @@ SOURCE=$(dirname "$0")
 # check for /usr/bin/kvm or /usr/bin/qemu-kvm and update VM XML template?
 # check storage accessibility (minimum: --x) for libvirt?
 #   setfacl -m g:qemu:x /home/mulch/
-#   setfacl -m g:libvirt-qemu:x /home/mulch/ 
+#   setfacl -m g:libvirt-qemu:x /home/mulch/
 
 function main() {
     parse_args "$@"
@@ -32,8 +32,6 @@ function main() {
     check_if_existing_config
 
     copy_config
-    gen_ssh_key
-    update_config_ssh
     update_config_path
     gen_services
 
@@ -129,22 +127,6 @@ function copy_config() {
     check $?
 }
 
-function gen_ssh_key() {
-    echo "generating SSH key…"
-
-    priv_key="$ETC/ssh/id_rsa_mulchd"
-    pub_key="$priv_key.pub"
-
-    mkdir -pm 0700 "$ETC/ssh"
-    check $?
-    if [ $FORCE == "true" ]; then
-        rm -f "$priv_key" "$pub_key"
-        check $?
-    fi
-    ssh-keygen -b 4096 -C "admin@vms" -N "" -q -f "$priv_key"
-    check $?
-}
-
 function check_libvirt_access() {
     echo "checking libvirt access…"
     virsh -c qemu:///system version
@@ -161,16 +143,6 @@ function check_libvirt_access() {
         echo "   - if needed: 'usermod -aG libvirt \$USER'"
     fi
     check $ret
-}
-
-function update_config_ssh() {
-    r_priv_key=$(realpath "$priv_key")
-    r_pub_key=$(realpath "$pub_key")
-
-    sed -i'' "s|^mulch_ssh_private_key =.*|mulch_ssh_private_key = \"$r_priv_key\"|" "$ETC/mulchd.toml"
-    check $?
-    sed -i'' "s|^mulch_ssh_public_key =.*|mulch_ssh_public_key = \"$r_pub_key\"|" "$ETC/mulchd.toml"
-    check $?
 }
 
 function update_config_path() {

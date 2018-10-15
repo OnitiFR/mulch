@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"path"
 
@@ -26,9 +25,8 @@ type AppConfig struct {
 	// prefix for VM names (in libvirt)
 	VMPrefix string
 
-	// SSH keys used by Mulch to control & command VMs
-	MulchSSHPrivateKey string
-	MulchSSHPublicKey  string
+	// SSH proxy listen address
+	ProxyListenSSH string
 
 	// User (sudoer) created by Mulch in VMs
 	MulchSuperUser string
@@ -47,15 +45,14 @@ type ConfigSeed struct {
 }
 
 type tomlAppConfig struct {
-	Listen             string
-	LibVirtURI         string `toml:"libvirt_uri"`
-	StoragePath        string `toml:"storage_path"`
-	DataPath           string `toml:"data_path"`
-	VMPrefix           string `toml:"vm_prefix"`
-	MulchSSHPrivateKey string `toml:"mulch_ssh_private_key"`
-	MulchSSHPublicKey  string `toml:"mulch_ssh_public_key"`
-	MulchSuperUser     string `toml:"mulch_super_user"`
-	Seed               []tomlConfigSeed
+	Listen         string
+	LibVirtURI     string `toml:"libvirt_uri"`
+	StoragePath    string `toml:"storage_path"`
+	DataPath       string `toml:"data_path"`
+	VMPrefix       string `toml:"vm_prefix"`
+	ProxyListenSSH string `toml:"proxy_listen_ssh"`
+	MulchSuperUser string `toml:"mulch_super_user"`
+	Seed           []tomlConfigSeed
 }
 
 type tomlConfigSeed struct {
@@ -82,6 +79,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		StoragePath:    "./var/storage", // example: /srv/mulch
 		DataPath:       "./var/data",    // example: /var/lib/mulch
 		VMPrefix:       "mulch-",
+		ProxyListenSSH: ":8022",
 		MulchSuperUser: "admin",
 	}
 
@@ -97,15 +95,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	appConfig.VMPrefix = tConfig.VMPrefix
 	appConfig.MulchSuperUser = tConfig.MulchSuperUser
 
-	if tConfig.MulchSSHPublicKey == "" {
-		return nil, errors.New("'mulch_ssh_private_key' config param must be defined")
-	}
-	appConfig.MulchSSHPrivateKey = tConfig.MulchSSHPrivateKey
-
-	if tConfig.MulchSSHPublicKey == "" {
-		return nil, errors.New("'mulch_ssh_public_key' config param must be defined")
-	}
-	appConfig.MulchSSHPublicKey = tConfig.MulchSSHPublicKey
+	appConfig.ProxyListenSSH = tConfig.ProxyListenSSH
 
 	for _, seed := range tConfig.Seed {
 		if seed.Name == "" {

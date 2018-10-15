@@ -56,7 +56,7 @@ func vmSeedsCB(reader io.Reader) {
 		})
 	}
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Ready", "Last modified"})
+	table.SetHeader([]string{"Name", "Ready", "Image date"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	table.SetCenterSeparator("|")
 	table.AppendBulk(strData)

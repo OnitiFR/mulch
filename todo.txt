@@ -3,6 +3,7 @@
 + Oniti: Sparkpost
 
 - download / upload backups from client
+- rename 'seeds' command to 'seed', add 'seed status <seed-name>' command with last failure (if any)
 - https://github.com/spf13/cobra/blob/master/bash_completions.md
 - VM autostart?, stop VMs on Mulchd stop? (see systemd)
 - last N log lines buffer, seen by "mulch log" (useful for seeder messages)

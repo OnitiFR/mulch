@@ -14,8 +14,10 @@ const apiKeyMinLength = 64
 
 // APIKey describes an API key
 type APIKey struct {
-	Comment string
-	Key     string
+	Comment    string
+	Key        string
+	SSHPrivate string
+	SSHPublic  string
 }
 
 // APIKeyDatabase describes a persistent API Key database
@@ -39,13 +41,12 @@ func NewAPIKeyDatabase(filename string, log *Log, rand *rand.Rand) (*APIKeyDatab
 			return nil, err
 		}
 	} else {
-		log.Warningf("no API keys database found, creating a new one with a default key (%s)", filename)
-		db.keys = []*APIKey{
-			&APIKey{
-				Comment: "default-key",
-				Key:     db.GenKey(),
-			},
+		log.Warningf("no API keys database found, creating a new one with a default key")
+		key, err := db.AddNew("default-key")
+		if err != nil {
+			return nil, err
 		}
+		log.Infof("key = %s", key.Key)
 	}
 
 	// save the file to check if it's writable
@@ -136,21 +137,36 @@ func (db *APIKeyDatabase) List() []*APIKey {
 }
 
 // GenKey generates a new random API key
-func (db *APIKeyDatabase) GenKey() string {
+func (db *APIKeyDatabase) genKey() string {
 	return RandString(apiKeyMinLength, db.rand)
 }
 
-// Add a new key to the database
-func (db *APIKeyDatabase) Add(comment string, key string) error {
-	db.keys = append(db.keys, &APIKey{
-		Comment: comment,
-		Key:     key,
-	})
+// AddNew generates a new key and adds it to the database
+func (db *APIKeyDatabase) AddNew(comment string) (*APIKey, error) {
 
-	err := db.Save()
-	if err != nil {
-		return err
+	for _, key := range db.keys {
+		if key.Comment == comment {
+			return nil, fmt.Errorf("duplicated comment in database: '%s'", comment)
+		}
 	}
 
-	return nil
+	priv, pub, err := MakeSSHKey()
+	if err != nil {
+		return nil, err
+	}
+
+	key := &APIKey{
+		Comment:    comment,
+		Key:        db.genKey(),
+		SSHPrivate: priv,
+		SSHPublic:  pub,
+	}
+	db.keys = append(db.keys, key)
+
+	err = db.Save()
+	if err != nil {
+		return nil, err
+	}
+
+	return key, nil
 }

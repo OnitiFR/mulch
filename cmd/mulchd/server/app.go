@@ -24,6 +24,7 @@ type App struct {
 	Log       *Log
 	Mux       *http.ServeMux
 	Rand      *rand.Rand
+	SSHPairDB *SSHPairDatabase
 	VMDB      *VMDatabase
 	BackupsDB *BackupDatabase
 	APIKeysDB *APIKeyDatabase
@@ -57,6 +58,11 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		return nil, err
 	}
 
+	err = app.initSSHPairDB()
+	if err != nil {
+		return nil, err
+	}
+
 	err = app.initVMDB()
 	if err != nil {
 		return nil, err
@@ -68,11 +74,6 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	}
 
 	err = app.initAPIKeysDB()
-	if err != nil {
-		return nil, err
-	}
-
-	err = app.initSSH()
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +122,30 @@ func (app *App) checkDataPath() error {
 	if common.PathExist(app.Config.DataPath) == false {
 		return fmt.Errorf("data path (%s) does not exist", app.Config.DataPath)
 	}
+	return nil
+}
+
+func (app *App) initSSHPairDB() error {
+	dbPath := app.Config.DataPath + "/mulch-ssh-pairs.db"
+
+	pairdb, err := NewSSHPairDatabase(dbPath)
+	if err != nil {
+		return err
+	}
+
+	if pairdb.GetByName(SSHSuperUserPair) == nil {
+		app.Log.Info("generating super user SSH key pair")
+		pairdb.AddNew(SSHSuperUserPair)
+	}
+
+	if pairdb.GetByName(SSHProxyPair) == nil {
+		app.Log.Info("generating SSH Proxy key pair")
+		pairdb.AddNew(SSHProxyPair)
+	}
+
+	app.SSHPairDB = pairdb
+
+	app.Log.Infof("found %d SSH pair(s) in database %s", app.SSHPairDB.Count(), dbPath)
 	return nil
 }
 
@@ -204,17 +229,6 @@ func (app *App) initSeedsDB() error {
 		return err
 	}
 	app.Seeder = seeder
-
-	return nil
-}
-
-func (app *App) initSSH() error {
-	if common.PathExist(app.Config.MulchSSHPrivateKey) == false {
-		app.Log.Warningf("SSH private key not found, mulch will fail to control VMs! (%s)", app.Config.MulchSSHPrivateKey)
-	}
-	if common.PathExist(app.Config.MulchSSHPublicKey) == false {
-		app.Log.Warningf("SSH public key not found, VM creation will fail! (%s)", app.Config.MulchSSHPublicKey)
-	}
 
 	return nil
 }
