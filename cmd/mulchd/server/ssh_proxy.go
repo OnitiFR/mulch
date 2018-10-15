@@ -2,7 +2,6 @@ package server
 
 import (
 	"io"
-	"log"
 	"net"
 	"sync"
 
@@ -15,20 +14,19 @@ type SSHProxy struct {
 	config    *ssh.ServerConfig
 	connectCB func(c ssh.ConnMetadata) (*ssh.Client, error)
 	closeCB   func(c ssh.ConnMetadata) error
+	log       *Log
 }
 
-func (p *SSHProxy) serveProxy() error {
-	serverConn, chans, reqs, err := ssh.NewServerConn(p, p.config)
+func (proxy *SSHProxy) serveProxy() error {
+	serverConn, chans, reqs, err := ssh.NewServerConn(proxy, proxy.config)
 	if err != nil {
-		log.Println("failed to handshake")
-		return (err)
+		return err
 	}
 	defer serverConn.Close()
 
-	clientConn, err := p.connectCB(serverConn)
+	clientConn, err := proxy.connectCB(serverConn)
 	if err != nil {
-		log.Printf("connectCB: %s", err.Error())
-		return (err)
+		return err
 	}
 	defer clientConn.Close()
 
@@ -37,18 +35,15 @@ func (p *SSHProxy) serveProxy() error {
 	var wg sync.WaitGroup
 
 	for newChannel := range chans {
-
-		log.Printf("newChannel.ChannelType() = %s\n", newChannel.ChannelType())
+		proxy.log.Tracef("SSH newChannel.ChannelType() = %s", newChannel.ChannelType())
 
 		upChannel, upRequests, err := clientConn.OpenChannel(newChannel.ChannelType(), newChannel.ExtraData())
 		if err != nil {
-			log.Printf("Could not accept client channel: %s", err.Error())
 			return err
 		}
 
 		downChannel, downRequests, err := newChannel.Accept()
 		if err != nil {
-			log.Printf("Could not accept server channel: %s", err.Error())
 			return err
 		}
 
@@ -56,7 +51,7 @@ func (p *SSHProxy) serveProxy() error {
 
 		// connect requests
 		go func() {
-			log.Printf("Waiting for request")
+			proxy.log.Trace("SSH waiting for request")
 
 			for {
 				var req *ssh.Request
@@ -73,41 +68,40 @@ func (p *SSHProxy) serveProxy() error {
 				}
 
 				if req == nil {
-					log.Println("req is nil, both chan closed!")
+					proxy.log.Trace("SSH: req is nil, both chan closed!")
 					// continue
 					break
 				}
 
-				log.Printf("Request: %s %t %s", req.Type, req.WantReply, chn)
-				// log.Printf("Payload: -%s-", req.Payload)
+				proxy.log.Tracef("SSH request: %s %t %s", req.Type, req.WantReply, chn)
+				// proxy.log.Tracef("SSH payload: -%s-", req.Payload)
 
 				b, errS := dst.SendRequest(req.Type, req.WantReply, req.Payload)
 				if errS != nil {
-					log.Printf("SendRequest error: %s", errS)
+					proxy.log.Errorf("SSH: SendRequest error: %s", errS)
 				}
 
 				if req.WantReply {
 					req.Reply(b, nil)
 				}
 			}
-			log.Println("goroutine quits")
+			proxy.log.Trace("SSH: goroutine quits")
 		}()
 
-		// connect channels
-		log.Printf("Connecting channels.")
+		proxy.log.Trace("SSH: Connecting channels")
 
 		go func() {
 			io.Copy(upChannel, downChannel)
 			upChannel.Close()
 			downChannel.Close()
-			log.Println("down->up finished")
+			proxy.log.Trace("down->up finished")
 			wg.Done()
 		}()
 		go func() {
 			io.Copy(downChannel, upChannel)
 			upChannel.Close()
 			downChannel.Close()
-			log.Println("up->down finished")
+			proxy.log.Trace("up->down finished")
 			wg.Done()
 		}()
 
@@ -115,47 +109,55 @@ func (p *SSHProxy) serveProxy() error {
 	// Wait io.Copies (we have defered Closes in this function)
 	wg.Wait()
 
-	if p.closeCB != nil {
-		p.closeCB(serverConn)
+	if proxy.closeCB != nil {
+		proxy.closeCB(serverConn)
 	}
 
 	return nil
 }
 
 // ListenAndServeProxy of our own SSH server
-func ListenAndServeProxy(addr string, serverConfig *ssh.ServerConfig,
+func ListenAndServeProxy(
+	addr string,
+	serverConfig *ssh.ServerConfig,
+	log *Log,
 	connectCB func(c ssh.ConnMetadata) (*ssh.Client, error),
 	closeCB func(c ssh.ConnMetadata) error,
 ) error {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Printf("net.Listen failed: %v\n", err)
 		return err
 	}
 
-	defer listener.Close()
+	go func() {
+		defer listener.Close()
+		for {
+			connListener, err := listener.Accept()
+			log.Tracef("SSH connection from %s", connListener.RemoteAddr())
 
-	for {
-		connListener, err := listener.Accept()
-		if err != nil {
-			log.Printf("listen.Accept failed: %v\n", err)
-			return err
-		}
-
-		sshconn := &SSHProxy{
-			Conn:      connListener,
-			config:    serverConfig,
-			connectCB: connectCB,
-			closeCB:   closeCB,
-		}
-
-		go func() {
-			if err := sshconn.serveProxy(); err != nil {
-				log.Printf("Error occured while serving: %s\n", err)
+			if err != nil {
+				log.Error(err.Error())
 				return
 			}
 
-			log.Println("Connection closed.")
-		}()
-	}
+			sshconn := &SSHProxy{
+				Conn:      connListener,
+				config:    serverConfig,
+				connectCB: connectCB,
+				closeCB:   closeCB,
+				log:       log,
+			}
+
+			go func() {
+				if err := sshconn.serveProxy(); err != nil {
+					log.Errorf("SSH proxy serving error: %s", err)
+					return
+				}
+
+				log.Trace("SSH connection closed")
+			}()
+		}
+	}()
+
+	return nil
 }

@@ -1,10 +1,7 @@
 package server
 
 import (
-	"flag"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net"
 	"strings"
 
@@ -12,68 +9,33 @@ import (
 )
 
 // NewSSHProxyServer creates and starts our SSH proxy to VMs
-func NewSSHProxyServer(app *App) {
+func NewSSHProxyServer(app *App) error {
 
-	// generate this and store somewhere? do the same for mulchd vm admin key?
-	ourKey := flag.String("our-key", "id_rsa_our", "rsa key to use for our identity")
-	destKey := flag.String("dest-key", "id_rsa_dest", "rsa key for authentication on destination")
-
-	// will be replaced with dynamic API key search
-	authorized := flag.String("authorized", "", "authorized keys file")
-
-	// ...
-	dest := flag.String("dest", "xxxx:22", "destination address")
-	flag.Parse()
-
-	authorizedKeysBytes, err := ioutil.ReadFile(*authorized)
-	if err != nil {
-		log.Fatalf("Failed to load authorized keys, err: %v", err)
+	ourPair := app.SSHPairDB.GetByName(SSHProxyPair)
+	if ourPair == nil {
+		return fmt.Errorf("cannot find %s SSH key pair", SSHProxyPair)
 	}
 
-	authorizedKeysMap := map[string]bool{}
-	for len(authorizedKeysBytes) > 0 {
-		pubKey, _, _, rest, errP := ssh.ParseAuthorizedKey(authorizedKeysBytes)
-		if errP != nil {
-			log.Fatal(errP)
-		}
-
-		authorizedKeysMap[string(pubKey.Marshal())] = true
-		authorizedKeysBytes = rest
+	ourPrivate, err := ssh.ParsePrivateKey([]byte(ourPair.Private))
+	if err != nil {
+		return err
 	}
 
-	// our private key
-	ourPrivateBytes, err := ioutil.ReadFile(*ourKey)
+	destAuth, err := app.SSHPairDB.GetPublicKeyAuth(SSHSuperUserPair)
 	if err != nil {
-		fmt.Println(*ourKey)
-		panic("Failed to load private key")
-	}
-
-	ourPrivate, err := ssh.ParsePrivateKey(ourPrivateBytes)
-	if err != nil {
-		fmt.Println(*ourKey)
-		fmt.Println(err)
-		panic("Failed to parse private key")
-	}
-
-	// private key for destination auth
-	destPrivateBytes, err := ioutil.ReadFile(*destKey)
-	if err != nil {
-		fmt.Println(*destKey)
-		panic("Failed to load private key")
-	}
-
-	destPrivate, err := ssh.ParsePrivateKey(destPrivateBytes)
-	if err != nil {
-		fmt.Println(*destKey)
-		fmt.Println(err)
-		panic("Failed to parse private key")
+		return err
 	}
 
 	var clients = make(map[net.Addr]*ssh.Client)
 
 	config := &ssh.ServerConfig{
 		PublicKeyCallback: func(c ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
-			if !authorizedKeysMap[string(pubKey.Marshal())] {
+
+			apiKey, errG := app.APIKeysDB.GetByPubKey(string(pubKey.Marshal()))
+			if errG != nil {
+				return nil, errG
+			}
+			if apiKey == nil {
 				return nil, fmt.Errorf("unknown public key for %q", c.User())
 			}
 			parts := strings.Split(c.User(), "@")
@@ -83,19 +45,23 @@ func NewSSHProxyServer(app *App) {
 			user := parts[0]
 			vmName := parts[1]
 
-			fmt.Printf("Login attempt: %s, user %s to vm %s\n", c.RemoteAddr(), user, vmName)
+			vm, errG := app.VMDB.GetByName(vmName)
+			if errG != nil {
+				return nil, errG
+			}
+
+			app.Log.Infof("SSH Proxy: %s (key '%s') %s@%s (%s)", c.RemoteAddr(), apiKey.Comment, user, vmName, vm.LastIP)
 
 			clientConfig := &ssh.ClientConfig{}
 
 			clientConfig.User = user
 			clientConfig.Auth = []ssh.AuthMethod{
-				ssh.PublicKeys(destPrivate), // key to auth to our destination
+				destAuth,
 			}
 			clientConfig.HostKeyCallback = ssh.InsecureIgnoreHostKey()
 
-			client, errD := ssh.Dial("tcp", *dest, clientConfig)
+			client, errD := ssh.Dial("tcp", vm.LastIP+":22", clientConfig)
 			if errD != nil {
-				fmt.Printf("dial failed: %s\n", errD)
 				return nil, errD
 			}
 
@@ -107,15 +73,25 @@ func NewSSHProxyServer(app *App) {
 	// key of our server
 	config.AddHostKey(ourPrivate)
 
-	ListenAndServeProxy(app.Config.ProxyListenSSH, config, func(c ssh.ConnMetadata) (*ssh.Client, error) {
-		client, _ := clients[c.RemoteAddr()]
-		delete(clients, c.RemoteAddr())
+	err = ListenAndServeProxy(
+		app.Config.ProxyListenSSH,
+		config,
+		app.Log,
+		func(c ssh.ConnMetadata) (*ssh.Client, error) {
+			client, _ := clients[c.RemoteAddr()]
+			delete(clients, c.RemoteAddr())
 
-		fmt.Printf("main: Connection accepted from %s forwarded to %s\n", c.RemoteAddr(), client.RemoteAddr())
+			app.Log.Tracef("SSH proxy: connection accepted from %s forwarded to %s", c.RemoteAddr(), client.RemoteAddr())
 
-		return client, err
-	}, func(c ssh.ConnMetadata) error {
-		fmt.Printf("main: Connection closed from: %s\n", c.RemoteAddr())
-		return nil
-	})
+			return client, err
+		}, func(c ssh.ConnMetadata) error {
+			app.Log.Tracef("SSH proxy: connection closed from: %s", c.RemoteAddr())
+			return nil
+		})
+	if err != nil {
+		return err
+	}
+
+	app.Log.Infof("SSH proxy server listening on %s", app.Config.ProxyListenSSH)
+	return nil
 }

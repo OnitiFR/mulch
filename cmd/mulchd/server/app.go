@@ -94,6 +94,8 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	}
 	go app.Seeder.Run()
 
+	NewSSHProxyServer(app)
+
 	app.PhoneHome = NewPhoneHomeHub()
 
 	app.Mux = http.NewServeMux()

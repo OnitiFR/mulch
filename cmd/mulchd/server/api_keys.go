@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // TODO: lock this database with a mutex?
@@ -169,4 +171,21 @@ func (db *APIKeyDatabase) AddNew(comment string) (*APIKey, error) {
 	}
 
 	return key, nil
+}
+
+// GetByPubKey returns an API key by its (marshaled) public key
+// Returns nil and no error when key was not found
+func (db *APIKeyDatabase) GetByPubKey(pub string) (*APIKey, error) {
+	for _, key := range db.keys {
+		pubKey, _, _, _, errP := ssh.ParseAuthorizedKey([]byte(key.SSHPublic))
+		if errP != nil {
+			return nil, errP
+		}
+
+		if string(pubKey.Marshal()) == pub {
+			return key, nil
+		}
+	}
+
+	return nil, nil
 }
