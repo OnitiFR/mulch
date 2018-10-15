@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Error $ERROR_CODE - Oops!</title>
+		<style>
+			* {
+			  -webkit-box-sizing: border-box;
+			          box-sizing: border-box;
+			}
+
+			body {
+			  padding: 0;
+			  margin: 0;
+			}
+
+			#error {
+			  position: relative;
+			  height: 100vh;
+			}
+
+			#error .error {
+			  position: absolute;
+			  left: 50%;
+			  top: 50%;
+			  -webkit-transform: translate(-50%, -50%);
+			      -ms-transform: translate(-50%, -50%);
+			          transform: translate(-50%, -50%);
+			}
+
+			.error {
+			  max-width: 767px;
+			  width: 100%;
+			  line-height: 1.4;
+			  text-align: center;
+			  padding: 15px;
+			}
+
+			.error .error-500 {
+			  position: relative;
+			  height: 220px;
+			}
+
+			.error .error-500 h1 {
+			  font-family: "Courier New", Courier, monospace;
+			  position: absolute;
+			  left: 50%;
+			  top: 50%;
+			  -webkit-transform: translate(-50%, -50%);
+			      -ms-transform: translate(-50%, -50%);
+			          transform: translate(-50%, -50%);
+			  font-size: 186px;
+			  font-weight: 200;
+			  margin: 0px;
+			  background: linear-gradient(130deg, #ffa34f, #ff6f68);
+			  color: transparent;
+			  -webkit-background-clip: text;
+			  background-clip: text;
+			  text-transform: uppercase;
+			}
+
+			.error h2 {
+			  font-family: "Courier New", Courier, monospace;
+			  font-size: 33px;
+			  font-weight: 200;
+			  text-transform: uppercase;
+			  margin-top: 0px;
+			  margin-bottom: 25px;
+			  letter-spacing: 3px;
+			}
+
+
+			.error p {
+			  font-family: "Courier New", Courier, monospace;
+			  font-size: 16px;
+			  font-weight: 200;
+			  margin-top: 0px;
+			  margin-bottom: 25px;
+			}
+
+            .error p.message {
+                color: #888;
+                font-size: 12px;
+                font-weight: normal;
+            }
+
+			@media only screen and (max-width: 480px) {
+			  .error .error-500 {
+			    position: relative;
+			    height: 168px;
+			  }
+
+			  .error .error-500 h1 {
+			    font-size: 142px;
+			  }
+
+			  .error h2 {
+			    font-size: 22px;
+			  }
+			}
+
+			#credit {
+				position: absolute;
+			  	right: 0;
+			  	bottom: 0;
+			  	padding: 1em;
+
+                color: #888;
+                font-family: "Arial", sans-serif;
+			  	font-size: 16px;
+				font-weight: 200;
+				text-decoration: none;
+			}
+
+			#credit a {
+                color: #ff6f68;
+			}
+
+			#credit a:hover {
+				color: #ffa34f;
+			}
+
+		</style>
+	</head>
+
+	<body>
+		<div id="error">
+			<div class="error">
+				<div class="error-500">
+					<h1>$ERROR_CODE</h1>
+				</div>
+				<h2>Oops! We'll be back soon!</h2>
+				<p>Sorry for the inconvenience but we're performing some maintenance at the moment.</p>
+                <p class="message">$ERROR_MESSAGE</p>
+			</div>
+		</div>
+
+		<div id="credit">
+		    Powered by <a href="https://github.com/Xfennec/mulch" title="Mulch">Mulch</a>
+		</div>
+	</body>
+</html>
