@@ -1,4 +1,4 @@
-* interactive SSH to VM from mulch client
+* interactive SSH to VM from mulch client (proxy OK, client part missing)
 
 + Oniti: Sparkpost
 
