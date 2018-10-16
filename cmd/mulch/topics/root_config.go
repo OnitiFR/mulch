@@ -1,6 +1,7 @@
 package topics
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 
@@ -11,17 +12,22 @@ import (
 type RootConfig struct {
 	ConfigFile string
 
-	URL   string
-	Key   string
-	Trace bool
-	Time  bool
+	Server *tomlServerConfig
+	Trace  bool
+	Time   bool
+}
+
+type tomlServerConfig struct {
+	Name string
+	URL  string
+	Key  string
 }
 
 type tomlRootConfig struct {
-	URL   string
-	Key   string
-	Trace bool
-	Time  bool
+	Trace   bool
+	Time    bool
+	Default string
+	Server  []*tomlServerConfig
 }
 
 // NewRootConfig reads configuration from filename and
@@ -32,12 +38,12 @@ func NewRootConfig(filename string) (*RootConfig, error) {
 
 	envTrace, _ := strconv.ParseBool(os.Getenv("TRACE"))
 	envTime, _ := strconv.ParseBool(os.Getenv("TIME"))
+	envServer := os.Getenv("SERVER")
 
 	tConfig := &tomlRootConfig{
-		URL:   os.Getenv("URL"),
-		Key:   os.Getenv("KEY"),
-		Trace: envTrace,
-		Time:  envTime,
+		Trace:   envTrace,
+		Time:    envTime,
+		Default: envServer,
 	}
 
 	if _, err := os.Stat(filename); err == nil {
@@ -47,16 +53,9 @@ func NewRootConfig(filename string) (*RootConfig, error) {
 		rootConfig.ConfigFile = filename
 	}
 
-	flagURL := rootCmd.PersistentFlags().Lookup("url")
 	flagTrace := rootCmd.PersistentFlags().Lookup("trace")
 	flagTime := rootCmd.PersistentFlags().Lookup("time")
-
-	if flagURL.Changed {
-		tConfig.URL = flagURL.Value.String()
-	}
-	if tConfig.URL == "" {
-		tConfig.URL = flagURL.DefValue
-	}
+	flagServer := rootCmd.PersistentFlags().Lookup("server")
 
 	if flagTrace.Changed {
 		trace, _ := strconv.ParseBool(flagTrace.Value.String())
@@ -67,8 +66,31 @@ func NewRootConfig(filename string) (*RootConfig, error) {
 		tConfig.Time = time
 	}
 
-	rootConfig.URL = tConfig.URL
-	rootConfig.Key = tConfig.Key
+	if flagServer.Changed {
+		tConfig.Default = flagServer.Value.String()
+	}
+
+	if len(tConfig.Server) == 0 {
+		return nil, fmt.Errorf("must define at least one [[server]] in configuration file")
+	}
+
+	if tConfig.Default == "" {
+		tConfig.Default = tConfig.Server[0].Name
+	}
+
+	for _, server := range tConfig.Server {
+		if server.Name == tConfig.Default {
+			if rootConfig.Server != nil {
+				return nil, fmt.Errorf("multiple declaration of server '%s'", server.Name)
+			}
+			rootConfig.Server = server
+		}
+	}
+
+	if rootConfig.Server == nil {
+		return nil, fmt.Errorf("unable to find server '%s' in configuration file", tConfig.Default)
+	}
+
 	rootConfig.Trace = tConfig.Trace
 	rootConfig.Time = tConfig.Time
 
