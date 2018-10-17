@@ -97,4 +97,10 @@ func AddRoutes(app *server.App) {
 		Handler: controllers.NewKeyController,
 	})
 
+	app.AddRoute(&server.Route{
+		Route:   "GET /sshpair",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.GetKeyPairController,
+	})
+
 }

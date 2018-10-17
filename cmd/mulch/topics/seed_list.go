@@ -22,12 +22,12 @@ var seedListCmd = &cobra.Command{
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		call := globalAPI.NewCall("GET", "/seed", map[string]string{})
-		call.JSONCallback = vmSeedsCB
+		call.JSONCallback = seedsCB
 		call.Do()
 	},
 }
 
-func vmSeedsCB(reader io.Reader) {
+func seedsCB(reader io.Reader) {
 	var data common.APISeedListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)
