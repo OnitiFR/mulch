@@ -15,6 +15,7 @@ import (
 )
 
 var sshCmdVM *common.APIVmInfos
+var sshCmdUser string
 
 //  sshCmd represents the "ssh" command
 var sshCmd = &cobra.Command{
@@ -77,12 +78,17 @@ func sshCmdPairCB(reader io.Reader) {
 		log.Fatal(err.Error())
 	}
 
+	user := sshCmdVM.SuperUser
+	if sshCmdUser != "" {
+		user = sshCmdUser
+	}
+
 	// launch 'ssh' command
 	args := []string{
 		"ssh",
 		"-i", privFilePath,
 		"-p", strconv.Itoa(sshPort),
-		sshCmdVM.SuperUser + "@" + sshCmdVM.Name + "@" + hostname,
+		user + "@" + sshCmdVM.Name + "@" + hostname,
 	}
 
 	sshPath, err := exec.LookPath("ssh")
@@ -97,4 +103,5 @@ func sshCmdPairCB(reader io.Reader) {
 
 func init() {
 	rootCmd.AddCommand(sshCmd)
+	sshCmd.Flags().StringVarP(&sshCmdUser, "user", "u", "", "login user (default: super user)")
 }
