@@ -27,29 +27,10 @@ libvirt API. This is the client.`,
 		fmt.Printf("%s\n\n", cmd.Short)
 		fmt.Printf("%s\n\n", cmd.Long)
 		fmt.Printf("Use --help to list commands and options.\n\n")
-		if globalConfig.ConfigFile != "" {
-			fmt.Printf("configuration file '%s', server '%s'\n",
-				globalConfig.ConfigFile,
-				globalConfig.Server.Name,
-			)
-		} else {
-			fmt.Printf(`No configuration file found (%s).
-
-Example:
-[[server]]
-name = "my-mulch"
-url = "http://192.168.10.104:8585"
-key = "gein2xah7keeL33thpe9ahvaegF15TUL3surae3Chue4riokooJ5WuTI80FTWfz2"
-
-You can define multiple servers and use -s option to select one, or use
-default = "my-mulch" as a global setting (i.e. before [[server]]).
-First server is the default.
-
-Global settings: trace, time
-Note: you can also use environment variables (TRACE, TIME, SERVER).
-------
-`, path.Clean(globalHome+"/.mulch.toml"))
-		}
+		fmt.Printf("configuration file '%s', server '%s'\n",
+			globalConfig.ConfigFile,
+			globalConfig.Server.Name,
+		)
 	},
 }
 
@@ -90,6 +71,26 @@ func initConfig() {
 	globalConfig, err = NewRootConfig(cfgFile)
 	if err != nil {
 		log.Fatalf("Error: %s", err)
+	}
+
+	if globalConfig == nil {
+		fmt.Printf(`ERROR: Configuration file not found: %s
+
+Example:
+
+[[server]]
+name = "my-mulch"
+url = "http://192.168.10.104:8585"
+key = "gein2xah7keeL33thpe9ahvaegF15TUL3surae3Chue4riokooJ5WuTI80FTWfz2"
+
+You can define multiple servers and use -s option to select one, or use
+default = "my-mulch" as a global setting (i.e. before [[server]]).
+First server is the default.
+
+Global settings: trace, time
+Note: you can also use environment variables (TRACE, TIME, SERVER).
+`, cfgFile)
+		os.Exit(1)
 	}
 
 	globalAPI = client.NewAPI(

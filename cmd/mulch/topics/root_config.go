@@ -51,6 +51,8 @@ func NewRootConfig(filename string) (*RootConfig, error) {
 			return nil, err
 		}
 		rootConfig.ConfigFile = filename
+	} else {
+		return nil, nil
 	}
 
 	flagTrace := rootCmd.PersistentFlags().Lookup("trace")

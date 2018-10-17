@@ -14,9 +14,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// vmSeedsCmd represents the vmSeeds command
-var vmSeedsCmd = &cobra.Command{
-	Use:   "seeds",
+// seedListCmd represents the seed list command
+var seedListCmd = &cobra.Command{
+	Use:   "list",
 	Short: "List all Seeds",
 	// Long: ``,
 	Args: cobra.NoArgs,
@@ -64,5 +64,5 @@ func vmSeedsCB(reader io.Reader) {
 }
 
 func init() {
-	rootCmd.AddCommand(vmSeedsCmd)
+	seedCmd.AddCommand(seedListCmd)
 }
