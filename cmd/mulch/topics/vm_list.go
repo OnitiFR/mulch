@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// vmListCmd represents the vmList command
+// vmListCmd represents the "vm list" command
 var vmListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all VMs",

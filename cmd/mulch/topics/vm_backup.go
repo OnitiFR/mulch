@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// vmBackupCmd represents the vmBackup command
+// vmBackupCmd represents the "vm backup" command
 var vmBackupCmd = &cobra.Command{
 	Use:   "backup <vm-name>",
 	Short: "backup a VM",

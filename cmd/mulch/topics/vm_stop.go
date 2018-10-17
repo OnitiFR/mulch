@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// vmStopCmd represents the vmStop command
+// vmStopCmd represents the "vm stop" command
 var vmStopCmd = &cobra.Command{
 	Use:   "stop <vm-name>",
 	Short: "Stop a VM",

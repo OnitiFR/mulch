@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// seedListCmd represents the seed list command
+// seedListCmd represents the "seed list" command
 var seedListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all Seeds",

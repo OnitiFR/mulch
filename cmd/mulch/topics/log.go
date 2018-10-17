@@ -16,7 +16,6 @@ Examples:
   mulch log --trace`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		// trace, _ := cmd.Flags().GetBool("trace")
 		call := globalAPI.NewCall("GET", "/log", map[string]string{})
 		call.Do()
 	},
@@ -24,5 +23,4 @@ Examples:
 
 func init() {
 	rootCmd.AddCommand(logCmd)
-	// logCmd.Flags().BoolP("trace", "t", false, "also show TRACE messages (debug)")
 }

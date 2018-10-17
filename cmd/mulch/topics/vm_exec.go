@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// vmExecCmd represents the vmExec command
+// vmExecCmd represents the "vm exec" command
 var vmExecCmd = &cobra.Command{
 	Use:   "exec <vm-name> <user> <script-file>",
 	Short: "Execute a script in VM",

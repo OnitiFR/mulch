@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// vmStartCmd represents the vmStart command
+// vmStartCmd represents the "vm start" command
 var vmStartCmd = &cobra.Command{
 	Use:   "start <vm-name>",
 	Short: "Start a VM",

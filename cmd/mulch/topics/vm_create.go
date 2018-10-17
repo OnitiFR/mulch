@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// vmCreateCmd represents the vmCreate command
+// vmCreateCmd represents the "vm create" command
 var vmCreateCmd = &cobra.Command{
 	Use:   "create <config.toml>",
 	Short: "Create a new VM",

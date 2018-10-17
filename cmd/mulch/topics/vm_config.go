@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// vmConfigCmd represents the vmConfig command
+// vmConfigCmd represents the "vm config" command
 var vmConfigCmd = &cobra.Command{
 	Use:   "config <vm-name>",
 	Short: "Get config of a VM",

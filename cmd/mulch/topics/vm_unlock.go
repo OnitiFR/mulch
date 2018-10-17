@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// vmUnlockCmd represents the vmUnlock command
+// vmUnlockCmd represents the "vm unlock" command
 var vmUnlockCmd = &cobra.Command{
 	Use:   "unlock <vm-name>",
 	Short: "Unlock a VM",

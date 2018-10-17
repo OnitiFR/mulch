@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// vmDeleteCmd represents the vmDelete command
+// vmDeleteCmd represents the "vm delete" command
 var vmDeleteCmd = &cobra.Command{
 	Use:   "delete <vm-name>",
 	Short: "Delete a VM",

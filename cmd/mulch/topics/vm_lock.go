@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// vmLockCmd represents the vmLock command
+// vmLockCmd represents the "vm lock" command
 var vmLockCmd = &cobra.Command{
 	Use:   "lock <vm-name>",
 	Short: "Lock a VM",
