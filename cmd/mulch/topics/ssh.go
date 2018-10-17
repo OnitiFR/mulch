@@ -2,18 +2,18 @@ package topics
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
-	"os/exec"
+	"os"
 	"strconv"
+	"syscall"
 
 	"github.com/Xfennec/mulch/common"
 	"github.com/spf13/cobra"
 )
 
-var sshCmdVm string
+var sshCmdVM string
 
 //  sshCmd represents the "ssh" command
 var sshCmd = &cobra.Command{
@@ -29,7 +29,7 @@ See 'vm list' for VM Names.
 			log.Fatal(err.Error())
 		}
 
-		sshCmdVm = args[0]
+		sshCmdVM = args[0]
 
 		call := globalAPI.NewCall("GET", "/sshpair", map[string]string{})
 		call.JSONCallback = sshCB
@@ -58,9 +58,25 @@ func sshCB(reader io.Reader) {
 		log.Fatal(err.Error())
 	}
 
+	hostname, err := GetSSHHost()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	// should get that dynamically from the VM
+	// (and it would allow to validate VM name early!)
+	user := "admin"
+
 	// launch 'ssh' command
-	cmd := exec.Command("ssh", "-i", privFilePath, "-p", strconv.Itoa(sshPort), "admin@"+sshCmdVm+"@"+globalConfig.Server.URL)
-	fmt.Println(cmd)
+	args := []string{
+		"ssh",
+		"-i", privFilePath,
+		"-p", strconv.Itoa(sshPort),
+		user+"@"+sshCmdVM+"@"+hostname,
+	}
+
+	err = syscall.Exec("/usr/bin/ssh", args, os.Environ())
+	log.Fatal(err.Error())
 }
 
 func init() {

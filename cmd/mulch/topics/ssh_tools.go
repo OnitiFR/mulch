@@ -3,6 +3,7 @@ package topics
 import (
 	"os"
 	"path"
+	"net/url"
 
 	"github.com/Xfennec/mulch/common"
 )
@@ -37,4 +38,15 @@ func CreateSSHMulchDir() error {
 	}
 
 	return nil
+}
+
+// GetSSHHost returns the SSH server hostname based on
+// mulchd API URL
+func GetSSHHost() (string, error) {
+	url, err := url.Parse(globalConfig.Server.URL)
+	if err != nil {
+		return "", err
+	}
+
+	return url.Hostname(), nil
 }
