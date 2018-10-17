@@ -13,7 +13,7 @@ See 'vm list' for VM Names.
 `,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		call := globalAPI.NewCall("GET", "/vm/"+args[0], map[string]string{})
+		call := globalAPI.NewCall("GET", "/vm/config/"+args[0], map[string]string{})
 		call.Do()
 	},
 }

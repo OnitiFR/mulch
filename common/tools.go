@@ -35,6 +35,8 @@ func InterfaceValueToString(iv interface{}) string {
 		return fmt.Sprintf("%d", iv.(int32))
 	case int64:
 		return strconv.FormatInt(iv.(int64), 10)
+	case uint64:
+		return strconv.FormatUint(iv.(uint64), 10)
 	case float32:
 		return fmt.Sprintf("%f", iv.(float32))
 	case float64:

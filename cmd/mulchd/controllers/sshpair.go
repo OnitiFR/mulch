@@ -12,7 +12,7 @@ import (
 func GetKeyPairController(req *server.Request) {
 	req.Response.Header().Set("Content-Type", "application/json")
 
-	retData := &common.SSHPair{
+	retData := &common.APISSHPair{
 		Private: req.APIKey.SSHPrivate,
 		Public:  req.APIKey.SSHPublic,
 	}

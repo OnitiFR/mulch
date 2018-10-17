@@ -1,7 +1,7 @@
 package common
 
-// SSHPair is an OpenSSH formatted key pair
-type SSHPair struct {
+// APISSHPair is an OpenSSH formatted key pair
+type APISSHPair struct {
 	Private string
 	Public  string
 }

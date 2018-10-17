@@ -240,7 +240,7 @@ func GetVMConfigController(req *server.Request) {
 	if vmName == "" {
 		msg := fmt.Sprintf("no VM name given")
 		req.App.Log.Error(msg)
-		http.Error(req.Response, msg, 404)
+		http.Error(req.Response, msg, 400)
 		return
 	}
 	vm, err := req.App.VMDB.GetByName(vmName)
@@ -253,6 +253,48 @@ func GetVMConfigController(req *server.Request) {
 
 	req.Response.Header().Set("Content-Type", "text/plain")
 	req.Println(vm.Config.FileContent)
+}
+
+// GetVMInfosController return VM informations
+func GetVMInfosController(req *server.Request) {
+	vmName := req.SubPath
+
+	if vmName == "" {
+		msg := fmt.Sprintf("no VM name given")
+		req.App.Log.Error(msg)
+		http.Error(req.Response, msg, 400)
+		return
+	}
+	vm, err := req.App.VMDB.GetByName(vmName)
+	if err != nil {
+		msg := fmt.Sprintf("VM '%s' not found", vmName)
+		req.App.Log.Error(msg)
+		http.Error(req.Response, msg, 404)
+		return
+	}
+
+	running, _ := server.VMIsRunning(vm.Config.Name, req.App)
+
+	data := &common.APIVmInfos{
+		Name:      vm.Config.Name,
+		Seed:      vm.Config.Seed,
+		CPUCount:  vm.Config.CPUCount,
+		RAMSize:   vm.Config.RAMSize,
+		Hostname:  vm.Config.Hostname,
+		SuperUser: vm.App.Config.MulchSuperUser,
+		AppUser:   vm.Config.AppUser,
+		AuthorKey: vm.AuthorKey,
+		Locked:    vm.Locked,
+		Up:        running,
+	}
+
+	req.Response.Header().Set("Content-Type", "application/json")
+	enc := json.NewEncoder(req.Response)
+	err = enc.Encode(data)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+	}
 }
 
 // BackupVM launch the backup proccess

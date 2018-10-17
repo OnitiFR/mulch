@@ -24,6 +24,8 @@ users:
   - name: $_APP_USER
     gecos: Application user account
     shell: /bin/bash
+    ssh_authorized_keys:
+    - $_SSH_PUBKEY
 
 # Need when we phone home
 packages:
