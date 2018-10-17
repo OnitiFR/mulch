@@ -2,6 +2,7 @@ package topics
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -43,6 +44,10 @@ func sshCmdInfoCB(reader io.Reader) {
 	err := dec.Decode(&data)
 	if err != nil {
 		log.Fatal(err.Error())
+	}
+
+	if data.Up == false {
+		log.Fatal(fmt.Errorf("error, VM is not running"))
 	}
 
 	sshCmdVM = &data
