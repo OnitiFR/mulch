@@ -16,13 +16,13 @@ server version to the result.
 
 Examples:
   mulch version
-  mulch version --server`,
+  mulch version --remote`,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("client version: %s\n", client.Version)
 		fmt.Printf("client protocol: %s\n", strconv.Itoa(client.ProtocolVersion))
 
-		server, _ := cmd.Flags().GetBool("server")
+		server, _ := cmd.Flags().GetBool("remote")
 		if server {
 			call := globalAPI.NewCall("GET", "/version", map[string]string{})
 			call.Do()
@@ -33,5 +33,5 @@ Examples:
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
-	versionCmd.Flags().BoolP("server", "s", false, "also show server version")
+	versionCmd.Flags().BoolP("remote", "r", false, "also show server version")
 }
