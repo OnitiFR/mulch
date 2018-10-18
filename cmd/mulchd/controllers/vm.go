@@ -86,11 +86,13 @@ func ListVMsController(req *server.Request) {
 		// }
 
 		retData = append(retData, common.APIVmListEntry{
-			Name:   vmName,
-			LastIP: vm.LastIP,
-			State:  server.LibvirtDomainStateToString(state),
-			Locked: vm.Locked,
-			WIP:    string(vm.WIP),
+			Name:      vmName,
+			LastIP:    vm.LastIP,
+			State:     server.LibvirtDomainStateToString(state),
+			Locked:    vm.Locked,
+			WIP:       string(vm.WIP),
+			SuperUser: vm.App.Config.MulchSuperUser,
+			AppUser:   vm.Config.AppUser,
 		})
 	}
 

@@ -2,9 +2,11 @@ package common
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 const stringWordSeparators = "[ \t\n,.;:\\(\\)\\[\\]{}'\"/\\\\!\\?<>@#|*+-=]"
@@ -82,4 +84,15 @@ func StringExpandVariables(str string, variables map[string]interface{}) string 
 		}
 	}
 	return str
+}
+
+// FileContains returns true if file contain text
+func FileContains(filepath string, text string) (bool, error) {
+	data, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return false, err
+	}
+
+	contains := strings.Contains(string(data), text)
+	return contains, nil
 }
