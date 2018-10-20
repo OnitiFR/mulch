@@ -7,7 +7,9 @@ import (
 	"sort"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
+	"github.com/Xfennec/mulch/cmd/mulchd/volumes"
 	"github.com/Xfennec/mulch/common"
+	"github.com/c2h5oh/datasize"
 	"github.com/libvirt/libvirt-go"
 )
 
@@ -99,4 +101,50 @@ func DeleteBackupController(req *server.Request) {
 	}
 
 	req.Stream.Successf("backup '%s' successfully deleted", backupName)
+}
+
+// DownloadBackupController will download a backup image
+func DownloadBackupController(req *server.Request) {
+	backupName := req.SubPath
+
+	req.Response.Header().Set("Content-Type", "application/octet-stream")
+
+	conn, err := req.App.Libvirt.GetConnection()
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
+	backup := req.App.BackupsDB.GetByName(backupName)
+	if backup == nil {
+		errB := fmt.Errorf("backup '%s' not found in database", backupName)
+		req.App.Log.Error(errB.Error())
+		http.Error(req.Response, errB.Error(), 500)
+		return
+	}
+
+	vol, err := req.App.Libvirt.Pools.Backups.LookupStorageVolByName(backupName)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+	defer vol.Free()
+
+	writeCloser := &common.FakeWriteCloser{Writer: req.Response}
+	vd, err := volumes.NewVolumeDownloadToWriter(vol, conn, writeCloser)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
+	bytesWritten, err := vd.Copy()
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+	req.App.Log.Infof("client downloaded %s (%s)", backupName, (datasize.ByteSize(bytesWritten) * datasize.B).HR())
 }

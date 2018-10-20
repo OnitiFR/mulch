@@ -74,6 +74,12 @@ func AddRoutes(app *server.App) {
 	})
 
 	app.AddRoute(&server.Route{
+		Route:   "GET /backup/*",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.DownloadBackupController,
+	})
+
+	app.AddRoute(&server.Route{
 		Route:   "DELETE /backup/*",
 		Type:    server.RouteTypeStream,
 		Handler: controllers.DeleteBackupController,

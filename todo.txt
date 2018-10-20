@@ -2,7 +2,7 @@
 
 + Oniti: Sparkpost
 
-- download / upload backups from client
+- upload backups from client
 - add 'seed status <seed-name>' command with last failure (if any)
 - https://github.com/spf13/cobra/blob/master/bash_completions.md
 - VM autostart?, stop VMs on Mulchd stop? (see systemd)

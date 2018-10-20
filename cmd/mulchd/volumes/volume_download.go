@@ -10,17 +10,12 @@ import (
 // VolumeDownload contains source and destination for the download operation
 type VolumeDownload struct {
 	streamSrc *libvirt.Stream
-	streamDst *os.File
+	streamDst io.WriteCloser
 }
 
-// NewVolumeDownload creates a VolumeDownload instance, allowing to download
-// a file from a libvirt storage pool
-func NewVolumeDownload(volSrc *libvirt.StorageVol, connSrc *libvirt.Connect, dstFile string) (instance *VolumeDownload, err error) {
-	streamDst, err := os.Create(dstFile)
-	if err != nil {
-		return nil, err
-	}
-
+// NewVolumeDownloadToWriter creates a VolumeDownload instance, allowing to download
+// a file from a libvirt storage pool to an io.WriteCloser
+func NewVolumeDownloadToWriter(volSrc *libvirt.StorageVol, connSrc *libvirt.Connect, streamDst io.WriteCloser) (instance *VolumeDownload, err error) {
 	streamSrc, err := connSrc.NewStream(0)
 	if err != nil {
 		return nil, err
@@ -37,6 +32,16 @@ func NewVolumeDownload(volSrc *libvirt.StorageVol, connSrc *libvirt.Connect, dst
 	}
 
 	return instance, nil
+}
+
+// NewVolumeDownload is a variant that writes to a file
+func NewVolumeDownload(volSrc *libvirt.StorageVol, connSrc *libvirt.Connect, dstFile string) (instance *VolumeDownload, err error) {
+	streamDst, err := os.Create(dstFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewVolumeDownloadToWriter(volSrc, connSrc, streamDst)
 }
 
 func (v VolumeDownload) Read(p []byte) (n int, e error) {

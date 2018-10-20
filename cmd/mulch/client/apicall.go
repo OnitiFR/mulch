@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/Xfennec/mulch/common"
+	"github.com/c2h5oh/datasize"
 	"github.com/fatih/color"
 )
 
@@ -34,6 +35,7 @@ type APICall struct {
 	Path         string
 	Args         map[string]string
 	JSONCallback func(io.Reader)
+	DestFilePath string
 	files        map[string]string
 }
 
@@ -196,6 +198,11 @@ func (call *APICall) Do() {
 		}
 		call.JSONCallback(resp.Body)
 		// return? call.callback?
+	case "application/octet-stream":
+		if call.DestFilePath == "" {
+			log.Fatalf("no DestFilePath defined for %s %s", call.Method, call.Path)
+		}
+		downloadFile(call.DestFilePath, resp.Body)
 	default:
 		log.Fatalf("unsupported content type '%s'", mime)
 	}
@@ -258,4 +265,20 @@ func printJSONStream(body io.ReadCloser, call *APICall) {
 		}
 		fmt.Printf("%s%s: %s\n", time, mtype, content)
 	}
+}
+
+func downloadFile(filename string, reader io.Reader) {
+	file, err := os.Create(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("downloading %s…\n", filename)
+
+	bytesWritten, err := io.Copy(file, reader)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("finished, downloaded %s\n", (datasize.ByteSize(bytesWritten) * datasize.B).HR())
 }
