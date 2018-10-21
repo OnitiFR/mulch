@@ -1,5 +1,8 @@
 + Oniti: Sparkpost
 
+- add vm rebuild command
+    - backup, stop (or stop routing), rename-old?, create-with-restore, delete-old
+    - backup, delete, create-with-restore
 - add 'seed status <seed-name>' command with last failure (if any)
 - https://github.com/spf13/cobra/blob/master/bash_completions.md
 - VM autostart?, stop VMs on Mulchd stop? (see systemd)
