@@ -9,5 +9,6 @@ type APISeedListEntries []APISeedListEntry
 type APISeedListEntry struct {
 	Name         string
 	Ready        bool
+	Size         uint64
 	LastModified time.Time
 }

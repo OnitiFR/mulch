@@ -68,6 +68,12 @@ func AddRoutes(app *server.App) {
 	})
 
 	app.AddRoute(&server.Route{
+		Route:   "GET /seed/*",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.GetSeedStatusController,
+	})
+
+	app.AddRoute(&server.Route{
 		Route:   "GET /backup",
 		Type:    server.RouteTypeCustom,
 		Handler: controllers.ListBackupsController,

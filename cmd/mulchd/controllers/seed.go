@@ -28,6 +28,7 @@ func ListSeedController(req *server.Request) {
 		retData = append(retData, common.APISeedListEntry{
 			Name:         name,
 			Ready:        seed.Ready,
+			Size:         seed.Size,
 			LastModified: seed.LastModified,
 		})
 	}
@@ -38,6 +39,44 @@ func ListSeedController(req *server.Request) {
 
 	enc := json.NewEncoder(req.Response)
 	err := enc.Encode(&retData)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+	}
+}
+
+// GetSeedStatusController is in charge of seed status command
+func GetSeedStatusController(req *server.Request) {
+	seedName := req.SubPath
+
+	if seedName == "" {
+		msg := fmt.Sprintf("no seed name given")
+		req.App.Log.Error(msg)
+		http.Error(req.Response, msg, 400)
+		return
+	}
+
+	seed, err := req.App.Seeder.GetByName(seedName)
+	if err != nil {
+		msg := fmt.Sprintf("seed '%s' not found", seedName)
+		req.App.Log.Error(msg)
+		http.Error(req.Response, msg, 404)
+		return
+	}
+
+	data := &common.APISeedStatus{
+		Name:       seedName,
+		As:         seed.As,
+		Ready:      seed.Ready,
+		CurrentURL: seed.CurrentURL,
+		Size:       seed.Size,
+		Status:     seed.Status,
+		StatusTime: seed.StatusTime,
+	}
+
+	req.Response.Header().Set("Content-Type", "application/json")
+	enc := json.NewEncoder(req.Response)
+	err = enc.Encode(data)
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)

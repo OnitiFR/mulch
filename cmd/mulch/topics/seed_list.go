@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Xfennec/mulch/common"
+	"github.com/c2h5oh/datasize"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -53,10 +54,11 @@ func seedsCB(reader io.Reader) {
 			line.Name,
 			state,
 			line.LastModified.Format(time.RFC3339),
+			(datasize.ByteSize(line.Size) * datasize.B).HR(),
 		})
 	}
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Ready", "Image date"})
+	table.SetHeader([]string{"Name", "Ready", "Image date", "Size"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	table.SetCenterSeparator("|")
 	table.AppendBulk(strData)

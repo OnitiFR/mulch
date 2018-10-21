@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const stringWordSeparators = "[ \t\n,.;:\\(\\)\\[\\]{}'\"/\\\\!\\?<>@#|*+-=]"
@@ -49,6 +50,8 @@ func InterfaceValueToString(iv interface{}) string {
 		return string(iv.([]byte))
 	case bool:
 		return strconv.FormatBool(iv.(bool))
+	case time.Time:
+		return iv.(time.Time).String()
 	}
 	return "INVALID_TYPE"
 }

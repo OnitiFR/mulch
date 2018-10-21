@@ -7,8 +7,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
+	"github.com/Xfennec/mulch/common"
+	"github.com/c2h5oh/datasize"
 	"github.com/libvirt/libvirt-go"
 )
 
@@ -25,6 +28,9 @@ type Seed struct {
 	As           string
 	Ready        bool
 	LastModified time.Time
+	Size         uint64
+	Status       string
+	StatusTime   time.Time
 }
 
 // NewSeeder instanciates a new VMDatabase
@@ -151,17 +157,25 @@ func (db *SeedDatabase) runStep() {
 	for name, seed := range db.db {
 		res, err := http.Head(seed.CurrentURL)
 		if err != nil {
-			db.app.Log.Errorf("seeder '%s': %s", name, err)
+			msg := fmt.Sprintf("seeder '%s': %s", name, err)
+			db.app.Log.Error(msg)
+			seed.UpdateStatus(msg)
 			continue
 		}
+		defer res.Body.Close()
+
 		lm := res.Header.Get("Last-Modified")
 		if lm == "" {
-			db.app.Log.Errorf("seeder '%s': undefined Last-Modified header", name)
+			msg := fmt.Sprintf("seeder '%s': undefined Last-Modified header", name)
+			db.app.Log.Error(msg)
+			seed.UpdateStatus(msg)
 			continue
 		}
 		t, err := http.ParseTime(lm)
 		if err != nil {
-			db.app.Log.Errorf("seeder '%s': can't parse Last-Modified header: %s", name, err)
+			msg := fmt.Sprintf("seeder '%s': can't parse Last-Modified header: %s", name, err)
+			db.app.Log.Error(msg)
+			seed.UpdateStatus(msg)
 			continue
 		}
 		if seed.LastModified != t {
@@ -169,9 +183,12 @@ func (db *SeedDatabase) runStep() {
 			seed.Ready = false
 			db.save()
 
+			before := time.Now()
 			tmpFile, err := db.seedDownload(seed)
 			if err != nil {
-				db.app.Log.Errorf("seeder '%s': unable to download image: %s", name, err)
+				msg := fmt.Sprintf("seeder '%s': unable to download image: %s", name, err)
+				db.app.Log.Error(msg)
+				seed.UpdateStatus(msg)
 				continue
 			}
 			defer os.Remove(tmpFile)
@@ -183,7 +200,9 @@ func (db *SeedDatabase) runStep() {
 			if err != nil {
 				virtErr := errR.(libvirt.Error)
 				if !(virtErr.Domain == libvirt.FROM_STORAGE && virtErr.Code == libvirt.ERR_NO_STORAGE_VOL) {
-					db.app.Log.Errorf("seeder '%s': unable to delete old image: %s", name, errR)
+					msg := fmt.Sprintf("seeder '%s': unable to delete old image: %s", name, errR)
+					db.app.Log.Error(msg)
+					seed.UpdateStatus(msg)
 					continue
 				}
 			}
@@ -196,12 +215,16 @@ func (db *SeedDatabase) runStep() {
 				seed.As,
 				db.app.Log)
 			if err != nil {
-				db.app.Log.Errorf("seeder '%s': unable to move image to storage: %s", name, err)
+				msg := fmt.Sprintf("seeder '%s': unable to move image to storage: %s", name, err)
+				db.app.Log.Error(msg)
+				seed.UpdateStatus(msg)
 				continue
 			}
+			after := time.Now()
 
 			seed.Ready = true
 			seed.LastModified = t
+			seed.UpdateStatus(fmt.Sprintf("downloaded and stored in %s", after.Sub(before)))
 			db.save()
 			db.app.Log.Infof("seed '%s' is now ready", name)
 			os.Remove(tmpFile) // remove now (already deferred, but let's free disk space)
@@ -210,7 +233,6 @@ func (db *SeedDatabase) runStep() {
 }
 
 func (db *SeedDatabase) seedDownload(seed *Seed) (string, error) {
-
 	tmpfile, err := ioutil.TempFile("", "mulch-seed-image")
 	if err != nil {
 		return "", err
@@ -223,10 +245,31 @@ func (db *SeedDatabase) seedDownload(seed *Seed) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	_, err = io.Copy(tmpfile, resp.Body)
+	total, _ := strconv.Atoi(resp.Header.Get("Content-Length"))
+	seed.Size = uint64(total)
+
+	wc := &common.WriteCounter{
+		Total: uint64(total),
+		Step:  1024 * 1024, // 1 MB
+		CB: func(current uint64, total uint64) {
+			seed.UpdateStatus(fmt.Sprintf("downloading %s (%d%%)",
+				(datasize.ByteSize(total) * datasize.B).HR(),
+				(current*100)/total),
+			)
+		},
+	}
+	tee := io.TeeReader(resp.Body, wc)
+
+	_, err = io.Copy(tmpfile, tee)
 	if err != nil {
 		return "", err
 	}
 
 	return tmpfile.Name(), nil
+}
+
+// UpdateStatus change status informations
+func (seed *Seed) UpdateStatus(status string) {
+	seed.Status = status
+	seed.StatusTime = time.Now()
 }
