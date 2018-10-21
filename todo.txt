@@ -1,8 +1,5 @@
-* interactive SSH to VM from mulch client (proxy OK, client part missing)
-
 + Oniti: Sparkpost
 
-- upload backups from client
 - replace things like configPath+"/templates…" by GetTemplateFilepath
 - add 'seed status <seed-name>' command with last failure (if any)
 - https://github.com/spf13/cobra/blob/master/bash_completions.md

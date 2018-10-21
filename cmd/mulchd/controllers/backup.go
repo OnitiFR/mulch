@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"time"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
 	"github.com/Xfennec/mulch/cmd/mulchd/volumes"
@@ -158,7 +159,10 @@ func UploadBackupController(req *server.Request) {
 		return
 	}
 
-	// TODO: check for backup in DB
+	if req.App.BackupsDB.GetByName(header.Filename) != nil {
+		req.Stream.Failuref("backup '%s' already exists in database", header.Filename)
+		return
+	}
 
 	req.Stream.Infof("uploading '%s'", header.Filename)
 
@@ -175,7 +179,20 @@ func UploadBackupController(req *server.Request) {
 		return
 	}
 
-	// TODO: add backup to DB
+	// Create a backup in DB with an empty VM
+	backup := &server.Backup{
+		DiskName: header.Filename,
+		Created:  time.Now(),
+		VM: &server.VM{
+			Config: &server.VMConfig{},
+		},
+	}
+
+	err = req.App.BackupsDB.Add(backup)
+	if err != nil {
+		req.Stream.Failuref("error adding backup to DB: %s", err)
+		return
+	}
 
 	req.Stream.Successf("backup '%s' uploaded successfully", header.Filename)
 }
