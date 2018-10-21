@@ -38,8 +38,8 @@ func cloudInitExtraEnv(envMap map[string]string) string {
 
 // CloudInitCreate will create (and upload ?) the CloudInit image
 func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
-	volTemplate := app.Config.configPath + "/templates/volume.xml"
-	userDataTemplate := app.Config.configPath + "/templates/ci-user-data.yml"
+	volTemplate := app.Config.GetTemplateFilepath("volume.xml")
+	userDataTemplate := app.Config.GetTemplateFilepath("ci-user-data.yml")
 
 	phURL := "http://" + app.Libvirt.NetworkXML.IPs[0].Address + app.Config.Listen + "/phone"
 

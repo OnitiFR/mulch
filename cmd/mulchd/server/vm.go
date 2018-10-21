@@ -154,7 +154,7 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 	err = app.Libvirt.CreateDiskFromSeed(
 		seed.As,
 		diskName,
-		app.Config.configPath+"/templates/volume.xml",
+		app.Config.GetTemplateFilepath("volume.xml"),
 		log)
 
 	if err != nil {
@@ -211,7 +211,7 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 
 	// 4 - define domain
 	log.Infof("defining vm domain (%s)", domainName)
-	xml, err := ioutil.ReadFile(app.Config.configPath + "/templates/vm.xml")
+	xml, err := ioutil.ReadFile(app.Config.GetTemplateFilepath("vm.xml"))
 	if err != nil {
 		return nil, err
 	}
@@ -798,8 +798,8 @@ func VMCreateBackupDisk(vmName string, volName string, volSize uint64, app *App,
 	err = app.Libvirt.UploadFileToLibvirt(
 		app.Libvirt.Pools.Backups,
 		app.Libvirt.Pools.BackupsXML,
-		path.Clean(app.Config.configPath+"/templates/volume.xml"),
-		path.Clean(app.Config.configPath+"/templates/empty.qcow2"),
+		path.Clean(app.Config.GetTemplateFilepath("volume.xml")),
+		path.Clean(app.Config.GetTemplateFilepath("empty.qcow2")),
 		volName,
 		log)
 	if err != nil {
@@ -825,7 +825,7 @@ func VMAttachBackup(vmName string, volName string, app *App) error {
 	}
 	defer dom.Free()
 
-	xml, err := ioutil.ReadFile(app.Config.configPath + "/templates/disk.xml")
+	xml, err := ioutil.ReadFile(app.Config.GetTemplateFilepath("disk.xml"))
 	if err != nil {
 		return err
 	}

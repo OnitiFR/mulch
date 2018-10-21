@@ -191,7 +191,7 @@ func (db *SeedDatabase) runStep() {
 			err = db.app.Libvirt.UploadFileToLibvirt(
 				db.app.Libvirt.Pools.Seeds,
 				db.app.Libvirt.Pools.SeedsXML,
-				db.app.Config.configPath+"/templates/volume.xml",
+				db.app.Config.GetTemplateFilepath("volume.xml"),
 				tmpFile,
 				seed.As,
 				db.app.Log)

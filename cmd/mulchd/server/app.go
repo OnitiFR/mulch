@@ -242,7 +242,7 @@ func (app *App) initLibvirtStorage() error {
 	pools.CloudInit, pools.CloudInitXML, err = app.Libvirt.GetOrCreateStoragePool(
 		"mulch-cloud-init",
 		app.Config.StoragePath+"/cloud-init",
-		app.Config.configPath+"/templates/storage.xml",
+		app.Config.GetTemplateFilepath("storage.xml"),
 		"0711",
 		app.Log)
 	if err != nil {
@@ -252,7 +252,7 @@ func (app *App) initLibvirtStorage() error {
 	pools.Seeds, pools.SeedsXML, err = app.Libvirt.GetOrCreateStoragePool(
 		"mulch-seeds",
 		app.Config.StoragePath+"/seeds",
-		app.Config.configPath+"/templates/storage.xml",
+		app.Config.GetTemplateFilepath("storage.xml"),
 		"",
 		app.Log)
 	if err != nil {
@@ -262,7 +262,7 @@ func (app *App) initLibvirtStorage() error {
 	pools.Disks, pools.DisksXML, err = app.Libvirt.GetOrCreateStoragePool(
 		"mulch-disks",
 		app.Config.StoragePath+"/disks",
-		app.Config.configPath+"/templates/storage.xml",
+		app.Config.GetTemplateFilepath("storage.xml"),
 		"0711",
 		app.Log)
 	if err != nil {
@@ -272,7 +272,7 @@ func (app *App) initLibvirtStorage() error {
 	pools.Backups, pools.BackupsXML, err = app.Libvirt.GetOrCreateStoragePool(
 		"mulch-backups",
 		app.Config.StoragePath+"/backups",
-		app.Config.configPath+"/templates/storage.xml",
+		app.Config.GetTemplateFilepath("storage.xml"),
 		"0711",
 		app.Log)
 	if err != nil {
@@ -287,7 +287,7 @@ func (app *App) initLibvirtNetwork() error {
 
 	net, netcfg, err := app.Libvirt.GetOrCreateNetwork(
 		networkName,
-		app.Config.configPath+"/templates/network.xml",
+		app.Config.GetTemplateFilepath("network.xml"),
 		app.Log)
 
 	if err != nil {
