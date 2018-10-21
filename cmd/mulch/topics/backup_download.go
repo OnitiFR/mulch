@@ -9,10 +9,10 @@ import (
 
 // backupDownloadCmd represents the "backup download" command
 var backupDownloadCmd = &cobra.Command{
-	Use:   "download [vm-name]",
+	Use:   "download <disk-name>",
 	Short: "Download a backup to client disk",
 	// Long: ``,
-	Args: cobra.MaximumNArgs(1),
+	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		backupName := args[0]
 

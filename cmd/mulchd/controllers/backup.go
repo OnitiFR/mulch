@@ -98,6 +98,7 @@ func DeleteBackupController(req *server.Request) {
 	err := req.App.BackupsDB.Delete(backupName)
 	if err != nil {
 		req.Stream.Failuref("unable remove '%s' backup from DB: %s", backupName, err)
+		return
 	}
 
 	req.Stream.Successf("backup '%s' successfully deleted", backupName)
@@ -147,4 +148,34 @@ func DownloadBackupController(req *server.Request) {
 		return
 	}
 	req.App.Log.Infof("client downloaded %s (%s)", backupName, (datasize.ByteSize(bytesWritten) * datasize.B).HR())
+}
+
+// UploadBackupController will upload a backup image to storage
+func UploadBackupController(req *server.Request) {
+	file, header, err := req.HTTP.FormFile("file")
+	if err != nil {
+		req.Stream.Failuref("error with 'file' field: %s", err)
+		return
+	}
+
+	// TODO: check for backup in DB
+
+	req.Stream.Infof("uploading '%s'", header.Filename)
+
+	err = req.App.Libvirt.UploadFileToLibvirtFromReader(
+		req.App.Libvirt.Pools.Backups,
+		req.App.Libvirt.Pools.BackupsXML,
+		req.App.Config.GetTemplateFilepath("volume.xml"),
+		file,
+		header.Filename,
+		req.Stream)
+
+	if err != nil {
+		req.Stream.Failuref("unable to upload backup: %s", err)
+		return
+	}
+
+	// TODO: add backup to DB
+
+	req.Stream.Successf("backup '%s' uploaded successfully", header.Filename)
 }

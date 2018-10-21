@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -256,8 +257,8 @@ func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFi
 	return nil
 }
 
-// UploadFileToLibvirt uploads a file to libvirt storage
-func (lv *Libvirt) UploadFileToLibvirt(pool *libvirt.StoragePool, poolXML *libvirtxml.StoragePool, template string, localSourceFile string, asName string, log *Log) error {
+// UploadFileToLibvirtFromReader uploads a file to libvirt storage
+func (lv *Libvirt) UploadFileToLibvirtFromReader(pool *libvirt.StoragePool, poolXML *libvirtxml.StoragePool, template string, sourceRC io.ReadCloser, asName string, log *Log) error {
 	conn, errC := lv.GetConnection()
 	if errC != nil {
 		return errC
@@ -289,7 +290,7 @@ func (lv *Libvirt) UploadFileToLibvirt(pool *libvirt.StoragePool, poolXML *libvi
 	}
 	defer volDst.Free()
 
-	vu, err := volumes.NewVolumeUpload(localSourceFile, conn, volDst)
+	vu, err := volumes.NewVolumeUploadFromReader(sourceRC, conn, volDst)
 	if err != nil {
 		return err
 	}
@@ -299,8 +300,18 @@ func (lv *Libvirt) UploadFileToLibvirt(pool *libvirt.StoragePool, poolXML *libvi
 		return err
 	}
 
-	log.Infof("upload '%s' to storage pool '%s' as '%s' (transfered %s)", localSourceFile, poolXML.Name, asName, (datasize.ByteSize(bytesWritten) * datasize.B).HR())
+	log.Infof("upload to storage pool '%s' as '%s' (transfered %s)", poolXML.Name, asName, (datasize.ByteSize(bytesWritten) * datasize.B).HR())
 	return nil
+}
+
+// UploadFileToLibvirt is a variant using a file as source
+func (lv *Libvirt) UploadFileToLibvirt(pool *libvirt.StoragePool, poolXML *libvirtxml.StoragePool, template string, localSourceFile string, asName string, log *Log) error {
+	streamSrc, err := os.Open(localSourceFile)
+	if err != nil {
+		return err
+	}
+
+	return lv.UploadFileToLibvirtFromReader(pool, poolXML, template, streamSrc, asName, log)
 }
 
 // ResizeDisk will change volume ("disk") size
