@@ -25,6 +25,8 @@ func NewVMController(req *server.Request) {
 	}
 	req.Stream.Tracef("reading '%s' config file", header.Filename)
 
+	restore := req.HTTP.FormValue("restore")
+
 	conf, err := server.NewVMConfigFromTomlReader(configFile, req.Stream)
 	if err != nil {
 		req.Stream.Failuref("decoding config: %s", err)
@@ -32,6 +34,12 @@ func NewVMController(req *server.Request) {
 	}
 
 	req.SetTarget(conf.Name)
+
+	if restore != "" {
+		conf.RestoreBackup = restore
+		req.Stream.Infof("will restore VM from '%s'", restore)
+	}
+
 	before := time.Now()
 	vm, err := server.NewVM(conf, req.APIKey.Comment, req.App, req.Stream)
 	if err != nil {
