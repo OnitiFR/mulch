@@ -27,6 +27,15 @@ env = [
 # TODO: allow this value to be changed afterward!
 backup_disk_size = "2G"
 
+# DNS domains
+# 'test1.localhost->1234' means that 'test1.localhost' HTTP(S) requests
+# are going to be proxied to VM's 1234 port. Default is 80.
+domains = ['test1.localhost->1234', 'dev.localhost->8080']
+redirect_to_https = false # (false = proxy also from tcp/80)
+redirects = [
+    ["www.test1.localhost", "test1.localhost"],
+]
+
 # If all prepare scripts share the same base URL, you can use prepare_prefix_url.
 # Otherwise, use absolute URL in 'prepare': admin@https://server/script.sh
 prepare_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/"
@@ -42,4 +51,10 @@ prepare = [
 backup_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/backup/"
 backup = [
     "app@lamp.sh",
+]
+
+# Restore
+restore_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/restore/"
+restore = [
+    "app@wordpress.sh",
 ]
