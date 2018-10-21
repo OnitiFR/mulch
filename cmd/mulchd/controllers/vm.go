@@ -314,6 +314,10 @@ func BackupVM(req *server.Request, vm *server.VM) error {
 		return errors.New("VM should be up and running to do a backup")
 	}
 
+	if len(vm.Config.Backup) == 0 {
+		return errors.New("no backup script defined for this VM")
+	}
+
 	volName := fmt.Sprintf("%s-backup-%s.qcow2",
 		vm.Config.Name,
 		time.Now().Format("20060102-150405"),
