@@ -4,8 +4,7 @@
 . ~/env
 
 rm -rf "$HTML_DIR" || exit $?
-mkdir "$html_dir" || exit $?
-
+mkdir "$HTML_DIR" || exit $?
 
 cd "$HTML_DIR" || exit $?
 
