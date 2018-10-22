@@ -22,16 +22,17 @@ MYSQL_USER="$_APP_USER"
 MYSQL_PASSWORD="$MYSQL_PASSWORD"
 HTML_DIR="$html_dir"
 EOS
+[ $? -eq 0 ] || exit $?
 
-sudo mkdir -p $html_dir
+sudo mkdir -p $html_dir || exit $?
 echo "creating/overwriting index.php..."
 sudo bash -c "echo '<?php echo getenv(\"_VM_NAME\").\" is ready!\";' > $html_dir/index.php"
 
-sudo chown -R $_APP_USER:$_APP_USER $html_dir $appenv
+sudo chown -R $_APP_USER:$_APP_USER $html_dir $appenv || exit $?
 
 # run Apache as $_APP_USER
-sudo sed -i "s/APACHE_RUN_USER=www-data/APACHE_RUN_USER=$_APP_USER/" /etc/apache2/envvars
-sudo sed -i "s/APACHE_RUN_GROUP=www-data/APACHE_RUN_GROUP=$_APP_USER/" /etc/apache2/envvars
+sudo sed -i "s/APACHE_RUN_USER=www-data/APACHE_RUN_USER=$_APP_USER/" /etc/apache2/envvars || exit $?
+sudo sed -i "s/APACHE_RUN_GROUP=www-data/APACHE_RUN_GROUP=$_APP_USER/" /etc/apache2/envvars || exit $?
 
 sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 <Directory $html_dir>
@@ -50,10 +51,11 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
     CustomLog \${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
 EOS
+[ $? -eq 0 ] || exit $?
 
 # change to /_mysql instead of /phpmyadmin
-sudo sed -i 's|Alias /phpmyadmin|Alias /_sql|' /etc/phpmyadmin/apache.conf
-sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf
+sudo sed -i 's|Alias /phpmyadmin|Alias /_sql|' /etc/phpmyadmin/apache.conf || exit $?
+sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf || exit $?
 sudo a2enconf phpmyadmin || exit $?
 sudo a2enmod rewrite || exit $?
 
