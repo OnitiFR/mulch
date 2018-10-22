@@ -41,11 +41,12 @@ RewriteRule . /index.php [L]
 </IfModule>
 # END WordPress
 EOS
+[ $? -eq 0 ] || exit $?
 
 echo "configuring Wordpress"
 
 # version 4.4.1 decided to switch to windows line endings
-sed -ri -e 's/\r$//' wp-config*
+sed -ri -e 's/\r$//' wp-config* || exit $?
 
 # used as a test for next step ("awk HTTPS thingy")
 cp -f wp-config-sample.php wp-config.php || exit $?
@@ -58,6 +59,7 @@ if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROT
 }
 
 EOPHP
+[ $? -eq 0 ] || exit $?
 
 sed_escape_lhs() {
     echo "$@" | sed -e 's/[]\/$*.^|[]/\\&/g'
@@ -82,7 +84,7 @@ set_config() {
         start="^(\s*)$(sed_escape_lhs "$key")\s*="
         end=";"
     fi
-    sed -ri -e "s/($start\s*).*($end)$/\1$(sed_escape_rhs "$(php_escape "$value" "$var_type")")\3/" wp-config.php
+    sed -ri -e "s/($start\s*).*($end)$/\1$(sed_escape_rhs "$(php_escape "$value" "$var_type")")\3/" wp-config.php || exit $?
 }
 
 set_config 'DB_HOST' "$MYSQL_HOST"

@@ -16,6 +16,7 @@ Debian GNU/Linux: $_VM_NAME
     Switch to application user: sudo -iu $_APP_USER (alias: $sualias)
 
 EOS
+[ $? -eq 0 ] || exit $?
 
 sudo bash -c "cat > /etc/profile.d/mulcj.sh" <<- EOS
 if ! shopt -oq posix; then
@@ -24,6 +25,7 @@ if ! shopt -oq posix; then
   alias e="mcedit"
 fi
 EOS
+[ $? -eq 0 ] || exit $?
 
 sudo bash -c "cat > /etc/profile.d/powerline.sh" <<- EOS
 if ! shopt -oq posix; then
@@ -32,6 +34,7 @@ if ! shopt -oq posix; then
   fi
 fi
 EOS
+[ $? -eq 0 ] || exit $?
 
 # remove public access for home directories
-sudo chmod o= /home/*/ /etc/skel
+sudo chmod o= /home/*/ /etc/skel || exit $?
