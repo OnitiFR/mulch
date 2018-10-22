@@ -900,3 +900,162 @@ func VMDetachBackup(vmName string, app *App) error {
 
 	return nil
 }
+
+// VMBackup launch the backup proccess
+func VMBackup(vmName string, app *App, log *Log) error {
+	vm, err := app.VMDB.GetByName(vmName)
+	if err != nil {
+		return err
+	}
+
+	if vm.WIP != VMOperationNone {
+		return fmt.Errorf("VM already have a work in progress (%s)", string(vm.WIP))
+	}
+
+	vm.SetOperation(VMOperationBackup)
+	defer vm.SetOperation(VMOperationNone)
+
+	running, _ := VMIsRunning(vm.Config.Name, app)
+	if running == false {
+		return errors.New("VM should be up and running to do a backup")
+	}
+
+	if len(vm.Config.Backup) == 0 {
+		return errors.New("no backup script defined for this VM")
+	}
+
+	volName := fmt.Sprintf("%s-backup-%s.qcow2",
+		vm.Config.Name,
+		time.Now().Format("20060102-150405"),
+	)
+
+	if app.BackupsDB.GetByName(volName) != nil {
+		return fmt.Errorf("a backup with the same name already exists (%s)", volName)
+	}
+
+	SSHSuperUserAuth, err := app.SSHPairDB.GetPublicKeyAuth(SSHSuperUserPair)
+	if err != nil {
+		return err
+	}
+
+	err = VMCreateBackupDisk(vm.Config.Name, volName, vm.Config.BackupDiskSize, app, log)
+	if err != nil {
+		return err
+	}
+
+	// NOTE: this attachement is transient
+	err = VMAttachBackup(vm.Config.Name, volName, app)
+	if err != nil {
+		return err
+	}
+	log.Info("backup disk attached")
+
+	// defer detach + vol delete in case of failure
+	commit := false
+	defer func() {
+		if commit == false {
+			log.Info("rollback backup disk creation")
+			errDet := VMDetachBackup(vm.Config.Name, app)
+			if errDet != nil {
+				log.Errorf("failed trying VMDetachBackup: %s (%s)", errDet, volName)
+				// no return, it may be already detached
+			}
+			vol, errDef := app.Libvirt.Pools.Backups.LookupStorageVolByName(volName)
+			if errDef != nil {
+				log.Errorf("failed LookupStorageVolByName: %s (%s)", errDef, volName)
+				return
+			}
+			defer vol.Free()
+			errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+			if errDef != nil {
+				log.Errorf("failed Delete: %s (%s)", errDef, volName)
+				return
+			}
+		}
+	}()
+
+	pre, err := os.Open(app.Config.GetTemplateFilepath("pre-backup.sh"))
+	if err != nil {
+		return err
+	}
+	defer pre.Close()
+
+	post, err := os.Open(app.Config.GetTemplateFilepath("post-backup.sh"))
+	if err != nil {
+		return err
+	}
+	defer post.Close()
+
+	before := time.Now()
+
+	// pre-backup + backup + post-backup
+	tasks := []*RunTask{}
+	tasks = append(tasks, &RunTask{
+		ScriptName:   "pre-backup.sh",
+		ScriptReader: pre,
+		As:           vm.App.Config.MulchSuperUser,
+	})
+
+	for _, confTask := range vm.Config.Backup {
+		stream, errG := GetScriptFromURL(confTask.ScriptURL)
+		if errG != nil {
+			return fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
+		}
+		defer stream.Close()
+
+		task := &RunTask{
+			ScriptName:   path.Base(confTask.ScriptURL),
+			ScriptReader: stream,
+			As:           confTask.As,
+		}
+		tasks = append(tasks, task)
+	}
+
+	tasks = append(tasks, &RunTask{
+		ScriptName:   "post-backup.sh",
+		ScriptReader: post,
+		As:           vm.App.Config.MulchSuperUser,
+	})
+
+	run := &Run{
+		SSHConn: &SSHConnection{
+			User: vm.App.Config.MulchSuperUser,
+			Host: vm.LastIP,
+			Port: 22,
+			Auths: []ssh.AuthMethod{
+				SSHSuperUserAuth,
+			},
+			Log: log,
+		},
+		Tasks: tasks,
+		Log:   log,
+	}
+	err = run.Go()
+	if err != nil {
+		return err
+	}
+
+	// detach backup disk
+	// TODO: check if this operation is synchronous for QEMU!
+	err = VMDetachBackup(vm.Config.Name, app)
+	if err != nil {
+		return err
+	}
+	log.Info("backup disk detached")
+
+	err = app.Libvirt.BackupCompress(volName, app.Config.GetTemplateFilepath("volume.xml"), log)
+	if err != nil {
+		return err
+	}
+
+	app.BackupsDB.Add(&Backup{
+		DiskName: volName,
+		Created:  time.Now(),
+		VM:       vm,
+	})
+	after := time.Now()
+
+	log.Infof("backup: %s", after.Sub(before))
+	commit = true
+	return nil
+}

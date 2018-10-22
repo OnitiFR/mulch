@@ -2,17 +2,13 @@ package controllers
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path"
 	"sort"
 	"time"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
 	"github.com/Xfennec/mulch/common"
-	"github.com/libvirt/libvirt-go"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -176,6 +172,8 @@ func ActionVMController(req *server.Request) {
 		err := BackupVM(req, vm)
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
+		} else {
+			req.Stream.Successf("backup completed")
 		}
 	default:
 		req.Stream.Failuref("missing or invalid action ('%s') for '%s'", action, vm.Config.Name)
@@ -309,155 +307,5 @@ func GetVMInfosController(req *server.Request) {
 
 // BackupVM launch the backup proccess
 func BackupVM(req *server.Request, vm *server.VM) error {
-
-	if vm.WIP != server.VMOperationNone {
-		return fmt.Errorf("VM already have a work in progress (%s)", string(vm.WIP))
-	}
-
-	vm.SetOperation(server.VMOperationBackup)
-	defer vm.SetOperation(server.VMOperationNone)
-
-	running, _ := server.VMIsRunning(vm.Config.Name, req.App)
-	if running == false {
-		return errors.New("VM should be up and running to do a backup")
-	}
-
-	if len(vm.Config.Backup) == 0 {
-		return errors.New("no backup script defined for this VM")
-	}
-
-	volName := fmt.Sprintf("%s-backup-%s.qcow2",
-		vm.Config.Name,
-		time.Now().Format("20060102-150405"),
-	)
-
-	if req.App.BackupsDB.GetByName(volName) != nil {
-		return fmt.Errorf("a backup with the same name already exists (%s)", volName)
-	}
-
-	SSHSuperUserAuth, err := req.App.SSHPairDB.GetPublicKeyAuth(server.SSHSuperUserPair)
-	if err != nil {
-		return err
-	}
-
-	err = server.VMCreateBackupDisk(vm.Config.Name, volName, vm.Config.BackupDiskSize, req.App, req.Stream)
-	if err != nil {
-		return err
-	}
-
-	// NOTE: this attachement is transient
-	err = server.VMAttachBackup(vm.Config.Name, volName, req.App)
-	if err != nil {
-		return err
-	}
-	req.Stream.Info("backup disk attached")
-
-	// defer detach + vol delete in case of failure
-	commit := false
-	defer func() {
-		if commit == false {
-			req.Stream.Info("rollback backup disk creation")
-			errDet := server.VMDetachBackup(vm.Config.Name, req.App)
-			if errDet != nil {
-				req.Stream.Errorf("failed trying VMDetachBackup: %s (%s)", errDet, volName)
-				// no return, it may be already detached
-			}
-			vol, errDef := req.App.Libvirt.Pools.Backups.LookupStorageVolByName(volName)
-			if errDef != nil {
-				req.Stream.Errorf("failed LookupStorageVolByName: %s (%s)", errDef, volName)
-				return
-			}
-			defer vol.Free()
-			errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
-			if errDef != nil {
-				req.Stream.Errorf("failed Delete: %s (%s)", errDef, volName)
-				return
-			}
-		}
-	}()
-
-	pre, err := os.Open(req.App.Config.GetTemplateFilepath("pre-backup.sh"))
-	if err != nil {
-		return err
-	}
-	defer pre.Close()
-
-	post, err := os.Open(req.App.Config.GetTemplateFilepath("post-backup.sh"))
-	if err != nil {
-		return err
-	}
-	defer post.Close()
-
-	before := time.Now()
-
-	// pre-backup + backup + post-backup
-	tasks := []*server.RunTask{}
-	tasks = append(tasks, &server.RunTask{
-		ScriptName:   "pre-backup.sh",
-		ScriptReader: pre,
-		As:           vm.App.Config.MulchSuperUser,
-	})
-
-	for _, confTask := range vm.Config.Backup {
-		stream, errG := server.GetScriptFromURL(confTask.ScriptURL)
-		if errG != nil {
-			return fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
-		}
-		defer stream.Close()
-
-		task := &server.RunTask{
-			ScriptName:   path.Base(confTask.ScriptURL),
-			ScriptReader: stream,
-			As:           confTask.As,
-		}
-		tasks = append(tasks, task)
-	}
-
-	tasks = append(tasks, &server.RunTask{
-		ScriptName:   "post-backup.sh",
-		ScriptReader: post,
-		As:           vm.App.Config.MulchSuperUser,
-	})
-
-	run := &server.Run{
-		SSHConn: &server.SSHConnection{
-			User: vm.App.Config.MulchSuperUser,
-			Host: vm.LastIP,
-			Port: 22,
-			Auths: []ssh.AuthMethod{
-				SSHSuperUserAuth,
-			},
-			Log: req.Stream,
-		},
-		Tasks: tasks,
-		Log:   req.Stream,
-	}
-	err = run.Go()
-	if err != nil {
-		return err
-	}
-
-	// detach backup disk
-	// TODO: check if this operation is synchronous for QEMU!
-	err = server.VMDetachBackup(vm.Config.Name, req.App)
-	if err != nil {
-		return err
-	}
-	req.Stream.Info("backup disk detached")
-
-	err = req.App.Libvirt.BackupCompress(volName, req.App.Config.GetTemplateFilepath("volume.xml"), req.Stream)
-	if err != nil {
-		return err
-	}
-
-	req.App.BackupsDB.Add(&server.Backup{
-		DiskName: volName,
-		Created:  time.Now(),
-		VM:       vm,
-	})
-	after := time.Now()
-
-	req.Stream.Successf("backup completed (%s)", after.Sub(before))
-	commit = true
-	return nil
+	return server.VMBackup(vm.Config.Name, req.App, req.Stream)
 }
