@@ -2,9 +2,11 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Xfennec/mulch/cmd/mulchd/server"
@@ -169,11 +171,18 @@ func ActionVMController(req *server.Request) {
 			req.Stream.Failuref("error: %s", err)
 		}
 	case "backup":
-		err := BackupVM(req, vm)
+		volHame, err := BackupVM(req, vm)
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
 		} else {
-			req.Stream.Successf("backup completed")
+			req.Stream.Successf("backup completed (%s)", volHame)
+		}
+	case "rebuild":
+		err := RebuildVM(req, vm)
+		if err != nil {
+			req.Stream.Failuref("error: %s", err)
+		} else {
+			req.Stream.Successf("rebuild completed")
 		}
 	default:
 		req.Stream.Failuref("missing or invalid action ('%s') for '%s'", action, vm.Config.Name)
@@ -306,6 +315,60 @@ func GetVMInfosController(req *server.Request) {
 }
 
 // BackupVM launch the backup proccess
-func BackupVM(req *server.Request, vm *server.VM) error {
+func BackupVM(req *server.Request, vm *server.VM) (string, error) {
 	return server.VMBackup(vm.Config.Name, req.App, req.Stream)
+}
+
+// RebuildVM delete VM and rebuilds it from a backup
+func RebuildVM(req *server.Request, vm *server.VM) error {
+	// Currently:
+	// - backup, delete, create-with-restore
+	// Should evolve to:
+	// - backup, stop (or stop routing), 'rename'-old, create-with-restore, delete-old
+
+	if len(vm.Config.Restore) == 0 {
+		return errors.New("no restore script defined for this VM")
+	}
+
+	configFile := vm.Config.FileContent
+
+	// 1 - backup
+	backupName, err := server.VMBackup(vm.Config.Name, req.App, req.Stream)
+	if err != nil {
+		return fmt.Errorf("creating backup: %s", err)
+	}
+
+	// 2 - delete original VM
+	err = server.VMDelete(vm.Config.Name, req.App, req.Stream)
+	if err != nil {
+		return fmt.Errorf("delete VM: %s", err)
+	}
+
+	// 3 - re-create
+	conf, err := server.NewVMConfigFromTomlReader(strings.NewReader(configFile), req.Stream)
+	if err != nil {
+		return fmt.Errorf("decoding config: %s", err)
+	}
+
+	conf.RestoreBackup = backupName
+
+	// replace original VM author with "rebuilder"
+	_, err = server.NewVM(conf, req.APIKey.Comment, req.App, req.Stream)
+	if err != nil {
+		return fmt.Errorf("Cannot create VM: %s", err)
+	}
+
+	// delete backup
+	err = req.App.BackupsDB.Delete(backupName)
+	if err != nil {
+		req.Stream.Errorf("unable remove '%s' backup from DB: %s", backupName, err)
+		return nil // not a real error
+	}
+	err = req.App.Libvirt.RemoveVolume(backupName, req.App.Libvirt.Pools.Backups)
+	if err != nil {
+		req.Stream.Errorf("unable remove '%s' backup from storage: %s", backupName, err)
+		return nil // not a real error
+	}
+
+	return nil
 }

@@ -3,8 +3,9 @@
 . /etc/mulch.env
 . ~/env
 
+rm -rf "$HTML_DIR" || exit $?
+
 cd "$HTML_DIR" || exit $?
-rm -f index.php
 
 tar xf "$_BACKUP/app.tar" || exit $?
 

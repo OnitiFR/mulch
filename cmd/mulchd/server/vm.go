@@ -140,8 +140,13 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 
 	// check if backup exists (if a restore was requested)
 	backup := app.BackupsDB.GetByName(vm.Config.RestoreBackup)
-	if vm.Config.RestoreBackup != "" && backup == nil {
-		return nil, fmt.Errorf("backup '%s' not found in database", vm.Config.RestoreBackup)
+	if vm.Config.RestoreBackup != "" {
+		if backup == nil {
+			return nil, fmt.Errorf("backup '%s' not found in database", vm.Config.RestoreBackup)
+		}
+		if len(vm.Config.Restore) == 0 {
+			return nil, errors.New("no restore script defined for this VM, can't restore")
+		}
 	}
 
 	SSHSuperUserAuth, err := app.SSHPairDB.GetPublicKeyAuth(SSHSuperUserPair)
@@ -901,15 +906,15 @@ func VMDetachBackup(vmName string, app *App) error {
 	return nil
 }
 
-// VMBackup launch the backup proccess
-func VMBackup(vmName string, app *App, log *Log) error {
+// VMBackup launch the backup proccess (returns backup filename)
+func VMBackup(vmName string, app *App, log *Log) (string, error) {
 	vm, err := app.VMDB.GetByName(vmName)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if vm.WIP != VMOperationNone {
-		return fmt.Errorf("VM already have a work in progress (%s)", string(vm.WIP))
+		return "", fmt.Errorf("VM already have a work in progress (%s)", string(vm.WIP))
 	}
 
 	vm.SetOperation(VMOperationBackup)
@@ -917,11 +922,11 @@ func VMBackup(vmName string, app *App, log *Log) error {
 
 	running, _ := VMIsRunning(vm.Config.Name, app)
 	if running == false {
-		return errors.New("VM should be up and running to do a backup")
+		return "", errors.New("VM should be up and running to do a backup")
 	}
 
 	if len(vm.Config.Backup) == 0 {
-		return errors.New("no backup script defined for this VM")
+		return "", errors.New("no backup script defined for this VM")
 	}
 
 	volName := fmt.Sprintf("%s-backup-%s.qcow2",
@@ -930,23 +935,23 @@ func VMBackup(vmName string, app *App, log *Log) error {
 	)
 
 	if app.BackupsDB.GetByName(volName) != nil {
-		return fmt.Errorf("a backup with the same name already exists (%s)", volName)
+		return "", fmt.Errorf("a backup with the same name already exists (%s)", volName)
 	}
 
 	SSHSuperUserAuth, err := app.SSHPairDB.GetPublicKeyAuth(SSHSuperUserPair)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = VMCreateBackupDisk(vm.Config.Name, volName, vm.Config.BackupDiskSize, app, log)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// NOTE: this attachement is transient
 	err = VMAttachBackup(vm.Config.Name, volName, app)
 	if err != nil {
-		return err
+		return "", err
 	}
 	log.Info("backup disk attached")
 
@@ -976,13 +981,13 @@ func VMBackup(vmName string, app *App, log *Log) error {
 
 	pre, err := os.Open(app.Config.GetTemplateFilepath("pre-backup.sh"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer pre.Close()
 
 	post, err := os.Open(app.Config.GetTemplateFilepath("post-backup.sh"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer post.Close()
 
@@ -999,7 +1004,7 @@ func VMBackup(vmName string, app *App, log *Log) error {
 	for _, confTask := range vm.Config.Backup {
 		stream, errG := GetScriptFromURL(confTask.ScriptURL)
 		if errG != nil {
-			return fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
+			return "", fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 		}
 		defer stream.Close()
 
@@ -1032,20 +1037,20 @@ func VMBackup(vmName string, app *App, log *Log) error {
 	}
 	err = run.Go()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// detach backup disk
 	// TODO: check if this operation is synchronous for QEMU!
 	err = VMDetachBackup(vm.Config.Name, app)
 	if err != nil {
-		return err
+		return "", err
 	}
 	log.Info("backup disk detached")
 
 	err = app.Libvirt.BackupCompress(volName, app.Config.GetTemplateFilepath("volume.xml"), log)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	app.BackupsDB.Add(&Backup{
@@ -1057,5 +1062,5 @@ func VMBackup(vmName string, app *App, log *Log) error {
 
 	log.Infof("backup: %s", after.Sub(before))
 	commit = true
-	return nil
+	return volName, nil
 }

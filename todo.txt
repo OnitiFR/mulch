@@ -1,11 +1,9 @@
 + Oniti: Sparkpost
+  - add 'env' to mulchd.toml? (overridden by VM's env directive)
 
-- add vm rebuild command
-    - backup, stop (or stop routing), rename-old?, create-with-restore, delete-old
-    - backup, delete, create-with-restore
 - https://github.com/spf13/cobra/blob/master/bash_completions.md
 - VM autostart?, stop VMs on Mulchd stop? (see systemd)
-- last N log lines buffer, seen by "mulch log" (useful for seeder messages)
+- transaction-able rebuild command?
 - challenge based auth?
 - mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
 - support passphrase for Mulch SSH key?
