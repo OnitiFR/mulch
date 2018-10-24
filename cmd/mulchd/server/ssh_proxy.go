@@ -4,6 +4,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -92,14 +93,19 @@ func (proxy *SSHProxy) serveProxy() error {
 
 		go func() {
 			io.Copy(upChannel, downChannel)
-			upChannel.Close()
+			// cheap "relaxing" of channels (otherwise, the other chan may
+			// miss the last SSH request and set a wrong shell return code)
 			downChannel.Close()
+			time.Sleep(10 * time.Millisecond)
+			upChannel.Close()
 			proxy.log.Trace("down->up finished")
 			wg.Done()
 		}()
 		go func() {
 			io.Copy(downChannel, upChannel)
+			// see above
 			upChannel.Close()
+			time.Sleep(10 * time.Millisecond)
 			downChannel.Close()
 			proxy.log.Trace("up->down finished")
 			wg.Done()
