@@ -321,14 +321,22 @@ func BackupVM(req *server.Request, vm *server.VM) (string, error) {
 
 // RebuildVM delete VM and rebuilds it from a backup
 func RebuildVM(req *server.Request, vm *server.VM) error {
-	// Currently:
-	// - backup, delete, create-with-restore
-	// Should evolve to:
-	// - backup, stop (or stop routing), 'rename'-old, create-with-restore, delete-old
+	// - backup, stop, rename-old, create-with-restore, delete-old, delete backup
+	// fallback: rename-old, start-old
 
 	if len(vm.Config.Restore) == 0 {
 		return errors.New("no restore script defined for this VM")
 	}
+
+	err := server.VMRename(vm.Config.Name, "foobar", req.App, req.Stream)
+	if err != nil {
+		return err
+	}
+	if true {
+		return errors.New("WIP")
+	}
+
+	///////////////////////////
 
 	configFile := vm.Config.FileContent
 
@@ -364,7 +372,7 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 		req.Stream.Errorf("unable remove '%s' backup from DB: %s", backupName, err)
 		return nil // not a real error
 	}
-	err = req.App.Libvirt.RemoveVolume(backupName, req.App.Libvirt.Pools.Backups)
+	err = req.App.Libvirt.DeleteVolume(backupName, req.App.Libvirt.Pools.Backups)
 	if err != nil {
 		req.Stream.Errorf("unable remove '%s' backup from storage: %s", backupName, err)
 		return nil // not a real error

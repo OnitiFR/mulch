@@ -198,8 +198,8 @@ func (lv *Libvirt) GetOrCreateNetwork(networkName string, templateFile string, l
 	return net, netcfg, nil
 }
 
-// CreateDiskFromSeed creates a disk (into "disks" pool) from seed image (from "seeds" pool)
-func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFile string, log *Log) error {
+// CloneVolume clones a source volume to a destination volume in the same pool
+func (lv *Libvirt) CloneVolume(srcVolName string, srcPool *libvirt.StoragePool, dstVolName string, dstPool *libvirt.StoragePool, dstPoolXML *libvirtxml.StoragePool, volumeTemplateFile string, log *Log) error {
 	conn, errC := lv.GetConnection()
 	if errC != nil {
 		return errC
@@ -211,7 +211,7 @@ func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFi
 	}
 
 	// find source volume
-	volSrc, err := lv.Pools.Seeds.LookupStorageVolByName(seed)
+	volSrc, err := srcPool.LookupStorageVolByName(srcVolName)
 	if err != nil {
 		return err
 	}
@@ -228,16 +228,16 @@ func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFi
 	if err != nil {
 		return err
 	}
-	volcfg.Name = disk
+	volcfg.Name = dstVolName
 
-	volcfg.Target.Path = lv.Pools.DisksXML.Target.Path + "/" + disk
+	volcfg.Target.Path = dstPoolXML.Target.Path + "/" + dstVolName
 	// volObj.Target.Format.Type = "raw"
 
 	xml2, err := volcfg.Marshal()
 	if err != nil {
 		return err
 	}
-	volDst, err := lv.Pools.Disks.StorageVolCreateXML(string(xml2), 0)
+	volDst, err := dstPool.StorageVolCreateXML(string(xml2), 0)
 	if err != nil {
 		return err
 	}
@@ -253,8 +253,13 @@ func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFi
 		return err
 	}
 
-	log.Infof("disk '%s' created from seed '%s' (transfered %s)", disk, seed, (datasize.ByteSize(bytesWritten) * datasize.B).HR())
+	log.Infof("volume '%s' created from '%s' (transfered %s)", dstVolName, srcVolName, (datasize.ByteSize(bytesWritten) * datasize.B).HR())
 	return nil
+}
+
+// CreateDiskFromSeed creates a disk (into "disks" pool) from seed image (from "seeds" pool)
+func (lv *Libvirt) CreateDiskFromSeed(seed string, disk string, volumeTemplateFile string, log *Log) error {
+	return lv.CloneVolume(seed, lv.Pools.Seeds, disk, lv.Pools.Disks, lv.Pools.DisksXML, volumeTemplateFile, log)
 }
 
 // UploadFileToLibvirtFromReader uploads a file to libvirt storage
@@ -380,8 +385,8 @@ func LibvirtDomainStateToString(state libvirt.DomainState) string {
 	}
 }
 
-// RemoveVolume for specified pool
-func (lv *Libvirt) RemoveVolume(name string, pool *libvirt.StoragePool) error {
+// DeleteVolume for specified pool
+func (lv *Libvirt) DeleteVolume(name string, pool *libvirt.StoragePool) error {
 	vol, errDef := pool.LookupStorageVolByName(name)
 	if errDef != nil {
 		return errDef

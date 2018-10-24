@@ -73,6 +73,13 @@ func checkAllDomains(db *VMDatabase, domains []*common.Domain) error {
 	return nil
 }
 
+// small helper to generate CloudImage name and main disk name
+func vmGenVolumesNames(vmName string) (string, string) {
+	ciName := "ci-" + vmName + ".img"
+	diskName := vmName + ".qcow2"
+	return ciName, diskName
+}
+
 // NewVM builds a new virtual machine from config
 // TODO: this function is HUUUGE and needs to be splitted. It's tricky
 // because there's a "transaction" here.
@@ -120,8 +127,7 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 		return nil, fmt.Errorf("Unexpected error: %s", err)
 	}
 
-	ciName := "ci-" + vmConfig.Name + ".img"
-	diskName := vmConfig.Name + ".qcow2"
+	ciName, diskName := vmGenVolumesNames(vmConfig.Name)
 
 	seed, err := app.Seeder.GetByName(vmConfig.Seed)
 	if err != nil {
@@ -718,7 +724,7 @@ func VMDelete(vmName string, app *App, log *Log) error {
 		}
 	}
 
-	// Casuel refresh, without any error checking. Alacool.
+	// Casual refresh, without any error checking. Alacool.
 	app.Libvirt.Pools.Disks.Refresh(0)
 	app.Libvirt.Pools.CloudInit.Refresh(0)
 
@@ -1063,4 +1069,137 @@ func VMBackup(vmName string, app *App, log *Log) (string, error) {
 	log.Infof("backup: %s", after.Sub(before))
 	commit = true
 	return volName, nil
+}
+
+// VMRename will rename the VM in Mulch and in libvirt (including disks)
+// TODO: try to make some sort of transaction here
+func VMRename(orgVMName string, newVMName string, app *App, log *Log) error {
+	conn, err := app.Libvirt.GetConnection()
+	if err != nil {
+		return err
+	}
+
+	vm, err := app.VMDB.GetByName(orgVMName)
+	if err != nil {
+		return err
+	}
+
+	running, _ := VMIsRunning(orgVMName, app)
+	if running == true {
+		return errors.New("can't rename a running VM")
+	}
+
+	if vm.WIP != VMOperationNone {
+		return fmt.Errorf("VM have a work in progress (%s)", string(vm.WIP))
+	}
+
+	orgLibvirtName := vm.App.Config.VMPrefix + orgVMName
+	newLibvirtName := app.Config.VMPrefix + newVMName
+
+	domain, err := app.Libvirt.GetDomainByName(orgLibvirtName)
+	if err != nil {
+		return err
+	}
+	if domain == nil {
+		return fmt.Errorf("VM '%s': does not exists in libvirt", orgLibvirtName)
+	}
+	defer domain.Free()
+
+	xmldoc, err := domain.GetXMLDesc(0)
+	if err != nil {
+		return err
+	}
+
+	domcfg := &libvirtxml.Domain{}
+	err = domcfg.Unmarshal(xmldoc)
+	if err != nil {
+		return err
+	}
+
+	newCiName, newDiskName := vmGenVolumesNames(newVMName)
+
+	ciName := ""
+	diskName := ""
+	for _, disk := range domcfg.Devices.Disks {
+		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasCloudInit {
+			ciName = path.Base(disk.Source.File.File)
+			dir := path.Dir(disk.Source.File.File)
+			disk.Source.File.File = path.Clean(dir + "/" + newCiName)
+		}
+		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasDisk {
+			diskName = path.Base(disk.Source.File.File)
+			dir := path.Dir(disk.Source.File.File)
+			disk.Source.File.File = path.Clean(dir + "/" + newDiskName)
+		}
+	}
+
+	diskTemplate := app.Config.GetTemplateFilepath("volume.xml")
+
+	ciPool := app.Libvirt.Pools.CloudInit
+	ciPoolXML := app.Libvirt.Pools.CloudInitXML
+
+	diskPool := app.Libvirt.Pools.Disks
+	diskPoolXML := app.Libvirt.Pools.DisksXML
+
+	if ciName != "" {
+		log.Infof("cloning volume '%s'", ciName)
+		errC := app.Libvirt.CloneVolume(ciName, ciPool, newCiName, ciPool, ciPoolXML, diskTemplate, log)
+		if errC != nil {
+			return errC
+		}
+	}
+
+	if diskName != "" {
+		log.Infof("cloning volume '%s'", diskName)
+		errC := app.Libvirt.CloneVolume(diskName, diskPool, newDiskName, diskPool, diskPoolXML, diskTemplate, log)
+		if errC != nil {
+			return errC
+		}
+	}
+
+	err = app.Libvirt.DeleteVolume(ciName, ciPool)
+	if err != nil {
+		return err
+	}
+
+	err = app.Libvirt.DeleteVolume(diskName, diskPool)
+	if err != nil {
+		return err
+	}
+
+	// rename in libvirt
+	domcfg.Name = newLibvirtName
+
+	out, err := domcfg.Marshal()
+	if err != nil {
+		return err
+	}
+
+	// undefine old domain
+	err = domain.Undefine()
+	if err != nil {
+		return err
+	}
+
+	// recreate updated domain
+	dom2, err := conn.DomainDefineXML(string(out))
+	if err != nil {
+		return err
+	}
+	defer dom2.Free()
+
+	// rename in app DB
+	err = app.VMDB.Delete(orgVMName)
+	if err != nil {
+		return err
+	}
+
+	vm.Config.Name = newVMName
+
+	err = app.VMDB.Add(vm)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

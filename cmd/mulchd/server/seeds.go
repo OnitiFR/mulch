@@ -81,7 +81,7 @@ func NewSeeder(filename string, app *App) (*SeedDatabase, error) {
 		if exists == false {
 			app.Log.Infof("removing old seed '%s'", name)
 			delete(db.db, name)
-			app.Libvirt.RemoveVolume(oldSeed.As, app.Libvirt.Pools.Seeds)
+			app.Libvirt.DeleteVolume(oldSeed.As, app.Libvirt.Pools.Seeds)
 		}
 	}
 
@@ -196,7 +196,7 @@ func (db *SeedDatabase) runStep() {
 			// upload to libvirt seed storage
 			db.app.Log.Infof("moving seed '%s' to storage", name)
 
-			errR := db.app.Libvirt.RemoveVolume(seed.As, db.app.Libvirt.Pools.Seeds)
+			errR := db.app.Libvirt.DeleteVolume(seed.As, db.app.Libvirt.Pools.Seeds)
 			if err != nil {
 				virtErr := errR.(libvirt.Error)
 				if !(virtErr.Domain == libvirt.FROM_STORAGE && virtErr.Code == libvirt.ERR_NO_STORAGE_VOL) {
