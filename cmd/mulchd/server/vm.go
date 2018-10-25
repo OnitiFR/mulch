@@ -1072,6 +1072,7 @@ func VMBackup(vmName string, app *App, log *Log) (string, error) {
 }
 
 // VMRename will rename the VM in Mulch and in libvirt (including disks)
+// Names are Mulch names (not libvirt ones)
 // TODO: try to make some sort of transaction here
 func VMRename(orgVMName string, newVMName string, app *App, log *Log) error {
 	conn, err := app.Libvirt.GetConnection()

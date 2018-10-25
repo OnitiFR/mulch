@@ -178,11 +178,13 @@ func ActionVMController(req *server.Request) {
 			req.Stream.Successf("backup completed (%s)", volHame)
 		}
 	case "rebuild":
+		before := time.Now()
 		err := RebuildVM(req, vm)
+		after := time.Now()
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
 		} else {
-			req.Stream.Successf("rebuild completed")
+			req.Stream.Successf("rebuild completed (%s)", after.Sub(before))
 		}
 	default:
 		req.Stream.Failuref("missing or invalid action ('%s') for '%s'", action, vm.Config.Name)
@@ -320,39 +322,57 @@ func BackupVM(req *server.Request, vm *server.VM) (string, error) {
 }
 
 // RebuildVM delete VM and rebuilds it from a backup
+// steps: backup, stop, rename-old, create-with-restore, delete-old, delete backup
 func RebuildVM(req *server.Request, vm *server.VM) error {
-	// - backup, stop, rename-old, create-with-restore, delete-old, delete backup
-	// fallback: rename-old, start-old
-
 	if len(vm.Config.Restore) == 0 {
 		return errors.New("no restore script defined for this VM")
 	}
 
-	err := server.VMRename(vm.Config.Name, "foobar", req.App, req.Stream)
-	if err != nil {
-		return err
-	}
-	if true {
-		return errors.New("WIP")
-	}
-
-	///////////////////////////
-
 	configFile := vm.Config.FileContent
 
-	// 1 - backup
-	backupName, err := server.VMBackup(vm.Config.Name, req.App, req.Stream)
+	vmName := vm.Config.Name
+	libvirtVMName := vm.App.Config.VMPrefix + vmName
+
+	// - backup
+	backupName, err := server.VMBackup(vmName, req.App, req.Stream)
 	if err != nil {
 		return fmt.Errorf("creating backup: %s", err)
 	}
 
-	// 2 - delete original VM
-	err = server.VMDelete(vm.Config.Name, req.App, req.Stream)
+	// - stop
+	req.Stream.Infof("stopping VM")
+	err = server.VMStopByName(libvirtVMName, req.App, req.Stream)
 	if err != nil {
-		return fmt.Errorf("delete VM: %s", err)
+		return err
 	}
 
-	// 3 - re-create
+	// - rename original VM
+	req.Stream.Infof("cloning VM")
+	tmpVMName := fmt.Sprintf("%s-old-%d", vmName, req.App.Rand.Int31())
+	err = server.VMRename(vmName, tmpVMName, req.App, req.Stream)
+	if err != nil {
+		return err
+	}
+
+	success := false
+	defer func() {
+		if success == false {
+			req.Stream.Infof("rollback: re-creating VM from %s", tmpVMName)
+			err = server.VMRename(tmpVMName, vmName, req.App, req.Stream)
+			if err != nil {
+				req.Stream.Error(err.Error())
+				return
+			}
+			err = server.VMStartByName(libvirtVMName, vm.SecretUUID, req.App, req.Stream)
+			if err != nil {
+				req.Stream.Error(err.Error())
+				return
+			}
+			req.Stream.Info("original VM restored")
+		}
+	}()
+
+	// - re-create VM
 	conf, err := server.NewVMConfigFromTomlReader(strings.NewReader(configFile), req.Stream)
 	if err != nil {
 		return fmt.Errorf("decoding config: %s", err)
@@ -360,13 +380,14 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 
 	conf.RestoreBackup = backupName
 
+	// FIXME: domains conflict between old and new VM
 	// replace original VM author with "rebuilder"
 	_, err = server.NewVM(conf, req.APIKey.Comment, req.App, req.Stream)
 	if err != nil {
 		return fmt.Errorf("Cannot create VM: %s", err)
 	}
 
-	// delete backup
+	// - delete backup
 	err = req.App.BackupsDB.Delete(backupName)
 	if err != nil {
 		req.Stream.Errorf("unable remove '%s' backup from DB: %s", backupName, err)
@@ -377,6 +398,15 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 		req.Stream.Errorf("unable remove '%s' backup from storage: %s", backupName, err)
 		return nil // not a real error
 	}
+
+	// - delete original VM
+	err = server.VMDelete(tmpVMName, req.App, req.Stream)
+	if err != nil {
+		return fmt.Errorf("delete VM: %s", err)
+	}
+
+	// commit
+	success = true
 
 	return nil
 }
