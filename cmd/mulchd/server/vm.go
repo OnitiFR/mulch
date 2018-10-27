@@ -489,6 +489,42 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 			return nil, err
 		}
 		log.Info("restore completed")
+	} else {
+		// 6b - run install scripts
+		log.Infof("running 'install' scripts")
+		tasks := []*RunTask{}
+		for _, confTask := range vm.Config.Install {
+			stream, errG := GetScriptFromURL(confTask.ScriptURL)
+			if errG != nil {
+				return nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
+			}
+			defer stream.Close()
+
+			task := &RunTask{
+				ScriptName:   path.Base(confTask.ScriptURL),
+				ScriptReader: stream,
+				As:           confTask.As,
+			}
+			tasks = append(tasks, task)
+		}
+
+		run := &Run{
+			SSHConn: &SSHConnection{
+				User: vm.App.Config.MulchSuperUser,
+				Host: vm.LastIP,
+				Port: 22,
+				Auths: []ssh.AuthMethod{
+					SSHSuperUserAuth,
+				},
+				Log: log,
+			},
+			Tasks: tasks,
+			Log:   log,
+		}
+		err = run.Go()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// all is OK, commit (= no defer) and save vm to DB

@@ -31,11 +31,12 @@ type VMConfig struct {
 	RestoreBackup  string
 
 	Prepare []*VMConfigScript
+	Install []*VMConfigScript
 	Backup  []*VMConfigScript
 	Restore []*VMConfigScript
 }
 
-// VMConfigScript is a script for prepare, save and restore steps
+// VMConfigScript is a script for prepare, install, save and restore steps
 type VMConfigScript struct {
 	ScriptURL string
 	As        string
@@ -60,6 +61,8 @@ type tomlVMConfig struct {
 
 	PreparePrefixURL string `toml:"prepare_prefix_url"`
 	Prepare          []string
+	InstallPrefixURL string `toml:"install_prefix_url"`
+	Install          []string
 	BackupPrefixURL  string `toml:"backup_prefix_url"`
 	Backup           []string
 	RestorePrefixURL string `toml:"restore_prefix_url"`
@@ -263,6 +266,14 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 			return nil, err
 		}
 		vmConfig.Prepare = append(vmConfig.Prepare, script)
+	}
+
+	for _, tScript := range tConfig.Install {
+		script, err := vmConfigGetScript(tScript, tConfig.InstallPrefixURL)
+		if err != nil {
+			return nil, err
+		}
+		vmConfig.Install = append(vmConfig.Install, script)
 	}
 
 	for _, tScript := range tConfig.Backup {
