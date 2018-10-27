@@ -5,8 +5,6 @@
 # Unlike RedHat/CentOS, Debian does not source profile for non-login shells:
 . /etc/mulch.env
 
-exit 19 # failure test
-
 export DEBIAN_FRONTEND="noninteractive"
 sudo -E apt-get -y -qq install progress mc powerline locate man || exit $?
 
