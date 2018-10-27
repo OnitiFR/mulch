@@ -354,10 +354,16 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 		return err
 	}
 
+	// remove domains from previous VM so the new one can take its place
+	domains := vm.Config.Domains
+	vm.Config.Domains = nil
+
 	success := false
 	defer func() {
 		if success == false {
 			req.Stream.Infof("rollback: re-creating VM from %s", tmpVMName)
+			// get our domains backs
+			vm.Config.Domains = domains
 			err = server.VMRename(tmpVMName, vmName, req.App, req.Stream)
 			if err != nil {
 				req.Stream.Error(err.Error())
@@ -384,6 +390,7 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 	// replace original VM author with "rebuilder"
 	_, err = server.NewVM(conf, req.APIKey.Comment, req.App, req.Stream)
 	if err != nil {
+		req.Stream.Error(err.Error())
 		return fmt.Errorf("Cannot create VM: %s", err)
 	}
 
