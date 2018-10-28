@@ -82,14 +82,14 @@ prepare = [
 ```
 
 During its creation, the VM will be prepared (see application lifecycle below) using
-simple shell scripts. Each script is run with a specific user, either `admin` with sudo
-privileges, or `app`, the user who host the application. Script are downloaded from an URL.
+simple shell scripts. Each script is run as a specific user, either `admin` (with sudo
+privileges) or `app` (who host the application). Script are downloaded from an URL.
 
 Here, a few comfort settings will be applied to the VM: installing
-tools we like powerline and Midnight Commander, creating a few alisases, adding a nice motd, …
+tools we like (powerline, Midnight Commander, …), creating a few command aliases, adding a nice motd, …
 
 The other script will install and configure Apache, PHP and MariaDB, providing a ready-to-use
-LAMP system. Environment variables are created with DB connection settings, htdoc directory, etc.
+LAMP system. Environment variables are created with DB connection settings, htdocs directory, etc.
 
 ```toml
 # Define system-wide environment variables
