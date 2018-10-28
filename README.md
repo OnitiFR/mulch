@@ -122,7 +122,7 @@ Note that you can modify *cloud-init* step, but it's used internally by Mulch to
 init the VM (injecting SSH keys, configure "home-phoning", …) and should have
 no interest.
 
-Show me some more features!
+Show me more features!
 ---
 
 #### HTTPS / Let's Encrypt
@@ -143,10 +143,28 @@ port forwarding, …
 
 ![mulch ssh-config](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-ssh-config.png)
 
-- seed list
-- backup (qcow2)
-- rebuild
-- lock
+#### Seeds
+As said previously, seeds are base Linux images for VMs, defined in `mulchd.conf` server configuration
+file:
+```toml
+[[seed]]
+name = "ubuntu_1810"
+current_url = "http://cloud-images.ubuntu.com/cosmic/current/cosmic-server-cloudimg-amd64.img"
+as = "ubuntu-1810-amd64.qcow2"
+```
+
+ Mulchd will download images on first boot and each time the image is updated by the vendor.
+
+ ![mulch seed](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-seed.png)
+
+#### Backups
+qcow2
+compression
+mount
+
+#### VM rebuild
+
+#### VM lock
 
 How do I install the client?
 ---
