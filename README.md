@@ -60,7 +60,7 @@ Here is a few interesting samples:
 domains = ['test1.example.com']
 redirect_to_https = true
 redirects = [
-    ["www.test1.example.com, "test1.example.com"],
+    ["www.test1.example.com", "test1.example.com"],
 ]
 ```
 Here, incoming requests for DNS domain `test1.example.com` will be proxied to this
