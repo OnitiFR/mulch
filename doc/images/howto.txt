@@ -1,0 +1,9 @@
+- Using "DIagrams Through Ascii Art" (ditaa) syntax
+https://github.com/stathissideris/ditaa
+
+- Generated using PlantUML online demo server
+http://plantuml.com/
+
+@startditaa
+...
+@endditaa

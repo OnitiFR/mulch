@@ -103,7 +103,10 @@ settings and secrets to your application.
 
 How does it works exactly?
 ---
-Here, a schema with mulch client, mulchd, mulch-proxy, libvirtd/KVM and VMs
+This schema show the basic Mulch infrastructure:
+
+![mulch infrastructure](https://raw.github.com/Xfennec/mulch/master/doc/images/img_infra.png)
+
 
 Also, a schema with VM lifecycle (cloud-init, prepare, install, backup, restore)
 
