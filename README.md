@@ -128,7 +128,7 @@ Show me some more features!
 #### HTTPS / Let's Encrypt
 The previously linked `sample-vm-full.toml` configuration at work, showing automatic HTTPS certificates:
 
-![mulch VMs lifecycle](https://raw.github.com/Xfennec/mulch/master/doc/images/img_lifecycle.png)
+![mulch VMs lifecycle](https://raw.github.com/Xfennec/mulch/master/doc/images/https_le.png)
 
 #### SSH
 Mulch allow easy SSH connection from mulch client with `mulch ssh` command. No configuration
