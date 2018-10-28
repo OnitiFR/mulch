@@ -46,7 +46,17 @@ func NewRootConfig(filename string) (*RootConfig, error) {
 		Default: envServer,
 	}
 
-	if _, err := os.Stat(filename); err == nil {
+	if stat, err := os.Stat(filename); err == nil {
+
+		requiredMode, err := strconv.ParseInt("0600", 8, 32)
+		if err != nil {
+			return nil, err
+		}
+
+		if stat.Mode() != os.FileMode(requiredMode) {
+			return nil, fmt.Errorf("%s: only the owner should be able to read/write this file (chmod 0600 %s)", filename, filename)
+		}
+
 		if _, err := toml.DecodeFile(filename, tConfig); err != nil {
 			return nil, err
 		}

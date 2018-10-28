@@ -34,11 +34,23 @@ How about a real world example?
 ---
 See the [complete sample VM configuration file](https://raw.github.com/Xfennec/mulch/master/vm-samples/sample-vm-full.toml) to get a broader view of Mulch features. We use this as a template for our "Wordpress farm" Mulch server VMs.
 
+Here is some interesting excerpts:
+…
+
 How does it works?
 ---
 Here, a schema with mulch client, mulchd, mulch-proxy, libvirtd/KVM and VMs
 
 Also, a schema with VM lifecycle (cloud-init, prepare, install, backup, restore)
+
+Show me some more features!
+---
+https
+ssh
+seed list
+backup
+rebuild
+lock
 
 How do I install the client?
 ---
@@ -56,7 +68,7 @@ name = "my-mulch"
 url = "http://192.168.10.104:8585"
 key = "gein2xah7keeL33thpe9ahvaegF15TUL3surae3Chue4riokooJ5WuTI80FTWfz2"
 ```
-Of course, you'll need to get your own API key / server URL.
+Of course, you'll need to get your own API key / server URL (and set file mode to `0600`, key is private)
 
 How do I install the server? (mulchd and mulch-proxy)
 ---

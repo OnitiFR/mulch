@@ -328,6 +328,10 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 		return errors.New("no restore script defined for this VM")
 	}
 
+	if vm.Locked == true {
+		return errors.New("VM is locked")
+	}
+
 	configFile := vm.Config.FileContent
 
 	vmName := vm.Config.Name
