@@ -50,7 +50,7 @@ mulch vm create mini.toml
 
 Here, the VM is up and ready 40 seconds later.
 
-How about a real world example?
+Any more complete example?
 ---
 See the [complete sample VM configuration file](https://raw.github.com/Xfennec/mulch/master/vm-samples/sample-vm-full.toml) to get a broader view of Mulch features. We use this as a template for our "Wordpress farm" Mulch server VMs.
 
@@ -113,7 +113,7 @@ SSH proxied access is done by mulchd (port `8022`).
 
 VM have this lifecycle :
 
-![mulch VMs lifecycle](https://raw.github.com/Xfennec/mulch/master/doc/images/img_lifecyce.png)
+![mulch VMs lifecycle](https://raw.github.com/Xfennec/mulch/master/doc/images/img_lifecycle.png)
 
 A new VM is channeled through *prepare* and *install* steps. If you create a
 VM from a previous backup, *install* is replaced by *restore*.
