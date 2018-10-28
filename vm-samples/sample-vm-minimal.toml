@@ -1,0 +1,11 @@
+# This is a (working) minimalist sample VM definition
+
+# Usage:
+#  mulch vm create sample-vm-minimal.toml
+
+name = "mini"
+seed = "debian_9"
+
+disk_size = "20G"
+ram_size = "1G"
+cpu_count = 1
