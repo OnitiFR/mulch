@@ -30,7 +30,7 @@ You can then create this VM with:
 mulch vm create mini.toml
 ```
 
-![mulch vm create minimal](https://raw.github.com/Xfennec/mulch/master/doc/images/)
+![mulch vm create minimal](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-create-mini.png)
 
 How do I install the client?
 ---
