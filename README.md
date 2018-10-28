@@ -68,7 +68,7 @@ VM on its port 80 as HTTP. You may use another port if needed, using `test1.exam
 
 Mulch will automatically generate a HTTPS certificate, and HTTP requests will be redirected
 to HTTPS (this is the default anyway). Requests to `www.test1.example.com` will be redirected
-to `test1.example.com` (including HTTPS requests).
+to `test1.example.com` (including HTTPS requests). All you have to do is point Mulch server in your DNS zone.
 
 ```toml
 # If all prepare scripts share the same base URL, you can use prepare_prefix_url.
@@ -107,17 +107,29 @@ This schema show the basic Mulch infrastructure:
 
 ![mulch infrastructure](https://raw.github.com/Xfennec/mulch/master/doc/images/img_infra.png)
 
+Mulchd receive requests from Mulch clients (REST API, HTTP, port `8585`) for VM management.
+Application serving is done through HTTP(S) requests to mulch-proxy (ports `80` and `443`) and
+SSH proxied access is done by mulchd (port `8022`).
 
-Also, a schema with VM lifecycle (cloud-init, prepare, install, backup, restore)
+VM have this lifecycle :
+
+![mulch VMs lifecycle](https://raw.github.com/Xfennec/mulch/master/doc/images/img_lifecyce.png)
+
+A new VM is channeled through *prepare* and *install* steps. If you create a
+VM from a previous backup, *install* is replaced by *restore*.
+
+Note that you can modify *cloud-init* step, but it's used internally by Mulch to
+init the VM (injecting SSH keys, configure "home-phoning", …) and should have
+no interest.
 
 Show me some more features!
 ---
-https
-ssh (admin, app)
-seed list
-backup
-rebuild
-lock
+- https
+- ssh (admin, app)
+- seed list
+- backup (qcow2)
+- rebuild
+- lock
 
 How do I install the client?
 ---
