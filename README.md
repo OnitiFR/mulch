@@ -124,8 +124,25 @@ no interest.
 
 Show me some more features!
 ---
-- https
-- ssh (admin, app)
+
+#### HTTPS / Let's Encrypt
+The previously linked `sample-vm-full.toml` configuration at work, showing automatic HTTPS certificates:
+
+![mulch VMs lifecycle](https://raw.github.com/Xfennec/mulch/master/doc/images/img_lifecycle.png)
+
+#### SSH
+Mulch allow easy SSH connection from mulch client with `mulch ssh` command. No configuration
+is required, the client will retrieve your SSH key pair. You may select another user using
+the `-u / --user` flag.
+
+![mulch ssh](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-ssh.png)
+
+Another feature is SSH alisases generation. Simply call `mulch ssh-config` command, and aliases
+for every VM will be generated. You can then use any usual OpenSSH command/feature: `ssh`, `scp`,
+port forwarding, …
+
+![mulch ssh-config](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-ssh-config.png)
+
 - seed list
 - backup (qcow2)
 - rebuild
