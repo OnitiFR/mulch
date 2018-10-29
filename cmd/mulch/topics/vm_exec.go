@@ -12,6 +12,9 @@ var vmExecCmd = &cobra.Command{
 	Short: "Execute a script in VM",
 	Long: `Execture a shell script inside the VM as the specified user.
 
+This command is particularly useful when testing new prepare, install,
+backup and restore scripts.
+
 Example:
   mulch vm exec myvm admin script.sh
 `,
