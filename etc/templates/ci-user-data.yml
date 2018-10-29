@@ -13,9 +13,12 @@ package_upgrade: $_PACKAGE_UPGRADE
 phone_home:
   url: $_PHONE_HOME_URL
 
+groups:
+  - mulcher
 
 users:
   - name: $_MULCH_SUPER_USER
+    primary-group: mulcher
     gecos: Mulch Control and Command admin account
     shell: /bin/bash
     sudo: ['ALL=(ALL) NOPASSWD:ALL']
