@@ -186,12 +186,25 @@ and upload back a backup to Mulch server in a few commands.
 ![mulch backup mount](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-backup-mount.png)
 
 #### VM rebuild
+Using the backup system, Mulch provides a clean way to rebuild a VM entirely. Rebuilding implies
+the following steps: **backup** scripts, **clone** of the original VM (will be used if rebuild fails),
+**delete** original VM, create a **new VM** with the same description and finally, **restore** the VM using
+the backup. The backup is transient and will be deleted.
 
-#### VM lock
+![mulch vm rebuild](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-vm-rebuild.png)
+
+Again, the general idea behind Mulch is to secure Ops by industrializing and simplify such
+processes ("service reconstructability").
 
 #### More…
+You can lock a VM, so no "big" operation, like delete or rebuild can be done until the VM
+is unlocked. Useful for precious VMs.
+
+![mulch vm locked](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-vm-locked.png)
+
 You still have the ability to use any libvirt tool, like virt-manager, to interact with VMs.
-(screenshot of virtual console?)
+
+![virt-manager](https://raw.github.com/Xfennec/mulch/master/doc/images/virt-manager.png)
 
 How do I install the client?
 ---
@@ -215,9 +228,12 @@ Of course, you'll need to get your own API key / server URL (and set file mode t
 
 How do I install the server? (mulchd and mulch-proxy)
 ---
-Install:
- - libvirt daemon packages: libvirt-bin / libvirt(?)
- - development packages: libvirt-dev / libvirt-devel package needed
- - go get -u github.com/Xfennec/mulch/cmd/...
- - cd go/src/github.com/Xfennec/mulch
- - ./install.sh
+*This section is still a WIP.*
+
+ - install libvirt daemon packages: libvirt-bin / libvirt / … (see your distribution docs)
+ - install development packages: libvirt-dev / libvirt-devel
+ - `go get -u github.com/Xfennec/mulch/cmd/...`
+ - `cd go/src/github.com/Xfennec/mulch`
+ - `./install.sh`
+
+The install script will give you details about installation: destination, rights, services, …

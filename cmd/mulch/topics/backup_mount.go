@@ -17,7 +17,8 @@ var backupMountCmd = &cobra.Command{
 	Long: `Mount a backup image on a mount as a user.
 
 The command 'guestmount' must be installed on your system. Usual package
-names are : guestmount, libguestfs.
+names are : guestmount, libguestfs. (libguestfs is based on libvirt, so be
+prepared for a fewdependencies…)
 
 Warning: use 'mulch backup umount' command, not the system's 'umount'.
 	`,
