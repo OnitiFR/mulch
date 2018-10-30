@@ -9,7 +9,7 @@
 export DEBIAN_FRONTEND="noninteractive"
 sudo -E apt-get -y -qq install progress mc powerline locate man || exit $?
 
-sualias="su-$_APP_USER"
+sualias="$_APP_USER"
 sudo bash -c "cat > /etc/motd" <<- EOS
 
 Debian GNU/Linux: $_VM_NAME
@@ -19,7 +19,7 @@ Debian GNU/Linux: $_VM_NAME
 EOS
 [ $? -eq 0 ] || exit $?
 
-sudo bash -c "cat > /etc/profile.d/mulcj.sh" <<- EOS
+sudo bash -c "cat > /etc/profile.d/mulch.sh" <<- EOS
 if ! shopt -oq posix; then
   alias $sualias="sudo -iu $_APP_USER"
   alias ll="ls -la --color"
