@@ -6,6 +6,16 @@ What is it?
 Mulch is a light and practical virtual machine manager, it allows to create and host applications in VMs with
 a single command line and a simple description file. **You can see it as a simple KVM hardened container system**.
 
+Index
+---
+ - [What's the point?](#whats-the-point)
+ - [Show me!](#show-me)
+ - [Any more complete example?](#any-more-complete-example)
+ - [How does it works exactly?](#how-does-it-works-exactly)
+ - [Show me more features!](#show-me-more-features)
+ - [How do I install the client?](#how-do-i-install-the-client)
+ - [How do I install the server?](#how-do-i-install-the-server-mulchd-and-mulch-proxy)
+
 What's the point?
 ---
 It aims people and organizations who don't want to (or can't) invest too much time in creating their own
