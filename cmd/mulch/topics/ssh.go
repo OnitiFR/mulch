@@ -101,7 +101,6 @@ func sshCmdPairCB(reader io.Reader) {
 		log.Fatalf("ssh command not found: %s", err)
 	}
 
-	// search ssh command in path?
 	err = syscall.Exec(sshPath, args, os.Environ())
 	log.Fatal(err.Error())
 }

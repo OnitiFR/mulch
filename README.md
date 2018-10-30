@@ -121,14 +121,12 @@ VM have this lifecycle :
  - **restore** scripts: restore the application from the attached disk, copying back code, data, …
 
 A new VM is channeled through *prepare* and *install* steps. If you create a
-VM from a previous backup, *install* is replaced by *restore*.
-
-All steps are optional, but missing steps will limit features (ex: no *backup* means
-you won't be able to *restore* the VM)
+VM from a previous backup, *install* is replaced by *restore*. All steps are optional, but missing steps
+ will limit features (ex: no *backup* means you won't be able to *restore* the VM)
 
 Note that you can modify *cloud-init* step, but it's used internally by Mulch to
 init the VM (injecting SSH keys, configure "home-phoning", …) and should have
-no interest.
+no interest to Mulch users.
 
 Show me more features!
 ---
@@ -166,13 +164,34 @@ as = "ubuntu-1810-amd64.qcow2"
  ![mulch seed](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-seed.png)
 
 #### Backups
-qcow2
-compression
-mount
+Mulch provides a flexible backup / restore system for your applications and data:
+archive, duplicate, iterate, CI/CD, …
+
+You can even rebuild your entire VM from an updated seed in one command (see below).
+
+![mulch vm backup](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-vm-backup.png)
+
+Backups are created by shell scripts (see VM lifecycle above). Backup scripts writes directly to an
+attached (and mounted) disk. No need to create the backup **and then** copy it somewhere, all
+is done is one step. Simpler, faster.
+
+The backup format is **Qcow2**, a common virtual disk format. This format allows transparent
+compression, so backup size is very close to the equivalent .tar.gz file.
+
+Restoring a VM only requires a qcow2 backup file and the VM description file.
+
+Since backup are virtual disk, they are writable. It's then easy to download, mount, **modify**
+and upload back a backup to Mulch server in a few commands.
+
+![mulch backup mount](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-vm-backup.png)
 
 #### VM rebuild
 
 #### VM lock
+
+#### More…
+You still have the ability to use any libvirt tool, like virt-manager, to interact with VMs.
+(screenshot of virtual console?)
 
 How do I install the client?
 ---

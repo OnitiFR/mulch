@@ -10,7 +10,11 @@ var backupCmd = &cobra.Command{
 	Short: "Backups management",
 	Long: `Manage VM backups.
 
-Example of how to access data inside a backup:
+Examples of how to access data inside a backup:
+
+ * using mulch itself (requires guestmount, aka libguestfs)
+  - mulch backup mount <my-backup.qcow2> <mount-point>
+  - mulch backup umount <mount-point>
 
  * using NBD: (modprobe nbd)
   - qemu-nbd -c /dev/nbd0 <my-backup.qcow2>
