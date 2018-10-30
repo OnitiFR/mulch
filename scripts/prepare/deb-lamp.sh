@@ -25,7 +25,7 @@ HTML_DIR="$html_dir"
 EOS
 [ $? -eq 0 ] || exit $?
 
-sudo bash -c "echo 'source $appenv' >> /home/$_APP_USER/.bashrc"
+sudo bash -c "echo 'export \$(grep -v ^\# $appenv | xargs)' >> /home/$_APP_USER/.bashrc"
 
 sudo mkdir -p $html_dir || exit $?
 echo "creating/overwriting index.php..."
