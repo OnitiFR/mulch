@@ -204,7 +204,7 @@ compression, so backup size is very close to the equivalent .tar.gz file.
 
 Restoring a VM only requires a qcow2 backup file and the VM description file.
 
-Since backup are virtual disk, they are writable. It's then easy to download, mount, **modify**
+Since backup are virtual disks, they are writable. It's then easy to download, mount, **modify**
 and upload back a backup to Mulch server in a few commands.
 
 ![mulch backup mount](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-backup-mount.png)
