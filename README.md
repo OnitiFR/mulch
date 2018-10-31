@@ -19,12 +19,12 @@ Index
 What's the point?
 ---
 It aims people and organizations who don't want to (or can't) invest too much time in creating their own
-private cloud, but want a simple and performant solution.
+private cloud, but want a simple solution with great performance.
 
 It features a client-server architecture using a REST API. It's written in Go and use shell scripts to drive VM
 configuration and application installation.
 
-Mulch is using libvirt API (KVM) and can share an existing libvirt server or use a dedicated one. No libvirt
+Mulch relies on libvirt API (KVM) and can share an existing libvirt server or use a dedicated one. No libvirt
 configuration (or knowledge) is required, Mulch will create and manage needed resources (storage, network).
 You will only interact with Mulch.
 
@@ -35,13 +35,13 @@ configuration provides seeds for Debian, Ubuntu and CentOS. Seed images will be 
 automatically, it is Mulch's job, not yours.
 
 Mulch features an embedded high-performance HTTP / HTTP2 reverse proxy with automatic Let's Encrypt certificate
-generation for VM hosted Web Application.
+generation for VM hosted Web Applications.
 
 Mulch also provides an SSH proxy providing full access (ssh, scp, port forwarding, …) to VMs for Mulch users.
 
 Show me!
 ---
-Here is a minimal VM description file: (TOML format)
+Here's a minimal VM description file: (TOML format)
 ```toml
 # This is a (working) minimalist sample VM definition
 name = "mini"
@@ -58,7 +58,7 @@ mulch vm create mini.toml
 
 ![mulch vm create minimal](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-create-mini.png)
 
-Here, the VM is up and ready 40 seconds later.
+In this example, the VM is up and ready 40 seconds later.
 
 Any more complete example?
 ---
@@ -76,11 +76,11 @@ redirects = [
 ]
 ```
 Here, incoming requests for DNS domain `test1.example.com` will be proxied to this
-VM on its port 80 as HTTP. You may use another port if needed, using `test1.example.com->8080` syntax.
+VM on its port 80 as HTTP. You may use another destination port if needed, using `test1.example.com->8080` syntax.
 
-Mulch will automatically generate a HTTPS certificate, and HTTP requests will be redirected
-to HTTPS (this is the default anyway). Requests to `www.test1.example.com` will be redirected
-to `test1.example.com` (including HTTPS requests). All you have to do is point Mulch server in your DNS zone.
+Mulch will automatically generate a HTTPS certificate and redirect HTTP requests
+to HTTPS (this is the default, `false` will proxy HTTP too). Requests to `www.test1.example.com` will be redirected
+to `test1.example.com` (including HTTPS requests). All you have to do is target Mulch server in your DNS zone.
 
 #### Scripts
 
@@ -100,7 +100,8 @@ prepare = [
 
 During its creation, the VM will be prepared (see application lifecycle below) using
 simple shell scripts. Each script is run as a specific user, either `admin` (with sudo
-privileges) or `app` (who host the application). Script are downloaded from an URL.
+privileges) or `app` (who host the application). Script are downloaded from an URL. Mulch 
+provides a few sample scripts, but you're supposed to create and host your own specific scripts.
 
 Here, a few comfort settings will be applied to the VM: installing
 tools we like (powerline, Midnight Commander, …), creating a few command aliases, adding a nice motd, …
@@ -110,6 +111,9 @@ LAMP system. Environment variables are created with DB connection settings, htdo
 
 #### Environment variables
 
+It's also possible to define your own environment variables, providing various
+settings and secrets to your application.
+
 ```toml
 # Define system-wide environment variables
 env = [
@@ -117,12 +121,10 @@ env = [
     ["TEST2", "bar"],
 ]
 ```
-It's also possible to define your own environment variables, providing various
-settings and secrets to your application.
 
 How does it works exactly?
 ---
-This schema show the basic Mulch infrastructure:
+This schema shows the basic Mulch infrastructure:
 
 ![mulch infrastructure](https://raw.github.com/Xfennec/mulch/master/doc/images/img_infra.png)
 
@@ -146,23 +148,22 @@ VM have this lifecycle :
 
 A new VM is channeled through *prepare* and *install* steps. If you create a
 VM from a previous backup, *install* is replaced by *restore*. All steps are optional, but missing steps
- will limit features (ex: no *backup* means you won't be able to *restore* the VM)
+will limit features.
 
-Note that you can modify *cloud-init* step, but it's used internally by Mulch to
-init the VM (injecting SSH keys, configure "home-phoning", …) and should have
-no interest to Mulch users.
+Note that you can modify *cloud-init* step, but it's used internally by Mulch for VM provisioning (injecting
+SSH keys, configure "home-phoning", …) and should have no interest to Mulch users.
 
 Show me more features!
 ---
 
 #### HTTPS / Let's Encrypt
-The previously linked `sample-vm-full.toml` configuration at work, showing automatic HTTPS certificates:
+Here's the result of the previously linked `sample-vm-full.toml` configuration, showing automatic HTTPS certificates:
 
 ![mulch VMs lifecycle](https://raw.github.com/Xfennec/mulch/master/doc/images/https_le.png)
 
 #### SSH
 Mulch allow easy SSH connection from mulch client with `mulch ssh` command. No configuration
-is required, the client will retrieve your SSH key pair. You may select another user using
+is required and the client will retrieve your very own SSH key pair. You may select another user using
 the `-u / --user` flag.
 
 ![mulch ssh](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-ssh.png)
