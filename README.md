@@ -37,7 +37,7 @@ automatically, it is Mulch's job, not yours.
 Mulch features an embedded high-performance HTTP / HTTP2 reverse proxy with automatic Let's Encrypt certificate
 generation for VM hosted Web Application.
 
-Mulh also provides an SSH proxy providing full access (ssh, scp, port forwarding, …) to VMs for Mulch users.
+Mulch also provides an SSH proxy providing full access (ssh, scp, port forwarding, …) to VMs for Mulch users.
 
 Show me!
 ---
@@ -64,7 +64,9 @@ Any more complete example?
 ---
 See the [complete sample VM configuration file](https://raw.github.com/Xfennec/mulch/master/vm-samples/sample-vm-full.toml) to get a broader view of Mulch features. We use this as a template for our "Wordpress farm" Mulch server VMs.
 
-Here is a few interesting samples:
+Let's see a few interesting samples:
+
+#### Domains
 
 ```toml
 domains = ['test1.example.com']
@@ -79,6 +81,11 @@ VM on its port 80 as HTTP. You may use another port if needed, using `test1.exam
 Mulch will automatically generate a HTTPS certificate, and HTTP requests will be redirected
 to HTTPS (this is the default anyway). Requests to `www.test1.example.com` will be redirected
 to `test1.example.com` (including HTTPS requests). All you have to do is point Mulch server in your DNS zone.
+
+#### Scripts
+
+Shell scripts are used at various stages of VM's lifecycle, let's have a
+look at the *prepare* step.
 
 ```toml
 # If all prepare scripts share the same base URL, you can use prepare_prefix_url.
@@ -101,6 +108,8 @@ tools we like (powerline, Midnight Commander, …), creating a few command alias
 The other script will install and configure Apache, PHP and MariaDB, providing a ready-to-use
 LAMP system. Environment variables are created with DB connection settings, htdocs directory, etc.
 
+#### Environment variables
+
 ```toml
 # Define system-wide environment variables
 env = [
@@ -117,8 +126,13 @@ This schema show the basic Mulch infrastructure:
 
 ![mulch infrastructure](https://raw.github.com/Xfennec/mulch/master/doc/images/img_infra.png)
 
-Mulchd receive requests from Mulch clients (REST API, HTTP, port `8585`) for VM management.
-Application serving is done through HTTP(S) requests to mulch-proxy (ports `80` and `443`) and
+Mulch currently have 3 components :
+ - `mulch`: the client
+ - `mulchd`: the server daemon
+ - `mulch-proxy`: the HTTP proxy
+
+**Mulchd** receive requests from Mulch clients (REST API, HTTP, port `8585`) for VM management.
+Application serving is done through HTTP(S) requests to **mulch-proxy** (ports `80` and `443`) and
 SSH proxied access is done by mulchd (port `8022`).
 
 VM have this lifecycle :
@@ -128,7 +142,7 @@ VM have this lifecycle :
  - **prepare** scripts: prepare the system for the application (install and configure web server, DB server, …)
  - **install** scripts: install and configure the application (download / git clone, composer, yarn, …)
  - **backup** scripts: copy all important data: code, DB, configs, … During backup, a virtual disk is attached to the VM.
- - **restore** scripts: restore the application from the attached disk, copying back code, data, …
+ - **restore** scripts: restore the application from the attached disk, copying back code, data, … (see these as backup "symmetric" scripts)
 
 A new VM is channeled through *prepare* and *install* steps. If you create a
 VM from a previous backup, *install* is replaced by *restore*. All steps are optional, but missing steps
@@ -233,6 +247,10 @@ url = "http://192.168.10.104:8585"
 key = "gein2xah7keeL33thpe9ahvaegF15TUL3surae3Chue4riokooJ5WuTI80FTWfz2"
 ```
 Of course, you'll need to get your own API key / server URL (and set file mode to `0600`, key is private)
+
+You can define multiple servers and use -s option to select one, or use
+default = "my-mulch" as a global setting (i.e. before [[server]]).
+First server is the default. Environment variable `SERVER` is also available.
 
 ![mulch client general help](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-h.png)
 

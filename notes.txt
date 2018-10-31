@@ -1,5 +1,9 @@
 # Some ideas and tips found here and there.
 
+# List of openstack supported distributions with URL to images:
+# https://docs.openstack.org/image-guide/obtain-images.html
+
+# Inject cloud-init params through SMBIOS
 # minimum req: cloud-init 17.1 (0.7.9: debian9, centos7, ...)
   <os mode='sysinfo'>
     <smbios mode='sysinfo'/>
@@ -12,14 +16,3 @@
       <entry name='serial'>ds=nocloud-net;s=http://192.168.122.1:80/cidata/</entry>
     </system>
   </sysinfo>
-
-
-virt-edit -a test.qcow2 "/etc/sysconfig/network-scripts/ifcfg-eth0" -e 's/%IP%/EXTERNAL_IP_HERE/'
-guestfish -a test.qcow2 -i write /root/.ssh/authorized_keys "ssh-rsa xxx"
-
-virsh change-media testing hda --eject --config
-
-ssh -i ~/.ssh/id_rsa_test -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no mulch@10.104.99.232
-
-# List of openstack supported distributions with URL to images:
-# https://docs.openstack.org/image-guide/obtain-images.html
