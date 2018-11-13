@@ -31,6 +31,12 @@ aditionnal configuration:
 ssh vm-mulch
 scp file vm-mulch:
 …
+
+Name follows the format: {VM Name}-{Mulch Server Name}
+
+For each VM, two aliases are available:
+ - myvm-mulch (admin user)
+ - myvm-app-mulch (application user)
 `,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -147,6 +153,15 @@ to your SSH config file '%s':
 		file.WriteString(fmt.Sprintf("    Port %d\n", sshPort))
 		file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.SuperUser, vm.Name))
 		file.WriteString(fmt.Sprintf("\n"))
+
+		appAliasName := vm.Name + "-app-" + globalConfig.Server.Name
+		fmt.Printf("  %s\n", appAliasName)
+		file.WriteString(fmt.Sprintf("Host %s\n", appAliasName))
+		file.WriteString(fmt.Sprintf("    HostName %s\n", conf.hostname))
+		file.WriteString(fmt.Sprintf("    IdentityFile %s\n", conf.privKeyPath))
+		file.WriteString(fmt.Sprintf("    Port %d\n", sshPort))
+		file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.AppUser, vm.Name))
+		file.WriteString(fmt.Sprintf("\n\n"))
 	}
 
 	return nil
