@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -185,7 +186,10 @@ func (call *APICall) Do() {
 
 	switch mime {
 	case "application/x-ndjson":
-		printJSONStream(resp.Body, call)
+		err := printJSONStream(resp.Body, call)
+		if err != nil {
+			log.Fatal(err)
+		}
 	case "text/plain":
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
@@ -215,7 +219,10 @@ func removeAPIKeyFromString(in string, key string) string {
 	return strings.Replace(in, key, "xxx", -1)
 }
 
-func printJSONStream(body io.ReadCloser, call *APICall) {
+func printJSONStream(body io.ReadCloser, call *APICall) error {
+	var retError error
+	retError = nil
+
 	dec := json.NewDecoder(body)
 	for {
 		var m common.Message
@@ -250,6 +257,7 @@ func printJSONStream(body io.ReadCloser, call *APICall) {
 			content = c(content)
 			mtype = c(mtype)
 		case common.MessageFailure:
+			retError = errors.New("Exiting with failure status due to previous errors")
 			c := color.New(color.FgHiRed).SprintFunc()
 			content = c(content)
 			mtype = c(mtype)
@@ -265,6 +273,7 @@ func printJSONStream(body io.ReadCloser, call *APICall) {
 		}
 		fmt.Printf("%s%s: %s\n", time, mtype, content)
 	}
+	return retError
 }
 
 func downloadFile(filename string, reader io.Reader) {
