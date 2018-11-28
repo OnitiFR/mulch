@@ -1102,6 +1102,7 @@ func VMBackup(vmName string, app *App, log *Log) (string, error) {
 	})
 	after := time.Now()
 
+	log.Infof("BACKUP=%s", volName)
 	log.Infof("backup: %s", after.Sub(before))
 	commit = true
 	return volName, nil
