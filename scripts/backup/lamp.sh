@@ -1,6 +1,5 @@
 #!/bin/bash
 
-. /etc/mulch.env
 . ~/env
 
 cd "$HTML_DIR" || exit $?

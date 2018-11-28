@@ -81,7 +81,7 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) error {
 
 		// cat is needed to "focus" stdin only on the child bash
 		// cat is "sudoed" so it can be killed by __kill_subshell bellow
-		str := fmt.Sprintf("sudo -u %s cat | sudo -u %s __SCRIPT_ID=%d bash -s -- %s ; echo __EXIT=$?", task.As, task.As, num, args)
+		str := fmt.Sprintf("sudo -iu %s cat | sudo -iu %s __SCRIPT_ID=%d bash -s -- %s ; echo __EXIT=$?", task.As, task.As, num, args)
 		run.Log.Tracef("child=%s", str)
 
 		_, err = out.Write([]byte(str + "\n"))

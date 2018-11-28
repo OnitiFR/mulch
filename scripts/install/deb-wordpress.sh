@@ -2,8 +2,6 @@
 
 # -- Run as user. WILL DELETE public_html CONTENT
 
-# Unlike RedHat/CentOS, Debian does not source profile for non-login shells:
-. /etc/mulch.env
 . ~/env
 
 # From Wordpress Dockerfile

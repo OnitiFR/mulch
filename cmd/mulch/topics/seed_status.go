@@ -13,7 +13,7 @@ import (
 
 // seedStatusCmd represents the "seed status" command
 var seedStatusCmd = &cobra.Command{
-	Use:   "status",
+	Use:   "status <seed-name>",
 	Short: "Display seed status",
 	// Long: ``,
 	Args: cobra.ExactArgs(1),

@@ -3,9 +3,6 @@
 # -- Run with sudo privileges
 # For: Debian 9 / Ubuntu 18.10
 
-# Unlike RedHat/CentOS, Debian does not source profile for non-login shells:
-. /etc/mulch.env
-
 appenv="/home/$_APP_USER/env"
 html_dir="/home/$_APP_USER/public_html/"
 

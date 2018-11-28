@@ -3,9 +3,6 @@
 # -- Run with sudo privileges
 # For: Debian 9 / Ubuntu 18.10
 
-# Unlike RedHat/CentOS, Debian does not source profile for non-login shells:
-. /etc/mulch.env
-
 export DEBIAN_FRONTEND="noninteractive"
 sudo -E apt-get -y -qq install progress mc powerline locate man || exit $?
 

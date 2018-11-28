@@ -1,6 +1,5 @@
 #!/bin/bash
 
-. /etc/mulch.env
 . ~/env
 
 rm -rf "$HTML_DIR" || exit $?
