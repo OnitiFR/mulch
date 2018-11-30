@@ -100,7 +100,7 @@ prepare = [
 
 During its creation, the VM will be prepared (see application lifecycle below) using
 simple shell scripts. Each script is run as a specific user, either `admin` (with sudo
-privileges) or `app` (who host the application). Script are downloaded from an URL. Mulch 
+privileges) or `app` (who host the application). Script are downloaded from an URL. Mulch
 provides a few sample scripts, but you're supposed to create and host your own specific scripts.
 
 Here, a few comfort settings will be applied to the VM: installing
@@ -233,7 +233,7 @@ You still have the ability to use any libvirt tool, like virt-manager, to intera
 
 How do I install the client?
 ---
-Usual Go requirements : check you have go/golang installed and `~/go/bin/` is in your `PATH` (or copy binary in one of your `PATH` directories; use `sudo cp ~/go/bin/mulch /usr/local/bin` if you have no idea of how to do this).
+Usual Go requirements : check you have go/golang installed and `~/go/bin/` is in your `PATH` (or copy/link binary in one of your `PATH` directories; use `sudo cp ~/go/bin/mulch /usr/local/bin` if you have no idea of how to do this).
 
 Then install the client:
 ```sh
