@@ -39,7 +39,8 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
     Options Indexes FollowSymLinks
     # Options is for .htaccess PHP settings
     # FileInfo is for rewrite
-    AllowOverride Options FileInfo Limit
+    # AuthConfig for Require
+    AllowOverride Options FileInfo Limit AuthConfig
     Require all granted
 </Directory>
 
