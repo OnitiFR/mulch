@@ -127,4 +127,10 @@ func AddRoutes(app *server.App) {
 		Handler: controllers.GetKeyPairController,
 	})
 
+	app.AddRoute(&server.Route{
+		Route:   "GET /status",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.GetStatusController,
+	})
+
 }

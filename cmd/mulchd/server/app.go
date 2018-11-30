@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Xfennec/mulch/common"
+	libvirt "github.com/libvirt/libvirt-go"
 )
 
 // App describes an (the?) application
@@ -344,4 +345,67 @@ func (app *App) Run() {
 func (app *App) Close() {
 	// close pools
 	// close connection (app.Libvirt.CloseConnection())
+}
+
+// Status returns informations about Mulch server
+func (app *App) Status() (*common.APIStatus, error) {
+	var ret common.APIStatus
+	conn, err := app.Libvirt.GetConnection()
+	if err != nil {
+		return nil, err
+	}
+
+	infos, err := conn.GetNodeInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	vmNames := app.VMDB.GetNames()
+	vmTotal := len(vmNames)
+	vmCPUs := 0
+	vmActiveCPUs := 0
+	vmActiveTotal := 0
+	vmMem := 0
+	vmActiveMem := 0
+
+	for _, vmName := range vmNames {
+		vm, err := app.VMDB.GetByName(vmName)
+		if err != nil {
+			return nil, fmt.Errorf("VM '%s': %s", vmName, err)
+		}
+
+		domain, err := app.Libvirt.GetDomainByName(app.Config.VMPrefix + vmName)
+		if err != nil {
+			return nil, err
+		}
+		if domain == nil {
+			return nil, fmt.Errorf("VM '%s': does not exists in libvirt", vmName)
+		}
+		defer domain.Free()
+
+		state, _, err := domain.GetState()
+		if err != nil {
+			return nil, fmt.Errorf("VM '%s': %s", vmName, err)
+		}
+
+		vmCPUs += vm.Config.CPUCount
+		vmMem += int(vm.Config.RAMSize / 1024 / 1024)
+
+		if state == libvirt.DOMAIN_RUNNING {
+			vmActiveTotal++
+			vmActiveCPUs += vm.Config.CPUCount
+			vmActiveMem += int(vm.Config.RAMSize / 1024 / 1024)
+		}
+	}
+
+	ret.VMs = vmTotal
+	ret.ActiveVMs = vmActiveTotal
+	ret.HostCPUs = int(infos.Cpus)
+	ret.HostMemoryTotalMB = int(infos.Memory / 1024)
+	ret.VMCPUs = vmCPUs
+	ret.VMActiveCPUs = vmActiveCPUs
+	ret.VMMemMB = vmMem
+	ret.VMActiveMemMB = vmActiveMem
+
+	return &ret, nil
 }
