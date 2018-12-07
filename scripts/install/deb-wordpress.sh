@@ -5,7 +5,7 @@
 . ~/env
 
 # From Wordpress Dockerfile
-WORDPRESS_VERSION="4.9.8"
+WORDPRESS_VERSION="5.0"
 WORDPRESS_SHA1="0945bab959cba127531dceb2c4fed81770812b4f"
 
 mkdir -p tmp || exit $?
