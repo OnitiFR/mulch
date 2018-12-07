@@ -6,7 +6,7 @@
 
 # From Wordpress Dockerfile
 WORDPRESS_VERSION="5.0"
-WORDPRESS_SHA1="0945bab959cba127531dceb2c4fed81770812b4f"
+WORDPRESS_SHA1="541befa7a362900f631c34d23bec4461"
 
 mkdir -p tmp || exit $?
 echo "downloading Wordpress $WORDPRESS_VERSION"
