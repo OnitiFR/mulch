@@ -102,7 +102,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 			return nil, fmt.Errorf("seed 'name' not defined")
 		}
 
-		if IsValidTokenName(seed.Name) == false {
+		if IsValidName(seed.Name) == false {
 			return nil, fmt.Errorf("'%s' is not a valid seed name", seed.Name)
 		}
 

@@ -8,10 +8,9 @@ import (
 	"regexp"
 )
 
-// IsValidTokenName returns true is argument use only allowed chars for a token
-// and does not start with a number
-func IsValidTokenName(token string) bool {
-	match, _ := regexp.MatchString("^[A-Za-z_][A-Za-z0-9_]*$", token)
+// IsValidName returns true is argument use only allowed chars for a name
+func IsValidName(token string) bool {
+	match, _ := regexp.MatchString("^[A-Za-z0-9_]*$", token)
 	return match
 }
 

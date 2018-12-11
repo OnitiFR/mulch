@@ -80,7 +80,7 @@ func vmConfigGetScript(tScript string, prefixURL string) (*VMConfigScript, error
 	as := tScript[:sepPlace]
 	scriptURL := prefixURL + tScript[sepPlace+1:]
 
-	if !IsValidTokenName(as) {
+	if !IsValidName(as) {
 		return nil, fmt.Errorf("'%s' is not a valid user name", as)
 	}
 	script.As = as
@@ -134,7 +134,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 		return nil, err
 	}
 
-	if tConfig.Name == "" || !IsValidTokenName(tConfig.Name) {
+	if tConfig.Name == "" || !IsValidName(tConfig.Name) {
 		return nil, fmt.Errorf("invalid VM name '%s'", tConfig.Name)
 	}
 	vmConfig.Name = tConfig.Name
@@ -147,7 +147,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 	}
 	vmConfig.AppUser = tConfig.AppUser
 
-	if tConfig.Seed == "" || !IsValidTokenName(tConfig.Seed) {
+	if tConfig.Seed == "" || !IsValidName(tConfig.Seed) {
 		return nil, fmt.Errorf("invalid seed image '%s'", tConfig.Seed)
 	}
 	vmConfig.Seed = tConfig.Seed
@@ -241,7 +241,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 
 		key := line[0]
 		val := line[1]
-		if !IsValidTokenName(key) {
+		if !IsValidName(key) {
 			return nil, fmt.Errorf("invalid 'env' name '%s'", key)
 		}
 

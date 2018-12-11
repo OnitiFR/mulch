@@ -107,7 +107,7 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 		return nil, err
 	}
 
-	if !IsValidTokenName(vmConfig.Name) {
+	if !IsValidName(vmConfig.Name) {
 		return nil, fmt.Errorf("name '%s' is invalid (need only letters, numbers and underscore, do not start with a number)", vmConfig.Name)
 	}
 

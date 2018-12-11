@@ -215,7 +215,7 @@ func ExecScriptVM(req *server.Request, vm *server.VM) error {
 
 	// Some sort of "security" check (even if we're root on the VM…)
 	as := req.HTTP.FormValue("as")
-	if !server.IsValidTokenName(as) {
+	if !server.IsValidName(as) {
 		return fmt.Errorf("'%s' is not a valid username", as)
 	}
 
