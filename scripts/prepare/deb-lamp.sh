@@ -92,5 +92,4 @@ EOS
 
 echo "restart apache2"
 sudo bash -c "echo '. /etc/mulch.env' >> /etc/apache2/envvars"
-sudo bash -c "echo '. ' >> /etc/apache2/envvars"
 sudo systemctl restart apache2 || exit $?
