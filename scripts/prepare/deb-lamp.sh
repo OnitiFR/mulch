@@ -56,6 +56,15 @@ EOS
 
 # change to /_mysql instead of /phpmyadmin
 sudo sed -i 's|Alias /phpmyadmin|Alias /_sql|' /etc/phpmyadmin/apache.conf || exit $?
+
+sudo bash -c "cat >> /etc/phpmyadmin/apache.conf" <<- EOS
+<Directory /usr/share/phpmyadmin>
+        php_admin_value upload_max_filesize 64M
+        php_admin_value post_max_size 64M
+</Directory>
+EOS
+[ $? -eq 0 ] || exit $?
+
 sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf || exit $?
 sudo a2enconf phpmyadmin || exit $?
 sudo a2enmod rewrite || exit $?

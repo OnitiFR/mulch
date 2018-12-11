@@ -1,6 +1,8 @@
 + Oniti: Sparkpost
   - add 'env' to mulchd.toml? (overridden by VM's env directive)
 
+- fix phpMyAdmin errors
+- add creation date to 'vm infos' command
 - interfaces <filterref filter='clean-traffic'>
 - https://github.com/spf13/cobra/blob/master/bash_completions.md
 - VM autostart?, stop VMs on Mulchd stop? (see systemd)
