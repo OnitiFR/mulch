@@ -5,8 +5,8 @@
 . ~/env
 
 # From Wordpress Dockerfile
-WORDPRESS_VERSION="5.0"
-WORDPRESS_SHA1="67758958f14c1dcefe37ce6558d470a4e142893b"
+WORDPRESS_VERSION="5.0.1"
+WORDPRESS_SHA1="298bd17feb7b4948e7eb8fa0cde17438a67db19a"
 
 mkdir -p tmp || exit $?
 echo "downloading Wordpress $WORDPRESS_VERSION"
