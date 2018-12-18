@@ -2,9 +2,10 @@
   - add 'env' to mulchd.toml? (overridden by VM's env directive)
 
 - fix phpMyAdmin errors (done in 4.8, let's wait)
+- interfaces <filterref filter='clean-traffic'>
 - add creation date to 'vm infos' command
 - add du / df infos in 'status' command
-- interfaces <filterref filter='clean-traffic'>
+- "Update available" alert on client (info from server?)
 - https://github.com/spf13/cobra/blob/master/bash_completions.md
 - VM autostart?, stop VMs on Mulchd stop? (see systemd)
 - https API
