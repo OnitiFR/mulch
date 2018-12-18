@@ -10,6 +10,7 @@ export DEBIAN_FRONTEND="noninteractive"
 sudo -E apt-get -y -qq install apache2 php mariadb-server phpmyadmin pwgen || exit $?
 
 MYSQL_PASSWORD=$(pwgen -1 16)
+[ $? -eq 0 ] || exit $?
 
 # Warning: see below for MariaDB user/db creation
 sudo bash -c "cat > $appenv" <<- EOS
@@ -22,11 +23,11 @@ HTML_DIR="$html_dir"
 EOS
 [ $? -eq 0 ] || exit $?
 
-sudo bash -c "echo 'export \$(grep -v ^\# $appenv | xargs)' >> /home/$_APP_USER/.bashrc"
+sudo bash -c "echo 'export \$(grep -v ^\# $appenv | xargs)' >> /home/$_APP_USER/.bashrc" || exit $?
 
 sudo mkdir -p $html_dir || exit $?
 echo "creating/overwriting index.php..."
-sudo bash -c "echo '<?php echo getenv(\"_VM_NAME\").\" is ready!\";' > $html_dir/index.php"
+sudo bash -c "echo '<?php echo getenv(\"_VM_NAME\").\" is ready!\";' > $html_dir/index.php" || exit $?
 
 sudo chown -R $_APP_USER:$_APP_USER $html_dir $appenv || exit $?
 
@@ -90,6 +91,8 @@ FLUSH PRIVILEGES;
 EOS
 [ $? -eq 0 ] || exit $?
 
+sudo bash -c "echo '. /etc/mulch.env' >> /etc/apache2/envvars" || exit $?
+sudo bash -c "echo 'export \$(grep -v ^\# $appenv | xargs)' >> /etc/apache2/envvars" || exit $?
+
 echo "restart apache2"
-sudo bash -c "echo '. /etc/mulch.env' >> /etc/apache2/envvars"
 sudo systemctl restart apache2 || exit $?
