@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # -- Run as user. WILL DELETE public_html CONTENT
+# Inspired from Wordpress Dockerfile
 
 . ~/env
 
-# From Wordpress Dockerfile
-WORDPRESS_VERSION="5.0.1"
-WORDPRESS_SHA1="298bd17feb7b4948e7eb8fa0cde17438a67db19a"
+# https://wordpress.org/download/releases/
+WORDPRESS_VERSION="5.0.2"
+WORDPRESS_SHA1="4a6971d35eb92e2fc30034141b1c865e8c156add"
 
 mkdir -p tmp || exit $?
 echo "downloading Wordpress $WORDPRESS_VERSION"
@@ -92,9 +93,26 @@ set_config 'DB_NAME' "$MYSQL_DB"
 # set_config 'DB_CHARSET' "$WORDPRESS_DB_CHARSET"
 # set_config 'DB_COLLATE' "$WORDPRESS_DB_COLLATE"
 
-# Note: Added at the end of wp-config.php, it seems.
-# // If we're behind a proxy server and using HTTPS, we need to alert Wordpress of that fact
-# // see also http://codex.wordpress.org/Administration_Over_SSL#Using_a_Reverse_Proxy
-# if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
-# 	$_SERVER['HTTPS'] = 'on';
-# }
+uniqueEnvs=(
+    AUTH_KEY
+    SECURE_AUTH_KEY
+    LOGGED_IN_KEY
+    NONCE_KEY
+    AUTH_SALT
+    SECURE_AUTH_SALT
+    LOGGED_IN_SALT
+    NONCE_SALT
+)
+
+for unique in "${uniqueEnvs[@]}"; do
+	uniqVar="WORDPRESS_$unique"
+	if [ -n "${!uniqVar}" ]; then
+		set_config "$unique" "${!uniqVar}"
+	else
+		# if not specified, let's generate a random value
+		currentVal="$(sed -rn -e "s/define\((([\'\"])$unique\2\s*,\s*)(['\"])(.*)\3\);/\4/p" wp-config.php)"
+		if [ "$currentVal" = 'put your unique phrase here' ]; then
+			set_config "$unique" "$(head -c1m /dev/urandom | sha1sum | cut -d' ' -f1)"
+		fi
+	fi
+done

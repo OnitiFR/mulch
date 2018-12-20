@@ -68,7 +68,7 @@ EOS
 
 sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf || exit $?
 sudo a2enconf phpmyadmin || exit $?
-sudo a2enmod rewrite || exit $?
+sudo a2enmod rewrite expires || exit $?
 
 # mysql_secure_installation
 # In recent release of MariaDB, root access is only possible
