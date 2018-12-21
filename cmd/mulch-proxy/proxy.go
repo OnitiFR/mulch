@@ -212,6 +212,10 @@ func (proxy *ProxyServer) RefreshReverseProxies() {
 		domain.ReverseProxy = httputil.NewSingleHostReverseProxy(pURL)
 
 		// domain.reverseProxy.ErrorHandler = reverseProxyErrorHandler
+		domain.ReverseProxy.ModifyResponse = func(resp *http.Response) (err error) {
+			resp.Header.Add("X-Mulch", domain.VMName)
+			return nil
+		}
 		domain.ReverseProxy.Transport = &errorHandlingRoundTripper{
 			ProxyServer: proxy,
 			Domain:      domain,
