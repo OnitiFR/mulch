@@ -148,6 +148,8 @@ func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string,
 	// req.Header.Set("X-Forwarded-Host", req.Host)
 	// req.Host = url.Host
 
+	req.Header.Set("X-Mulch", domain.VMName)
+
 	domain.ReverseProxy.ServeHTTP(res, req)
 }
 
