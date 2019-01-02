@@ -3,7 +3,7 @@
 
 - fix phpMyAdmin errors (done in 4.8, let's wait)
 - interfaces <filterref filter='clean-traffic'>
-- add creation date to 'vm infos' command
+- add creation date to 'vm infos' command (+disk size provisioned/real ? + domains ?)
 - add du / df infos in 'status' command
 - "Update available" alert on client (info from server?)
 - https://github.com/spf13/cobra/blob/master/bash_completions.md

@@ -360,6 +360,16 @@ func (app *App) Status() (*common.APIStatus, error) {
 		return nil, err
 	}
 
+	disksInfos, err := app.Libvirt.Pools.Disks.GetInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	backupsInfos, err := app.Libvirt.Pools.Backups.GetInfo()
+	if err != nil {
+		return nil, err
+	}
+
 	vmNames := app.VMDB.GetNames()
 	vmTotal := len(vmNames)
 	vmCPUs := 0
@@ -406,6 +416,8 @@ func (app *App) Status() (*common.APIStatus, error) {
 	ret.VMActiveCPUs = vmActiveCPUs
 	ret.VMMemMB = vmMem
 	ret.VMActiveMemMB = vmActiveMem
+	ret.FreeStorageMB = int(disksInfos.Available / 1024 / 1024)
+	ret.FreeBackupMB = int(backupsInfos.Available / 1024 / 1024)
 
 	return &ret, nil
 }

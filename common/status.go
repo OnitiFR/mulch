@@ -10,4 +10,6 @@ type APIStatus struct {
 	VMActiveCPUs      int
 	VMMemMB           int
 	VMActiveMemMB     int
+	FreeStorageMB     int
+	FreeBackupMB      int
 }
