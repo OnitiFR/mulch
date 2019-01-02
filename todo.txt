@@ -2,9 +2,7 @@
   - add 'env' to mulchd.toml? (overridden by VM's env directive)
 
 - fix phpMyAdmin errors (done in 4.8, let's wait)
-- interfaces <filterref filter='clean-traffic'>
 - add creation date to 'vm infos' command (+disk size provisioned/real ? + domains ?)
-- add du / df infos in 'status' command
 - "Update available" alert on client (info from server?)
 - https://github.com/spf13/cobra/blob/master/bash_completions.md
 - VM autostart?, stop VMs on Mulchd stop? (see systemd)
@@ -18,8 +16,8 @@
 - change HTTP code from 200 to 4XX in controllers when things fails (ex: req.Stream.Failure)
     - in client, make the non-200 error message silent in stream mode?
 
-- see if it's possible for a VM to steal an IP from another VM (DoS)
 - create a specific HTTP muxer for /phone (only listening on mulch's virbr)
+- hardening of <filterref filter='clean-traffic'> with fixed IP addr?
 
 - deal with libvirtd restart
 - check connection and access rights
