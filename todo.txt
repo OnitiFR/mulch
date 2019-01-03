@@ -1,5 +1,6 @@
 + Oniti: Sparkpost
   - add 'env' to mulchd.toml? (overridden by VM's env directive)
+  - mc: remove mcedit alternative choice, enable lynx mode
 
 - fix phpMyAdmin errors (done in 4.8, let's wait)
 - add creation date to 'vm infos' command (+disk size provisioned/real ? + domains ?)
