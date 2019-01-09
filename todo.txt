@@ -6,6 +6,8 @@
 - add creation date to 'vm infos' command (+disk size provisioned/real ? + domains ?)
 - "Update available" alert on client (info from server?)
 - https://github.com/spf13/cobra/blob/master/bash_completions.md
+- "fast" backup (no compression)
+- (big!) faster rebuild
 - VM autostart?, stop VMs on Mulchd stop? (see systemd)
 - https API
 - challenge based auth?
