@@ -6,6 +6,8 @@
 export DEBIAN_FRONTEND="noninteractive"
 sudo -E apt-get -y -qq install progress mc powerline locate man || exit $?
 
+sudo update-alternatives --set editor /usr/bin/mcedit || exit $?
+
 sualias="$_APP_USER"
 sudo bash -c "cat > /etc/motd" <<- EOS
 
