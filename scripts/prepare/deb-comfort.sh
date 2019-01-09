@@ -6,7 +6,18 @@
 export DEBIAN_FRONTEND="noninteractive"
 sudo -E apt-get -y -qq install progress mc powerline locate man || exit $?
 
+# Set Midnight-Commander as the default editor, and apply
+# a cool setup to it
 sudo update-alternatives --set editor /usr/bin/mcedit || exit $?
+sudo bash -c "cat > /usr/share/mc/mc.ini" <<- EOS
+[Midnight-Commander]
+use_internal_edit=true
+editor_edit_confirm_save=false
+
+[Panels]
+navigate_with_arrows=true
+EOS
+[ $? -eq 0 ] || exit $?
 
 sualias="$_APP_USER"
 sudo bash -c "cat > /etc/motd" <<- EOS
