@@ -47,5 +47,5 @@ check $? "unable to download backup"
 mulch backup delete "$backup_name" > /dev/null
 check $? "unable to delete backup"
 
-find "$backup_dir" -type f -mtime +20 -delete
+find "$backup_dir" -type f -mtime +10 -delete
 check $? "unable to delete old backups"
