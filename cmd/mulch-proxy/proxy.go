@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Xfennec/mulch/common"
 	"golang.org/x/crypto/acme"
@@ -91,15 +92,22 @@ func NewProxyServer(config *ProxyServerConfig) *ProxyServer {
 	mux := &http.ServeMux{}
 	mux.HandleFunc("/", proxy.handleRequest)
 
+	// We're still very gentle here, there are some legitimate "long idling request"
+	// use case out there. But we should add a runtime setting somewhere to
+	// allow the admin to drastically lower this value.
+	IdleTimeout := 15 * time.Minute
+
 	proxy.HTTP = &http.Server{
-		Handler: manager.HTTPHandler(mux),
-		Addr:    config.ListenHTTP,
+		Handler:     manager.HTTPHandler(mux),
+		Addr:        config.ListenHTTP,
+		IdleTimeout: IdleTimeout,
 	}
 
 	proxy.HTTPS = &http.Server{
-		Handler:   mux,
-		Addr:      config.ListenHTTPS,
-		TLSConfig: &tls.Config{GetCertificate: manager.GetCertificate},
+		Handler:     mux,
+		Addr:        config.ListenHTTPS,
+		TLSConfig:   &tls.Config{GetCertificate: manager.GetCertificate},
+		IdleTimeout: IdleTimeout,
 	}
 
 	return &proxy
