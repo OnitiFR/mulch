@@ -66,7 +66,27 @@ sed_escape_lhs() {
 sed_escape_rhs() {
     echo "$@" | sed -e 's/[\/&]/\\&/g'
 }
+php_escape() {
+    local escaped="$(php -r 'var_export(('"$2"') $argv[1]);' -- "$1")"
+    if [ "$2" = 'string' ] && [ "${escaped:0:1}" = "'" ]; then
+        escaped="${escaped//$'\n'/"' + \"\\n\" + '"}"
+    fi
+    echo "$escaped"
+}
 set_config() {
+    key="$1"
+    value="$2"
+    var_type="${3:-string}"
+    start="(['\"])$(sed_escape_lhs "$key")\2\s*,"
+    end="\);"
+    if [ "${key:0:1}" = '$' ]; then
+        start="^(\s*)$(sed_escape_lhs "$key")\s*="
+        end=";"
+    fi
+    sed -ri -e "s/($start\s*).*($end)$/\1$(sed_escape_rhs "$(php_escape "$value" "$var_type")")\3/" wp-config.php
+}
+# no php_escape in this variant
+set_config_raw() {
     key="$1"
     value="$2"
     var_type="${3:-string}"
@@ -79,10 +99,10 @@ set_config() {
     sed -ri -e "s/($start\s*).*($end)$/\1$(sed_escape_rhs "$value")\3/" wp-config.php || exit $?
 }
 
-set_config 'DB_HOST' "getenv('MYSQL_HOST')"
-set_config 'DB_USER' "getenv('MYSQL_USER')"
-set_config 'DB_PASSWORD' "getenv('MYSQL_PASSWORD')"
-set_config 'DB_NAME' "getenv('MYSQL_DB')"
+set_config_raw 'DB_HOST' "getenv('MYSQL_HOST')"
+set_config_raw 'DB_USER' "getenv('MYSQL_USER')"
+set_config_raw 'DB_PASSWORD' "getenv('MYSQL_PASSWORD')"
+set_config_raw 'DB_NAME' "getenv('MYSQL_DB')"
 # set_config 'DB_CHARSET' "$WORDPRESS_DB_CHARSET"
 # set_config 'DB_COLLATE' "$WORDPRESS_DB_COLLATE"
 
