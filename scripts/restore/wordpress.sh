@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Wordpress on LAMP restore script
+# -- Run with app privileges
+# NOW OBSOLETE! Wordpress install script now use ~/.env so the
+# generic lamp.sh restore script is enough.
+
 . ~/env
 
 rm -rf "$HTML_DIR" || exit $?

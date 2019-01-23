@@ -6,8 +6,8 @@
 . ~/env
 
 # https://wordpress.org/download/releases/
-WORDPRESS_VERSION="5.0.2"
-WORDPRESS_SHA1="4a6971d35eb92e2fc30034141b1c865e8c156add"
+WORDPRESS_VERSION="5.0.3"
+WORDPRESS_SHA1="f9a4b482288b5be7a71e9f3dc9b5b0c1f881102b"
 
 mkdir -p tmp || exit $?
 echo "downloading Wordpress $WORDPRESS_VERSION"
@@ -66,13 +66,6 @@ sed_escape_lhs() {
 sed_escape_rhs() {
     echo "$@" | sed -e 's/[\/&]/\\&/g'
 }
-php_escape() {
-    local escaped="$(php -r 'var_export(('"$2"') $argv[1]);' -- "$1")"
-    if [ "$2" = 'string' ] && [ "${escaped:0:1}" = "'" ]; then
-        escaped="${escaped//$'\n'/"' + \"\\n\" + '"}"
-    fi
-    echo "$escaped"
-}
 set_config() {
     key="$1"
     value="$2"
@@ -83,13 +76,13 @@ set_config() {
         start="^(\s*)$(sed_escape_lhs "$key")\s*="
         end=";"
     fi
-    sed -ri -e "s/($start\s*).*($end)$/\1$(sed_escape_rhs "$(php_escape "$value" "$var_type")")\3/" wp-config.php || exit $?
+    sed -ri -e "s/($start\s*).*($end)$/\1$(sed_escape_rhs "$value")\3/" wp-config.php || exit $?
 }
 
-set_config 'DB_HOST' "$MYSQL_HOST"
-set_config 'DB_USER' "$MYSQL_USER"
-set_config 'DB_PASSWORD' "$MYSQL_PASSWORD"
-set_config 'DB_NAME' "$MYSQL_DB"
+set_config 'DB_HOST' "getenv('MYSQL_HOST')"
+set_config 'DB_USER' "getenv('MYSQL_USER')"
+set_config 'DB_PASSWORD' "getenv('MYSQL_PASSWORD')"
+set_config 'DB_NAME' "getenv('MYSQL_DB')"
 # set_config 'DB_CHARSET' "$WORDPRESS_DB_CHARSET"
 # set_config 'DB_COLLATE' "$WORDPRESS_DB_COLLATE"
 
