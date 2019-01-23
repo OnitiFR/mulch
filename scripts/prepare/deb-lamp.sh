@@ -40,11 +40,11 @@ sudo sed -i 's/^ServerTokens \(.\+\)$/ServerTokens Prod/' /etc/apache2/conf-enab
 sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 <Directory $html_dir>
     Options Indexes FollowSymLinks
-    # Options is for .htaccess PHP settings
+    # Options is for .htaccess PHP settings and MultiViews
     # FileInfo is for rewrite
     # AuthConfig for Require
     # Indexes for expires
-    AllowOverride Options FileInfo Limit AuthConfig Indexes
+    AllowOverride Options=MultiViews FileInfo Limit AuthConfig Indexes
     Require all granted
 </Directory>
 
