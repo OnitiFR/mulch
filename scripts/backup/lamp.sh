@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# -- Run as app user
+
 . ~/env
 
 cd "$HTML_DIR" || exit $?

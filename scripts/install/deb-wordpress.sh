@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# -- Run as user. WILL DELETE public_html CONTENT
+# -- Run as app user. WILL DELETE public_html CONTENT
 # Inspired from Wordpress Dockerfile
 
 . ~/env
