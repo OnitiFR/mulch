@@ -10,11 +10,7 @@ var vmRebuildCmd = &cobra.Command{
 	Short: "Rebuild a VM",
 	Long: `Backup a VM, DELETE IT and re-create it from the backup.
 
-Currently, this process is NOT a transaction: if new VM creation
-fails, your old VM is lost anyway! Temporay backup is only deleted
-if the rebuild is successful, though.
-
-Anyway, you should consider this operation as a dangerous one, since
+Warning: you should consider this operation as a dangerous one, since
 the result relies on backup/restore scripts correctness. You may lose
 data in the process if one of those scripts "forgets" some data.
 
