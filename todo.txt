@@ -9,6 +9,7 @@
 - "fast" backup (no compression)
 - (big!) faster rebuild
 - VM autostart?, stop VMs on Mulchd stop? (see systemd)
+- check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
 - https API
 - challenge based auth?
 - mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
