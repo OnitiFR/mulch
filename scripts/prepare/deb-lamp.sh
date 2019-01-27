@@ -27,7 +27,7 @@ sudo bash -c "echo 'export \$(grep -v ^\# $appenv | xargs)' >> /home/$_APP_USER/
 
 sudo mkdir -p $html_dir || exit $?
 echo "creating/overwriting index.php..."
-sudo bash -c "echo '<?php echo getenv(\"_VM_NAME\").\" is ready!\";' > $html_dir/index.php" || exit $?
+sudo bash -c "echo '<?php echo getenv(\"_VM_NAME\") . \" is ready!\";' > $html_dir/index.php" || exit $?
 
 sudo chown -R $_APP_USER:$_APP_USER $html_dir $appenv || exit $?
 
@@ -72,6 +72,8 @@ EOS
 sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf || exit $?
 sudo a2enconf phpmyadmin || exit $?
 sudo a2enmod rewrite expires || exit $?
+
+sudo sed -i 's/^disable_functions = \(.*\)/disable_functions = \1phpinfo,/' /etc/php/*/apache2/php.ini
 
 # mysql_secure_installation
 # In recent release of MariaDB, root access is only possible
