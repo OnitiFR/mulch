@@ -27,6 +27,7 @@ type App struct {
 	Rand      *rand.Rand
 	SSHPairDB *SSHPairDatabase
 	VMDB      *VMDatabase
+	VMStateDB *VMStateDatabase
 	BackupsDB *BackupDatabase
 	APIKeysDB *APIKeyDatabase
 	Seeder    *SeedDatabase
@@ -69,6 +70,11 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		return nil, err
 	}
 
+	err = app.initVMStateDB()
+	if err != nil {
+		return nil, err
+	}
+
 	err = app.initBackupDB()
 	if err != nil {
 		return nil, err
@@ -100,6 +106,8 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app.PhoneHome = NewPhoneHomeHub()
 
 	app.Mux = http.NewServeMux()
+
+	go app.VMStateDB.Run()
 
 	// dirty log broadcast tests
 	// go func() {
@@ -196,6 +204,17 @@ func (app *App) initVMDB() error {
 	app.Log.Infof("found %d VM(s) in database %s", app.VMDB.Count(), dbPath)
 
 	// detect missing entries from DB?
+	return nil
+}
+
+func (app *App) initVMStateDB() error {
+	dbPath := app.Config.DataPath + "/mulch-vmstates.db"
+
+	db, err := NewVMStateDatabase(dbPath, app)
+	if err != nil {
+		return err
+	}
+	app.VMStateDB = db
 	return nil
 }
 
