@@ -9,7 +9,7 @@ html_dir="/home/$_APP_USER/public_html/"
 # TODO:
 # phpMyAdmin
 
-sudo yum -y install mod_php mariadb-server || exit $?
+sudo yum -y install mod_php mariadb-server php-mysql php-mbstring php-intl php-xml php-gd || exit $?
 
 sudo systemctl enable -q httpd || exit $?
 sudo systemctl enable -q --now mariadb || exit $?
