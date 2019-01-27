@@ -6,9 +6,6 @@
 appenv="/home/$_APP_USER/env"
 html_dir="/home/$_APP_USER/public_html/"
 
-# TODO:
-# phpMyAdmin
-
 sudo yum -y install mod_php mariadb-server php-mysql php-mbstring php-intl php-xml php-gd || exit $?
 
 sudo systemctl enable -q httpd || exit $?
@@ -57,6 +54,7 @@ sudo bash -c "echo > /etc/httpd/conf.d/userdir.conf" || exit $?
 sudo bash -c "cat > /etc/httpd/conf.d/000-default.conf" <<- EOS
 User $_APP_USER
 Group $_APP_USER
+ServerTokens Prod
 
 <Directory $html_dir>
     Options Indexes FollowSymLinks
@@ -78,6 +76,9 @@ Group $_APP_USER
 EOS
 [ $? -eq 0 ] || exit $?
 
+sudo chgrp $_APP_USER /var/lib/php/session/ || exit $?
+
+sudo sed -i 's/^disable_functions \(.\+\)$/disable_functions = phpinfo/' /etc/php.ini || exit $?
 
 if [ ! -f ~/.my.cnf ]; then
   root_pwd=$(genpasswd)
@@ -124,9 +125,45 @@ EOS
 sudo chmod +x $http_env  || exit $?
 
 sudo touch $file # so systemd will not complain on 1st start
-sudo sed -i "/\[Service\]/ a EnvironmentFile=$file" /usr/lib/systemd/system/httpd.service
-sudo sed -i "/\[Service\]/ a ExecStartPre=$http_env" /usr/lib/systemd/system/httpd.service
-sudo systemctl daemon-reload
+sudo sed -i "/\[Service\]/ a EnvironmentFile=$file" /usr/lib/systemd/system/httpd.service || exit $?
+sudo sed -i "/\[Service\]/ a ExecStartPre=$http_env" /usr/lib/systemd/system/httpd.service || exit $?
+sudo systemctl daemon-reload || exit $?
+
+# phpMyAdmin (old, unsupported, PHP 5.4 compliant version of phpMyAdmin)
+url="https://files.phpmyadmin.net/phpMyAdmin/4.0.10.20/phpMyAdmin-4.0.10.20-all-languages.tar.gz"
+sudo curl -s $url --output /usr/local/lib/pma.tgz || exit $?
+sudo tar xzf /usr/local/lib/pma.tgz -C /usr/local/lib || exit $?
+sudo rm -f /usr/local/lib/pma.tgz
+sudo rm -rf /usr/local/lib/phpMyAdmin/
+sudo mv /usr/local/lib/phpMyAdmin-* /usr/local/lib/phpMyAdmin || exit $?
+
+sudo bash -c "cat > /etc/httpd/conf.d/001-phpmyadmin.conf" <<- EOS
+# phpMyAdmin default Apache configuration
+
+Alias /_sql /usr/local/lib/phpMyAdmin
+
+<Directory /usr/local/lib/phpMyAdmin>
+    Require all granted
+    php_admin_value mbstring.func_overload 0
+</Directory>
+
+# Disallow web access to directories that don't need it
+<Directory /usr/local/lib/phpMyAdmin/templates>
+    Require all denied
+</Directory>
+<Directory /usr/local/lib/phpMyAdmin/libraries>
+    Require all denied
+</Directory>
+<Directory /usr/local/lib/phpMyAdmin/setup/lib>
+    Require all denied
+</Directory>
+
+<Directory /usr/local/lib/phpMyAdmin>
+        php_admin_value upload_max_filesize 64M
+        php_admin_value post_max_size 64M
+</Directory>
+EOS
+[ $? -eq 0 ] || exit $?
 
 echo "restart apache2"
 sudo systemctl restart httpd || exit $?
