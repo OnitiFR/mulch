@@ -7,6 +7,7 @@ User={USER}
 ExecStart={MULCH_PROXY}
 Type=simple
 Restart=on-failure
+LimitNOFILE=4096
 
 [Install]
 WantedBy=multi-user.target
