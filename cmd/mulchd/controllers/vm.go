@@ -318,7 +318,7 @@ func GetVMInfosController(req *server.Request) {
 
 // BackupVM launch the backup proccess
 func BackupVM(req *server.Request, vm *server.VM) (string, error) {
-	return server.VMBackup(vm.Config.Name, req.App, req.Stream)
+	return server.VMBackup(vm.Config.Name, req.App, req.Stream, server.BackupCompressAllow)
 }
 
 // RebuildVM delete VM and rebuilds it from a backup
@@ -338,7 +338,7 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 	libvirtVMName := vm.App.Config.VMPrefix + vmName
 
 	// - backup
-	backupName, err := server.VMBackup(vmName, req.App, req.Stream)
+	backupName, err := server.VMBackup(vmName, req.App, req.Stream, server.BackupCompressDisable)
 	if err != nil {
 		return fmt.Errorf("creating backup: %s", err)
 	}

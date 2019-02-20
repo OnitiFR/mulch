@@ -33,6 +33,12 @@ const (
 	VMOperationRestore = "restore"
 )
 
+// Backup compression
+const (
+	BackupCompressAllow   = true
+	BackupCompressDisable = false
+)
+
 // VM defines a virtual machine ("domain")
 type VM struct {
 	LibvirtUUID string
@@ -949,7 +955,7 @@ func VMDetachBackup(vmName string, app *App) error {
 }
 
 // VMBackup launch the backup proccess (returns backup filename)
-func VMBackup(vmName string, app *App, log *Log) (string, error) {
+func VMBackup(vmName string, app *App, log *Log, compressAllow bool) (string, error) {
 	vm, err := app.VMDB.GetByName(vmName)
 	if err != nil {
 		return "", err
@@ -1090,13 +1096,15 @@ func VMBackup(vmName string, app *App, log *Log) (string, error) {
 	}
 	log.Info("backup disk detached")
 
-	err = app.Libvirt.BackupCompress(
-		volName,
-		app.Config.GetTemplateFilepath("volume.xml"),
-		app.Config.TempPath,
-		log)
-	if err != nil {
-		return "", err
+	if vm.Config.BackupCompress && compressAllow == BackupCompressAllow {
+		err = app.Libvirt.BackupCompress(
+			volName,
+			app.Config.GetTemplateFilepath("volume.xml"),
+			app.Config.TempPath,
+			log)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	app.BackupsDB.Add(&Backup{

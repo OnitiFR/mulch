@@ -25,8 +25,8 @@ env = [
     ["TEST2", "bar"],
 ]
 
-# TODO: allow this value to be changed afterward!
 backup_disk_size = "2G"
+backup_compress = true
 
 # DNS domains
 # 'test1.localhost->1234' means that 'test1.localhost' HTTP(S) requests

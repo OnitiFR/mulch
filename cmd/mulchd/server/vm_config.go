@@ -28,6 +28,7 @@ type VMConfig struct {
 	Domains        []*common.Domain
 	Env            map[string]string
 	BackupDiskSize uint64
+	BackupCompress bool
 	RestoreBackup  string
 
 	Prepare []*VMConfigScript
@@ -57,6 +58,7 @@ type tomlVMConfig struct {
 	Redirects       [][]string
 	Env             [][]string
 	BackupDiskSize  datasize.ByteSize `toml:"backup_disk_size"`
+	BackupCompress  bool              `toml:"backup_compress"`
 	RestoreBackup   string            `toml:"restore_backup"`
 
 	PreparePrefixURL string `toml:"prepare_prefix_url"`
@@ -128,6 +130,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 		CPUCount:        1,
 		RedirectToHTTPS: true,
 		BackupDiskSize:  2 * datasize.GB,
+		BackupCompress:  true,
 	}
 
 	if _, err = toml.Decode(vmConfig.FileContent, tConfig); err != nil {
@@ -259,6 +262,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 		return nil, fmt.Errorf("looks like a too small backup disk (%s)", tConfig.BackupDiskSize)
 	}
 	vmConfig.BackupDiskSize = tConfig.BackupDiskSize.Bytes()
+	vmConfig.BackupCompress = tConfig.BackupCompress
 
 	for _, tScript := range tConfig.Prepare {
 		script, err := vmConfigGetScript(tScript, tConfig.PreparePrefixURL)
