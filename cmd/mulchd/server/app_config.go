@@ -22,6 +22,9 @@ type AppConfig struct {
 	// TODO: create path if needed on startup
 	DataPath string
 
+	// temporary files path (ioutil.TempFile)
+	TempPath string
+
 	// prefix for VM names (in libvirt)
 	VMPrefix string
 
@@ -49,6 +52,7 @@ type tomlAppConfig struct {
 	LibVirtURI     string `toml:"libvirt_uri"`
 	StoragePath    string `toml:"storage_path"`
 	DataPath       string `toml:"data_path"`
+	TempPath       string `toml:"temp_path"`
 	VMPrefix       string `toml:"vm_prefix"`
 	ProxyListenSSH string `toml:"proxy_listen_ssh"`
 	MulchSuperUser string `toml:"mulch_super_user"`
@@ -78,6 +82,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		LibVirtURI:     "qemu:///system",
 		StoragePath:    "./var/storage", // example: /srv/mulch
 		DataPath:       "./var/data",    // example: /var/lib/mulch
+		TempPath:       "",
 		VMPrefix:       "mulch-",
 		ProxyListenSSH: ":8022",
 		MulchSuperUser: "admin",
@@ -92,6 +97,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	appConfig.LibVirtURI = tConfig.LibVirtURI
 	appConfig.StoragePath = tConfig.StoragePath
 	appConfig.DataPath = tConfig.DataPath
+	appConfig.TempPath = tConfig.TempPath
 	appConfig.VMPrefix = tConfig.VMPrefix
 	appConfig.MulchSuperUser = tConfig.MulchSuperUser
 

@@ -74,7 +74,7 @@ func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
 		CIFFile{Filename: "meta-data", Content: metaData},
 		CIFFile{Filename: "user-data", Content: userData},
 	}
-	tmpfile, err := ioutil.TempFile("", "mulch-ci-image")
+	tmpfile, err := ioutil.TempFile(app.Config.TempPath, "mulch-ci-image")
 	if err != nil {
 		return err
 	}

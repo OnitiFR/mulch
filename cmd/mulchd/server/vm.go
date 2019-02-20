@@ -1090,7 +1090,11 @@ func VMBackup(vmName string, app *App, log *Log) (string, error) {
 	}
 	log.Info("backup disk detached")
 
-	err = app.Libvirt.BackupCompress(volName, app.Config.GetTemplateFilepath("volume.xml"), log)
+	err = app.Libvirt.BackupCompress(
+		volName,
+		app.Config.GetTemplateFilepath("volume.xml"),
+		app.Config.TempPath,
+		log)
 	if err != nil {
 		return "", err
 	}

@@ -15,6 +15,10 @@ storage_path = "./var/storage"
 # real world example: /var/lib/mulch
 data_path = "./var/data"
 
+# Temporary files path, empty = system default directory
+# (may be useful for big backups compression)
+temp_path = ""
+
 # Name prefix for Mulch VMs in libirt (so we don't collide with
 # some existing VMs)
 vm_prefix = "mulch-"

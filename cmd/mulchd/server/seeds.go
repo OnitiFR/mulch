@@ -184,7 +184,7 @@ func (db *SeedDatabase) runStep() {
 			db.save()
 
 			before := time.Now()
-			tmpFile, err := db.seedDownload(seed)
+			tmpFile, err := db.seedDownload(seed, db.app.Config.TempPath)
 			if err != nil {
 				msg := fmt.Sprintf("seeder '%s': unable to download image: %s", name, err)
 				db.app.Log.Error(msg)
@@ -232,8 +232,8 @@ func (db *SeedDatabase) runStep() {
 	}
 }
 
-func (db *SeedDatabase) seedDownload(seed *Seed) (string, error) {
-	tmpfile, err := ioutil.TempFile("", "mulch-seed-image")
+func (db *SeedDatabase) seedDownload(seed *Seed, tmpPath string) (string, error) {
+	tmpfile, err := ioutil.TempFile(tmpPath, "mulch-seed-image")
 	if err != nil {
 		return "", err
 	}

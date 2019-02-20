@@ -414,7 +414,7 @@ func (lv *Libvirt) VolumeInfos(name string, pool *libvirt.StoragePool) (*libvirt
 }
 
 // BackupCompress will TRY to compress backup
-func (lv *Libvirt) BackupCompress(volName string, template string, log *Log) error {
+func (lv *Libvirt) BackupCompress(volName string, template string, tmpPath string, log *Log) error {
 	conn, err := lv.GetConnection()
 	if err != nil {
 		return err
@@ -433,14 +433,14 @@ func (lv *Libvirt) BackupCompress(volName string, template string, log *Log) err
 		return nil
 	}
 
-	tmpfileUncomp, err := ioutil.TempFile("", "mulch-backup-uncomp")
+	tmpfileUncomp, err := ioutil.TempFile(tmpPath, "mulch-backup-uncomp")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(tmpfileUncomp.Name())
 	tmpfileUncomp.Close()
 
-	tmpfileComp, err := ioutil.TempFile("", "mulch-backup-comp")
+	tmpfileComp, err := ioutil.TempFile(tmpPath, "mulch-backup-comp")
 	if err != nil {
 		return err
 	}
