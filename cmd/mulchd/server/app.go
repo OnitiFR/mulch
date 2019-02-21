@@ -379,6 +379,16 @@ func (app *App) Status() (*common.APIStatus, error) {
 		return nil, err
 	}
 
+	err = app.Libvirt.Pools.Disks.Refresh(0)
+	if err != nil {
+		return nil, err
+	}
+
+	err = app.Libvirt.Pools.Backups.Refresh(0)
+	if err != nil {
+		return nil, err
+	}
+
 	disksInfos, err := app.Libvirt.Pools.Disks.GetInfo()
 	if err != nil {
 		return nil, err
