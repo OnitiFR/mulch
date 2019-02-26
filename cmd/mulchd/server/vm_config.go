@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -80,12 +81,22 @@ func vmConfigGetScript(tScript string, prefixURL string) (*VMConfigScript, error
 	}
 
 	as := tScript[:sepPlace]
-	scriptURL := prefixURL + tScript[sepPlace+1:]
+	scriptName := tScript[sepPlace+1:]
 
 	if !IsValidName(as) {
 		return nil, fmt.Errorf("'%s' is not a valid user name", as)
 	}
 	script.As = as
+
+	var scriptURL string
+
+	_, errParse := url.ParseRequestURI(scriptName)
+
+	if errParse == nil {
+		scriptURL = scriptName
+	} else {
+		scriptURL = prefixURL + scriptName
+	}
 
 	// test readability
 	stream, errG := GetScriptFromURL(scriptURL)
