@@ -60,8 +60,33 @@ EOS
 sudo a2enmod rewrite || exit $?
 sudo a2enmod rewrite expires || exit $?
 
-# install phpPgAdmin? (package: phppgadmin)
+# Adminer
+adminer_url="https://github.com/vrana/adminer/releases/download/v4.7.1/adminer-4.7.1.php"
+sudo mkdir -p /usr/share/adminer || exit $?
+sudo wget -q -O /usr/share/adminer/adminer.php "$adminer_url" || exit $?
 
+sudo bash -c "cat > /etc/apache2/conf-available/adminer.conf" <<- EOS
+Alias /_sql /usr/share/adminer
+
+<Directory /usr/share/adminer>
+    Options SymLinksIfOwnerMatch
+    DirectoryIndex index.php
+
+    php_admin_value upload_max_filesize 64M
+    php_admin_value post_max_size 64M
+</Directory>
+EOS
+[ $? -eq 0 ] || exit $?
+
+sudo a2enconf adminer || exit $?
+
+sudo bash -c "cat > /usr/share/adminer/index.php" <<- 'EOS'
+<?php
+header('Location: adminer.php?pgsql=&username=app&db=app');
+EOS
+[ $? -eq 0 ] || exit $?
+
+# PgSQL
 sudo bash -c "cat | sudo -iu postgres psql -v ON_ERROR_STOP=1" <<- EOS
 CREATE DATABASE $_APP_USER;
 CREATE USER $_APP_USER WITH PASSWORD '$PGSQL_PASSWORD';
