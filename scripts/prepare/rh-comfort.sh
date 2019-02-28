@@ -38,3 +38,17 @@ if ! shopt -oq posix; then
 fi
 EOS
 [ $? -eq 0 ] || exit $?
+
+# Powerline
+sudo yum install python-pip python-pygit2 || exit $?
+sudo pip install powerline-status || exit $?
+
+sudo bash -c "cat > /etc/profile.d/powerline.sh" <<- 'EOS'
+if ! shopt -oq posix; then
+  powerline_sh=$(find /usr/lib -name powerline.sh |grep bash)
+  if [ -f "$powerline_sh" ]; then
+    . "$powerline_sh"
+  fi
+fi
+EOS
+[ $? -eq 0 ] || exit $?
