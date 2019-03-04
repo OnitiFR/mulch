@@ -68,7 +68,9 @@ func SearchSSHAuthorizedKey(searchedPubKey ssh.PublicKey, authorizedKeysFile str
 	}
 
 	for len(authorizedKeysBytes) > 0 {
-		pubKey, comment, _, _, errP := ssh.ParseAuthorizedKey(authorizedKeysBytes)
+		pubKey, comment, _, rest, errP := ssh.ParseAuthorizedKey(authorizedKeysBytes)
+		authorizedKeysBytes = rest
+
 		if errP != nil {
 			continue
 		}
