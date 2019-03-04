@@ -18,14 +18,14 @@ func (run *Run) readStdout(std io.Reader, exitStatus chan int) error {
 			run.Log.Trace(text)
 			parts := strings.Split(text, "=")
 			switch parts[0] {
-			case "__EXIT":
+			case "___EXIT":
 				if len(parts) != 2 {
-					run.Log.Errorf("invalid __EXIT: %s", text)
+					run.Log.Errorf("invalid ___EXIT: %s", text)
 					continue
 				}
 				status, err := strconv.Atoi(parts[1])
 				if err != nil {
-					run.Log.Errorf("invalid __EXIT value: %s", text)
+					run.Log.Errorf("invalid ___EXIT value: %s", text)
 					continue
 				}
 				run.Log.Tracef("EXIT detected: %s (status %d)", text, status)
@@ -81,7 +81,7 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) error {
 
 		// cat is needed to "focus" stdin only on the child bash
 		// cat is "sudoed" so it can be killed by __kill_subshell bellow
-		str := fmt.Sprintf("sudo -iu %s cat | sudo -iu %s __SCRIPT_ID=%d bash -s -- %s ; echo __EXIT=$?", task.As, task.As, num, args)
+		str := fmt.Sprintf("sudo -iu %s cat | sudo -iu %s __SCRIPT_ID=%d bash -s -- %s ; echo ___EXIT=$?", task.As, task.As, num, args)
 		run.Log.Tracef("child=%s", str)
 
 		_, err = out.Write([]byte(str + "\n"))

@@ -71,7 +71,6 @@ func NewSSHProxyServer(app *App) error {
 					}
 
 					app.Log.Infof("SSH Proxy: %s (proxy_ssh_extra_keys_file) %s@%s", c.RemoteAddr(), user, vmName)
-				} else {
 				}
 			}
 
@@ -91,6 +90,8 @@ func NewSSHProxyServer(app *App) error {
 				destAuth,
 			}
 			clientConfig.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+
+			app.Log.Infof("SSH Proxy: dial %s@%s", user, vm.LastIP)
 
 			client, errD := ssh.Dial("tcp", vm.LastIP+":22", clientConfig)
 			if errD != nil {
