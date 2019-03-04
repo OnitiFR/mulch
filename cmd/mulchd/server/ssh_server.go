@@ -63,6 +63,13 @@ func NewSSHProxyServer(app *App) error {
 
 					user = parts[0]
 					vmName = parts[1]
+
+					// if the user is authorized to connect any VM, use the
+					// username as the VM name:
+					if vmName == "*" {
+						vmName = c.User()
+					}
+
 					app.Log.Infof("SSH Proxy: %s (proxy_ssh_extra_keys_file) %s@%s", c.RemoteAddr(), user, vmName)
 				} else {
 				}

@@ -3,11 +3,15 @@
 # The "comment" defines the SSH destination, ex:
 # ssh-rsa ABC…12== me@my-vm
 # … will make this SSH key to (exclusively) connect to "my-vm"
-# as user "me" (ignoring the user given in CLI, for instance)
+# as user "me" (ignoring the CLI user)
 
-# Note: the /home/me/.ssh/authorized_keys must have *MUCLH* pub key
+# You can also use a wildcard for the VM name: me@*
+# It will allow user "me" to connect to ANY VM. The VM name must then
+# be given as the SSH username: ssh -i id_rsa_me vm-name@mulch-server
+
+# In all cases, the /home/me/.ssh/authorized_keys must contain *MUCLH* pub key.
 # (since connection is relayed by the SSH proxy using its own key).
 # You can find it in /home/admin/.ssh/authorized_keys
 
 # You don't need to reload Mulchd when this file is modified.
-# File mode must be 600.
+# File mode must be 0600.
