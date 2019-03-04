@@ -1,0 +1,13 @@
+# Extra (limited) SSH pub keys, in usual "authorized_keys" format.
+
+# The "comment" defines the SSH destination, ex:
+# ssh-rsa ABC…12== me@my-vm
+# … will make this SSH key to (exclusively) connect to "my-vm"
+# as user "me" (ignoring the user given in CLI, for instance)
+
+# Note: the /home/me/.ssh/authorized_keys must have *MUCLH* pub key
+# (since connection is relayed by the SSH proxy using its own key).
+# You can find it in /home/admin/.ssh/authorized_keys
+
+# You don't need to reload Mulchd when this file is modified.
+# File mode must be 600.

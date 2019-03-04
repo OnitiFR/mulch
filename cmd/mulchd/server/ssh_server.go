@@ -31,26 +31,51 @@ func NewSSHProxyServer(app *App) error {
 	config := &ssh.ServerConfig{
 		PublicKeyCallback: func(c ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
 
+			user := ""
+			vmName := ""
+
 			apiKey, errG := app.APIKeysDB.GetByPubKey(string(pubKey.Marshal()))
 			if errG != nil {
 				return nil, errG
 			}
-			if apiKey == nil {
-				return nil, fmt.Errorf("unknown public key for %q", c.User())
+
+			if apiKey != nil {
+				// API key access
+				parts := strings.Split(c.User(), "@")
+				if len(parts) != 2 {
+					return nil, fmt.Errorf("wrong user format '%s' (user@vm needed)", c.User())
+				}
+
+				user = parts[0]
+				vmName = parts[1]
+				app.Log.Infof("SSH Proxy: %s (API key '%s') %s@%s", c.RemoteAddr(), apiKey.Comment, user, vmName)
+			} else {
+				matchingPubKey, comment, errS := SearchSSHAuthorizedKey(pubKey, app.Config.ProxySSHExtraKeysFile)
+				if errS != nil {
+					return nil, errS
+				}
+				// Extra public key access
+				if matchingPubKey != nil {
+					parts := strings.Split(comment, "@")
+					if len(parts) != 2 {
+						return nil, fmt.Errorf("wrong user format '%s' (user@vm needed)", c.User())
+					}
+
+					user = parts[0]
+					vmName = parts[1]
+					app.Log.Infof("SSH Proxy: %s (proxy_ssh_extra_keys_file) %s@%s", c.RemoteAddr(), user, vmName)
+				} else {
+				}
 			}
-			parts := strings.Split(c.User(), "@")
-			if len(parts) != 2 {
-				return nil, fmt.Errorf("wrong user format '%s' (user@vm needed)", c.User())
+
+			if user == "" || vmName == "" {
+				return nil, fmt.Errorf("no allowed public key found (%s)", c.RemoteAddr())
 			}
-			user := parts[0]
-			vmName := parts[1]
 
 			vm, errG := app.VMDB.GetByName(vmName)
 			if errG != nil {
 				return nil, errG
 			}
-
-			app.Log.Infof("SSH Proxy: %s (key '%s') %s@%s (%s)", c.RemoteAddr(), apiKey.Comment, user, vmName, vm.LastIP)
 
 			clientConfig := &ssh.ClientConfig{}
 

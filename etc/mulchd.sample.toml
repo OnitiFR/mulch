@@ -30,6 +30,9 @@ mulch_super_user = "admin"
 # Listen address for SSH proxy
 proxy_listen_ssh = ":8022"
 
+# Extra (limited) SSH pub keys (see ./etc/extra_authorized_keys.sample)
+proxy_ssh_extra_keys_file = ""
+
 # ACME protocol directory server
 #
 # We use Let's Encrypt *staging* directory by default.

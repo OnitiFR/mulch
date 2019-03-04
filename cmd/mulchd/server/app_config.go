@@ -31,6 +31,9 @@ type AppConfig struct {
 	// SSH proxy listen address
 	ProxyListenSSH string
 
+	// Extra (limited) SSH keys
+	ProxySSHExtraKeysFile string
+
 	// User (sudoer) created by Mulch in VMs
 	MulchSuperUser string
 
@@ -48,15 +51,16 @@ type ConfigSeed struct {
 }
 
 type tomlAppConfig struct {
-	Listen         string
-	LibVirtURI     string `toml:"libvirt_uri"`
-	StoragePath    string `toml:"storage_path"`
-	DataPath       string `toml:"data_path"`
-	TempPath       string `toml:"temp_path"`
-	VMPrefix       string `toml:"vm_prefix"`
-	ProxyListenSSH string `toml:"proxy_listen_ssh"`
-	MulchSuperUser string `toml:"mulch_super_user"`
-	Seed           []tomlConfigSeed
+	Listen                string
+	LibVirtURI            string `toml:"libvirt_uri"`
+	StoragePath           string `toml:"storage_path"`
+	DataPath              string `toml:"data_path"`
+	TempPath              string `toml:"temp_path"`
+	VMPrefix              string `toml:"vm_prefix"`
+	ProxyListenSSH        string `toml:"proxy_listen_ssh"`
+	ProxySSHExtraKeysFile string `toml:"proxy_ssh_extra_keys_file"`
+	MulchSuperUser        string `toml:"mulch_super_user"`
+	Seed                  []tomlConfigSeed
 }
 
 type tomlConfigSeed struct {
@@ -78,14 +82,15 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 
 	// defaults (if not in the file)
 	tConfig := &tomlAppConfig{
-		Listen:         ":8585",
-		LibVirtURI:     "qemu:///system",
-		StoragePath:    "./var/storage", // example: /srv/mulch
-		DataPath:       "./var/data",    // example: /var/lib/mulch
-		TempPath:       "",
-		VMPrefix:       "mulch-",
-		ProxyListenSSH: ":8022",
-		MulchSuperUser: "admin",
+		Listen:                ":8585",
+		LibVirtURI:            "qemu:///system",
+		StoragePath:           "./var/storage", // example: /srv/mulch
+		DataPath:              "./var/data",    // example: /var/lib/mulch
+		TempPath:              "",
+		VMPrefix:              "mulch-",
+		ProxyListenSSH:        ":8022",
+		ProxySSHExtraKeysFile: "",
+		MulchSuperUser:        "admin",
 	}
 
 	if _, err := toml.DecodeFile(filename, tConfig); err != nil {
@@ -102,6 +107,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	appConfig.MulchSuperUser = tConfig.MulchSuperUser
 
 	appConfig.ProxyListenSSH = tConfig.ProxyListenSSH
+	appConfig.ProxySSHExtraKeysFile = tConfig.ProxySSHExtraKeysFile
 
 	for _, seed := range tConfig.Seed {
 		if seed.Name == "" {

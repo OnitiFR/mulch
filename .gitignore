@@ -1,5 +1,6 @@
 var/*
 etc/mulchd.toml
+etc/extra_authorized_keys
 mulchd.service
 mulch-proxy.service
 
