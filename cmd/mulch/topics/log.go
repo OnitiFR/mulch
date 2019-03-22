@@ -14,7 +14,8 @@ the client. All logs from all targets ("vm") are displayed.
 Examples:
   mulch log
   mulch log --trace`,
-	Args: cobra.NoArgs,
+	Args:    cobra.NoArgs,
+	Aliases: []string{"logs"},
 	Run: func(cmd *cobra.Command, args []string) {
 		call := globalAPI.NewCall("GET", "/log", map[string]string{})
 		call.Do()
