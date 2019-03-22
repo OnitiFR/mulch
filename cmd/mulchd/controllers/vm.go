@@ -303,6 +303,7 @@ func GetVMInfosController(req *server.Request) {
 		SuperUser: vm.App.Config.MulchSuperUser,
 		AppUser:   vm.Config.AppUser,
 		AuthorKey: vm.AuthorKey,
+		InitDate:  vm.InitDate,
 		Locked:    vm.Locked,
 		Up:        running,
 	}

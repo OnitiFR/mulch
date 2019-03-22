@@ -406,6 +406,8 @@ func (app *App) Status() (*common.APIStatus, error) {
 	vmActiveTotal := 0
 	vmMem := 0
 	vmActiveMem := 0
+	provisionedDisks := 0
+	allocatedDisks := 0
 
 	for _, vmName := range vmNames {
 		vm, err := app.VMDB.GetByName(vmName)
@@ -413,7 +415,8 @@ func (app *App) Status() (*common.APIStatus, error) {
 			return nil, fmt.Errorf("VM '%s': %s", vmName, err)
 		}
 
-		domain, err := app.Libvirt.GetDomainByName(app.Config.VMPrefix + vmName)
+		libvirtName := app.Config.VMPrefix + vmName
+		domain, err := app.Libvirt.GetDomainByName(libvirtName)
 		if err != nil {
 			return nil, err
 		}
@@ -429,12 +432,23 @@ func (app *App) Status() (*common.APIStatus, error) {
 
 		vmCPUs += vm.Config.CPUCount
 		vmMem += int(vm.Config.RAMSize / 1024 / 1024)
+		provisionedDisks += int(vm.Config.DiskSize / 1024 / 1024)
 
 		if state == libvirt.DOMAIN_RUNNING {
 			vmActiveTotal++
 			vmActiveCPUs += vm.Config.CPUCount
 			vmActiveMem += int(vm.Config.RAMSize / 1024 / 1024)
 		}
+
+		diskName, err := VMGetDiskName(libvirtName, app)
+		if err != nil {
+			return nil, fmt.Errorf("VM '%s': %s", vmName, err)
+		}
+		vInfos, err := app.Libvirt.VolumeInfos(diskName, app.Libvirt.Pools.Disks)
+		if err != nil {
+			return nil, fmt.Errorf("VM '%s': %s", vmName, err)
+		}
+		allocatedDisks += int(vInfos.Allocation / 1024 / 1024)
 	}
 
 	ret.VMs = vmTotal
@@ -447,6 +461,8 @@ func (app *App) Status() (*common.APIStatus, error) {
 	ret.VMActiveMemMB = vmActiveMem
 	ret.FreeStorageMB = int(disksInfos.Available / 1024 / 1024)
 	ret.FreeBackupMB = int(backupsInfos.Available / 1024 / 1024)
+	ret.ProvisionedDisksMB = provisionedDisks
+	ret.AllocatedDisksMB = allocatedDisks
 
 	return &ret, nil
 }

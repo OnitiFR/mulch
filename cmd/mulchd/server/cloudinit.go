@@ -61,7 +61,7 @@ func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
 	userDataVariables["_VM_NAME"] = vm.Config.Name
 	userDataVariables["_KEY_DESC"] = vm.AuthorKey
 	userDataVariables["_MULCH_VERSION"] = Version
-	userDataVariables["_VM_INIT_DATE"] = time.Now().Format(time.RFC3339)
+	userDataVariables["_VM_INIT_DATE"] = vm.InitDate.Format(time.RFC3339)
 	userDataVariables["__EXTRA_ENV"] = cloudInitExtraEnv(vm.Config.Env)
 
 	userData, err := cloudInitUserData(userDataTemplate, userDataVariables)

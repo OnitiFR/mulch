@@ -46,6 +46,7 @@ type VM struct {
 	App         *App
 	Config      *VMConfig
 	AuthorKey   string
+	InitDate    time.Time
 	LastIP      string
 	Locked      bool
 	WIP         VMOperation
@@ -104,6 +105,7 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 		SecretUUID: secretUUID.String(),
 		Config:     vmConfig, // copy()? (deep)
 		AuthorKey:  authorKey,
+		InitDate:   time.Now(),
 		Locked:     false,
 		WIP:        VMOperationNone,
 	}
@@ -541,6 +543,41 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 	}
 	commit = true
 	return vm, nil
+}
+
+// VMGetDiskName return VM (by its libvirt name) disk filename
+func VMGetDiskName(name string, app *App) (string, error) {
+	domain, err := app.Libvirt.GetDomainByName(name)
+	if err != nil {
+		return "", err
+	}
+	if domain == nil {
+		return "", fmt.Errorf("VM '%s': does not exists in libvirt", name)
+	}
+	defer domain.Free()
+
+	xmldoc, err := domain.GetXMLDesc(0)
+	if err != nil {
+		return "", err
+	}
+
+	domcfg := &libvirtxml.Domain{}
+	err = domcfg.Unmarshal(xmldoc)
+	if err != nil {
+		return "", err
+	}
+
+	diskName := ""
+	for _, disk := range domcfg.Devices.Disks {
+		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasDisk {
+			diskName = path.Base(disk.Source.File.File)
+		}
+	}
+	if diskName == "" {
+		return "", fmt.Errorf("disk with '%s' alias not found", VMStorageAliasDisk)
+	}
+
+	return diskName, nil
 }
 
 func vmDeleteCloudInitDisk(dom *libvirt.Domain, pool *libvirt.StoragePool, conn *libvirt.Connect) (*libvirt.Domain, error) {
