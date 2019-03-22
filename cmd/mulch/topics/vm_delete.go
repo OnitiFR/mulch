@@ -14,7 +14,8 @@ Note: A locked VM can't be deleted.
 
 See 'vm list' for VM Names.
 `,
-	Args: cobra.ExactArgs(1),
+	Args:    cobra.ExactArgs(1),
+	Aliases: []string{"remove"},
 	Run: func(cmd *cobra.Command, args []string) {
 		call := globalAPI.NewCall("DELETE", "/vm/"+args[0], map[string]string{})
 		call.Do()
