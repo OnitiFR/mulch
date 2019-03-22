@@ -116,24 +116,6 @@ Include mulch/aliases_*.conf
 Host *
     IdentitiesOnly yes
 `
-
-	includeIsHere, _ := common.FileContains(configPath, includeString)
-	if !includeIsHere {
-		if !common.PathExist(configPath) {
-			err := ioutil.WriteFile(configPath, []byte(sampleContent), 0600)
-			if err != nil {
-				log.Fatal(err.Error())
-			}
-		} else {
-			fmt.Printf(`Warning: in order to use aliases, you should add the following line
-to your SSH config file '%s':
----
-%s
----
-`, configPath, includeString)
-		}
-	}
-
 	filename := GetSSHPath(mulchSubDir + "aliases_" + globalConfig.Server.Name + ".conf")
 	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
@@ -162,6 +144,24 @@ to your SSH config file '%s':
 		file.WriteString(fmt.Sprintf("    Port %d\n", sshPort))
 		file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.AppUser, vm.Name))
 		file.WriteString(fmt.Sprintf("\n\n"))
+	}
+
+	includeIsHere, _ := common.FileContains(configPath, includeString)
+	if !includeIsHere {
+		if !common.PathExist(configPath) {
+			err := ioutil.WriteFile(configPath, []byte(sampleContent), 0600)
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+		} else {
+			fmt.Printf(`
+Warning: in order to use aliases, you should add the following line
+to your SSH config file '%s':
+---
+%s
+---
+`, configPath, includeString)
+		}
 	}
 
 	return nil
