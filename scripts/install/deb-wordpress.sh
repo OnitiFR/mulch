@@ -10,7 +10,7 @@ WORDPRESS_VERSION="5.1.1"
 WORDPRESS_SHA1="f1bff89cc360bf5ef7086594e8a9b68b4cbf2192"
 
 mkdir -p tmp || exit $?
-echo "downloading Wordpress $WORDPRESS_VERSION"
+echo "downloading Wordpress $WORDPRESS_VERSION ($WORDPRESS_SHA1)"
 
 curl -so wordpress.tar.gz -fSL "https://wordpress.org/wordpress-${WORDPRESS_VERSION}.tar.gz" || exit $?
 echo "$WORDPRESS_SHA1 *wordpress.tar.gz" | sha1sum -c - || exit $?
