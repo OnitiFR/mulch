@@ -7,7 +7,7 @@
 
 # https://wordpress.org/download/releases/ (tar.gz)
 WORDPRESS_VERSION="5.1.1"
-WORDPRESS_SHA1="3c4f94b671d0d8b8ed216d2ef221e3ad0d989ee8"
+WORDPRESS_SHA1="f1bff89cc360bf5ef7086594e8a9b68b4cbf2192"
 
 mkdir -p tmp || exit $?
 echo "downloading Wordpress $WORDPRESS_VERSION"
