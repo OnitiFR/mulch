@@ -1,9 +1,6 @@
-+ Oniti: Sparkpost
-  - add 'env' to mulchd.toml? (overridden by VM's env directive)
-  - mc: remove mcedit alternative choice, enable lynx mode
-
+- add 'env' to mulchd.toml? (overridden by VM's env directive)
 - fix phpMyAdmin errors (done in 4.8, let's wait)
-- add creation date to 'vm infos' command (+disk size provisioned/real ? + domains ?)
+- 'vm infos' command: add disk size provisioned/real ? + domains ?
 - "Update available" alert on client (info from server?)
 - https://github.com/spf13/cobra/blob/master/bash_completions.md
 - "fast" backup (no compression)
@@ -23,6 +20,5 @@
 - create a specific HTTP muxer for /phone (only listening on mulch's virbr)
 - hardening of <filterref filter='clean-traffic'> with fixed IP addr?
 
-- deal with libvirtd restart
 - check connection and access rights
 - differentiate "rights issues" from  "libvirtd not running" issues

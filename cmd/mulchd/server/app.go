@@ -16,6 +16,18 @@ import (
 	libvirt "github.com/libvirt/libvirt-go"
 )
 
+// Mulch storage and network names, see the following usages:
+// - App.initLibvirtStorage()
+// - Libvirt.GetConnection()
+const (
+	AppStorageCloudInit = "mulch-cloud-init"
+	AppStorageSeeds     = "mulch-seeds"
+	AppStorageDisks     = "mulch-disks"
+	AppStorageBackups   = "mulch-backups"
+
+	AppNetwork = "mulch"
+)
+
 // App describes an (the?) application
 type App struct {
 	Config    *AppConfig
@@ -260,7 +272,7 @@ func (app *App) initLibvirtStorage() error {
 	var pools = &app.Libvirt.Pools
 
 	pools.CloudInit, pools.CloudInitXML, err = app.Libvirt.GetOrCreateStoragePool(
-		"mulch-cloud-init",
+		AppStorageCloudInit,
 		app.Config.StoragePath+"/cloud-init",
 		app.Config.GetTemplateFilepath("storage.xml"),
 		"0711",
@@ -270,7 +282,7 @@ func (app *App) initLibvirtStorage() error {
 	}
 
 	pools.Seeds, pools.SeedsXML, err = app.Libvirt.GetOrCreateStoragePool(
-		"mulch-seeds",
+		AppStorageSeeds,
 		app.Config.StoragePath+"/seeds",
 		app.Config.GetTemplateFilepath("storage.xml"),
 		"",
@@ -280,7 +292,7 @@ func (app *App) initLibvirtStorage() error {
 	}
 
 	pools.Disks, pools.DisksXML, err = app.Libvirt.GetOrCreateStoragePool(
-		"mulch-disks",
+		AppStorageDisks,
 		app.Config.StoragePath+"/disks",
 		app.Config.GetTemplateFilepath("storage.xml"),
 		"0711",
@@ -290,7 +302,7 @@ func (app *App) initLibvirtStorage() error {
 	}
 
 	pools.Backups, pools.BackupsXML, err = app.Libvirt.GetOrCreateStoragePool(
-		"mulch-backups",
+		AppStorageBackups,
 		app.Config.StoragePath+"/backups",
 		app.Config.GetTemplateFilepath("storage.xml"),
 		"0711",
@@ -303,10 +315,8 @@ func (app *App) initLibvirtStorage() error {
 }
 
 func (app *App) initLibvirtNetwork() error {
-	networkName := "mulch"
-
 	net, netcfg, err := app.Libvirt.GetOrCreateNetwork(
-		networkName,
+		AppNetwork,
 		app.Config.GetTemplateFilepath("network.xml"),
 		app.Log)
 

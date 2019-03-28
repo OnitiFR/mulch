@@ -19,7 +19,8 @@ import (
 
 // Libvirt is an interface to libvirt library
 type Libvirt struct {
-	conn       *libvirt.Connect
+	connection *libvirt.Connect
+	uri        string
 	Pools      LibvirtPools
 	Network    *libvirt.Network
 	NetworkXML *libvirtxml.Network
@@ -46,20 +47,64 @@ func NewLibvirt(uri string) (*Libvirt, error) {
 	}
 
 	return &Libvirt{
-		conn: conn,
+		connection: conn,
+		uri:        uri,
 	}, nil
 }
 
 // GetConnection returns the current libvirt connection
 func (lv *Libvirt) GetConnection() (*libvirt.Connect, error) {
-	// TODO: test if connection is OK, THEN return it?
-	// (what about storages, networks, etc?)
-	return lv.conn, nil
+
+	// Test connection
+	lv.connection.GetVersion()
+
+	alive, err := lv.connection.IsAlive()
+	if err != nil {
+		return nil, err
+	}
+
+	if alive == false {
+		lv.CloseConnection()
+		conn, err := libvirt.NewConnect(lv.uri)
+		if err != nil {
+			return nil, err
+		}
+
+		// replace connection
+		lv.connection = conn
+
+		lv.Pools.CloudInit, err = conn.LookupStoragePoolByName(AppStorageCloudInit)
+		if err != nil {
+			return nil, err
+		}
+
+		lv.Pools.Seeds, err = conn.LookupStoragePoolByName(AppStorageSeeds)
+		if err != nil {
+			return nil, err
+		}
+
+		lv.Pools.Disks, err = conn.LookupStoragePoolByName(AppStorageDisks)
+		if err != nil {
+			return nil, err
+		}
+
+		lv.Pools.Backups, err = conn.LookupStoragePoolByName(AppStorageBackups)
+		if err != nil {
+			return nil, err
+		}
+
+		lv.Network, err = conn.LookupNetworkByName(AppNetwork)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+	return lv.connection, nil
 }
 
 // CloseConnection close connection to libvirt
 func (lv *Libvirt) CloseConnection() {
-	lv.conn.Close()
+	lv.connection.Close()
 }
 
 // GetOrCreateStoragePool retreives (and create, if necessary) a storage pool
