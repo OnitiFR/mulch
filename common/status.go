@@ -2,12 +2,12 @@ package common
 
 // APIStatus describes host status
 type APIStatus struct {
-	HostCPUs           int
-	HostMemoryTotalMB  int
 	VMs                int
 	ActiveVMs          int
+	HostCPUs           int
 	VMCPUs             int
 	VMActiveCPUs       int
+	HostMemoryTotalMB  int
 	VMMemMB            int
 	VMActiveMemMB      int
 	FreeStorageMB      int

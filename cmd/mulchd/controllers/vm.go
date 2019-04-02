@@ -294,18 +294,36 @@ func GetVMInfosController(req *server.Request) {
 
 	running, _ := server.VMIsRunning(vm.Config.Name, req.App)
 
+	libvirtName := req.App.Config.VMPrefix + vmName
+
+	diskName, err := server.VMGetDiskName(libvirtName, req.App)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+	vInfos, err := req.App.Libvirt.VolumeInfos(diskName, req.App.Libvirt.Pools.Disks)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
 	data := &common.APIVmInfos{
-		Name:      vm.Config.Name,
-		Seed:      vm.Config.Seed,
-		CPUCount:  vm.Config.CPUCount,
-		RAMSize:   vm.Config.RAMSize,
-		Hostname:  vm.Config.Hostname,
-		SuperUser: vm.App.Config.MulchSuperUser,
-		AppUser:   vm.Config.AppUser,
-		AuthorKey: vm.AuthorKey,
-		InitDate:  vm.InitDate,
-		Locked:    vm.Locked,
-		Up:        running,
+		Name:                vm.Config.Name,
+		Seed:                vm.Config.Seed,
+		CPUCount:            vm.Config.CPUCount,
+		RAMSizeMB:           (vm.Config.RAMSize / 1024 / 1024),
+		DiskSizeMB:          (vm.Config.DiskSize / 1024 / 1024),
+		AllocatedDiskSizeMB: (vInfos.Allocation / 1024 / 1024),
+		BackupDiskSizeMB:    (vm.Config.BackupDiskSize / 1024 / 1024),
+		Hostname:            vm.Config.Hostname,
+		SuperUser:           vm.App.Config.MulchSuperUser,
+		AppUser:             vm.Config.AppUser,
+		AuthorKey:           vm.AuthorKey,
+		InitDate:            vm.InitDate,
+		Locked:              vm.Locked,
+		Up:                  running,
 	}
 
 	req.Response.Header().Set("Content-Type", "application/json")
