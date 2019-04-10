@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # -- Run as app user
-# Warning: will fail if no crontab was saved
 
-crontab "$_BACKUP/crontab" || exit $?
+if [ -f "$_BACKUP/crontab" ]; then
+    crontab "$_BACKUP/crontab" || exit $?
+fi
