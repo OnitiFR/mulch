@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Xfennec/mulch/cmd/mulchd/server"
+	"github.com/OnitiFR/mulch/cmd/mulchd/server"
 )
 
 // GetStatusController return status informations about host

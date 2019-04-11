@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"github.com/Xfennec/mulch/cmd/mulchd/server"
+	"github.com/OnitiFR/mulch/cmd/mulchd/server"
 )
 
 // Test2Controller is another test.

@@ -3,7 +3,7 @@ package controllers
 import (
 	"net"
 
-	"github.com/Xfennec/mulch/cmd/mulchd/server"
+	"github.com/OnitiFR/mulch/cmd/mulchd/server"
 )
 
 // PhoneController receive "phone home" requests from instances

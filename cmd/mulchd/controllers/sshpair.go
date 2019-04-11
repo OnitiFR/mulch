@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Xfennec/mulch/cmd/mulchd/server"
-	"github.com/Xfennec/mulch/common"
+	"github.com/OnitiFR/mulch/cmd/mulchd/server"
+	"github.com/OnitiFR/mulch/common"
 )
 
 // GetKeyPairController returns user key pair

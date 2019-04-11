@@ -1,7 +1,7 @@
 package main
 
-import "github.com/Xfennec/mulch/cmd/mulchd/server"
-import "github.com/Xfennec/mulch/cmd/mulchd/controllers"
+import "github.com/OnitiFR/mulch/cmd/mulchd/server"
+import "github.com/OnitiFR/mulch/cmd/mulchd/controllers"
 
 // AddRoutes defines all API routes for the application
 func AddRoutes(app *server.App) {

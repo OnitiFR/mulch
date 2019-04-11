@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/Xfennec/mulch/cmd/mulchd/server"
+	"github.com/OnitiFR/mulch/cmd/mulchd/server"
 )
 
 var configPath = flag.String("path", "./etc/", "configuration path")

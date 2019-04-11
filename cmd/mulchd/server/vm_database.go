@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/Xfennec/mulch/common"
+	"github.com/OnitiFR/mulch/common"
 )
 
 type updateCallback func()

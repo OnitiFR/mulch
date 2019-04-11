@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/Xfennec/mulch/common"
+	"github.com/OnitiFR/mulch/common"
 )
 
 // TODO: watch the file, re-create proxies on refresh

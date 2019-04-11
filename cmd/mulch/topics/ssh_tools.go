@@ -5,7 +5,7 @@ import (
 	"path"
 	"net/url"
 
-	"github.com/Xfennec/mulch/common"
+	"github.com/OnitiFR/mulch/common"
 )
 
 const mulchSubDir = "mulch/"

@@ -3,7 +3,7 @@ package controllers
 import (
 	"strconv"
 
-	"github.com/Xfennec/mulch/cmd/mulchd/server"
+	"github.com/OnitiFR/mulch/cmd/mulchd/server"
 )
 
 // VersionController return versions

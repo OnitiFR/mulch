@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/Xfennec/mulch/common"
+	"github.com/OnitiFR/mulch/common"
 )
 
 // Hub structure allows multiple clients to receive messages

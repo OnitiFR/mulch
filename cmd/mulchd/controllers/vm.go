@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Xfennec/mulch/cmd/mulchd/server"
-	"github.com/Xfennec/mulch/common"
+	"github.com/OnitiFR/mulch/cmd/mulchd/server"
+	"github.com/OnitiFR/mulch/common"
 	"golang.org/x/crypto/ssh"
 )
 

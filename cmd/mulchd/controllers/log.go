@@ -1,7 +1,7 @@
 package controllers
 
-import "github.com/Xfennec/mulch/common"
-import "github.com/Xfennec/mulch/cmd/mulchd/server"
+import "github.com/OnitiFR/mulch/common"
+import "github.com/OnitiFR/mulch/cmd/mulchd/server"
 
 // LogController sends logs to client
 func LogController(req *server.Request) {

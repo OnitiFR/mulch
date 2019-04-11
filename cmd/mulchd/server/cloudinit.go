@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Xfennec/mulch/common"
+	"github.com/OnitiFR/mulch/common"
 )
 
 func cloudInitMetaData(id string, hostname string) []byte {

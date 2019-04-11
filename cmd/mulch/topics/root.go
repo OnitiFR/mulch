@@ -6,7 +6,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/Xfennec/mulch/cmd/mulch/client"
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 )

@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/Xfennec/mulch/common"
+	"github.com/OnitiFR/mulch/common"
 	"github.com/spf13/cobra"
 )
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/Xfennec/mulch/cmd/mulch/client"
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 )
 
