@@ -28,7 +28,7 @@ Mulch relies on libvirt API (KVM) and can share an existing libvirt server or us
 configuration (or knowledge) is required, Mulch will create and manage needed resources (storage, network).
 You will only interact with Mulch.
 
-![Tech banner](https://raw.github.com/Xfennec/mulch/master/doc/images/tech-banner.png)
+![Tech banner](https://raw.github.com/OnitiFR/mulch/master/doc/images/tech-banner.png)
 
 Base Linux images ("seeds") use Cloud-Init so almost every [OpenStack compliant image](https://docs.openstack.org/image-guide/obtain-images.html) will work out of the box. Default Mulch
 configuration provides seeds for Debian, Ubuntu and CentOS. Seed images will be downloaded and updated
@@ -56,13 +56,13 @@ You can then create this VM with:
 mulch vm create mini.toml
 ```
 
-![mulch vm create minimal](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-create-mini.png)
+![mulch vm create minimal](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-create-mini.png)
 
 In this example, the VM is up and ready 40 seconds later.
 
 Any more complete example?
 ---
-See the [complete sample VM configuration file](https://raw.github.com/Xfennec/mulch/master/vm-samples/sample-vm-full.toml) to get a broader view of Mulch features. We use this as a template for our "Wordpress farm" Mulch server VMs.
+See the [complete sample VM configuration file](https://raw.github.com/OnitiFR/mulch/master/vm-samples/sample-vm-full.toml) to get a broader view of Mulch features. We use this as a template for our "Wordpress farm" Mulch server VMs.
 
 Let's see a few interesting samples:
 
@@ -90,7 +90,7 @@ look at the *prepare* step.
 ```toml
 # If all prepare scripts share the same base URL, you can use prepare_prefix_url.
 # Otherwise, use absolute URL in 'prepare': admin@https://server/script.sh
-prepare_prefix_url = "https://raw.githubusercontent.com/Xfennec/mulch/master/scripts/prepare/"
+prepare_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/prepare/"
 prepare = [
     # user@script
     "admin@deb-comfort.sh",
@@ -126,7 +126,7 @@ How does it works exactly?
 ---
 This schema shows the basic Mulch infrastructure:
 
-![mulch infrastructure](https://raw.github.com/Xfennec/mulch/master/doc/images/img_infra.png)
+![mulch infrastructure](https://raw.github.com/OnitiFR/mulch/master/doc/images/img_infra.png)
 
 Mulch currently have 3 components :
  - `mulch`: the client
@@ -139,7 +139,7 @@ SSH proxied access is done by mulchd (port `8022`).
 
 VM have this lifecycle :
 
-![mulch VMs lifecycle](https://raw.github.com/Xfennec/mulch/master/doc/images/img_lifecycle.png)
+![mulch VMs lifecycle](https://raw.github.com/OnitiFR/mulch/master/doc/images/img_lifecycle.png)
 
  - **prepare** scripts: prepare the system for the application (install and configure web server, DB server, …)
  - **install** scripts: install and configure the application (download / git clone, composer, yarn, …)
@@ -159,20 +159,20 @@ Show me more features!
 #### HTTPS / Let's Encrypt
 Here's the result of the previously linked `sample-vm-full.toml` configuration, showing automatic HTTPS certificates:
 
-![mulch VMs lifecycle](https://raw.github.com/Xfennec/mulch/master/doc/images/https_le.png)
+![mulch VMs lifecycle](https://raw.github.com/OnitiFR/mulch/master/doc/images/https_le.png)
 
 #### SSH
 Mulch allow easy SSH connection from mulch client with `mulch ssh` command. No configuration
 is required and the client will retrieve your very own SSH key pair. You may select another user using
 the `-u / --user` flag.
 
-![mulch ssh](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-ssh.png)
+![mulch ssh](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-ssh.png)
 
 Another feature is SSH alisases generation. Simply call `mulch ssh-config` command, and aliases
 for every VM will be generated. You can then use any usual OpenSSH command/feature: `ssh`, `scp`,
 port forwarding, …
 
-![mulch ssh-config](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-ssh-config.png)
+![mulch ssh-config](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-ssh-config.png)
 
 #### Seeds
 As said previously, seeds are base Linux images for VMs, defined in `mulchd.conf` server configuration
@@ -186,7 +186,7 @@ as = "ubuntu-1810-amd64.qcow2"
 
  Mulchd will download images on first boot and each time the image is updated by the vendor.
 
- ![mulch seed](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-seed.png)
+ ![mulch seed](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-seed.png)
 
 #### Backups
 Mulch provides a flexible backup / restore system for your applications and data:
@@ -194,7 +194,7 @@ archive, duplicate, iterate, CI/CD, …
 
 You can even rebuild your entire VM from an updated seed in one command (see below).
 
-![mulch vm backup](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-vm-backup.png)
+![mulch vm backup](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-vm-backup.png)
 
 Backups are created by shell scripts (see VM lifecycle above). Backup scripts writes directly to an
 attached (and mounted) disk. No need to create the backup **and then** copy it somewhere, all
@@ -208,7 +208,7 @@ Restoring a VM only requires a qcow2 backup file and the VM description file.
 Since backup are virtual disks, they are writable. It's then easy to download, mount, **modify**
 and upload back a backup to Mulch server in a few commands.
 
-![mulch backup mount](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-backup-mount.png)
+![mulch backup mount](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-backup-mount.png)
 
 #### VM rebuild
 Using the backup system, Mulch provides a clean way to rebuild a VM entirely. Rebuilding implies
@@ -216,7 +216,7 @@ the following steps: **backup** scripts, **clone** of the original VM (will be u
 **delete** original VM, create a **new VM** with the same description and finally, **restore** the VM using
 the backup. The backup is transient and will be deleted.
 
-![mulch vm rebuild](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-vm-rebuild.png)
+![mulch vm rebuild](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-vm-rebuild.png)
 
 Again, the general idea behind Mulch is to secure Ops by industrializing and simplify such
 processes ("service reconstructability").
@@ -225,11 +225,11 @@ processes ("service reconstructability").
 You can lock a VM, so no "big" operation, like delete or rebuild can be done until the VM
 is unlocked. Useful for precious VMs.
 
-![mulch vm locked](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-vm-locked.png)
+![mulch vm locked](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-vm-locked.png)
 
 You still have the ability to use any libvirt tool, like virt-manager, to interact with VMs.
 
-![virt-manager](https://raw.github.com/Xfennec/mulch/master/doc/images/virt-manager.png)
+![virt-manager](https://raw.github.com/OnitiFR/mulch/master/doc/images/virt-manager.png)
 
 How do I install the client?
 ---
@@ -237,7 +237,7 @@ Usual Go requirements : check you have go/golang installed and `~/go/bin/` is in
 
 Then install the client:
 ```sh
-go get -u github.com/Xfennec/mulch/cmd/mulch
+go get -u github.com/OnitiFR/mulch/cmd/mulch
 ```
 
 That's it, you can now run `mulch` command. It will show you a sample configuration file (`~/.mulch.toml`):
@@ -253,7 +253,7 @@ You can define multiple servers and use -s option to select one, or use
 default = "my-mulch" as a global setting (i.e. before [[server]]).
 First server is the default. Environment variable `SERVER` is also available.
 
-![mulch client general help](https://raw.github.com/Xfennec/mulch/master/doc/images/mulch-h.png)
+![mulch client general help](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-h.png)
 
 How do I install the server? (mulchd and mulch-proxy)
 ---
@@ -261,8 +261,8 @@ How do I install the server? (mulchd and mulch-proxy)
 
  - install libvirt daemon packages: libvirt-bin / libvirt / … (see your distribution docs)
  - install development packages: libvirt-dev / libvirt-devel
- - `go get -u github.com/Xfennec/mulch/cmd/...`
- - `cd go/src/github.com/Xfennec/mulch`
+ - `go get -u github.com/OnitiFR/mulch/cmd/...`
+ - `cd go/src/github.com/OnitiFR/mulch`
  - `./install.sh`
 
 The install script will give you details about installation: destination, rights, services, …
