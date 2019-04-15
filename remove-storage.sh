@@ -7,7 +7,9 @@
 virsh pool-destroy mulch-seeds
 virsh pool-destroy mulch-disks
 virsh pool-destroy mulch-cloud-init
+virsh pool-destroy mulch-backups
 
 virsh pool-undefine mulch-seeds
 virsh pool-undefine mulch-disks
 virsh pool-undefine mulch-cloud-init
+virsh pool-undefine mulch-backups
