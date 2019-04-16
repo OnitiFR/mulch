@@ -186,6 +186,13 @@ func ActionVMController(req *server.Request) {
 		} else {
 			req.Stream.Successf("rebuild completed (%s)", after.Sub(before))
 		}
+	case "redefine":
+		err := RedefineVM(req, vm)
+		if err != nil {
+			req.Stream.Failuref("error: %s", err)
+		} else {
+			req.Stream.Successf("VM '%s' redefined (may the sysadmin gods be with you)", vm.Config.Name)
+		}
 	default:
 		req.Stream.Failuref("missing or invalid action ('%s') for '%s'", action, vm.Config.Name)
 		return
@@ -409,7 +416,6 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 
 	conf.RestoreBackup = backupName
 
-	// FIXME: domains conflict between old and new VM
 	// replace original VM author with "rebuilder"
 	_, err = server.NewVM(conf, req.APIKey.Comment, req.App, req.Stream)
 	if err != nil {
@@ -437,6 +443,48 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 
 	// commit
 	success = true
+
+	return nil
+}
+
+// RedefineVM replace VM config file with a new one, for next rebuild
+func RedefineVM(req *server.Request, vm *server.VM) error {
+	req.SetTarget(vm.Config.Name)
+
+	if vm.Locked == true {
+		return errors.New("VM is locked")
+	}
+
+	configFile, header, err := req.HTTP.FormFile("config")
+	if err != nil {
+		return fmt.Errorf("'config' file field: %s", err)
+	}
+	req.Stream.Tracef("reading '%s' config file", header.Filename)
+
+	conf, err := server.NewVMConfigFromTomlReader(configFile, req.Stream)
+	if err != nil {
+		return fmt.Errorf("decoding config: %s", err)
+	}
+
+	if conf.Name != vm.Config.Name {
+		return fmt.Errorf("VM name does not match")
+	}
+
+	// check for conclicting domains
+	err = server.CheckDomainsConflicts(req.App.VMDB, conf.Domains, conf.Name)
+	if err != nil {
+		return err
+	}
+
+	// change author
+	vm.AuthorKey = req.APIKey.Comment
+
+	vm.Config = conf
+
+	req.App.VMDB.Update()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

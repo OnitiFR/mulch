@@ -1,11 +1,13 @@
+- "backup cat" command (or --stdout for backup download ?)
+- fix SSH proxy "end of connection"
+- completion
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
 - fix phpMyAdmin errors (done in 4.8, let's wait)
 - 'vm infos' command: add disk size provisioned/real ? + domains ?
 - "Update available" alert on client (info from server?)
 - https://github.com/spf13/cobra/blob/master/bash_completions.md
-- "fast" backup (no compression)
+- flag for compression / no compression on "vm backup"
 - (big!) faster rebuild
-- VM autostart?, stop VMs on Mulchd stop? (see systemd)
 - check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
 - https API
 - challenge based auth?

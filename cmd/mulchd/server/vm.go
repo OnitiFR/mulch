@@ -57,10 +57,16 @@ func (vm *VM) SetOperation(op VMOperation) {
 	vm.WIP = op
 }
 
-func checkAllDomains(db *VMDatabase, domains []*common.Domain) error {
+// CheckDomainsConflicts will detect if incoming domains conflicts with existing VMs
+// You can exclude a specific VM using its name (use empty string otherwise)
+func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM string) error {
 	domainMap := make(map[string]*VM)
 	vmNames := db.GetNames()
 	for _, vmName := range vmNames {
+		if excludeVM != "" && vmName == excludeVM {
+			continue
+		}
+
 		vm, err := db.GetByName(vmName)
 		if err != nil {
 			return err
@@ -147,7 +153,7 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 	}
 
 	// check for conclicting domains (will also be done later while saving vm database)
-	err = checkAllDomains(app.VMDB, vmConfig.Domains)
+	err = CheckDomainsConflicts(app.VMDB, vmConfig.Domains, "")
 	if err != nil {
 		return nil, err
 	}
