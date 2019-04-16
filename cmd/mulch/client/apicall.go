@@ -37,6 +37,7 @@ type APICall struct {
 	Args         map[string]string
 	JSONCallback func(io.Reader)
 	DestFilePath string
+	DestStream   *os.File
 	files        map[string]string
 }
 
@@ -203,10 +204,18 @@ func (call *APICall) Do() {
 		call.JSONCallback(resp.Body)
 		// return? call.callback?
 	case "application/octet-stream":
-		if call.DestFilePath == "" {
-			log.Fatalf("no DestFilePath defined for %s %s", call.Method, call.Path)
+		if call.DestFilePath == "" && call.DestStream == nil {
+			log.Fatalf("no DestFilePath/DestStream defined for %s %s", call.Method, call.Path)
 		}
-		downloadFile(call.DestFilePath, resp.Body)
+
+		if call.DestFilePath != "" {
+			downloadFile(call.DestFilePath, resp.Body)
+		} else if call.DestStream != nil {
+			_, err := io.Copy(call.DestStream, resp.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
 	default:
 		log.Fatalf("unsupported content type '%s'", mime)
 	}
