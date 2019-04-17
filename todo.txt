@@ -1,11 +1,9 @@
-- "backup cat" command (or --stdout for backup download ?)
 - fix SSH proxy "end of connection"
-- completion
+- completion: https://github.com/spf13/cobra/blob/master/bash_completions.md
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
 - fix phpMyAdmin errors (done in 4.8, let's wait)
 - 'vm infos' command: add disk size provisioned/real ? + domains ?
 - "Update available" alert on client (info from server?)
-- https://github.com/spf13/cobra/blob/master/bash_completions.md
 - flag for compression / no compression on "vm backup"
 - (big!) faster rebuild
 - check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
@@ -22,5 +20,6 @@
 - create a specific HTTP muxer for /phone (only listening on mulch's virbr)
 - hardening of <filterref filter='clean-traffic'> with fixed IP addr?
 
+- re-check/update install script
 - check connection and access rights
 - differentiate "rights issues" from  "libvirtd not running" issues
