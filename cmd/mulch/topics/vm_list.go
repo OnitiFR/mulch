@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var vmListFlagBasic bool
+
 // vmListCmd represents the "vm list" command
 var vmListCmd = &cobra.Command{
 	Use:   "list",
@@ -20,6 +22,8 @@ var vmListCmd = &cobra.Command{
 	// Long: ``,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
+		vmListFlagBasic, _ = cmd.Flags().GetBool("basic")
+
 		call := globalAPI.NewCall("GET", "/vm", map[string]string{})
 		call.JSONCallback = vmListCB
 		call.Do()
@@ -34,42 +38,49 @@ func vmListCB(reader io.Reader) {
 		log.Fatal(err.Error())
 	}
 
-	if len(data) == 0 {
-		fmt.Printf("Currently, no VM exists. You may use 'mulch vm create'.\n")
-		return
-	}
-
-	strData := [][]string{}
-	red := color.New(color.FgHiRed).SprintFunc()
-	green := color.New(color.FgHiGreen).SprintFunc()
-	yellow := color.New(color.FgHiYellow).SprintFunc()
-	for _, line := range data {
-		state := red(line.State)
-		if line.State == "up" {
-			state = green(line.State)
+	if vmListFlagBasic {
+		for _, line := range data {
+			fmt.Println(line.Name)
+		}
+	} else {
+		if len(data) == 0 {
+			fmt.Printf("Currently, no VM exists. You may use 'mulch vm create'.\n")
+			return
 		}
 
-		locked := "false"
-		if line.Locked == true {
-			locked = yellow("locked")
-		}
+		strData := [][]string{}
+		red := color.New(color.FgHiRed).SprintFunc()
+		green := color.New(color.FgHiGreen).SprintFunc()
+		yellow := color.New(color.FgHiYellow).SprintFunc()
+		for _, line := range data {
+			state := red(line.State)
+			if line.State == "up" {
+				state = green(line.State)
+			}
 
-		strData = append(strData, []string{
-			line.Name,
-			line.LastIP,
-			state,
-			locked,
-			yellow(line.WIP),
-		})
+			locked := "false"
+			if line.Locked == true {
+				locked = yellow("locked")
+			}
+
+			strData = append(strData, []string{
+				line.Name,
+				line.LastIP,
+				state,
+				locked,
+				yellow(line.WIP),
+			})
+		}
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetHeader([]string{"Name", "Last known IP", "State", "Locked", "Operation"})
+		table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
+		table.SetCenterSeparator("|")
+		table.AppendBulk(strData)
+		table.Render()
 	}
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Last known IP", "State", "Locked", "Operation"})
-	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-	table.SetCenterSeparator("|")
-	table.AppendBulk(strData)
-	table.Render()
 }
 
 func init() {
 	vmCmd.AddCommand(vmListCmd)
+	vmListCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formating")
 }

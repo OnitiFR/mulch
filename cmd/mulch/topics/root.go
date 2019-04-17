@@ -32,6 +32,7 @@ libvirt API. This is the client.`,
 			globalConfig.Server.Name,
 		)
 	},
+	BashCompletionFunction: bashCompletionFunc,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

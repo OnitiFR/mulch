@@ -33,4 +33,5 @@ from an existing VM using [unimplemented yet]
 func init() {
 	vmCmd.AddCommand(vmCreateCmd)
 	vmCreateCmd.Flags().StringP("restore", "r", "", "backup to restore")
+	vmCreateCmd.MarkFlagCustom("restore", "__internal_list_backups")
 }
