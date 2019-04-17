@@ -14,10 +14,13 @@ var completionCmd = &cobra.Command{
 
 . <(mulch completion)
 
-To configure your bash shell to load completions for each session add to your bashrc
+To configure your bash shell to load completions for each session;
+add this line to your ~/.bashrc or ~/.profile file.
 
-# ~/.bashrc or ~/.profile
-. <(mulch completion)
+Using completion with an alias:
+
+alias m=mulch
+complete -F __start_mulch m
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		rootCmd.GenBashCompletion(os.Stdout)
