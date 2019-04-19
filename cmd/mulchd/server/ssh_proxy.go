@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -18,6 +19,31 @@ type SSHProxy struct {
 	log       *Log
 }
 
+func sshProxyCopyChan(dst ssh.Channel, src ssh.Channel, way string, wgChannels *sync.WaitGroup, log *Log) {
+	_, err := io.Copy(dst, src)
+	if err != nil {
+		log.Tracef("SSH: %s Copy error: %s", way, err)
+	}
+
+	// -- Cheap "relaxing" of channels
+	// I don't see better option, since EOF/Close messages from
+	// remotes are hidden by x/crypto/ssh API.
+	src.CloseWrite()
+	dst.CloseWrite()
+	log.Tracef("SSH: %s EOF sent", way)
+
+	// This is it: we wait for the other copy and last requests…
+	// If connection latency is greater, the "exit-status" request
+	// is missed, and the ssh/scp/… client will return its own error code.
+	time.Sleep(500 * time.Millisecond)
+
+	src.Close()
+	dst.Close()
+	log.Tracef("SSH: %s finished", way)
+
+	wgChannels.Done()
+}
+
 func (proxy *SSHProxy) serveProxy() error {
 	serverConn, chans, reqs, err := ssh.NewServerConn(proxy, proxy.config)
 	if err != nil {
@@ -31,28 +57,40 @@ func (proxy *SSHProxy) serveProxy() error {
 	}
 	defer clientConn.Close()
 
+	// discard global requests, we won't manage it anyway
 	go ssh.DiscardRequests(reqs)
 
-	var wg sync.WaitGroup
+	var wgChannels sync.WaitGroup
 
 	for newChannel := range chans {
-		proxy.log.Tracef("SSH newChannel.ChannelType() = %s", newChannel.ChannelType())
 
+		proxy.log.Tracef("SSH: newChannel.ChannelType() = %s", newChannel.ChannelType())
+
+		// up = internal VM
 		upChannel, upRequests, err := clientConn.OpenChannel(newChannel.ChannelType(), newChannel.ExtraData())
 		if err != nil {
-			return err
+			if newChannel.ChannelType() == "session" {
+				// no session is fatal
+				return fmt.Errorf("OpenChannel: %s", err)
+			}
+
+			proxy.log.Errorf("OpenChannel: %s", err)
+			newChannel.Reject(2, err.Error()) // 2 = SSH_OPEN_CONNECT_FAILED
+			continue
 		}
 
+		// down = external client to mulch ssh proxy
 		downChannel, downRequests, err := newChannel.Accept()
 		if err != nil {
-			return err
+			return fmt.Errorf("Accept: %s", err)
 		}
 
-		wg.Add(2)
+		// requests + two Copy
+		wgChannels.Add(3)
 
 		// connect requests
 		go func() {
-			proxy.log.Trace("SSH waiting for request")
+			proxy.log.Trace("SSH: waiting for request")
 
 			for {
 				var req *ssh.Request
@@ -69,12 +107,12 @@ func (proxy *SSHProxy) serveProxy() error {
 				}
 
 				if req == nil {
-					proxy.log.Trace("SSH: req is nil, both chan closed!")
-					// continue
+					proxy.log.Trace("SSH: req is nil, both chan closed")
+					wgChannels.Done()
 					break
 				}
 
-				proxy.log.Tracef("SSH request: %s %t %s", req.Type, req.WantReply, chn)
+				proxy.log.Tracef("SSH: request: %s %t %s", req.Type, req.WantReply, chn)
 				// proxy.log.Tracef("SSH payload: -%s-", req.Payload)
 
 				b, errS := dst.SendRequest(req.Type, req.WantReply, req.Payload)
@@ -86,34 +124,16 @@ func (proxy *SSHProxy) serveProxy() error {
 					req.Reply(b, nil)
 				}
 			}
-			proxy.log.Trace("SSH: goroutine quits")
 		}()
 
 		proxy.log.Trace("SSH: Connecting channels")
 
-		go func() {
-			io.Copy(upChannel, downChannel)
-			// cheap "relaxing" of channels (otherwise, the other chan may
-			// miss the last SSH request and set a wrong shell return code)
-			downChannel.Close()
-			time.Sleep(10 * time.Millisecond)
-			upChannel.Close()
-			proxy.log.Trace("down->up finished")
-			wg.Done()
-		}()
-		go func() {
-			io.Copy(downChannel, upChannel)
-			// see above
-			upChannel.Close()
-			time.Sleep(10 * time.Millisecond)
-			downChannel.Close()
-			proxy.log.Trace("up->down finished")
-			wg.Done()
-		}()
-
+		go sshProxyCopyChan(upChannel, downChannel, "down->up", &wgChannels, proxy.log)
+		go sshProxyCopyChan(downChannel, upChannel, "up->down", &wgChannels, proxy.log)
 	}
+
 	// Wait io.Copies (we have defered Closes in this function)
-	wg.Wait()
+	wgChannels.Wait()
 
 	if proxy.closeCB != nil {
 		proxy.closeCB(serverConn)
@@ -156,11 +176,11 @@ func ListenAndServeProxy(
 
 			go func() {
 				if err := sshconn.serveProxy(); err != nil {
-					log.Errorf("SSH proxy serving error: %s", err)
+					log.Errorf("SSH: proxy serving error: %s", err)
 					return
 				}
 
-				log.Trace("SSH connection closed")
+				log.Trace("SSH: connection closed")
 			}()
 		}
 	}()
