@@ -59,6 +59,9 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("time", "d", false, "show server timestamps on messages")
 	rootCmd.PersistentFlags().StringP("server", "s", "", "selected server in the config file")
 
+	rootCmd.PersistentFlags().BoolP("dump-server", "", false, "dump current server name (useful for completion)")
+	rootCmd.PersistentFlags().MarkHidden("dump-server")
+
 	// since MarkPersistentFlagCustom does not exists:
 	serverFlagAnnotation := make(map[string][]string)
 	serverFlagAnnotation[cobra.BashCompCustom] = []string{"__mulch_get_servers"}
@@ -105,4 +108,10 @@ Note: you can also use environment variables (TRACE, TIME, SERVER).
 		globalConfig.Trace,
 		globalConfig.Time,
 	)
+
+	if rootCmd.PersistentFlags().Lookup("dump-server").Changed {
+		fmt.Println(globalConfig.Server.Name)
+		os.Exit(1)
+	}
+
 }

@@ -1,8 +1,7 @@
-- completion: detect -s / --server argument
 - re-check/update install script / create distro-specific scripts?
 - fix phpMyAdmin errors (done in 4.8, let's wait - see if there's not a file access issue)
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
-- 'vm infos' command: add disk size provisioned/real ? + domains ?
+- 'vm infos' command: add domains ?
 - "Update available" alert on client (info from server?)
 - flag for compression / no compression on "vm backup"
 - (big!) faster rebuild
