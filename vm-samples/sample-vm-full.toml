@@ -39,6 +39,7 @@ redirects = [
 
 # If all prepare scripts share the same base URL, you can use prepare_prefix_url.
 # Otherwise, use absolute URL in 'prepare': admin@https://server/script.sh
+# Note: you can use file:// scheme for files on mulchd FS (ex: local git repo)
 prepare_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/prepare/"
 prepare = [
     # user@script

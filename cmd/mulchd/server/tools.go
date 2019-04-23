@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"os"
 	"regexp"
 )
 
@@ -27,6 +28,15 @@ func RandString(n int, rand *rand.Rand) string {
 // GetScriptFromURL returns a ReadCloser to the script at the given URL
 // Caller must Close() the returned value.
 func GetScriptFromURL(url string) (io.ReadCloser, error) {
+	if len(url) > 7 && url[:7] == "file://" {
+		filename := url[7:]
+		file, err := os.Open(filename)
+		if err != nil {
+			return nil, err
+		}
+		return file, nil
+	}
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
