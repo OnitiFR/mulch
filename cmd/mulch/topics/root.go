@@ -58,6 +58,11 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("trace", "t", false, "also show server TRACE messages (debug)")
 	rootCmd.PersistentFlags().BoolP("time", "d", false, "show server timestamps on messages")
 	rootCmd.PersistentFlags().StringP("server", "s", "", "selected server in the config file")
+
+	// since MarkPersistentFlagCustom does not exists:
+	serverFlagAnnotation := make(map[string][]string)
+	serverFlagAnnotation[cobra.BashCompCustom] = []string{"__mulch_get_servers"}
+	rootCmd.PersistentFlags().Lookup("server").Annotations = serverFlagAnnotation
 }
 
 // initConfig reads in config file and ENV variables if set.

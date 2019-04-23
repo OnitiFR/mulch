@@ -34,6 +34,13 @@ __internal_list_vms() {
     fi
 }
 
+__mulch_get_servers() {
+	local out servers
+	servers=$(egrep '^[[:blank:]]*name[[:blank:]]*=' ~/.mulch.toml | awk -F= '{print $2}')
+	out=($(echo $servers))
+    COMPREPLY=( $( compgen -W "${out[*]}" -- "$cur" ) )
+}
+
 __custom_func() {
     case ${last_command} in
         mulch_vm_create)
