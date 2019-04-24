@@ -58,7 +58,7 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 EOS
 [ $? -eq 0 ] || exit $?
 
-# change to /_mysql instead of /phpmyadmin
+# change to /_sql instead of /phpmyadmin
 sudo sed -i 's|Alias /phpmyadmin|Alias /_sql|' /etc/phpmyadmin/apache.conf || exit $?
 
 sudo bash -c "cat >> /etc/phpmyadmin/apache.conf" <<- EOS
@@ -68,6 +68,13 @@ sudo bash -c "cat >> /etc/phpmyadmin/apache.conf" <<- EOS
 </Directory>
 EOS
 [ $? -eq 0 ] || exit $?
+
+# bug: phpMyAdmin < 4.0 + PHP 7.2 = count() error
+# tested targets: Ubuntu 18.10
+# remaining tests: Ubuntu 16.04, Debian 9
+if grep --quiet 'Ubuntu 18.10' /etc/issue; then
+    sudo sed -i "s/|\s*\((count(\$analyzed_sql_results\['select_expr'\]\)/| (\1)/g" /usr/share/phpmyadmin/libraries/sql.lib.php || exit $?
+fi
 
 sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf || exit $?
 sudo a2enconf phpmyadmin || exit $?
