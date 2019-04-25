@@ -267,7 +267,7 @@ sudo apt install golang-go
 sudo apt install libvirt-daemon-system libvirt-dev
 ```
 
-#### Mulchd itself:
+### Install:
  - `go get -u github.com/OnitiFR/mulch/cmd/...`
  - `cd go/src/github.com/OnitiFR/mulch`
  - `./install.sh --help` (see sample install section)

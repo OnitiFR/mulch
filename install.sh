@@ -142,7 +142,7 @@ function check_libvirt_access() {
         echo "   - systemctl status libvirtd"
         echo " - check that $USER is allowed to connect to qemu:///system URL:"
         echo "   - check that your user is in 'libvirt' group"
-        echo "   - usermod -aG libvirt \$USER"
+        echo "   - sudo usermod -aG libvirt \$USER"
         echo "   - you may have to disconnect / reconnect your user"
     fi
     check $ret
