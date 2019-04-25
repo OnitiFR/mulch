@@ -233,7 +233,7 @@ You still have the ability to use any libvirt tool, like virt-manager, to intera
 
 How do I install the client?
 ---
-Usual Go requirements : check you have go/golang installed and `~/go/bin/` is in your `PATH` (or copy/link binary in one of your `PATH` directories; use `sudo cp ~/go/bin/mulch /usr/local/bin` if you have no idea of how to do this).
+Usual Go requirements : check you have go/golang installed and `~/go/bin/` is in your `PATH` (or copy/link binary in one of your `PATH` directories; use `sudo ln -s /home/$USER/go/bin/mulch /usr/local/bin` if you have no idea of how to do this).
 
 Then install the client:
 ```sh
