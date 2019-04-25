@@ -261,7 +261,7 @@ How do I install the server? (mulchd and mulch-proxy)
 
 ### Requirements:
 
-##### Ubuntu 19.04:
+##### Ubuntu: (19.04 / 18.10 / 18.04)
 ```
 sudo apt install golang-go
 sudo apt install libvirt-daemon-system libvirt-dev
