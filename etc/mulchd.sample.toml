@@ -66,3 +66,8 @@ as = "centos-7-x86_64.qcow2"
 name = "ubuntu_1810"
 current_url = "http://cloud-images.ubuntu.com/cosmic/current/cosmic-server-cloudimg-amd64.img"
 as = "ubuntu-1810-amd64.qcow2"
+
+[[seed]]
+name = "ubuntu_1904"
+current_url = "http://cloud-images.ubuntu.com/disco/current/disco-server-cloudimg-amd64.img"
+as = "ubuntu-1904-amd64.qcow2"
