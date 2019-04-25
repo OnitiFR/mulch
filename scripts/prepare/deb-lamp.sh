@@ -69,10 +69,10 @@ sudo bash -c "cat >> /etc/phpmyadmin/apache.conf" <<- EOS
 EOS
 [ $? -eq 0 ] || exit $?
 
-# bug: phpMyAdmin < 4.0 + PHP 7.2 = count() error
-# tested targets: Ubuntu 18.10
+# bug: phpMyAdmin < 4.8 + PHP 7.2 = count() error
+# tested targets: Ubuntu 18.10 / 19.04
 # remaining tests: Ubuntu 16.04, Debian 9
-if grep --quiet 'Ubuntu 18.10' /etc/issue; then
+if grep --quiet -E 'Ubuntu 18.10|Ubuntu 19.04' /etc/issue; then
     sudo sed -i "s/|\s*\((count(\$analyzed_sql_results\['select_expr'\]\)/| (\1)/g" /usr/share/phpmyadmin/libraries/sql.lib.php || exit $?
 fi
 
