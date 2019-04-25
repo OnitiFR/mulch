@@ -267,6 +267,13 @@ sudo apt install golang-go
 sudo apt install libvirt-daemon-system libvirt-dev
 ```
 
+##### Fedora:
+```
+sudo dnf install golang
+sudo dnf install qemu-kvm libvirt-devel libvirt-daemon-kvm libvirt-daemon-config-nwfilter
+sudo systemctl enable --now libvirtd
+```
+
 ### Install:
  - `go get -u github.com/OnitiFR/mulch/cmd/...`
  - `cd go/src/github.com/OnitiFR/mulch`
