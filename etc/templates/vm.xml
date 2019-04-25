@@ -17,8 +17,17 @@
     <apic/>
     <vmport state='off'/>
   </features>
-  <!-- you may want to adjust that -->
+  <!-- You may want to adjust that.
+
+    If your real CPU is newer, you may miss some performances
+    If your real CPU is old, you may get a 'CPU is incompatible with host CPU'
+    error while creating a new VM.
+
+    An idea is to manualy create a VM with virt-install and look 
+    at /etc/libvirt/qemu definition file.
+  -->
   <cpu mode='custom' match='exact' check='partial'>
+    <!-- <model fallback='allow'>Haswell-noTSX</model> -->
     <model fallback='allow'>Broadwell-noTSX-IBRS</model>
   </cpu>
   <clock offset='utc'>
