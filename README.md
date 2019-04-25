@@ -259,10 +259,17 @@ How do I install the server? (mulchd and mulch-proxy)
 ---
 *This section is still a WIP.*
 
- - install libvirt daemon packages: libvirt-bin / libvirt / … (see your distribution docs)
- - install development packages: libvirt-dev / libvirt-devel
+### Requirements:
+
+##### Ubuntu 19.04:
+```
+sudo apt install golang-go
+sudo apt install libvirt-daemon-system libvirt-dev
+```
+
+#### Mulchd itself:
  - `go get -u github.com/OnitiFR/mulch/cmd/...`
  - `cd go/src/github.com/OnitiFR/mulch`
- - `./install.sh`
+ - `./install.sh --help` (see sample install section)
 
 The install script will give you details about installation: destination, rights, services, …

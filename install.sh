@@ -24,6 +24,7 @@ function main() {
     check_noroot # show warning if UID 0
 
     check_libvirt_access
+    search_kvm_binary
 
     is_dir_writable "$ETC"
     is_dir_writable "$VAR_DATA"
@@ -78,6 +79,10 @@ function parse_args() {
             echo "  --data $VAR_DATA (-d, state [small] databases)"
             echo "  --storage $VAR_STORAGE (-s, disks storage)"
             echo "  --force (-f, erase old install)"
+            echo ""
+            echo "Sample install:"
+            echo "mkdir -p ~/mulch/etc ~/mulch/data ~/mulch/storage"
+            echo "./install.sh --etc ~/mulch/etc/ --data ~/mulch/data/ --storage ~/mulch/storage/"
             exit 1
             ;;
         *)
@@ -133,16 +138,29 @@ function check_libvirt_access() {
     ret=$?
     if [ "$ret" -ne 0 ]; then
         echo "Failed."
-        echo " - check that libvirtd is running"
-        echo "   - systemd: systemctl status libvirtd"
-        echo "   - sysv: service libvirtd status"
-        echo " - check that $USER is allowed to connect to qemu:///system"
+        echo " - check that libvirtd is running:"
+        echo "   - systemctl status libvirtd"
+        echo " - check that $USER is allowed to connect to qemu:///system URL:"
         echo "   - check that your user is in 'libvirt' group"
-        echo "   - some distributions do this automatically on package install"
+        echo "   - usermod -aG libvirt \$USER"
         echo "   - you may have to disconnect / reconnect your user"
-        echo "   - if needed: 'usermod -aG libvirt \$USER'"
     fi
     check $ret
+}
+
+function search_kvm_binary() {
+    # Fedora
+    if [ -x /usr/bin/qemu-kvm ]; then
+        kvm_path="/usr/bin/qemu-kvm"
+        return 0
+    fi
+    # Ubuntu / Debian
+    if [ -x /usr/bin/kvm ]; then
+        kvm_path="/usr/bin/kvm"
+        return 0
+    fi
+    echo "error: unable to find kvm / qemu-kvm binary"
+    exit 10
 }
 
 function update_config_path() {
@@ -150,6 +168,9 @@ function update_config_path() {
     check $?
     sed -i'' "s|^storage_path =.*|storage_path = \"$VAR_STORAGE\"|" "$ETC/mulchd.toml"
     check $?
+    sed -i'' "s|<emulator>.*</emulator>|<emulator>$kvm_path</emulator>|" "$ETC/templates/vm.xml"
+    check $?
+    echo "using kvm binary: $kvm_path"
 }
 
 function infos_next() {
