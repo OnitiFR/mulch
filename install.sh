@@ -170,6 +170,7 @@ function update_config_path() {
     sed -i'' "s|<emulator>.*</emulator>|<emulator>$kvm_path</emulator>|" "$ETC/templates/vm.xml"
     check $?
     echo "using kvm binary: $kvm_path"
+    echo "please, check CPU details in $ETC/templates/vm.xml"
 }
 
 function infos_next() {
@@ -182,11 +183,11 @@ function infos_next() {
     echo "   - $mulchd_bin -path \"$ETC\""
     echo "   - $proxy_bin -path \"$ETC\""
     echo " - install+start services (root)"
-    echo "   - cp mulchd.service mulch-proxy.service /etc/systemd/system/ (no symlink)"
-    echo "   - systemctl daemon-reload"
-    echo "   - systemctl enable --now mulchd"
-    echo "   - systemctl enable --now mulch-proxy"
-    echo " - get/set API key(s) in $VAR_DATA/mulch-api-keys.db"
+    echo "   - sudo cp mulchd.service mulch-proxy.service /etc/systemd/system/ (no symlink)"
+    echo "   - sudo systemctl daemon-reload"
+    echo "   - sudo systemctl enable --now mulchd"
+    echo "   - sudo systemctl enable --now mulch-proxy"
+    echo " - get API key(s) in $VAR_DATA/mulch-api-keys.db"
     echo " - have fun with mulch client"
 }
 

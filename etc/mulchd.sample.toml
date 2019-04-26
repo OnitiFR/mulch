@@ -41,6 +41,7 @@ proxy_ssh_extra_keys_file = ""
 #
 # For Let's Encrypt production URL, you can use:
 # proxy_acme_url = "LETS_ENCRYPT_PRODUCTION"
+# Warning: define a proper email below!
 proxy_acme_url = "https://acme-staging.api.letsencrypt.org/directory"
 
 # Email will be used by CAs, such as Let's Encrypt, to notify about
