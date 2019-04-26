@@ -266,24 +266,27 @@ How do I install the server? (mulchd and mulch-proxy)
 #### Ubuntu: (19.04 / 18.10 / 18.04)
 ```
 sudo apt install golang-go
-sudo apt install ebtables gawk libxml2-utils dnsmasq libvirt-daemon-system libvirt-dev
-```
-
-#### Debian 9:
-Download and install a newer release of Go than provided
-packages, see https://golang.org/dl/
-```
-sudo apt install build-essential pkg-config git
-sudo apt install qemu-kvm ebtables gawk libxml2-utils bridge-utils dnsmasq libvirt-daemon-system libvirt-dev
-sudo usermod -aG libvirt USER # replace USER by the user running mulch
+sudo apt install ebtables gawk libxml2-utils libcap2-bin dnsmasq libvirt-daemon-system libvirt-dev
 ```
 
 #### Fedora:
 ```
-sudo dnf install golang
+sudo dnf install golang git
 sudo dnf install qemu-kvm libvirt-devel libvirt-daemon-kvm libvirt-daemon-config-nwfilter
 sudo systemctl enable --now libvirtd
+sudo usermod -aG libvirt USER # replace USER by the user running mulchd
+sudo setfacl -m g:libvirt:x /home/USER/
 ```
+
+#### Debian 9: (Unsupported! libvirt is too old [missing disk aliases])
+Download and install a newer release of Go than provided
+packages, see https://golang.org/dl/
+```
+sudo apt install build-essential pkg-config git gawk libxml2-utils
+sudo apt install qemu-kvm ebtables libcap2-bin bridge-utils dnsmasq libvirt-daemon-system libvirt-dev
+sudo usermod -aG libvirt USER # replace USER by the user running mulchd
+```
+
 
 ### Install:
 As a user:
