@@ -9,7 +9,8 @@
   <currentMemory unit='KiB'>0</currentMemory>
   <vcpu placement='static'>0</vcpu>
   <os>
-    <type arch='x86_64' machine='pc-i440fx-2.11'>hvm</type>
+    <!-- pc is an alias for the latest pc-i440fx -->
+    <type arch='x86_64' machine='pc'>hvm</type>
     <boot dev='hd'/>
   </os>
   <features>
