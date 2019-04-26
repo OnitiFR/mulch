@@ -272,10 +272,10 @@ sudo apt install ebtables gawk libxml2-utils libcap2-bin dnsmasq libvirt-daemon-
 #### Fedora:
 ```
 sudo dnf install golang git
-sudo dnf install qemu-kvm libvirt-devel libvirt-daemon-kvm libvirt-daemon-config-nwfilter
+sudo dnf install qemu-kvm libvirt-client libvirt-devel libvirt-daemon-kvm libvirt-daemon-config-nwfilter
 sudo systemctl enable --now libvirtd
 sudo usermod -aG libvirt USER # replace USER by the user running mulchd
-sudo setfacl -m g:libvirt:x /home/USER/
+sudo setfacl -m g:qemu:x /home/USER/
 ```
 
 #### Debian 9: (Unsupported! libvirt is too old [missing disk aliases])
