@@ -36,12 +36,22 @@ type VMConfig struct {
 	Install []*VMConfigScript
 	Backup  []*VMConfigScript
 	Restore []*VMConfigScript
+
+	DoActions map[string]*VMDoAction
 }
 
 // VMConfigScript is a script for prepare, install, save and restore steps
 type VMConfigScript struct {
 	ScriptURL string
 	As        string
+}
+
+// VMDoAction is a script for a "do" action (scripts for usual tasks in the VM)
+type VMDoAction struct {
+	Name        string
+	ScriptURL   string
+	User        string
+	Description string
 }
 
 type tomlVMConfig struct {
@@ -70,6 +80,36 @@ type tomlVMConfig struct {
 	Backup           []string
 	RestorePrefixURL string `toml:"restore_prefix_url"`
 	Restore          []string
+
+	DoActions []tomlVMDoAction `toml:"do-actions"`
+}
+
+type tomlVMDoAction struct {
+	Name        string
+	Script      string
+	User        string
+	Description string
+}
+
+func vmCheckScriptURL(scriptURL string) error {
+	// test readability
+	stream, errG := GetScriptFromURL(scriptURL)
+	if errG != nil {
+		return fmt.Errorf("unable to get script '%s': %s", scriptURL, errG)
+	}
+	defer stream.Close()
+
+	// check script signature
+	signature := make([]byte, 2)
+	n, errR := stream.Read(signature)
+	if n != 2 || errR != nil {
+		return fmt.Errorf("error reading script '%s' (n=%d)", scriptURL, n)
+	}
+	if string(signature) != "#!" {
+		return fmt.Errorf("script '%s': no shebang found, is it really a shell script?", scriptURL)
+	}
+
+	return nil
 }
 
 func vmConfigGetScript(tScript string, prefixURL string) (*VMConfigScript, error) {
@@ -98,25 +138,33 @@ func vmConfigGetScript(tScript string, prefixURL string) (*VMConfigScript, error
 		scriptURL = prefixURL + scriptName
 	}
 
-	// test readability
-	stream, errG := GetScriptFromURL(scriptURL)
-	if errG != nil {
-		return nil, fmt.Errorf("unable to get script '%s': %s", scriptURL, errG)
-	}
-	defer stream.Close()
-
-	// check script signature
-	signature := make([]byte, 2)
-	n, errR := stream.Read(signature)
-	if n != 2 || errR != nil {
-		return nil, fmt.Errorf("error reading script '%s' (n=%d)", scriptURL, n)
-	}
-	if string(signature) != "#!" {
-		return nil, fmt.Errorf("script '%s': no shebang found, is it really a shell script?", scriptURL)
+	if err := vmCheckScriptURL(scriptURL); err != nil {
+		return nil, err
 	}
 
 	script.ScriptURL = scriptURL
 	return script, nil
+}
+
+func vmConfigGetDoAction(tDoAction *tomlVMDoAction) (*VMDoAction, error) {
+	doAction := &VMDoAction{}
+
+	if tDoAction.Name == "" || !IsValidName(tDoAction.Name) {
+		return nil, fmt.Errorf("invalid action name '%s'", tDoAction.Name)
+	}
+
+	scriptURL := tDoAction.Script
+
+	if err := vmCheckScriptURL(scriptURL); err != nil {
+		return nil, err
+	}
+
+	doAction.Name = tDoAction.Name
+	doAction.ScriptURL = scriptURL
+	doAction.Description = tDoAction.Description
+	doAction.User = tDoAction.User
+
+	return doAction, nil
 }
 
 // NewVMConfigFromTomlReader cretes a new VMConfig instance from
@@ -307,6 +355,26 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 		vmConfig.Restore = append(vmConfig.Restore, script)
 	}
 	vmConfig.RestoreBackup = tConfig.RestoreBackup
+
+	var actions []*VMDoAction
+
+	for _, tDoAction := range tConfig.DoActions {
+		doAction, err := vmConfigGetDoAction(&tDoAction)
+		if err != nil {
+			return nil, err
+		}
+		actions = append(actions, doAction)
+	}
+
+	// build a map from the actions array
+	vmConfig.DoActions = make(map[string]*VMDoAction)
+	for _, action := range actions {
+		_, exist := vmConfig.DoActions[action.Name]
+		if exist {
+			return nil, fmt.Errorf("duplicate do-action '%s'", action.Name)
+		}
+		vmConfig.DoActions[action.Name] = action
+	}
 
 	return vmConfig, nil
 }

@@ -65,3 +65,10 @@ restore_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scr
 restore = [
     "app@wordpress.sh",
 ]
+
+
+[[do-actions]]
+name = "open"
+script = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/open.sh"
+user = "app"
+description = "Open VM first domain in the browser"
