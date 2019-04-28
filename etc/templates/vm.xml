@@ -24,8 +24,8 @@
     If your real CPU is old, you may get a 'CPU is incompatible with host CPU'
     error while creating a new VM.
 
-    An idea is to manualy create a VM with virt-install and look 
-    at /etc/libvirt/qemu definition file.
+    Use "virsh capabilities | grep model" for current CPU model as seen by
+    libvirt (warning: for live migration, model must match)
   -->
   <cpu mode='custom' match='exact' check='partial'>
     <!-- <model fallback='allow'>Haswell-noTSX</model> -->
