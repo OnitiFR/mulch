@@ -441,6 +441,16 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 		return fmt.Errorf("delete VM: %s", err)
 	}
 
+	lock := req.HTTP.FormValue("lock")
+	if lock == "true" {
+		err := server.VMLockUnlock(vmName, true, req.App.VMDB)
+		if err != nil {
+			req.Stream.Failuref("unable to lock '%s': %s", vmName, err)
+			return nil
+		}
+		req.Stream.Info("VM locked")
+	}
+
 	// commit
 	success = true
 
