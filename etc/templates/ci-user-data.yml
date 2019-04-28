@@ -71,6 +71,8 @@ write_files:
       export _VM_INIT_DATE='$_VM_INIT_DATE'
       export _KEY_DESC='$_KEY_DESC'
       export _BACKUP='/mnt/backup'
+      export _DOMAIN_FIRST='$_DOMAIN_FIRST'
+      export _DOMAINS='$_DOMAINS'
       $__EXTRA_ENV
     owner: root:root
     permissions: '0644'

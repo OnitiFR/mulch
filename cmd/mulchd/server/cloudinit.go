@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
@@ -48,6 +49,15 @@ func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
 		return errors.New("can't find SSH super user key pair")
 	}
 
+	var domains []string
+	var firstDomain string
+	for index, domain := range vm.Config.Domains {
+		if index == 0 {
+			firstDomain = domain.Name
+		}
+		domains = append(domains, domain.Name)
+	}
+
 	// 1 - create cidata file contents
 	metaData := cloudInitMetaData(vm.SecretUUID, vm.Config.Hostname)
 
@@ -62,6 +72,8 @@ func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
 	userDataVariables["_KEY_DESC"] = vm.AuthorKey
 	userDataVariables["_MULCH_VERSION"] = Version
 	userDataVariables["_VM_INIT_DATE"] = vm.InitDate.Format(time.RFC3339)
+	userDataVariables["_DOMAINS"] = strings.Join(domains, ",")
+	userDataVariables["_DOMAIN_FIRST"] = firstDomain
 	userDataVariables["__EXTRA_ENV"] = cloudInitExtraEnv(vm.Config.Env)
 
 	userData, err := cloudInitUserData(userDataTemplate, userDataVariables)
