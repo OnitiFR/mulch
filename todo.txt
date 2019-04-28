@@ -1,5 +1,4 @@
-- re-check/update install script / create distro-specific scripts?
-- fix phpMyAdmin errors (done in 4.8, let's wait - see if there's not a file access issue)
+- "do" actions (name, script, description)
 - start network and storage if down on startup (because of failed creation, for instance)
 - completion on seed (status)
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
