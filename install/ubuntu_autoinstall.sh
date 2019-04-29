@@ -31,12 +31,24 @@ sudo -iu mulch /home/mulch/go/src/github.com/OnitiFR/mulch/install.sh --etc /hom
 setcap 'cap_net_bind_service=+ep' /home/mulch/go/bin/mulch-proxy || exit $?
 cp mulchd.service mulch-proxy.service /etc/systemd/system/ || exit $?
 systemctl daemon-reload || exit $?
+
+echo "Enabling and testing services…"
 systemctl enable --now mulchd || exit $?
+sleep 10
 systemctl enable --now mulch-proxy || exit $?
-echo "Testing services…"
-sleep 5
-systemctl is-active --quiet mulchd || (echo "Error, see systemctl status mulchd" ; exit $?)
-systemctl is-active --quiet mulch-proxy || (echo "Error, see systemctl status mulch-proxy" ; exit $?)
+sleep 3
+
+systemctl is-active --quiet mulchd
+if [ $? -ne 0 ]; then
+    echo "Error, see systemctl status mulchd"
+    exit $?
+fi
+
+systemctl is-active --quiet mulch-proxy
+if [ $? -ne 0 ]; then
+    echo "Error, see systemctl status mulch-proxy"
+    exit $?
+fi
 
 echo "Installation completed."
 
