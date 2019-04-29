@@ -82,6 +82,8 @@ function parse_args() {
             echo "Sample install:"
             echo "mkdir -p ~/mulch/etc ~/mulch/data ~/mulch/storage"
             echo "./install.sh --etc ~/mulch/etc/ --data ~/mulch/data/ --storage ~/mulch/storage/"
+            echo ""
+            echo "For a quick demo install for Ubuntu, see install/ubuntu_autoinstall.sh"
             exit 1
             ;;
         *)

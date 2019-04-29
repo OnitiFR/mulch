@@ -295,3 +295,6 @@ As a user:
  - `./install.sh --help` (see sample install section)
 
 The install script will give you details about installation: destination, rights, services, …
+
+For a quick demo installation on a *blank* Ubuntu system, you may also use this standalone
+auto-install script : https://raw.github.com/OnitiFR/mulch/master/install/ubuntu_autoinstall.sh
