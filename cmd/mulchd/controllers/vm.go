@@ -342,6 +342,48 @@ func GetVMInfosController(req *server.Request) {
 	}
 }
 
+// GetVMDoActionsController return VM do-action list
+func GetVMDoActionsController(req *server.Request) {
+	req.Response.Header().Set("Content-Type", "application/json")
+
+	vmName := req.SubPath
+
+	if vmName == "" {
+		msg := fmt.Sprintf("no VM name given")
+		req.App.Log.Error(msg)
+		http.Error(req.Response, msg, 400)
+		return
+	}
+	vm, err := req.App.VMDB.GetByName(vmName)
+	if err != nil {
+		msg := fmt.Sprintf("VM '%s' not found", vmName)
+		req.App.Log.Error(msg)
+		http.Error(req.Response, msg, 404)
+		return
+	}
+
+	var retData common.APIVMDoListEntries
+
+	for _, action := range vm.Config.DoActions {
+		retData = append(retData, common.APIVMDoListEntry{
+			Name:        action.Name,
+			User:        action.User,
+			Description: action.Description,
+		})
+	}
+
+	sort.Slice(retData, func(i, j int) bool {
+		return retData[i].Name < retData[j].Name
+	})
+
+	enc := json.NewEncoder(req.Response)
+	err = enc.Encode(&retData)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+	}
+}
+
 // BackupVM launch the backup proccess
 func BackupVM(req *server.Request, vm *server.VM) (string, error) {
 	return server.VMBackup(vm.Config.Name, req.App, req.Stream, server.BackupCompressAllow)

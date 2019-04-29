@@ -191,7 +191,7 @@ func (call *APICall) Do() {
 		if err != nil {
 			log.Fatal(err)
 		}
-	case "text/plain":
+	case "text/plain", "text/plain; charset=utf-8":
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Fatal(err)
