@@ -32,6 +32,13 @@ setcap 'cap_net_bind_service=+ep' /home/mulch/go/bin/mulch-proxy || exit $?
 cp mulchd.service mulch-proxy.service /etc/systemd/system/ || exit $?
 systemctl daemon-reload || exit $?
 
+model=$(virsh capabilities | xmllint  --xpath 'string(/capabilities/host/cpu/model)' -)
+if [ $? -ne 0 ]; then
+    echo "Error detecting CPU capabilities"
+    exit $?
+fi
+sudo -iu mulch sed -i'' "s|<model fallback='allow'>.*</model>|<model fallback='allow'>$model</model>|" /home/mulch/mulch/etc/templates/vm.xml || exit $?
+
 echo "Enabling and testing services…"
 systemctl enable --now mulchd || exit $?
 sleep 10
@@ -52,8 +59,14 @@ fi
 
 echo "Installation completed."
 
-echo "Your API key:"
-grep Key /home/mulch/mulch/data/mulch-api-keys.db
+db="/home/mulch/mulch/data/mulch-api-keys.db"
+echo "Waiting for your API key…"
+while [ ! -f $db ]
+do
+  sleep 1
+done
+echo "Your API key is:"
+grep Key $db
 
 echo ""
 echo "Sample ~/.toml file:"
