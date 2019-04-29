@@ -2,8 +2,8 @@ package common
 
 import "time"
 
-// APIVmInfos expose a few VM informations
-type APIVmInfos struct {
+// APIVMInfos expose a few VM informations
+type APIVMInfos struct {
 	Name                string
 	Seed                string
 	CPUCount            int

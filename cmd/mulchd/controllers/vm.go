@@ -54,7 +54,7 @@ func ListVMsController(req *server.Request) {
 	req.Response.Header().Set("Content-Type", "application/json")
 	vmNames := req.App.VMDB.GetNames()
 
-	var retData common.APIVmListEntries
+	var retData common.APIVMListEntries
 	for _, vmName := range vmNames {
 		vm, err := req.App.VMDB.GetByName(vmName)
 		if err != nil {
@@ -91,7 +91,7 @@ func ListVMsController(req *server.Request) {
 		// 	// check if services are running? (SSH? port?)
 		// }
 
-		retData = append(retData, common.APIVmListEntry{
+		retData = append(retData, common.APIVMListEntry{
 			Name:      vmName,
 			LastIP:    vm.LastIP,
 			State:     server.LibvirtDomainStateToString(state),
@@ -316,7 +316,7 @@ func GetVMInfosController(req *server.Request) {
 		return
 	}
 
-	data := &common.APIVmInfos{
+	data := &common.APIVMInfos{
 		Name:                vm.Config.Name,
 		Seed:                vm.Config.Seed,
 		CPUCount:            vm.Config.CPUCount,

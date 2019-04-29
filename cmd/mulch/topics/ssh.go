@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var sshCmdVM *common.APIVmInfos
+var sshCmdVM *common.APIVMInfos
 var sshCmdUser string
 
 //  sshCmd represents the "ssh" command
@@ -39,7 +39,7 @@ See 'vm list' for VM Names.
 }
 
 func sshCmdInfoCB(reader io.Reader) {
-	var data common.APIVmInfos
+	var data common.APIVMInfos
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)
 	if err != nil {

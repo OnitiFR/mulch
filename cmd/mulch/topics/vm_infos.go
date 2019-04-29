@@ -28,7 +28,7 @@ See 'vm list' for VM Names.
 }
 
 func vmInfosDisplay(reader io.Reader) {
-	var data common.APIVmInfos
+	var data common.APIVMInfos
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)
 	if err != nil {

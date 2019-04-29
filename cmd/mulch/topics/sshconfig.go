@@ -14,7 +14,7 @@ import (
 
 type sshConfigCmdDataStruct struct {
 	hostname    string
-	vmList      *common.APIVmListEntries
+	vmList      *common.APIVMListEntries
 	privKeyPath string
 }
 
@@ -85,7 +85,7 @@ func sshConfigCmdPairCB(reader io.Reader) {
 }
 
 func sshConfigCmdVMListCB(reader io.Reader) {
-	var data common.APIVmListEntries
+	var data common.APIVMListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)
 	if err != nil {

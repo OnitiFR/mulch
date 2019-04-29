@@ -31,7 +31,7 @@ var vmListCmd = &cobra.Command{
 }
 
 func vmListCB(reader io.Reader) {
-	var data common.APIVmListEntries
+	var data common.APIVMListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)
 	if err != nil {

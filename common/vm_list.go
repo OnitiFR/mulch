@@ -1,10 +1,10 @@
 package common
 
-// APIVmListEntries is a list of entries for "vm list" command
-type APIVmListEntries []APIVmListEntry
+// APIVMListEntries is a list of entries for "vm list" command
+type APIVMListEntries []APIVMListEntry
 
-// APIVmListEntry is an entry for a VM
-type APIVmListEntry struct {
+// APIVMListEntry is an entry for a VM
+type APIVMListEntry struct {
 	Name      string
 	LastIP    string `json:"last_ip"`
 	State     string
