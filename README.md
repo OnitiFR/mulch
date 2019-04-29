@@ -296,5 +296,10 @@ As a user:
 
 The install script will give you details about installation: destination, rights, services, …
 
-For a quick demo installation on a *blank* Ubuntu system, you may also use this standalone
-auto-install script : https://raw.github.com/OnitiFR/mulch/master/install/ubuntu_autoinstall.sh
+For a quick demo installation on a **blank** Ubuntu system, you may also use this standalone
+auto-install script (with root privileges):
+```
+wget https://raw.github.com/OnitiFR/mulch/master/install/ubuntu_autoinstall.sh
+chmod +x ubuntu_autoinstall.sh
+./ubuntu_autoinstall.sh
+```
