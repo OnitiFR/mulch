@@ -26,7 +26,7 @@ echo "Compiling and installing mulch…"
 sudo -iu mulch go get -u github.com/OnitiFR/mulch/cmd/... || exit $?
 sudo -iu mulch mkdir -p /home/mulch/mulch/etc /home/mulch/mulch/data /home/mulch/mulch/storage || exit $?
 cd /home/mulch/go/src/github.com/OnitiFR/mulch || exit $?
-sudo -iu mulch ./install.sh --etc /home/mulch/mulch/etc/ --data /home/mulch/mulch/data/ --storage /home/mulch/mulch/storage/ || exit $?
+sudo -iu mulch /home/mulch/go/src/github.com/OnitiFR/mulch/install.sh --etc /home/mulch/mulch/etc/ --data /home/mulch/mulch/data/ --storage /home/mulch/mulch/storage/ || exit $?
 
 setcap 'cap_net_bind_service=+ep' /home/mulch/go/bin/mulch-proxy || exit $?
 cp mulchd.service mulch-proxy.service /etc/systemd/system/ || exit $?
