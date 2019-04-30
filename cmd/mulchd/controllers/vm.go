@@ -136,6 +136,9 @@ func ActionVMController(req *server.Request) {
 	action := req.HTTP.FormValue("action")
 	switch action {
 	case "lock":
+		if vm.Locked {
+			req.Stream.Warningf("'%s' already locked", vmName)
+		}
 		err := server.VMLockUnlock(vmName, true, req.App.VMDB)
 		if err != nil {
 			req.Stream.Failuref("unable to lock '%s': %s", vmName, err)
@@ -143,6 +146,9 @@ func ActionVMController(req *server.Request) {
 			req.Stream.Successf("'%s' is now locked", vmName)
 		}
 	case "unlock":
+		if vm.Locked == false {
+			req.Stream.Warningf("'%s' already unlocked", vmName)
+		}
 		err := server.VMLockUnlock(vmName, false, req.App.VMDB)
 		if err != nil {
 			req.Stream.Failuref("unable to unlock '%s': %s", vmName, err)
