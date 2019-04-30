@@ -10,6 +10,7 @@
 - check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
 - https API
 - challenge based auth?
+- rights / limited access
 - mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
 - support passphrase for Mulch SSH key?
 - move SSH Keys and MulchSuperUser to VM level?
