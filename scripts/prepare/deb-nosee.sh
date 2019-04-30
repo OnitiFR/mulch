@@ -3,8 +3,6 @@
 # -- Run with sudo privileges
 # For: Debian 9 / Ubuntu 18.10
 
-. /etc/mulch.env
-
 # add user
 sudo useradd -m -s /bin/bash nosee || exit $?
 
