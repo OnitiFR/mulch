@@ -73,3 +73,9 @@ name = "open"
 script = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/open.sh"
 user = "app"
 description = "Open VM first domain in the browser"
+
+[[do-actions]]
+name = "db"
+script = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/deb_db_phpmyadmin.sh"
+user = "admin"
+description = "Login to phpMyAdmin"
