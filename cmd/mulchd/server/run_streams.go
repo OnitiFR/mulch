@@ -74,10 +74,9 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) error {
 
 		scanner = bufio.NewScanner(task.ScriptReader)
 
-		// args := task.Probe.Arguments
+		args := task.Arguments
 		// params := make(map[string]interface{})
 		// args = StringExpandVariables(args, params)
-		args := ""
 
 		// cat is needed to "focus" stdin only on the child bash
 		// cat is "sudoed" so it can be killed by __kill_subshell bellow

@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
-	"strconv"
+	"strings"
 
 	"github.com/OnitiFR/mulch/common"
 	"github.com/olekukonko/tablewriter"
@@ -34,14 +34,12 @@ See [[do-actions]] in TOML description file.
 			call.JSONCallback = doListCB
 			call.Do()
 		} else {
+			arguments := strings.Join(args[2:], " ")
+
 			params := map[string]string{
 				"action":    "do",
 				"do_action": args[1],
-				// add other arguments
-			}
-			for index, value := range args[2:] {
-				key := "param" + strconv.Itoa(index)
-				params[key] = value
+				"arguments": arguments,
 			}
 
 			call := globalAPI.NewCall("POST", "/vm/"+args[0], params)

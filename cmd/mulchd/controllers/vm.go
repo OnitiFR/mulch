@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -165,8 +166,12 @@ func ActionVMController(req *server.Request) {
 			req.Stream.Successf("VM '%s' is now down", vmName)
 		}
 	case "exec":
-		// req.Stream.Infof("executing script (%s)", vmName)
 		err := ExecScriptVM(req, vm)
+		if err != nil {
+			req.Stream.Failuref("error: %s", err)
+		}
+	case "do":
+		err := DoActionVM(req, vm)
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
 		}
@@ -218,13 +223,13 @@ func ExecScriptVM(req *server.Request, vm *server.VM) error {
 	if err != nil {
 		return fmt.Errorf("'script' field: %s", err)
 	}
-	// TODO: check shebang? (and then rewind the reader ?)
 
-	// Some sort of "security" check (even if we're root on the VM…)
-	as := req.HTTP.FormValue("as")
-	if !server.IsValidName(as) {
-		return fmt.Errorf("'%s' is not a valid username", as)
+	running, _ := server.VMIsRunning(vm.Config.Name, req.App)
+	if running == false {
+		return errors.New("VM should be up and running")
 	}
+
+	as := req.HTTP.FormValue("as")
 
 	SSHSuperUserAuth, err := req.App.SSHPairDB.GetPublicKeyAuth(server.SSHSuperUserPair)
 	if err != nil {
@@ -256,6 +261,61 @@ func ExecScriptVM(req *server.Request, vm *server.VM) error {
 	}
 
 	req.Stream.Successf("script '%s' returned 0", header.Filename)
+	return nil
+}
+
+// DoActionVM will execute a "do action" in the VM
+func DoActionVM(req *server.Request, vm *server.VM) error {
+	actionName := req.HTTP.FormValue("do_action")
+	arguments := req.HTTP.FormValue("arguments")
+
+	action, exists := vm.Config.DoActions[actionName]
+	if !exists {
+		return fmt.Errorf("unable to find action '%s' for '%s'", actionName, vm.Config.Name)
+	}
+
+	running, _ := server.VMIsRunning(vm.Config.Name, req.App)
+	if running == false {
+		return errors.New("VM should be up and running")
+	}
+
+	stream, errG := server.GetScriptFromURL(action.ScriptURL)
+	if errG != nil {
+		return fmt.Errorf("unable to get script '%s': %s", action.ScriptURL, errG)
+	}
+	defer stream.Close()
+
+	SSHSuperUserAuth, err := req.App.SSHPairDB.GetPublicKeyAuth(server.SSHSuperUserPair)
+	if err != nil {
+		return err
+	}
+
+	run := &server.Run{
+		SSHConn: &server.SSHConnection{
+			User: vm.App.Config.MulchSuperUser,
+			Host: vm.LastIP,
+			Port: 22,
+			Auths: []ssh.AuthMethod{
+				SSHSuperUserAuth,
+			},
+			Log: req.Stream,
+		},
+		Tasks: []*server.RunTask{
+			&server.RunTask{
+				ScriptName:   path.Base(action.ScriptURL),
+				ScriptReader: stream,
+				As:           action.User,
+				Arguments:    arguments,
+			},
+		},
+		Log: req.Stream,
+	}
+	err = run.Go()
+	if err != nil {
+		return err
+	}
+
+	req.Stream.Success("script returned 0")
 	return nil
 }
 

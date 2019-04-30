@@ -11,6 +11,7 @@ type RunTask struct {
 	ScriptName   string
 	ScriptReader io.Reader
 	As           string
+	Arguments    string
 }
 
 // Run is a list of Tasks on Host, including task results
