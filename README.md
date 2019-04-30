@@ -296,6 +296,8 @@ As a user:
 
 The install script will give you details about installation: destination, rights, services, …
 
+
+### Quick demo install:
 For a quick demo installation on a **blank** Ubuntu system, you may also use this standalone
 auto-install script (with root privileges):
 ```
