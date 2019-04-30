@@ -1,4 +1,5 @@
-- "do" actions (name, script, description)
+- shortcut for "do action" (ex: mulch open xyz)
+- completion for "do" (and do shortcut?)
 - start network and storage if down on startup (because of failed creation, for instance)
 - completion on seed (status)
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
