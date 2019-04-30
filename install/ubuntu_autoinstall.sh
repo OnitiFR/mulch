@@ -39,6 +39,8 @@ if [ $? -ne 0 ]; then
 fi
 sudo -iu mulch sed -i'' "s|<model fallback='allow'>.*</model>|<model fallback='allow'>$model</model>|" /home/mulch/mulch/etc/templates/vm.xml || exit $?
 
+sudo -iu mulch sed -i'' "s|^proxy_acme_email =.*|proxy_acme_email = \"mulch-testing@oniti.fr\"|" /home/mulch/mulch/etc/mulchd.toml
+
 echo "Enabling and testing services…"
 systemctl enable --now mulchd || exit $?
 
@@ -81,3 +83,5 @@ echo '[[server]]'
 echo 'name = "demo"'
 echo 'url = "http://xxxxx:8585"'
 echo 'key = "xxxxx"'
+echo ""
+echo "See also https://letsencrypt.org/docs/staging-environment/ to add the 'fake LE root' certificate to your browser for HTTPS tests (and change proxy_acme_email with your own email address)"
