@@ -41,7 +41,14 @@ sudo -iu mulch sed -i'' "s|<model fallback='allow'>.*</model>|<model fallback='a
 
 echo "Enabling and testing services…"
 systemctl enable --now mulchd || exit $?
-sleep 10
+
+db="/home/mulch/mulch/data/mulch-proxy-domains.db"
+echo "Waiting for mulch-proxy-domains.db…"
+while [ ! -f $db ]; do
+  sleep 1
+done
+
+sleep 3
 systemctl enable --now mulch-proxy || exit $?
 sleep 3
 
@@ -61,8 +68,7 @@ echo "Installation completed."
 
 db="/home/mulch/mulch/data/mulch-api-keys.db"
 echo "Waiting for your API key…"
-while [ ! -f $db ]
-do
+while [ ! -f $db ]; do
   sleep 1
 done
 echo "Your API key is:"
