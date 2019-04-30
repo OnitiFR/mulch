@@ -281,8 +281,24 @@ func printJSONStream(body io.ReadCloser, call *APICall) error {
 			time = m.Time.Format("15:04:05") + " "
 		}
 		fmt.Printf("%s%s: %s\n", time, mtype, content)
+
+		err = dealWithSpecialMessages(content)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Client error: %s", err.Error())
+		}
 	}
 	return retError
+}
+
+func dealWithSpecialMessages(content string) error {
+	if isVar, value := stringIsVariable(content, "_MULCH_OPEN_URL"); isVar {
+		_, err := url.ParseRequestURI(value)
+		if err != nil {
+			return fmt.Errorf("Invalid URL: %s", value)
+		}
+		openbrowser(value)
+	}
+	return nil
 }
 
 func downloadFile(filename string, reader io.Reader) {
