@@ -48,6 +48,15 @@ __internal_list_actions() {
     fi
 }
 
+__internal_list_seeds() {
+    local mulch_output out
+    __mulch_get_server
+    if mulch_output=$(mulch --server $__mulch_current_server seed list --basic 2>/dev/null); then
+        out=($(echo "${mulch_output}"))
+        COMPREPLY=( $( compgen -W "${out[*]}" -- "$cur" ) )
+    fi
+}
+
 __internal_doaction() {
     if [ "$prev" =  "do" ]; then
         __internal_list_vms
@@ -83,6 +92,10 @@ __custom_func() {
             ;;
         mulch_do)
             __internal_doaction
+            return
+            ;;
+        mulch_seed_status)
+            __internal_list_seeds
             return
             ;;
         *)
