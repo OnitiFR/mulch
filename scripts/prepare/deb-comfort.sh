@@ -49,3 +49,12 @@ EOS
 
 # remove public access for home directories
 sudo chmod o= /home/*/ /etc/skel || exit $?
+
+# add a "open" action (see "do" command) if there's any domain defined
+if [ -n "$_DOMAIN_FIRST" ]; then
+    echo "_MULCH_ACTION_NAME=open"
+    echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/open.sh"
+    echo "_MULCH_ACTION_USER=app"
+    echo "_MULCH_ACTION_DESCRIPTION=Open VM first domain in the browser"
+    echo "_MULCH_ACTION=commit"
+fi
