@@ -22,7 +22,8 @@ type Run struct {
 	// StartTime    time.Time
 	// Duration     time.Duration
 	// DialDuration time.Duration
-	Log *Log
+	Log            *Log
+	StdoutCallback func(string)
 }
 
 // Go will execute the Run

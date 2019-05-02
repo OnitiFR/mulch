@@ -291,7 +291,7 @@ func printJSONStream(body io.ReadCloser, call *APICall) error {
 }
 
 func dealWithSpecialMessages(content string) error {
-	if isVar, value := stringIsVariable(content, "_MULCH_OPEN_URL"); isVar {
+	if isVar, value := common.StringIsVariable(content, "_MULCH_OPEN_URL"); isVar {
 		_, err := url.ParseRequestURI(value)
 		if err != nil {
 			return fmt.Errorf("Invalid URL: %s", value)

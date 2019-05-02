@@ -407,6 +407,10 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 		tasks = append(tasks, task)
 	}
 
+	// empty action
+	var vmDoAction VMDoAction
+	var errDoAction error
+
 	run := &Run{
 		SSHConn: &SSHConnection{
 			User: vm.App.Config.MulchSuperUser,
@@ -419,10 +423,65 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 		},
 		Tasks: tasks,
 		Log:   log,
+		StdoutCallback: func(line string) {
+			var isVar bool
+			var value string
+
+			if errDoAction != nil {
+				return
+			}
+
+			if isVar, value = common.StringIsVariable(line, "_MULCH_ACTION_NAME"); isVar {
+				vmDoAction.Name = value
+			}
+			if isVar, value = common.StringIsVariable(line, "_MULCH_ACTION_SCRIPT"); isVar {
+				stream, errG := GetScriptFromURL(value)
+				if errG != nil {
+					errDoAction = fmt.Errorf("unable to get script '%s': %s", value, errG)
+					return
+				}
+				stream.Close()
+
+				vmDoAction.ScriptURL = value
+			}
+			if isVar, value = common.StringIsVariable(line, "_MULCH_ACTION_USER"); isVar {
+				vmDoAction.User = value
+			}
+			if isVar, value = common.StringIsVariable(line, "_MULCH_ACTION_DESCRIPTION"); isVar {
+				vmDoAction.Description = value
+			}
+			if isVar, value = common.StringIsVariable(line, "_MULCH_ACTION"); isVar {
+				if value != "commit" {
+					errDoAction = fmt.Errorf("invalid verb '%s' (only 'commit' is supported)", value)
+					return
+				}
+				if vmDoAction.Name == "" || vmDoAction.User == "" || vmDoAction.ScriptURL == "" {
+					errDoAction = fmt.Errorf("invalid action, missing information (need name, user and script)")
+					return
+				}
+				_, exists := vm.Config.DoActions[vmDoAction.Name]
+				if exists {
+					errDoAction = fmt.Errorf("action '%s' already exists for this VM", vmDoAction.Name)
+					return
+				}
+
+				// add action
+				newAction := vmDoAction // duplicate
+				vm.Config.DoActions[vmDoAction.Name] = &newAction
+				log.Infof("action '%s' added", vmDoAction.Name)
+
+				// reset action object
+				vmDoAction = VMDoAction{}
+			}
+		},
 	}
 	err = run.Go()
 	if err != nil {
 		return nil, err
+	}
+
+	if errDoAction != nil {
+		return nil, fmt.Errorf("can't add do action: %s", errDoAction)
 	}
 
 	if vm.Config.RestoreBackup != "" {

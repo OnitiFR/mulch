@@ -66,16 +66,19 @@ restore = [
     "app@wordpress.sh",
 ]
 
-# Scripts for usual tasks of the VM
+# Scripts for usual tasks on the VM
 # example : mulch do myvm open
-[[do-actions]]
-name = "open"
-script = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/open.sh"
-user = "app"
-description = "Open VM first domain in the browser"
+#[[do-actions]]
+#name = "open"
+#script = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/open.sh"
+#user = "app"
+#description = "Open VM first domain in the browser"
 
-[[do-actions]]
-name = "db"
-script = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/deb_db_phpmyadmin.sh"
-user = "admin"
-description = "Login to phpMyAdmin"
+# Do actions can also be added via 'prepare' scripts
+# Print the following lines:
+# _MULCH_ACTION_NAME=open
+# _MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/open.sh
+# _MULCH_ACTION_USER=app
+# _MULCH_ACTION_DESCRIPTION=Open VM first domain in the browser
+# _MULCH_ACTION=commit
+# Multiple actions per script are allowed, just repeat the previous "block".

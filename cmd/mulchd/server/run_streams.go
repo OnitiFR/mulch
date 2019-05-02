@@ -36,6 +36,9 @@ func (run *Run) readStdout(std io.Reader, exitStatus chan int) error {
 			continue
 		} else {
 			run.Log.Info(text)
+			if run.StdoutCallback != nil {
+				run.StdoutCallback(text)
+			}
 		}
 
 		if err := scanner.Err(); err != nil {

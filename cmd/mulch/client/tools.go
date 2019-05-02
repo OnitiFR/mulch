@@ -5,7 +5,6 @@ import (
 	"log"
 	"os/exec"
 	"runtime"
-	"strings"
 )
 
 func openbrowser(url string) {
@@ -25,11 +24,4 @@ func openbrowser(url string) {
 		log.Fatal(err)
 	}
 
-}
-
-func stringIsVariable(s string, varName string) (bool, string) {
-	if !strings.HasPrefix(s, varName+"=") {
-		return false, ""
-	}
-	return true, s[len(varName)+1:]
 }

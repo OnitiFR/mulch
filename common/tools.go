@@ -99,3 +99,13 @@ func FileContains(filepath string, text string) (bool, error) {
 	contains := strings.Contains(string(data), text)
 	return contains, nil
 }
+
+// StringIsVariable returns true and the value if the string's like:
+// FOOBAR=dummy
+// (returns true and "dummy" if varName is "FOOBAR")
+func StringIsVariable(s string, varName string) (bool, string) {
+	if !strings.HasPrefix(s, varName+"=") {
+		return false, ""
+	}
+	return true, s[len(varName)+1:]
+}
