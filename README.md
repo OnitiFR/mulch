@@ -231,6 +231,8 @@ You still have the ability to use any libvirt tool, like virt-manager, to intera
 
 ![virt-manager](https://raw.github.com/OnitiFR/mulch/master/doc/images/virt-manager.png)
 
+You can also use 'do actions' for usual tasks. For instance `mulch do myvm db` will open your browser and automatically log you in phpMyAdmin (or any other db manager). And with included bash completion, such a command is just a matter of a few key presses !
+
 How do I install the client?
 ---
 Usual Go requirements : check you have go/golang installed and `~/go/bin/` is in your `PATH` (or copy/link binary in one of your `PATH` directories; use `sudo ln -s /home/$USER/go/bin/mulch /usr/local/bin` if you have no idea of how to do this).
