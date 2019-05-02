@@ -167,3 +167,12 @@ EOS
 
 echo "restart apache2"
 sudo systemctl restart httpd || exit $?
+
+# add a "open" action (see "do" command) if there's any domain defined
+if [ -n "$_DOMAIN_FIRST" ]; then
+    echo "_MULCH_ACTION_NAME=db"
+    echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/deb_db_phpmyadmin.sh"
+    echo "_MULCH_ACTION_USER=admin"
+    echo "_MULCH_ACTION_DESCRIPTION=Login to phpMyAdmin"
+    echo "_MULCH_ACTION=commit"
+fi
