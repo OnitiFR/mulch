@@ -5,6 +5,12 @@
 - 'vm infos' command: add domains ?
 - flag for compression / no compression on "vm backup"
 - (big!) faster rebuild
+    - branch "revisions"
+    - VMDatabase: GetNames, GetByName
+    - backward compat with existing installs! (or migration script)
+    # myvm-r1, myvm-r2, … (user see it, ssh myvm-rxxx will change ssh aliases all the time, …)
+    # GetByName("myvm", 1), but what about GetNames()? (return structs and not strings)
+        replace "vmName string" everywhere with a "vmName VMName" struct, mapping name+revision to libvirt name (linked to vmdb?)
 - check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
 - https API
 - challenge based auth?
