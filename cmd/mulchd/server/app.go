@@ -173,7 +173,7 @@ func (app *App) initSSHPairDB() error {
 }
 
 func (app *App) initVMDB() error {
-	dbPath := app.Config.DataPath + "/mulch-vm.db"
+	dbPath := app.Config.DataPath + "/mulch-vm-v2.db"
 	domainDbPath := app.Config.DataPath + "/mulch-proxy-domains.db"
 
 	vmdb, err := NewVMDatabase(dbPath, domainDbPath, app.sendProxyReloadSignal)

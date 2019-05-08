@@ -17,7 +17,7 @@ import (
 type VMConfig struct {
 	FileContent string // config file content
 
-	Name           string
+	NameTODOXF     string
 	Hostname       string
 	Timezone       string
 	AppUser        string
@@ -199,7 +199,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 	if tConfig.Name == "" || !IsValidName(tConfig.Name) {
 		return nil, fmt.Errorf("invalid VM name '%s'", tConfig.Name)
 	}
-	vmConfig.Name = tConfig.Name
+	vmConfig.NameTODOXF = tConfig.Name
 
 	vmConfig.Hostname = tConfig.Hostname
 	vmConfig.Timezone = tConfig.Timezone

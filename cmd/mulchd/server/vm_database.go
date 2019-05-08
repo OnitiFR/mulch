@@ -12,11 +12,19 @@ import (
 
 type updateCallback func()
 
+// VMDatabaseEntry is an entry in the DB: a name and a VM
+// Only one entry can be active per name
+type VMDatabaseEntry struct {
+	Name   *VMName
+	VM     *VM
+	Active bool
+}
+
 // VMDatabase describes a persistent DataBase of VMs structures
 type VMDatabase struct {
 	filename       string
 	domainFilename string
-	db             map[string]*VM
+	db             map[string]*VMDatabaseEntry
 	mutex          sync.Mutex
 	onUpdate       updateCallback
 }
@@ -26,7 +34,7 @@ func NewVMDatabase(filename string, domainFilename string, onUpdate updateCallba
 	vmdb := &VMDatabase{
 		filename:       filename,
 		domainFilename: domainFilename,
-		db:             make(map[string]*VM),
+		db:             make(map[string]*VMDatabaseEntry),
 		onUpdate:       onUpdate,
 	}
 
@@ -51,7 +59,11 @@ func NewVMDatabase(filename string, domainFilename string, onUpdate updateCallba
 func (vmdb *VMDatabase) genDomainsDB() error {
 	domains := make(map[string]*common.Domain)
 
-	for _, vm := range vmdb.db {
+	for _, entry := range vmdb.db {
+		if entry.Active == false {
+			continue
+		}
+		vm := entry.VM
 		for _, domain := range vm.Config.Domains {
 			if domain.RedirectTo == "" {
 				domain.DestinationHost = vm.LastIP
@@ -147,15 +159,15 @@ func (vmdb *VMDatabase) Update() error {
 }
 
 // Delete the VM from the database using its name
-func (vmdb *VMDatabase) Delete(name string) error {
+func (vmdb *VMDatabase) Delete(name *VMName) error {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
-	if _, exists := vmdb.db[name]; exists == false {
-		return fmt.Errorf("VM '%s' was not found in database", name)
+	if _, exists := vmdb.db[name.ID()]; exists == false {
+		return fmt.Errorf("VM '%s' was not found in database", name.ID())
 	}
 
-	delete(vmdb.db, name)
+	delete(vmdb.db, name.ID())
 
 	err := vmdb.save()
 	if err != nil {
@@ -166,15 +178,21 @@ func (vmdb *VMDatabase) Delete(name string) error {
 }
 
 // Add a new VM in the database
-func (vmdb *VMDatabase) Add(vm *VM) error {
+func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
-	if _, exists := vmdb.db[vm.Config.Name]; exists == true {
-		return fmt.Errorf("VM '%s' already exists in database", vm.Config.Name)
+	if _, exists := vmdb.db[name.ID()]; exists == true {
+		return fmt.Errorf("VM '%s' already exists in database", id)
 	}
 
-	vmdb.db[vm.Config.Name] = vm
+	entry := &VMDatabaseEntry{
+		Name:   name,
+		VM:     vm,
+		Active: active,
+	}
+
+	vmdb.db[name.ID()] = entry
 	err := vmdb.save()
 	if err != nil {
 		return err
