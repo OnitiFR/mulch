@@ -1,7 +1,7 @@
 - add author to backups
+- check if "redefine" command is blocked during rebuilds / WIP (is rebuild a WIP?)
 - shortcut for "do action" (ex: mulch open xyz) with completion ?
 - completion for "-r" on "vm create" command
-- start network and storage if down on startup (because of failed creation, for instance)
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
 - "Update available" alert on client (info from server?)
 - 'vm infos' command: add domains ?
