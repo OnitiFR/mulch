@@ -1,3 +1,4 @@
+- add author to backups
 - shortcut for "do action" (ex: mulch open xyz) with completion ?
 - completion for "-r" on "vm create" command
 - start network and storage if down on startup (because of failed creation, for instance)
