@@ -26,7 +26,7 @@ type AppConfig struct {
 	TempPath string
 
 	// prefix for VM names (in libvirt)
-	VMPrefix string
+	VMPrefixTODOXF string
 
 	// SSH proxy listen address
 	ProxyListenSSH string
@@ -103,7 +103,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	appConfig.StoragePath = tConfig.StoragePath
 	appConfig.DataPath = tConfig.DataPath
 	appConfig.TempPath = tConfig.TempPath
-	appConfig.VMPrefix = tConfig.VMPrefix
+	appConfig.VMPrefixTODOXF = tConfig.VMPrefix
 	appConfig.MulchSuperUser = tConfig.MulchSuperUser
 
 	appConfig.ProxyListenSSH = tConfig.ProxyListenSSH

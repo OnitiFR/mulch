@@ -58,12 +58,12 @@ func (vm *VM) SetOperation(op VMOperation) {
 }
 
 // CheckDomainsConflicts will detect if incoming domains conflicts with existing VMs
-// You can exclude a specific VM using its name (use empty string otherwise)
+// You can exclude a specific VM (every revisions) using its name (use empty string otherwise)
 func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM string) error {
 	domainMap := make(map[string]*VM)
 	vmNames := db.GetNames()
 	for _, vmName := range vmNames {
-		if excludeVM != "" && vmName == excludeVM {
+		if excludeVM != "" && vmName.Name == excludeVM {
 			continue
 		}
 
@@ -79,7 +79,7 @@ func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM s
 	for _, domain := range domains {
 		vm, exist := domainMap[domain.Name]
 		if exist == true {
-			return fmt.Errorf("vm '%s' already registered domain '%s'", vm.Config.Name, domain.Name)
+			return fmt.Errorf("vm '%s' already registered domain '%s'", vm.Config.NameTODOXF, domain.Name)
 		}
 	}
 
@@ -87,17 +87,17 @@ func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM s
 }
 
 // small helper to generate CloudImage name and main disk name
-func vmGenVolumesNames(vmName string) (string, string) {
-	ciName := "ci-" + vmName + ".img"
-	diskName := vmName + ".qcow2"
+func vmGenVolumesNames(vmName *VMName) (string, string) {
+	ciName := "ci-" + vmName.ID() + ".img"
+	diskName := vmName.ID() + ".qcow2"
 	return ciName, diskName
 }
 
 // NewVM builds a new virtual machine from config
 // TODO: this function is HUUUGE and needs to be splitted. It's tricky
 // because there's a "transaction" here.
-func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error) {
-	log.Infof("creating new VM '%s'", vmConfig.Name)
+func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log) (*VM, error) {
+	log.Infof("creating new VM '%s'", vmConfig.NameTODOXF)
 
 	commit := false
 
@@ -121,16 +121,15 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 		return nil, err
 	}
 
-	if !IsValidName(vmConfig.Name) {
-		return nil, fmt.Errorf("name '%s' is invalid (need only letters, numbers and underscore, do not start with a number)", vmConfig.Name)
+	if !IsValidName(vmConfig.NameTODOXF) {
+		return nil, fmt.Errorf("name '%s' is invalid (need only letters, numbers and underscore, do not start with a number)", vmConfig.NameTODOXF)
 	}
 
-	_, err = app.VMDB.GetByName(vmConfig.Name)
-	if err == nil {
-		return nil, fmt.Errorf("VM '%s' already exists in database", vmConfig.Name)
-	}
+	// find next revision
+	revision := app.VMDB.GetNextRevisionForName(vmConfig.NameTODOXF)
+	vmName := NewVMName(vmConfig.NameTODOXF, revision)
 
-	domainName := app.Config.VMPrefix + vmConfig.Name
+	domainName := vmName.LibvirtDomainName(app)
 
 	_, err = conn.LookupDomainByName(domainName)
 	if err == nil {
@@ -141,7 +140,7 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 		return nil, fmt.Errorf("Unexpected error: %s", err)
 	}
 
-	ciName, diskName := vmGenVolumesNames(vmConfig.Name)
+	ciName, diskName := vmGenVolumesNames(vmName)
 
 	seed, err := app.Seeder.GetByName(vmConfig.Seed)
 	if err != nil {
@@ -211,7 +210,7 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 	}
 
 	// 3 - Cloud-Init files
-	log.Infof("creating Cloud-Init image for '%s'", vmConfig.Name)
+	log.Infof("creating Cloud-Init image for %s", vmName)
 	err = CloudInitCreate(ciName, vm, app, log)
 	if err != nil {
 		return nil, err
@@ -298,7 +297,7 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 
 	defer func() {
 		if !commit {
-			log.Infof("rollback, deleting vm '%s'", vm.Config.Name)
+			log.Infof("rollback, deleting vm %s", vmName)
 			dom.Destroy() // stop (if needed)
 			errDef := dom.Undefine()
 			if errDef != nil {
@@ -489,13 +488,13 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 		log.Infof("restoring from '%s'", vm.Config.RestoreBackup)
 
 		// attach backup
-		err = VMAttachBackup(vm.Config.Name, backup.DiskName, app)
+		err = VMAttachBackup(vmName, backup.DiskName, app)
 		if err != nil {
 			return nil, err
 		}
 		defer func() {
 			// detach backup
-			err = VMDetachBackup(vm.Config.Name, app)
+			err = VMDetachBackup(vmName, app)
 			if err != nil {
 				log.Errorf("VMDetachBackup: %s", err)
 			} else {
@@ -602,7 +601,7 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 
 	// all is OK, commit (= no defer) and save vm to DB
 	log.Infof("saving VM in database")
-	err = app.VMDB.Add(vm)
+	err = app.VMDB.Add(vm, vmName, active)
 	if err != nil {
 		return nil, err
 	}
@@ -610,9 +609,9 @@ func NewVM(vmConfig *VMConfig, authorKey string, app *App, log *Log) (*VM, error
 	return vm, nil
 }
 
-// VMGetDiskName return VM (by its libvirt name) disk filename
-func VMGetDiskName(name string, app *App) (string, error) {
-	domain, err := app.Libvirt.GetDomainByName(name)
+// VMGetDiskName return VM's disk filename
+func VMGetDiskName(name *VMName, app *App) (string, error) {
+	domain, err := app.Libvirt.GetDomainByName(name.LibvirtDomainName(app))
 	if err != nil {
 		return "", err
 	}
@@ -698,15 +697,14 @@ func vmDeleteCloudInitDisk(dom *libvirt.Domain, pool *libvirt.StoragePool, conn 
 	return dom2, nil
 }
 
-// VMStopByName stops a VM using its (libvirt) name
-// and waits until the VM is shutoff. (or timeouts)
-func VMStopByName(name string, app *App, log *Log) error {
-	domain, err := app.Libvirt.GetDomainByName(name)
+// VMStopByName stops a VM using its name and waits until the VM is down. (or timeouts)
+func VMStopByName(name *VMName, app *App, log *Log) error {
+	domain, err := app.Libvirt.GetDomainByName(name.LibvirtDomainName(app))
 	if err != nil {
 		return err
 	}
 	if domain == nil {
-		return fmt.Errorf("VM '%s': does not exists in libvirt", name)
+		return fmt.Errorf("VM %s: does not exists in libvirt", name)
 	}
 	defer domain.Free()
 
@@ -748,15 +746,15 @@ func VMStopByName(name string, app *App, log *Log) error {
 	return nil
 }
 
-// VMStartByName starts a VM using its (libvirt) name
+// VMStartByName starts a VM using its name
 // and waits until the VM phones home. (or timeouts)
-func VMStartByName(name string, secretUUID string, app *App, log *Log) error {
-	domain, err := app.Libvirt.GetDomainByName(name)
+func VMStartByName(name *VMName, secretUUID string, app *App, log *Log) error {
+	domain, err := app.Libvirt.GetDomainByName(name.LibvirtDomainName(app))
 	if err != nil {
 		return err
 	}
 	if domain == nil {
-		return fmt.Errorf("VM '%s': does not exists in libvirt", name)
+		return fmt.Errorf("VM %s: does not exists in libvirt", name)
 	}
 	defer domain.Free()
 
@@ -793,7 +791,7 @@ func VMStartByName(name string, secretUUID string, app *App, log *Log) error {
 }
 
 // VMLockUnlock will lock or unlock a VM, preventing it from deletion
-func VMLockUnlock(vmName string, locked bool, vmdb *VMDatabase) error {
+func VMLockUnlock(vmName *VMName, locked bool, vmdb *VMDatabase) error {
 	vm, err := vmdb.GetByName(vmName)
 	if err != nil {
 		return err
@@ -805,7 +803,7 @@ func VMLockUnlock(vmName string, locked bool, vmdb *VMDatabase) error {
 }
 
 // VMDelete will delete a VM (using its name) and linked storages.
-func VMDelete(vmName string, app *App, log *Log) error {
+func VMDelete(vmName *VMName, app *App, log *Log) error {
 	vm, err := app.VMDB.GetByName(vmName)
 	if err != nil {
 		return err
@@ -815,13 +813,13 @@ func VMDelete(vmName string, app *App, log *Log) error {
 		return errors.New("VM is locked")
 	}
 
-	libvirtName := vm.App.Config.VMPrefix + vmName
+	libvirtName := vmName.LibvirtDomainName(app)
 	domain, err := app.Libvirt.GetDomainByName(libvirtName)
 	if err != nil {
 		return err
 	}
 	if domain == nil {
-		return fmt.Errorf("VM '%s': does not exists in libvirt", libvirtName)
+		return fmt.Errorf("VM %s: does not exists in libvirt", libvirtName)
 	}
 	defer domain.Free()
 
@@ -918,13 +916,13 @@ func VMDelete(vmName string, app *App, log *Log) error {
 }
 
 // VMIsRunning returns true if VM is up and running
-func VMIsRunning(vmName string, app *App) (bool, error) {
-	dom, err := app.Libvirt.GetDomainByName(app.Config.VMPrefix + vmName)
+func VMIsRunning(vmName *VMName, app *App) (bool, error) {
+	dom, err := app.Libvirt.GetDomainByName(vmName.LibvirtDomainName(app))
 	if err != nil {
 		return false, err
 	}
 	if dom == nil {
-		return false, fmt.Errorf("can't find domain '%s'", vmName)
+		return false, fmt.Errorf("can't find domain for %s", vmName)
 	}
 	defer dom.Free()
 
@@ -940,13 +938,13 @@ func VMIsRunning(vmName string, app *App) (bool, error) {
 
 // VMCreateBackupDisk create a new backup volume
 // TODO: make this function transactional: remove disk if we fail in last steps
-func VMCreateBackupDisk(vmName string, volName string, volSize uint64, app *App, log *Log) error {
-	dom, err := app.Libvirt.GetDomainByName(app.Config.VMPrefix + vmName)
+func VMCreateBackupDisk(vmName *VMName, volName string, volSize uint64, app *App, log *Log) error {
+	dom, err := app.Libvirt.GetDomainByName(vmName.LibvirtDomainName(app))
 	if err != nil {
 		return err
 	}
 	if dom == nil {
-		return fmt.Errorf("can't find domain '%s'", vmName)
+		return fmt.Errorf("can't find domain for %s", vmName)
 	}
 	defer dom.Free()
 
@@ -970,13 +968,13 @@ func VMCreateBackupDisk(vmName string, volName string, volSize uint64, app *App,
 }
 
 // VMAttachBackup attach a backup volume to the VM
-func VMAttachBackup(vmName string, volName string, app *App) error {
-	dom, err := app.Libvirt.GetDomainByName(app.Config.VMPrefix + vmName)
+func VMAttachBackup(vmName *VMName, volName string, app *App) error {
+	dom, err := app.Libvirt.GetDomainByName(vmName.LibvirtDomainName(app))
 	if err != nil {
 		return err
 	}
 	if dom == nil {
-		return fmt.Errorf("can't find domain '%s'", vmName)
+		return fmt.Errorf("can't find domain for %s", vmName)
 	}
 	defer dom.Free()
 
@@ -1008,13 +1006,13 @@ func VMAttachBackup(vmName string, volName string, app *App) error {
 }
 
 // VMDetachBackup detach the backup volume from the VM
-func VMDetachBackup(vmName string, app *App) error {
-	dom, err := app.Libvirt.GetDomainByName(app.Config.VMPrefix + vmName)
+func VMDetachBackup(vmName *VMName, app *App) error {
+	dom, err := app.Libvirt.GetDomainByName(vmName.LibvirtDomainName(app))
 	if err != nil {
 		return err
 	}
 	if dom == nil {
-		return fmt.Errorf("can't find domain '%s'", vmName)
+		return fmt.Errorf("can't find domain for %s", vmName)
 	}
 	defer dom.Free()
 
@@ -1057,7 +1055,7 @@ func VMDetachBackup(vmName string, app *App) error {
 }
 
 // VMBackup launch the backup proccess (returns backup filename)
-func VMBackup(vmName string, app *App, log *Log, compressAllow bool) (string, error) {
+func VMBackup(vmName *VMName, app *App, log *Log, compressAllow bool) (string, error) {
 	vm, err := app.VMDB.GetByName(vmName)
 	if err != nil {
 		return "", err
@@ -1070,7 +1068,7 @@ func VMBackup(vmName string, app *App, log *Log, compressAllow bool) (string, er
 	vm.SetOperation(VMOperationBackup)
 	defer vm.SetOperation(VMOperationNone)
 
-	running, _ := VMIsRunning(vm.Config.Name, app)
+	running, _ := VMIsRunning(vmName, app)
 	if running == false {
 		return "", errors.New("VM should be up and running to do a backup")
 	}
@@ -1080,7 +1078,7 @@ func VMBackup(vmName string, app *App, log *Log, compressAllow bool) (string, er
 	}
 
 	volName := fmt.Sprintf("%s-backup-%s.qcow2",
-		vm.Config.Name,
+		vmName.ID(),
 		time.Now().Format("20060102-150405"),
 	)
 
@@ -1093,13 +1091,13 @@ func VMBackup(vmName string, app *App, log *Log, compressAllow bool) (string, er
 		return "", err
 	}
 
-	err = VMCreateBackupDisk(vm.Config.Name, volName, vm.Config.BackupDiskSize, app, log)
+	err = VMCreateBackupDisk(vmName, volName, vm.Config.BackupDiskSize, app, log)
 	if err != nil {
 		return "", err
 	}
 
 	// NOTE: this attachement is transient
-	err = VMAttachBackup(vm.Config.Name, volName, app)
+	err = VMAttachBackup(vmName, volName, app)
 	if err != nil {
 		return "", err
 	}
@@ -1110,7 +1108,7 @@ func VMBackup(vmName string, app *App, log *Log, compressAllow bool) (string, er
 	defer func() {
 		if commit == false {
 			log.Info("rollback backup disk creation")
-			errDet := VMDetachBackup(vm.Config.Name, app)
+			errDet := VMDetachBackup(vmName, app)
 			if errDet != nil {
 				log.Errorf("failed trying VMDetachBackup: %s (%s)", errDet, volName)
 				// no return, it may be already detached
@@ -1192,7 +1190,7 @@ func VMBackup(vmName string, app *App, log *Log, compressAllow bool) (string, er
 
 	// detach backup disk
 	// TODO: check if this operation is synchronous for QEMU!
-	err = VMDetachBackup(vm.Config.Name, app)
+	err = VMDetachBackup(vmName, app)
 	if err != nil {
 		return "", err
 	}
@@ -1223,9 +1221,8 @@ func VMBackup(vmName string, app *App, log *Log, compressAllow bool) (string, er
 }
 
 // VMRename will rename the VM in Mulch and in libvirt (including disks)
-// Names are Mulch names (not libvirt ones)
 // TODO: try to make some sort of transaction here
-func VMRename(orgVMName string, newVMName string, app *App, log *Log) error {
+func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 	conn, err := app.Libvirt.GetConnection()
 	if err != nil {
 		return err
@@ -1234,6 +1231,10 @@ func VMRename(orgVMName string, newVMName string, app *App, log *Log) error {
 	vm, err := app.VMDB.GetByName(orgVMName)
 	if err != nil {
 		return err
+	}
+
+	if found, _ := app.VMDB.GetByName(newVMName); found != nil {
+		return fmt.Errorf("VM %s already exists", newVMName)
 	}
 
 	running, _ := VMIsRunning(orgVMName, app)
@@ -1245,15 +1246,15 @@ func VMRename(orgVMName string, newVMName string, app *App, log *Log) error {
 		return fmt.Errorf("VM have a work in progress (%s)", string(vm.WIP))
 	}
 
-	orgLibvirtName := vm.App.Config.VMPrefix + orgVMName
-	newLibvirtName := app.Config.VMPrefix + newVMName
+	orgLibvirtName := orgVMName.LibvirtDomainName(app)
+	newLibvirtName := newVMName.LibvirtDomainName(app)
 
 	domain, err := app.Libvirt.GetDomainByName(orgLibvirtName)
 	if err != nil {
 		return err
 	}
 	if domain == nil {
-		return fmt.Errorf("VM '%s': does not exists in libvirt", orgLibvirtName)
+		return fmt.Errorf("VM %s: does not exists in libvirt", orgLibvirtName)
 	}
 	defer domain.Free()
 
@@ -1340,15 +1341,20 @@ func VMRename(orgVMName string, newVMName string, app *App, log *Log) error {
 	}
 	defer dom2.Free()
 
+	active, err := app.VMDB.IsVMActive(orgVMName)
+	if err != nil {
+		return err
+	}
+
 	// rename in app DB
 	err = app.VMDB.Delete(orgVMName)
 	if err != nil {
 		return err
 	}
 
-	vm.Config.Name = newVMName
+	vm.Config.NameTODOXF = newVMName.Name
 
-	err = app.VMDB.Add(vm)
+	err = app.VMDB.Add(vm, newVMName, active)
 	if err != nil {
 		return err
 	}

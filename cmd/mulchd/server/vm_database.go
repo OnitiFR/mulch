@@ -183,7 +183,16 @@ func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 	defer vmdb.mutex.Unlock()
 
 	if _, exists := vmdb.db[name.ID()]; exists == true {
-		return fmt.Errorf("VM '%s' already exists in database", id)
+		return fmt.Errorf("VM %s already exists in database", name)
+	}
+
+	if active {
+		// set any other instance as inactive
+		for _, entry := range vmdb.db {
+			if entry.Name.Name == name.Name {
+				entry.Active = false
+			}
+		}
 	}
 
 	entry := &VMDatabaseEntry{
@@ -201,27 +210,27 @@ func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 }
 
 // GetNames of all VMs in the database
-func (vmdb *VMDatabase) GetNames() []string {
+func (vmdb *VMDatabase) GetNames() []*VMName {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
-	keys := make([]string, 0, len(vmdb.db))
-	for key := range vmdb.db {
-		keys = append(keys, key)
+	names := make([]*VMName, 0, len(vmdb.db))
+	for _, entry := range vmdb.db {
+		names = append(names, entry.Name)
 	}
-	return keys
+	return names
 }
 
 // GetByName lookups a VM by its name
-func (vmdb *VMDatabase) GetByName(name string) (*VM, error) {
+func (vmdb *VMDatabase) GetByName(name *VMName) (*VM, error) {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
-	vm, exists := vmdb.db[name]
+	vm, exists := vmdb.db[name.ID()]
 	if !exists {
-		return nil, fmt.Errorf("VM '%s' not found in database", name)
+		return nil, fmt.Errorf("VM %s not found in database", name)
 	}
-	return vm, nil
+	return vm.VM, nil
 }
 
 // GetBySecretUUID lookups a VM by its secretUUID
@@ -234,9 +243,9 @@ func (vmdb *VMDatabase) GetBySecretUUID(uuid string) (*VM, error) {
 		anon = uuid[:4] + "…"
 	}
 
-	for _, vm := range vmdb.db {
-		if vm.SecretUUID == uuid {
-			return vm, nil
+	for _, entry := range vmdb.db {
+		if entry.VM.SecretUUID == uuid {
+			return entry.VM, nil
 		}
 	}
 	return nil, fmt.Errorf("UUID '%s' was not found in database", anon)
@@ -248,4 +257,31 @@ func (vmdb *VMDatabase) Count() int {
 	defer vmdb.mutex.Unlock()
 
 	return len(vmdb.db)
+}
+
+// GetNextRevisionForName returns the next revision for a VM name
+func (vmdb *VMDatabase) GetNextRevisionForName(name string) int {
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
+	maxRevision := -1
+	for _, entry := range vmdb.db {
+		if entry.Name.Name == name && entry.Name.Revision > maxRevision {
+			maxRevision = entry.Name.Revision
+		}
+	}
+
+	return maxRevision + 1 // will return 0 if no previous revision was found
+}
+
+// IsVMActive returns true if VM is active
+func (vmdb *VMDatabase) IsVMActive(name *VMName) (bool, error) {
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
+	entry, exists := vmdb.db[name.ID()]
+	if !exists {
+		return false, fmt.Errorf("VM %s not found in database", name)
+	}
+	return entry.Active, nil
 }
