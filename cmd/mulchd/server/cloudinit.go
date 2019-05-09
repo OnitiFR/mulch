@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,8 +38,8 @@ func cloudInitExtraEnv(envMap map[string]string) string {
 	return res
 }
 
-// CloudInitCreate will create (and upload ?) the CloudInit image
-func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
+// CloudInitCreate will create (and upload) the CloudInit image
+func CloudInitCreate(volumeName string, vmName *VMName, vm *VM, app *App, log *Log) error {
 	volTemplate := app.Config.GetTemplateFilepath("volume.xml")
 	userDataTemplate := app.Config.GetTemplateFilepath("ci-user-data.yml")
 
@@ -68,7 +69,8 @@ func CloudInitCreate(volumeName string, vm *VM, app *App, log *Log) error {
 	userDataVariables["_MULCH_SUPER_USER"] = app.Config.MulchSuperUser
 	userDataVariables["_TIMEZONE"] = vm.Config.Timezone
 	userDataVariables["_APP_USER"] = vm.Config.AppUser
-	userDataVariables["_VM_NAME"] = vm.Config.Name
+	userDataVariables["_VM_NAME"] = vmName.Name
+	userDataVariables["_VM_REVISION"] = strconv.Itoa(vmName.Revision)
 	userDataVariables["_KEY_DESC"] = vm.AuthorKey
 	userDataVariables["_MULCH_VERSION"] = Version
 	userDataVariables["_VM_INIT_DATE"] = vm.InitDate.Format(time.RFC3339)

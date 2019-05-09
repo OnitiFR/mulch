@@ -55,7 +55,8 @@ func NewVMDatabase(filename string, domainFilename string, onUpdate updateCallba
 	return vmdb, nil
 }
 
-// build domain database, updated with each vm.LastIP
+// build domain database, updated with each vm.LastIP (and name, as it's not
+// available at config file reading time)
 func (vmdb *VMDatabase) genDomainsDB() error {
 	domains := make(map[string]*common.Domain)
 
@@ -65,6 +66,7 @@ func (vmdb *VMDatabase) genDomainsDB() error {
 		}
 		vm := entry.VM
 		for _, domain := range vm.Config.Domains {
+			domain.VMName = entry.Name.ID()
 			if domain.RedirectTo == "" {
 				domain.DestinationHost = vm.LastIP
 			}
@@ -233,6 +235,27 @@ func (vmdb *VMDatabase) GetByName(name *VMName) (*VM, error) {
 	return vm.VM, nil
 }
 
+// GetActiveByName return the active VM with the specified name
+func (vmdb *VMDatabase) GetActiveByName(name string) (*VM, error) {
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
+	maxRevision := -1
+	for _, entry := range vmdb.db {
+		if entry.Name.Name == name && entry.Name.Revision > maxRevision {
+			maxRevision = entry.Name.Revision
+		}
+	}
+
+	if maxRevision == -1 {
+		return nil, fmt.Errorf("VM %s not found in database", name)
+	}
+
+	vmName := NewVMName(name, maxRevision)
+	entry := vmdb.db[vmName.ID()]
+	return entry.VM, nil
+}
+
 // GetBySecretUUID lookups a VM by its secretUUID
 func (vmdb *VMDatabase) GetBySecretUUID(uuid string) (*VM, error) {
 	vmdb.mutex.Lock()
@@ -284,4 +307,16 @@ func (vmdb *VMDatabase) IsVMActive(name *VMName) (bool, error) {
 		return false, fmt.Errorf("VM %s not found in database", name)
 	}
 	return entry.Active, nil
+}
+
+// for special server internal purposes (ex: vm state database)
+func (vmdb *VMDatabase) getEntryByID(id string) (*VMDatabaseEntry, error) {
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
+	entry, exists := vmdb.db[id]
+	if !exists {
+		return nil, fmt.Errorf("VM id '%s' not found in database", id)
+	}
+	return entry, nil
 }

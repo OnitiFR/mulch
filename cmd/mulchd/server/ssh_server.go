@@ -78,7 +78,7 @@ func NewSSHProxyServer(app *App) error {
 				return nil, fmt.Errorf("no allowed public key found (%s)", c.RemoteAddr())
 			}
 
-			vm, errG := app.VMDB.GetByName(vmName)
+			vm, errG := app.VMDB.GetActiveByName(vmName)
 			if errG != nil {
 				return nil, errG
 			}

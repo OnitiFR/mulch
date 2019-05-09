@@ -186,7 +186,7 @@ func (app *App) initVMDB() error {
 	// + "rebuild" parts of the VM in the DB (ex : App)
 	vmNames := app.VMDB.GetNames()
 	for _, name := range vmNames {
-		domainName := app.Config.VMPrefix + name
+		domainName := name.LibvirtDomainName(app)
 		dom, err := app.Libvirt.GetDomainByName(domainName)
 		if err != nil {
 			return err
@@ -425,7 +425,7 @@ func (app *App) Status() (*common.APIStatus, error) {
 			return nil, fmt.Errorf("VM '%s': %s", vmName, err)
 		}
 
-		libvirtName := app.Config.VMPrefix + vmName
+		libvirtName := vmName.LibvirtDomainName(app)
 		domain, err := app.Libvirt.GetDomainByName(libvirtName)
 		if err != nil {
 			return nil, err
@@ -450,7 +450,7 @@ func (app *App) Status() (*common.APIStatus, error) {
 			vmActiveMem += int(vm.Config.RAMSize / 1024 / 1024)
 		}
 
-		diskName, err := VMGetDiskName(libvirtName, app)
+		diskName, err := VMGetDiskName(vmName, app)
 		if err != nil {
 			return nil, fmt.Errorf("VM '%s': %s", vmName, err)
 		}

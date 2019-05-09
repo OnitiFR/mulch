@@ -251,7 +251,6 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 		}
 		domain := common.Domain{
 			Name:            hostName,
-			VMName:          vmConfig.Name,
 			DestinationPort: portNum,
 			RedirectToHTTPS: tConfig.RedirectToHTTPS,
 		}
@@ -280,7 +279,6 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 
 		domain := common.Domain{
 			Name:       from,
-			VMName:     vmConfig.Name,
 			RedirectTo: dest,
 		}
 		vmConfig.Domains = append(vmConfig.Domains, &domain)

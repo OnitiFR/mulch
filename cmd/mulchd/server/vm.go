@@ -211,7 +211,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 
 	// 3 - Cloud-Init files
 	log.Infof("creating Cloud-Init image for %s", vmName)
-	err = CloudInitCreate(ciName, vm, app, log)
+	err = CloudInitCreate(ciName, vmName, vm, app, log)
 	if err != nil {
 		return nil, err
 	}

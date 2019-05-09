@@ -97,7 +97,7 @@ func (vmsdb *VMStateDatabase) Update() error {
 		if state == true {
 			sState = VMStateUp
 		}
-		newStates[vmName] = sState
+		newStates[vmName.ID()] = sState
 	}
 
 	// compare states with previous ones
@@ -129,25 +129,24 @@ func (vmsdb *VMStateDatabase) restoreStates() {
 	coldStates := vmsdb.db
 	var wg sync.WaitGroup
 
-	for vmName, coldState := range coldStates {
-		hotState, err := VMIsRunning(vmName, vmsdb.app)
-		if err != nil {
-			vmsdb.app.Log.Error(err.Error())
-			continue
-		}
-		vm, err := vmsdb.app.VMDB.GetByName(vmName)
+	for id, coldState := range coldStates {
+		entry, err := vmsdb.app.VMDB.getEntryByID(id)
 		if err != nil {
 			vmsdb.app.Log.Error(err.Error())
 			continue
 		}
 
-		libvirtVMName := vmsdb.app.Config.VMPrefix + vmName
+		hotState, err := VMIsRunning(entry.Name, vmsdb.app)
+		if err != nil {
+			vmsdb.app.Log.Error(err.Error())
+			continue
+		}
 
 		if coldState == VMStateUp && hotState == false {
-			vmsdb.app.Log.Infof("restore state: starting %s", vmName)
+			vmsdb.app.Log.Infof("restore state: starting %s", entry.Name)
 			wg.Add(1)
 			go func() {
-				err := VMStartByName(libvirtVMName, vm.SecretUUID, vmsdb.app, vmsdb.app.Log)
+				err := VMStartByName(entry.Name, entry.VM.SecretUUID, vmsdb.app, vmsdb.app.Log)
 				if err != nil {
 					vmsdb.app.Log.Error(err.Error())
 				}
@@ -156,9 +155,9 @@ func (vmsdb *VMStateDatabase) restoreStates() {
 		}
 		if coldState == VMStateDown && hotState == true {
 			wg.Add(1)
-			vmsdb.app.Log.Infof("restore state: stopping %s", vmName)
+			vmsdb.app.Log.Infof("restore state: stopping %s", entry.Name)
 			go func() {
-				err := VMStopByName(libvirtVMName, vmsdb.app, vmsdb.app.Log)
+				err := VMStopByName(entry.Name, vmsdb.app, vmsdb.app.Log)
 				if err != nil {
 					vmsdb.app.Log.Error(err.Error())
 				}
