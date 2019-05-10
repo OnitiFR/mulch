@@ -1355,10 +1355,8 @@ func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 	// the Delete() may have set a previous WM as active. It's bad
 	// because the Add() below will fail is active is true.
 	if active {
-		err := app.VMDB.SetActiveRevision(orgVMName.Name, RevisionNone)
-		if err != nil {
-			return err
-		}
+		// an error is non-fatal for us (no previous active VM, for instance)
+		app.VMDB.SetActiveRevision(orgVMName.Name, RevisionNone)
 	}
 
 	vm.Config.Name = newVMName.Name
