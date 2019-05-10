@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -9,6 +10,9 @@ import (
 
 	"github.com/OnitiFR/mulch/common"
 )
+
+// RevisionNone means… none (see SetActiveRevision for instance)
+const RevisionNone = -1
 
 type updateCallback func()
 
@@ -165,8 +169,26 @@ func (vmdb *VMDatabase) Delete(name *VMName) error {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
-	if _, exists := vmdb.db[name.ID()]; exists == false {
+	entryToDelete, exists := vmdb.db[name.ID()]
+	if exists == false {
 		return fmt.Errorf("VM '%s' was not found in database", name.ID())
+	}
+
+	if entryToDelete.Active {
+		// set "previous" instance active (if any)
+		var previous *VMDatabaseEntry
+		maxRevision := -1
+		for _, entry := range vmdb.db {
+			if entry.Name.Name == entryToDelete.Name.Name &&
+				entry.Name.Revision != entryToDelete.Name.Revision &&
+				entry.Name.Revision > maxRevision {
+				maxRevision = entry.Name.Revision
+				previous = entry
+			}
+		}
+		if previous != nil {
+			previous.Active = true
+		}
 	}
 
 	delete(vmdb.db, name.ID())
@@ -235,24 +257,33 @@ func (vmdb *VMDatabase) GetByName(name *VMName) (*VM, error) {
 	return vm.VM, nil
 }
 
-// GetActiveByName return the active VM with the specified name
-func (vmdb *VMDatabase) GetActiveByName(name string) (*VM, error) {
+// GetActiveEntryByName return the active VM entry with the specified name
+func (vmdb *VMDatabase) GetActiveEntryByName(name string) (*VMDatabaseEntry, error) {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
 	maxRevision := -1
 	for _, entry := range vmdb.db {
-		if entry.Name.Name == name && entry.Name.Revision > maxRevision {
+		if entry.Name.Name == name && entry.Name.Revision > maxRevision && entry.Active {
 			maxRevision = entry.Name.Revision
 		}
 	}
 
 	if maxRevision == -1 {
-		return nil, fmt.Errorf("VM %s not found in database", name)
+		return nil, fmt.Errorf("active VM %s not found in database", name)
 	}
 
 	vmName := NewVMName(name, maxRevision)
 	entry := vmdb.db[vmName.ID()]
+	return entry, nil
+}
+
+// GetActiveByName return the active VM with the specified name
+func (vmdb *VMDatabase) GetActiveByName(name string) (*VM, error) {
+	entry, err := vmdb.GetActiveEntryByName(name)
+	if err != nil {
+		return nil, err
+	}
 	return entry.VM, nil
 }
 
@@ -319,4 +350,66 @@ func (vmdb *VMDatabase) getEntryByID(id string) (*VMDatabaseEntry, error) {
 		return nil, fmt.Errorf("VM id '%s' not found in database", id)
 	}
 	return entry, nil
+}
+
+// GetEntryByVM lookups a VM entry by it's VM pointer
+func (vmdb *VMDatabase) GetEntryByVM(vm *VM) (*VMDatabaseEntry, error) {
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
+	for _, entry := range vmdb.db {
+		if entry.VM == vm {
+			return entry, nil
+		}
+	}
+	return nil, errors.New("can't find VM by address")
+}
+
+// GetCountForName returns the amount of instances with the specified name
+// (so 0 means none)
+func (vmdb *VMDatabase) GetCountForName(name string) int {
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
+	count := 0
+	for _, entry := range vmdb.db {
+		if entry.Name.Name == name {
+			count++
+		}
+	}
+	return count
+}
+
+// SetActiveRevision change the active instance (RevisionNone is allowed)
+func (vmdb *VMDatabase) SetActiveRevision(name string, revision int) error {
+	// sanity checks (out of lock!)
+	if revision == RevisionNone {
+		if vmdb.GetCountForName(name) == 0 {
+			return fmt.Errorf("no VM '%s' found", name)
+		}
+	} else {
+		vmName := NewVMName(name, revision)
+		if _, err := vmdb.GetByName(vmName); err != nil {
+			return err
+		}
+	}
+
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
+	for _, entry := range vmdb.db {
+		if entry.Name.Name == name {
+			if entry.Name.Revision == revision {
+				entry.Active = true
+			} else {
+				entry.Active = false
+			}
+		}
+	}
+
+	err := vmdb.save()
+	if err != nil {
+		return err
+	}
+	return nil
 }

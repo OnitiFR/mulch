@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/OnitiFR/mulch/common"
 	"github.com/fatih/color"
@@ -52,6 +53,7 @@ func vmListCB(reader io.Reader) {
 		red := color.New(color.FgHiRed).SprintFunc()
 		green := color.New(color.FgHiGreen).SprintFunc()
 		yellow := color.New(color.FgHiYellow).SprintFunc()
+		grey := color.New(color.FgHiBlack).SprintFunc()
 		for _, line := range data {
 			state := red(line.State)
 			if line.State == "up" {
@@ -63,16 +65,21 @@ func vmListCB(reader io.Reader) {
 				locked = yellow("locked")
 			}
 
+			name := line.Name
+			if line.Active == false {
+				name = grey(name)
+			}
+
 			strData = append(strData, []string{
-				line.Name,
-				line.LastIP,
+				name,
+				strconv.Itoa(line.Revision),
 				state,
 				locked,
 				yellow(line.WIP),
 			})
 		}
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Name", "Last known IP", "State", "Locked", "Operation"})
+		table.SetHeader([]string{"Name", "Rev", "State", "Locked", "Operation"})
 		table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 		table.SetCenterSeparator("|")
 		table.AppendBulk(strData)

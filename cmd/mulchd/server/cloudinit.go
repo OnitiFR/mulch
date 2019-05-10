@@ -62,6 +62,7 @@ func CloudInitCreate(volumeName string, vmName *VMName, vm *VM, app *App, log *L
 	// 1 - create cidata file contents
 	metaData := cloudInitMetaData(vm.SecretUUID, vm.Config.Hostname)
 
+	// DO NOT FORGET TO UPDATE ci-user-data.yml TEMPLATE TOO!
 	userDataVariables := make(map[string]interface{})
 	userDataVariables["_SSH_PUBKEY"] = sshKeyPair.Public
 	userDataVariables["_PHONE_HOME_URL"] = phURL

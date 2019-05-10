@@ -25,10 +25,16 @@ func NewVMController(req *server.Request) {
 	req.Stream.Tracef("reading '%s' config file", header.Filename)
 
 	restore := req.HTTP.FormValue("restore")
+	allowNewRevision := req.HTTP.FormValue("allow_new_revision")
 
 	conf, err := server.NewVMConfigFromTomlReader(configFile, req.Stream)
 	if err != nil {
 		req.Stream.Failuref("decoding config: %s", err)
+		return
+	}
+
+	if req.App.VMDB.GetCountForName(conf.Name) > 0 && allowNewRevision != common.TrueStr {
+		req.Stream.Failuref("VM '%s' already exists (see --new-revision CLI option?)", conf.Name)
 		return
 	}
 
@@ -40,14 +46,21 @@ func NewVMController(req *server.Request) {
 	}
 
 	before := time.Now()
-	vm, err := server.NewVM(conf, req.APIKey.Comment, req.App, req.Stream)
+	vm, err := server.NewVM(conf, true, req.APIKey.Comment, req.App, req.Stream)
 	if err != nil {
 		req.Stream.Failuref("Cannot create VM: %s", err)
 		return
 	}
+
+	entry, err := req.App.VMDB.GetEntryByVM(vm)
+	if err != nil {
+		req.Stream.Failuref("Cannot find new VM entry: %s", err)
+		return
+	}
+
 	after := time.Now()
 
-	req.Stream.Successf("VM '%s' created successfully (%s)", vm.Config.Name, after.Sub(before))
+	req.Stream.Successf("VM %s created successfully (%s)", entry.Name, after.Sub(before))
 }
 
 // ListVMsController list VMs
@@ -59,21 +72,21 @@ func ListVMsController(req *server.Request) {
 	for _, vmName := range vmNames {
 		vm, err := req.App.VMDB.GetByName(vmName)
 		if err != nil {
-			msg := fmt.Sprintf("VM '%s': %s", vmName, err)
+			msg := fmt.Sprintf("VM %s: %s", vmName, err)
 			req.App.Log.Error(msg)
 			http.Error(req.Response, msg, 500)
 			return
 		}
 
-		domain, err := req.App.Libvirt.GetDomainByName(req.App.Config.VMPrefix + vmName)
+		domain, err := req.App.Libvirt.GetDomainByName(vmName.LibvirtDomainName(req.App))
 		if err != nil {
-			msg := fmt.Sprintf("VM '%s': %s", vmName, err)
+			msg := fmt.Sprintf("VM %s: %s", vmName, err)
 			req.App.Log.Error(msg)
 			http.Error(req.Response, msg, 500)
 			return
 		}
 		if domain == nil {
-			msg := fmt.Sprintf("VM '%s': does not exists in libvirt", vmName)
+			msg := fmt.Sprintf("VM %s: does not exists in libvirt", vmName)
 			req.App.Log.Error(msg)
 			http.Error(req.Response, msg, 500)
 			return
@@ -82,7 +95,15 @@ func ListVMsController(req *server.Request) {
 
 		state, _, err := domain.GetState()
 		if err != nil {
-			msg := fmt.Sprintf("VM '%s': %s", vmName, err)
+			msg := fmt.Sprintf("VM %s: %s", vmName, err)
+			req.App.Log.Error(msg)
+			http.Error(req.Response, msg, 500)
+			return
+		}
+
+		active, err := req.App.VMDB.IsVMActive(vmName)
+		if err != nil {
+			msg := fmt.Sprintf("VM %s: %s", vmName, err)
 			req.App.Log.Error(msg)
 			http.Error(req.Response, msg, 500)
 			return
@@ -93,7 +114,9 @@ func ListVMsController(req *server.Request) {
 		// }
 
 		retData = append(retData, common.APIVMListEntry{
-			Name:      vmName,
+			Name:      vmName.Name,
+			Revision:  vmName.Revision,
+			Active:    active,
 			LastIP:    vm.LastIP,
 			State:     server.LibvirtDomainStateToString(state),
 			Locked:    vm.Locked,
@@ -104,6 +127,9 @@ func ListVMsController(req *server.Request) {
 	}
 
 	sort.Slice(retData, func(i, j int) bool {
+		if retData[i].Name == retData[j].Name {
+			return retData[i].Revision < retData[j].Revision
+		}
 		return retData[i].Name < retData[j].Name
 	})
 
@@ -123,15 +149,12 @@ func ActionVMController(req *server.Request) {
 		req.Stream.Failuref("invalid VM name")
 		return
 	}
-	vm, err := req.App.VMDB.GetByName(vmName)
+	entry, err := req.App.VMDB.GetActiveEntryByName(vmName)
 	if err != nil {
 		req.Stream.Failure(err.Error())
 		return
 	}
-
-	req.SetTarget(vmName)
-
-	libvirtVMName := vm.App.Config.VMPrefix + vmName
+	vm := entry.VM
 
 	action := req.HTTP.FormValue("action")
 	switch action {
@@ -139,7 +162,7 @@ func ActionVMController(req *server.Request) {
 		if vm.Locked {
 			req.Stream.Warningf("'%s' already locked", vmName)
 		}
-		err := server.VMLockUnlock(vmName, true, req.App.VMDB)
+		err := server.VMLockUnlock(entry.Name, true, req.App.VMDB)
 		if err != nil {
 			req.Stream.Failuref("unable to lock '%s': %s", vmName, err)
 		} else {
@@ -149,7 +172,7 @@ func ActionVMController(req *server.Request) {
 		if vm.Locked == false {
 			req.Stream.Warningf("'%s' already unlocked", vmName)
 		}
-		err := server.VMLockUnlock(vmName, false, req.App.VMDB)
+		err := server.VMLockUnlock(entry.Name, false, req.App.VMDB)
 		if err != nil {
 			req.Stream.Failuref("unable to unlock '%s': %s", vmName, err)
 		} else {
@@ -157,7 +180,7 @@ func ActionVMController(req *server.Request) {
 		}
 	case "start":
 		req.Stream.Infof("starting %s", vmName)
-		err := server.VMStartByName(libvirtVMName, vm.SecretUUID, req.App, req.Stream)
+		err := server.VMStartByName(entry.Name, vm.SecretUUID, req.App, req.Stream)
 		if err != nil {
 			req.Stream.Failuref("unable to start '%s': %s", vmName, err)
 		} else {
@@ -165,24 +188,24 @@ func ActionVMController(req *server.Request) {
 		}
 	case "stop":
 		req.Stream.Infof("stopping %s", vmName)
-		err := server.VMStopByName(libvirtVMName, req.App, req.Stream)
+		err := server.VMStopByName(entry.Name, req.App, req.Stream)
 		if err != nil {
 			req.Stream.Failuref("unable to stop '%s': %s", vmName, err)
 		} else {
 			req.Stream.Successf("VM '%s' is now down", vmName)
 		}
 	case "exec":
-		err := ExecScriptVM(req, vm)
+		err := ExecScriptVM(req, vm, entry.Name)
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
 		}
 	case "do":
-		err := DoActionVM(req, vm)
+		err := DoActionVM(req, vm, entry.Name)
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
 		}
 	case "backup":
-		volHame, err := BackupVM(req, vm)
+		volHame, err := BackupVM(req, entry.Name)
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
 		} else {
@@ -190,7 +213,7 @@ func ActionVMController(req *server.Request) {
 		}
 	case "rebuild":
 		before := time.Now()
-		err := RebuildVM(req, vm)
+		err := RebuildVM(req, vm, entry.Name)
 		after := time.Now()
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
@@ -202,10 +225,10 @@ func ActionVMController(req *server.Request) {
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
 		} else {
-			req.Stream.Successf("VM '%s' redefined (may the sysadmin gods be with you)", vm.Config.Name)
+			req.Stream.Successf("VM '%s' redefined (may the sysadmin gods be with you)", vmName)
 		}
 	default:
-		req.Stream.Failuref("missing or invalid action ('%s') for '%s'", action, vm.Config.Name)
+		req.Stream.Failuref("missing or invalid action ('%s') for '%s'", action, vmName)
 		return
 	}
 }
@@ -214,8 +237,16 @@ func ActionVMController(req *server.Request) {
 func DeleteVMController(req *server.Request) {
 	vmName := req.SubPath
 	req.SetTarget(vmName)
+
+	entry, err := req.App.VMDB.GetActiveEntryByName(vmName)
+	if err != nil {
+		req.Stream.Failure(err.Error())
+		return
+	}
+
 	req.Stream.Infof("deleting vm '%s'", vmName)
-	err := server.VMDelete(vmName, req.App, req.Stream)
+
+	err = server.VMDelete(entry.Name, req.App, req.Stream)
 	if err != nil {
 		req.Stream.Failuref("unable to delete VM '%s': %s", vmName, err)
 	} else {
@@ -224,13 +255,13 @@ func DeleteVMController(req *server.Request) {
 }
 
 // ExecScriptVM will execute a script inside the VM
-func ExecScriptVM(req *server.Request, vm *server.VM) error {
+func ExecScriptVM(req *server.Request, vm *server.VM, vmName *server.VMName) error {
 	script, header, err := req.HTTP.FormFile("script")
 	if err != nil {
 		return fmt.Errorf("'script' field: %s", err)
 	}
 
-	running, _ := server.VMIsRunning(vm.Config.Name, req.App)
+	running, _ := server.VMIsRunning(vmName, req.App)
 	if running == false {
 		return errors.New("VM should be up and running")
 	}
@@ -271,16 +302,16 @@ func ExecScriptVM(req *server.Request, vm *server.VM) error {
 }
 
 // DoActionVM will execute a "do action" in the VM
-func DoActionVM(req *server.Request, vm *server.VM) error {
+func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error {
 	actionName := req.HTTP.FormValue("do_action")
 	arguments := req.HTTP.FormValue("arguments")
 
 	action, exists := vm.Config.DoActions[actionName]
 	if !exists {
-		return fmt.Errorf("unable to find action '%s' for '%s'", actionName, vm.Config.Name)
+		return fmt.Errorf("unable to find action '%s' for %s", actionName, vmName)
 	}
 
-	running, _ := server.VMIsRunning(vm.Config.Name, req.App)
+	running, _ := server.VMIsRunning(vmName, req.App)
 	if running == false {
 		return errors.New("VM should be up and running")
 	}
@@ -335,7 +366,7 @@ func GetVMConfigController(req *server.Request) {
 		http.Error(req.Response, msg, 400)
 		return
 	}
-	vm, err := req.App.VMDB.GetByName(vmName)
+	vm, err := req.App.VMDB.GetActiveByName(vmName)
 	if err != nil {
 		msg := fmt.Sprintf("VM '%s' not found", vmName)
 		req.App.Log.Error(msg)
@@ -357,19 +388,18 @@ func GetVMInfosController(req *server.Request) {
 		http.Error(req.Response, msg, 400)
 		return
 	}
-	vm, err := req.App.VMDB.GetByName(vmName)
+	entry, err := req.App.VMDB.GetActiveEntryByName(vmName)
 	if err != nil {
 		msg := fmt.Sprintf("VM '%s' not found", vmName)
 		req.App.Log.Error(msg)
 		http.Error(req.Response, msg, 404)
 		return
 	}
+	vm := entry.VM
 
-	running, _ := server.VMIsRunning(vm.Config.Name, req.App)
+	running, _ := server.VMIsRunning(entry.Name, req.App)
 
-	libvirtName := req.App.Config.VMPrefix + vmName
-
-	diskName, err := server.VMGetDiskName(libvirtName, req.App)
+	diskName, err := server.VMGetDiskName(entry.Name, req.App)
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)
@@ -383,7 +413,9 @@ func GetVMInfosController(req *server.Request) {
 	}
 
 	data := &common.APIVMInfos{
-		Name:                vm.Config.Name,
+		Name:                entry.Name.Name,
+		Revision:            entry.Name.Revision,
+		Active:              entry.Active,
 		Seed:                vm.Config.Seed,
 		CPUCount:            vm.Config.CPUCount,
 		RAMSizeMB:           (vm.Config.RAMSize / 1024 / 1024),
@@ -420,7 +452,7 @@ func GetVMDoActionsController(req *server.Request) {
 		http.Error(req.Response, msg, 400)
 		return
 	}
-	vm, err := req.App.VMDB.GetByName(vmName)
+	vm, err := req.App.VMDB.GetActiveByName(vmName)
 	if err != nil {
 		msg := fmt.Sprintf("VM '%s' not found", vmName)
 		req.App.Log.Error(msg)
@@ -451,13 +483,13 @@ func GetVMDoActionsController(req *server.Request) {
 }
 
 // BackupVM launch the backup proccess
-func BackupVM(req *server.Request, vm *server.VM) (string, error) {
-	return server.VMBackup(vm.Config.Name, req.App, req.Stream, server.BackupCompressAllow)
+func BackupVM(req *server.Request, vmName *server.VMName) (string, error) {
+	return server.VMBackup(vmName, req.App, req.Stream, server.BackupCompressAllow)
 }
 
 // RebuildVM delete VM and rebuilds it from a backup
 // steps: backup, stop, rename-old, create-with-restore, delete-old, delete backup
-func RebuildVM(req *server.Request, vm *server.VM) error {
+func RebuildVM(req *server.Request, vm *server.VM, vmName *server.VMName) error {
 	if len(vm.Config.Restore) == 0 {
 		return errors.New("no restore script defined for this VM")
 	}
@@ -468,9 +500,6 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 
 	configFile := vm.Config.FileContent
 
-	vmName := vm.Config.Name
-	libvirtVMName := vm.App.Config.VMPrefix + vmName
-
 	// - backup
 	backupName, err := server.VMBackup(vmName, req.App, req.Stream, server.BackupCompressDisable)
 	if err != nil {
@@ -479,14 +508,15 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 
 	// - stop
 	req.Stream.Infof("stopping VM")
-	err = server.VMStopByName(libvirtVMName, req.App, req.Stream)
+	err = server.VMStopByName(vmName, req.App, req.Stream)
 	if err != nil {
 		return err
 	}
 
 	// - rename original VM
 	req.Stream.Infof("cloning VM")
-	tmpVMName := fmt.Sprintf("%s-old-%d", vmName, req.App.Rand.Int31())
+	tmpVMNameStr := fmt.Sprintf("%s-old-%d", vmName.ID(), req.App.Rand.Int31())
+	tmpVMName := server.NewVMName(tmpVMNameStr, 0)
 	err = server.VMRename(vmName, tmpVMName, req.App, req.Stream)
 	if err != nil {
 		return err
@@ -507,7 +537,7 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 				req.Stream.Error(err.Error())
 				return
 			}
-			err = server.VMStartByName(libvirtVMName, vm.SecretUUID, req.App, req.Stream)
+			err = server.VMStartByName(vmName, vm.SecretUUID, req.App, req.Stream)
 			if err != nil {
 				req.Stream.Error(err.Error())
 				return
@@ -525,7 +555,7 @@ func RebuildVM(req *server.Request, vm *server.VM) error {
 	conf.RestoreBackup = backupName
 
 	// replace original VM author with "rebuilder"
-	_, err = server.NewVM(conf, req.APIKey.Comment, req.App, req.Stream)
+	_, err = server.NewVM(conf, true, req.APIKey.Comment, req.App, req.Stream)
 	if err != nil {
 		req.Stream.Error(err.Error())
 		return fmt.Errorf("Cannot create VM: %s", err)

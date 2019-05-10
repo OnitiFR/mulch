@@ -79,7 +79,7 @@ func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM s
 	for _, domain := range domains {
 		vm, exist := domainMap[domain.Name]
 		if exist == true {
-			return fmt.Errorf("vm '%s' already registered domain '%s'", vm.Config.NameTODOXF, domain.Name)
+			return fmt.Errorf("vm '%s' already registered domain '%s'", vm.Config.Name, domain.Name)
 		}
 	}
 
@@ -97,7 +97,7 @@ func vmGenVolumesNames(vmName *VMName) (string, string) {
 // TODO: this function is HUUUGE and needs to be splitted. It's tricky
 // because there's a "transaction" here.
 func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log) (*VM, error) {
-	log.Infof("creating new VM '%s'", vmConfig.NameTODOXF)
+	log.Infof("creating new VM '%s'", vmConfig.Name)
 
 	commit := false
 
@@ -121,13 +121,13 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 		return nil, err
 	}
 
-	if !IsValidName(vmConfig.NameTODOXF) {
-		return nil, fmt.Errorf("name '%s' is invalid (need only letters, numbers and underscore, do not start with a number)", vmConfig.NameTODOXF)
+	if !IsValidName(vmConfig.Name) {
+		return nil, fmt.Errorf("name '%s' is invalid (need only letters, numbers and underscore, do not start with a number)", vmConfig.Name)
 	}
 
 	// find next revision
-	revision := app.VMDB.GetNextRevisionForName(vmConfig.NameTODOXF)
-	vmName := NewVMName(vmConfig.NameTODOXF, revision)
+	revision := app.VMDB.GetNextRevisionForName(vmConfig.Name)
+	vmName := NewVMName(vmConfig.Name, revision)
 
 	domainName := vmName.LibvirtDomainName(app)
 
@@ -152,7 +152,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	}
 
 	// check for conclicting domains (will also be done later while saving vm database)
-	err = CheckDomainsConflicts(app.VMDB, vmConfig.Domains, "")
+	err = CheckDomainsConflicts(app.VMDB, vmConfig.Domains, vmName.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -1352,7 +1352,16 @@ func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 		return err
 	}
 
-	vm.Config.NameTODOXF = newVMName.Name
+	// the Delete() may have set a previous WM as active. It's bad
+	// because the Add() below will fail is active is true.
+	if active {
+		err := app.VMDB.SetActiveRevision(orgVMName.Name, RevisionNone)
+		if err != nil {
+			return err
+		}
+	}
+
+	vm.Config.Name = newVMName.Name
 
 	err = app.VMDB.Add(vm, newVMName, active)
 	if err != nil {

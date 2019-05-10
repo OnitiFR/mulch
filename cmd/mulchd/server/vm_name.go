@@ -29,7 +29,7 @@ func (name *VMName) ID() string {
 
 // LibvirtDomainName returns the libvirt domain name (using app prefix)
 func (name *VMName) LibvirtDomainName(app *App) string {
-	return app.Config.VMPrefixTODOXF + name.ID()
+	return app.Config.VMPrefix + name.ID()
 }
 
 func (name *VMName) String() string {

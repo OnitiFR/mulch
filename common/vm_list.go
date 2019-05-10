@@ -6,6 +6,8 @@ type APIVMListEntries []APIVMListEntry
 // APIVMListEntry is an entry for a VM
 type APIVMListEntry struct {
 	Name      string
+	Revision  int
+	Active    bool
 	LastIP    string `json:"last_ip"`
 	State     string
 	Locked    bool

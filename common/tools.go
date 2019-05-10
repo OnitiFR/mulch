@@ -12,6 +12,9 @@ import (
 
 const stringWordSeparators = "[ \t\n,.;:\\(\\)\\[\\]{}'\"/\\\\!\\?<>@#|*+-=]"
 
+// TrueStr is the true truth.
+const TrueStr = "true"
+
 // PathExist returns true if a file or directory exists
 func PathExist(path string) bool {
 	_, err := os.Stat(path)

@@ -5,6 +5,8 @@ import "time"
 // APIVMInfos expose a few VM informations
 type APIVMInfos struct {
 	Name                string
+	Revision            int
+	Active              bool
 	Seed                string
 	CPUCount            int
 	RAMSizeMB           uint64

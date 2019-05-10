@@ -22,9 +22,8 @@ func ListBackupsController(req *server.Request) {
 	vmFilter := req.HTTP.FormValue("vm")
 
 	if vmFilter != "" {
-		_, err := req.App.VMDB.GetByName(vmFilter)
-		if err != nil {
-			msg := fmt.Sprintf("'%s': %s", vmFilter, err)
+		if req.App.VMDB.GetCountForName(vmFilter) == 0 {
+			msg := fmt.Sprintf("can't find any VM with name '%s'", vmFilter)
 			req.App.Log.Error(msg)
 			http.Error(req.Response, msg, 404)
 			return

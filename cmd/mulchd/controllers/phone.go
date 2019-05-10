@@ -4,6 +4,7 @@ import (
 	"net"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
+	"github.com/OnitiFR/mulch/common"
 )
 
 // PhoneController receive "phone home" requests from instances
@@ -45,7 +46,12 @@ func PhoneController(req *server.Request) {
 			req.App.Log.Warningf("no VM found (yet?) in database with this instance_id (%s)", instanceAnon)
 		}
 	} else {
-		req.App.Log.Infof("phoning VM is '%s'", vm.Config.Name)
+		entry, err := req.App.VMDB.GetEntryByVM(vm)
+		if err != nil {
+			req.App.Log.Errorf("unable to find VM: %s", err)
+			return
+		}
+		req.App.Log.Infof("phoning VM is %s", entry.Name)
 		if vm.LastIP != ip {
 			req.App.Log.Warningf("vm IP changed since last call (from '%s' to '%s')", vm.LastIP, ip)
 
@@ -55,7 +61,7 @@ func PhoneController(req *server.Request) {
 				req.App.Log.Errorf("unable to update VM DB: %s", err)
 			}
 		}
-		if req.HTTP.PostFormValue("dump_config") == "true" {
+		if req.HTTP.PostFormValue("dump_config") == common.TrueStr {
 			req.Println(vm.Config.FileContent)
 		}
 	}
