@@ -600,7 +600,7 @@ func RebuildVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 // - create VM rev+1
 // - inactive rev+0 VM
 // - backup rev+0
-// - restore rev+1 (need a dedicated function, I think)
+// - restore rev+1
 // - activate rev+1
 // - delete rev+0
 // - delete backup
