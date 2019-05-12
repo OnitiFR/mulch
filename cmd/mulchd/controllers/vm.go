@@ -595,6 +595,21 @@ func RebuildVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 	return nil
 }
 
+// RebuildVM2 delete VM and rebuilds it from a backup (2nd version, using revisions)
+// steps:
+// - create VM rev+1
+// - inactive rev+0 VM
+// - backup rev+0
+// - restore rev+1 (need a dedicated function, I think)
+// - activate rev+1
+// - delete rev+0
+// - delete backup
+// - display downtime
+// - rollback: activate rev+0, delete rev+1, delete backup
+func RebuildVM2(req *server.Request, vm *server.VM, vmName *server.VMName) error {
+	return nil
+}
+
 // RedefineVM replace VM config file with a new one, for next rebuild
 func RedefineVM(req *server.Request, vm *server.VM) error {
 	req.SetTarget(vm.Config.Name)

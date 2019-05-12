@@ -484,83 +484,10 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	}
 
 	if vm.Config.RestoreBackup != "" {
-		// 6 - restore
-		log.Infof("restoring from '%s'", vm.Config.RestoreBackup)
-
-		// attach backup
-		err = VMAttachBackup(vmName, backup.DiskName, app)
+		err = vmRestore(vm, vmName, backup, app, log, SSHSuperUserAuth)
 		if err != nil {
 			return nil, err
 		}
-		defer func() {
-			// detach backup
-			err = VMDetachBackup(vmName, app)
-			if err != nil {
-				log.Errorf("VMDetachBackup: %s", err)
-			} else {
-				log.Info("backup disk detached")
-			}
-		}()
-
-		log.Infof("running 'restore' scripts")
-		// pre-restore + restore + post-restore
-		pre, errO := os.Open(app.Config.GetTemplateFilepath("pre-restore.sh"))
-		if errO != nil {
-			return nil, errO
-		}
-		defer pre.Close()
-
-		post, errO := os.Open(app.Config.GetTemplateFilepath("post-restore.sh"))
-		if errO != nil {
-			return nil, errO
-		}
-		defer post.Close()
-
-		tasks := []*RunTask{}
-		tasks = append(tasks, &RunTask{
-			ScriptName:   "pre-restore.sh",
-			ScriptReader: pre,
-			As:           vm.App.Config.MulchSuperUser,
-		})
-
-		for _, confTask := range vm.Config.Restore {
-			stream, errG := GetScriptFromURL(confTask.ScriptURL)
-			if errG != nil {
-				return nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
-			}
-			defer stream.Close()
-
-			task := &RunTask{
-				ScriptName:   path.Base(confTask.ScriptURL),
-				ScriptReader: stream,
-				As:           confTask.As,
-			}
-			tasks = append(tasks, task)
-		}
-
-		tasks = append(tasks, &RunTask{
-			ScriptName:   "post-restore.sh",
-			ScriptReader: post,
-			As:           vm.App.Config.MulchSuperUser,
-		})
-		run := &Run{
-			SSHConn: &SSHConnection{
-				User: vm.App.Config.MulchSuperUser,
-				Host: vm.LastIP,
-				Port: 22,
-				Auths: []ssh.AuthMethod{
-					SSHSuperUserAuth,
-				},
-				Log: log,
-			},
-			Tasks: tasks,
-			Log:   log,
-		}
-		err = run.Go()
-		if err != nil {
-			return nil, err
-		}
-		log.Info("restore completed")
 	} else {
 		// 6b - run install scripts
 		log.Infof("running 'install' scripts")
@@ -1218,6 +1145,98 @@ func VMBackup(vmName *VMName, app *App, log *Log, compressAllow bool) (string, e
 	log.Infof("backup: %s", after.Sub(before))
 	commit = true
 	return volName, nil
+}
+
+// vmRestore launch the restore proccess, this function is limited to (server)
+// internal use, since a few checks are missing because it supposed to be called
+// -during VM creation- (and not after)
+func vmRestore(vm *VM, vmName *VMName, backup *Backup, app *App, log *Log, SSHSuperUserAuth ssh.AuthMethod) error {
+	vm.SetOperation(VMOperationRestore)
+	defer vm.SetOperation(VMOperationNone)
+
+	if len(vm.Config.Backup) == 0 {
+		return errors.New("no backup script defined for this VM")
+	}
+
+	// 6 - restore
+	log.Infof("restoring from '%s'", vm.Config.RestoreBackup)
+
+	// attach backup
+	err := VMAttachBackup(vmName, backup.DiskName, app)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		// detach backup
+		err = VMDetachBackup(vmName, app)
+		if err != nil {
+			log.Errorf("VMDetachBackup: %s", err)
+		} else {
+			log.Info("backup disk detached")
+		}
+	}()
+
+	log.Infof("running 'restore' scripts")
+	// pre-restore + restore + post-restore
+	pre, errO := os.Open(app.Config.GetTemplateFilepath("pre-restore.sh"))
+	if errO != nil {
+		return errO
+	}
+	defer pre.Close()
+
+	post, errO := os.Open(app.Config.GetTemplateFilepath("post-restore.sh"))
+	if errO != nil {
+		return errO
+	}
+	defer post.Close()
+
+	tasks := []*RunTask{}
+	tasks = append(tasks, &RunTask{
+		ScriptName:   "pre-restore.sh",
+		ScriptReader: pre,
+		As:           vm.App.Config.MulchSuperUser,
+	})
+
+	for _, confTask := range vm.Config.Restore {
+		stream, errG := GetScriptFromURL(confTask.ScriptURL)
+		if errG != nil {
+			return fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
+		}
+		defer stream.Close()
+
+		task := &RunTask{
+			ScriptName:   path.Base(confTask.ScriptURL),
+			ScriptReader: stream,
+			As:           confTask.As,
+		}
+		tasks = append(tasks, task)
+	}
+
+	tasks = append(tasks, &RunTask{
+		ScriptName:   "post-restore.sh",
+		ScriptReader: post,
+		As:           vm.App.Config.MulchSuperUser,
+	})
+	run := &Run{
+		SSHConn: &SSHConnection{
+			User: vm.App.Config.MulchSuperUser,
+			Host: vm.LastIP,
+			Port: 22,
+			Auths: []ssh.AuthMethod{
+				SSHSuperUserAuth,
+			},
+			Log: log,
+		},
+		Tasks: tasks,
+		Log:   log,
+	}
+	err = run.Go()
+	if err != nil {
+		return err
+	}
+	log.Info("restore completed")
+
+	return nil
 }
 
 // VMRename will rename the VM in Mulch and in libvirt (including disks)
