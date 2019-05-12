@@ -176,6 +176,23 @@ func (app *App) initVMDB() error {
 	dbPath := app.Config.DataPath + "/mulch-vm-v2.db"
 	domainDbPath := app.Config.DataPath + "/mulch-proxy-domains.db"
 
+	dbPathV1 := app.Config.DataPath + "/mulch-vm.db"
+	if common.PathExist(dbPathV1) && !common.PathExist(dbPath) {
+		app.Log.Warning("will migrate VM database to V2 format")
+		migrate := NewVMDatabaseMigrate()
+		if err := migrate.loadv1(dbPathV1); err != nil {
+			return err
+		}
+		migrate.migrate()
+		if err := migrate.savev2(dbPath); err != nil {
+			return err
+		}
+		if err := os.Remove(dbPathV1); err != nil {
+			return err
+		}
+		app.Log.Infof("migrate completed (entry count: %d)", len(migrate.dbv2))
+	}
+
 	vmdb, err := NewVMDatabase(dbPath, domainDbPath, app.sendProxyReloadSignal)
 	if err != nil {
 		return err
