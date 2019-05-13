@@ -178,6 +178,10 @@ func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, temp
 		return nil, nil, fmt.Errorf("GetOrCreateStoragePool: pool.Refresh: %s", err)
 	}
 
+	if active, errI := pool.IsActive(); active == false || errI != nil {
+		return nil, nil, fmt.Errorf("GetOrCreateStoragePool: pool %s is not active: %s", poolName, errI)
+	}
+
 	xmldoc, err := pool.GetXMLDesc(0)
 	if err != nil {
 		return nil, nil, fmt.Errorf("GetOrCreateStoragePool: GetXMLDesc: %s", err)
@@ -227,6 +231,10 @@ func (lv *Libvirt) GetOrCreateNetwork(networkName string, templateFile string, l
 		} else {
 			return nil, nil, fmt.Errorf("GetOrCreateNetwork: Unexpected error: %s", errN)
 		}
+	}
+
+	if active, errI := net.IsActive(); active == false || errI != nil {
+		return nil, nil, fmt.Errorf("GetOrCreateNetwork: network %s is not active: %s", networkName, errI)
 	}
 
 	xmldoc, err := net.GetXMLDesc(0)

@@ -7,7 +7,7 @@ appenv="/home/$_APP_USER/env"
 html_dir="/home/$_APP_USER/public_html/"
 
 export DEBIAN_FRONTEND="noninteractive"
-sudo -E apt-get -y -qq install apache2 php pwgen postgresql postgresql-client php-pgsql || exit $?
+sudo -E apt-get -y -qq install apache2 php php-bcmath php-imagick pwgen postgresql postgresql-client php-pgsql || exit $?
 
 PGSQL_PASSWORD=$(pwgen -1 16)
 [ $? -eq 0 ] || exit $?
