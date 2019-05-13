@@ -39,6 +39,10 @@ const (
 	BackupCompressDisable = false
 )
 
+// BackupBlankRestore is used to disable install scripts during a
+// a VM creation (and then restore a backup later)
+const BackupBlankRestore = "-"
+
 // VM defines a virtual machine ("domain")
 type VM struct {
 	LibvirtUUID string
@@ -96,14 +100,14 @@ func vmGenVolumesNames(vmName *VMName) (string, string) {
 // NewVM builds a new virtual machine from config
 // TODO: this function is HUUUGE and needs to be splitted. It's tricky
 // because there's a "transaction" here.
-func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log) (*VM, error) {
+func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log) (*VM, *VMName, error) {
 	log.Infof("creating new VM '%s'", vmConfig.Name)
 
 	commit := false
 
 	secretUUID, err := uuid.NewV4()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	vm := &VM{
@@ -118,11 +122,11 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 
 	conn, err := app.Libvirt.GetConnection()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if !IsValidName(vmConfig.Name) {
-		return nil, fmt.Errorf("name '%s' is invalid (need only letters, numbers and underscore, do not start with a number)", vmConfig.Name)
+		return nil, nil, fmt.Errorf("name '%s' is invalid (need only letters, numbers and underscore, do not start with a number)", vmConfig.Name)
 	}
 
 	// find next revision
@@ -133,44 +137,44 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 
 	_, err = conn.LookupDomainByName(domainName)
 	if err == nil {
-		return nil, fmt.Errorf("VM '%s' already exists in libvirt", domainName)
+		return nil, nil, fmt.Errorf("VM '%s' already exists in libvirt", domainName)
 	}
 	errDetails := err.(libvirt.Error)
 	if errDetails.Domain != libvirt.FROM_QEMU || errDetails.Code != libvirt.ERR_NO_DOMAIN {
-		return nil, fmt.Errorf("Unexpected error: %s", err)
+		return nil, nil, fmt.Errorf("Unexpected error: %s", err)
 	}
 
 	ciName, diskName := vmGenVolumesNames(vmName)
 
 	seed, err := app.Seeder.GetByName(vmConfig.Seed)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if seed.Ready == false {
-		return nil, fmt.Errorf("seed %s is not ready", vmConfig.Seed)
+		return nil, nil, fmt.Errorf("seed %s is not ready", vmConfig.Seed)
 	}
 
 	// check for conclicting domains (will also be done later while saving vm database)
 	err = CheckDomainsConflicts(app.VMDB, vmConfig.Domains, vmName.Name)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// check if backup exists (if a restore was requested)
 	backup := app.BackupsDB.GetByName(vm.Config.RestoreBackup)
 	if vm.Config.RestoreBackup != "" {
-		if backup == nil {
-			return nil, fmt.Errorf("backup '%s' not found in database", vm.Config.RestoreBackup)
+		if backup == nil && vm.Config.RestoreBackup != BackupBlankRestore {
+			return nil, nil, fmt.Errorf("backup '%s' not found in database", vm.Config.RestoreBackup)
 		}
 		if len(vm.Config.Restore) == 0 {
-			return nil, errors.New("no restore script defined for this VM, can't restore")
+			return nil, nil, errors.New("no restore script defined for this VM, can't restore")
 		}
 	}
 
 	SSHSuperUserAuth, err := app.SSHPairDB.GetPublicKeyAuth(SSHSuperUserPair)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// 1 - copy from reference image
@@ -182,7 +186,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 		log)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// delete the created volume in case of failure of the rest of the VM creation
@@ -206,14 +210,14 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	// 2 - resize disk
 	err = app.Libvirt.ResizeDisk(diskName, vmConfig.DiskSize, app.Libvirt.Pools.Disks, log)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// 3 - Cloud-Init files
 	log.Infof("creating Cloud-Init image for %s", vmName)
 	err = CloudInitCreate(ciName, vmName, vm, app, log)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// delete the created volume in case of failure of the rest of the VM creation
 	defer func() {
@@ -237,13 +241,13 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	log.Infof("defining vm domain (%s)", domainName)
 	xml, err := ioutil.ReadFile(app.Config.GetTemplateFilepath("vm.xml"))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	domcfg := &libvirtxml.Domain{}
 	err = domcfg.Unmarshal(string(xml))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	domcfg.Name = domainName
@@ -268,7 +272,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	}
 
 	if foundDisks != 2 {
-		return nil, errors.New("vm xml file: disks with 'ua-mulch-disk' and 'ua-mulch-cloudinit' aliases are required, see sample file")
+		return nil, nil, errors.New("vm xml file: disks with 'ua-mulch-disk' and 'ua-mulch-cloudinit' aliases are required, see sample file")
 	}
 
 	foundInterfaces := 0
@@ -281,17 +285,17 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	}
 
 	if foundInterfaces != 1 {
-		return nil, fmt.Errorf("vm xml file: found %d interface(s) with 'ua-mulch-bridge' alias, one is needed", foundInterfaces)
+		return nil, nil, fmt.Errorf("vm xml file: found %d interface(s) with 'ua-mulch-bridge' alias, one is needed", foundInterfaces)
 	}
 
 	xml2, err := domcfg.Marshal()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	dom, err := conn.DomainDefineXML(string(xml2))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer dom.Free() // remember: "deferred calls are executed in last-in-first-out order"
 
@@ -309,7 +313,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 
 	libvirtUUID, err := dom.GetUUIDString()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	vm.LibvirtUUID = libvirtUUID
 
@@ -321,7 +325,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	}
 	err = dom.Create()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	phone := app.PhoneHome.Register(secretUUID.String())
@@ -331,7 +335,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	for done := false; done == false; {
 		select {
 		case <-time.After(10 * time.Minute):
-			return nil, errors.New("vm init is too long, something probably went wrong")
+			return nil, nil, errors.New("vm init is too long, something probably went wrong")
 		case call := <-phone.PhoneCalls:
 			phoned = true
 			log.Info("vm phoned home, cloud-init was successful")
@@ -340,10 +344,10 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 			log.Trace("checking vm state")
 			state, _, errG := dom.GetState()
 			if errG != nil {
-				return nil, errG
+				return nil, nil, errG
 			}
 			if state == libvirt.DOMAIN_CRASHED {
-				return nil, errors.New("vm crashed! (said libvirt)")
+				return nil, nil, errors.New("vm crashed! (said libvirt)")
 			}
 			if state == libvirt.DOMAIN_SHUTOFF {
 				log.Info("vm is now down")
@@ -353,7 +357,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	}
 
 	if phoned == false {
-		return nil, errors.New("vm is down but didn't phoned home, something went wrong during cloud-init")
+		return nil, nil, errors.New("vm is down but didn't phoned home, something went wrong during cloud-init")
 	}
 
 	// if all is OK, remove and delete cloud-init image
@@ -369,7 +373,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	log.Infof("starting vm")
 	err = dom.Create()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// wait the vm's phone call
@@ -377,7 +381,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 		select {
 		case <-time.After(5 * time.Minute):
 			dom.Destroy()
-			return nil, errors.New("vm start is too long, something probably went wrong")
+			return nil, nil, errors.New("vm start is too long, something probably went wrong")
 		case call := <-phone.PhoneCalls:
 			done = true
 			log.Info("vm phoned home, boot successful")
@@ -394,7 +398,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	for _, confTask := range vm.Config.Prepare {
 		stream, errG := GetScriptFromURL(confTask.ScriptURL)
 		if errG != nil {
-			return nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
+			return nil, nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 		}
 		defer stream.Close()
 
@@ -476,17 +480,19 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	}
 	err = run.Go()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if errDoAction != nil {
-		return nil, fmt.Errorf("can't add do action: %s", errDoAction)
+		return nil, nil, fmt.Errorf("can't add do action: %s", errDoAction)
 	}
 
 	if vm.Config.RestoreBackup != "" {
-		err = vmRestore(vm, vmName, backup, app, log, SSHSuperUserAuth)
-		if err != nil {
-			return nil, err
+		if vm.Config.RestoreBackup != BackupBlankRestore {
+			err = VMRestoreNoChecks(vm, vmName, backup, app, log)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 	} else {
 		// 6b - run install scripts
@@ -495,7 +501,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 		for _, confTask := range vm.Config.Install {
 			stream, errG := GetScriptFromURL(confTask.ScriptURL)
 			if errG != nil {
-				return nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
+				return nil, nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 			}
 			defer stream.Close()
 
@@ -522,7 +528,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 		}
 		err = run.Go()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -530,10 +536,10 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	log.Infof("saving VM in database")
 	err = app.VMDB.Add(vm, vmName, active)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	commit = true
-	return vm, nil
+	return vm, vmName, nil
 }
 
 // VMGetDiskName return VM's disk filename
@@ -1018,6 +1024,8 @@ func VMBackup(vmName *VMName, app *App, log *Log, compressAllow bool) (string, e
 		return "", err
 	}
 
+	before := time.Now()
+
 	err = VMCreateBackupDisk(vmName, volName, vm.Config.BackupDiskSize, app, log)
 	if err != nil {
 		return "", err
@@ -1065,8 +1073,6 @@ func VMBackup(vmName *VMName, app *App, log *Log, compressAllow bool) (string, e
 		return "", err
 	}
 	defer post.Close()
-
-	before := time.Now()
 
 	// pre-backup + backup + post-backup
 	tasks := []*RunTask{}
@@ -1147,10 +1153,10 @@ func VMBackup(vmName *VMName, app *App, log *Log, compressAllow bool) (string, e
 	return volName, nil
 }
 
-// vmRestore launch the restore proccess, this function is limited to (server)
-// internal use, since a few checks are missing because it supposed to be called
-// -during VM creation- (and not after)
-func vmRestore(vm *VM, vmName *VMName, backup *Backup, app *App, log *Log, SSHSuperUserAuth ssh.AuthMethod) error {
+// VMRestoreNoChecks launch the restore proccess, this function is limited to (server)
+// internal use, since a few checks are missing because it's supposed to be
+// called -during VM creation- (and not after)
+func VMRestoreNoChecks(vm *VM, vmName *VMName, backup *Backup, app *App, log *Log) error {
 	vm.SetOperation(VMOperationRestore)
 	defer vm.SetOperation(VMOperationNone)
 
@@ -1159,7 +1165,9 @@ func vmRestore(vm *VM, vmName *VMName, backup *Backup, app *App, log *Log, SSHSu
 	}
 
 	// 6 - restore
-	log.Infof("restoring from '%s'", vm.Config.RestoreBackup)
+	log.Infof("restoring from '%s'", backup.DiskName)
+
+	before := time.Now()
 
 	// attach backup
 	err := VMAttachBackup(vmName, backup.DiskName, app)
@@ -1189,6 +1197,11 @@ func vmRestore(vm *VM, vmName *VMName, backup *Backup, app *App, log *Log, SSHSu
 		return errO
 	}
 	defer post.Close()
+
+	SSHSuperUserAuth, err := app.SSHPairDB.GetPublicKeyAuth(SSHSuperUserPair)
+	if err != nil {
+		return err
+	}
 
 	tasks := []*RunTask{}
 	tasks = append(tasks, &RunTask{
@@ -1236,6 +1249,8 @@ func vmRestore(vm *VM, vmName *VMName, backup *Backup, app *App, log *Log, SSHSu
 	}
 	log.Info("restore completed")
 
+	after := time.Now()
+	log.Infof("restore: %s", after.Sub(before))
 	return nil
 }
 
