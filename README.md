@@ -235,12 +235,12 @@ You can also use 'do actions' for usual tasks. For instance `mulch do myvm db` w
 
 How do I install the client?
 ---
-Usual Go requirements : check you have go/golang installed and `~/go/bin/` is in your `PATH` (or copy/link binary in one of your `PATH` directories; use `sudo ln -s /home/$USER/go/bin/mulch /usr/local/bin` if you have no idea of how to do this).
 
-Then install the client:
+Install go (sometimes named "golang") and then:
 ```sh
 go get -u github.com/OnitiFR/mulch/cmd/mulch
 ```
+Usual Go requirements : check you have go/golang installed and `~/go/bin/` is in your `PATH` (or copy/link binary in one of your `PATH` directories; use `sudo ln -s /home/$USER/go/bin/mulch /usr/local/bin` if you have no idea of how to do this).
 
 That's it, you can now run `mulch` command. It will show you a sample configuration file (`~/.mulch.toml`):
 ```toml
@@ -255,9 +255,10 @@ You can define multiple servers and use -s option to select one, or use
 default = "my-mulch" as a global setting (i.e. before [[server]]).
 First server is the default. Environment variable `SERVER` is also available.
 
-![mulch client general help](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-h.png)
+To install bash completion, you may have a look at `mulch help completion`, you may
+also install ssh aliases right now with `mulch ssh-config`.
 
-To install bash completion, you may have a look at `mulch help completion`.
+![mulch client general help](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-h.png)
 
 How do I install the server? (mulchd and mulch-proxy)
 ---
