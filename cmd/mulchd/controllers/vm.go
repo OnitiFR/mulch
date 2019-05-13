@@ -207,7 +207,7 @@ func ActionVMController(req *server.Request) {
 		}
 	case "rebuild":
 		before := time.Now()
-		err := RebuildVM2(req, vm, entry.Name)
+		err := RebuildVMv2(req, vm, entry.Name)
 		after := time.Now()
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
@@ -483,118 +483,8 @@ func BackupVM(req *server.Request, vmName *server.VMName) (string, error) {
 	return server.VMBackup(vmName, req.App, req.Stream, server.BackupCompressAllow)
 }
 
-// RebuildVM delete VM and rebuilds it from a backup
-// steps: backup, stop, rename-old, create-with-restore, delete-old, delete backup
-func RebuildVM(req *server.Request, vm *server.VM, vmName *server.VMName) error {
-	if len(vm.Config.Restore) == 0 {
-		return errors.New("no restore script defined for this VM")
-	}
-
-	if vm.Locked == true {
-		return errors.New("VM is locked")
-	}
-
-	configFile := vm.Config.FileContent
-
-	// - backup
-	backupName, err := server.VMBackup(vmName, req.App, req.Stream, server.BackupCompressDisable)
-	if err != nil {
-		return fmt.Errorf("creating backup: %s", err)
-	}
-
-	// - stop
-	req.Stream.Infof("stopping VM")
-	err = server.VMStopByName(vmName, req.App, req.Stream)
-	if err != nil {
-		return err
-	}
-
-	// - rename original VM
-	req.Stream.Infof("cloning VM")
-	tmpVMNameStr := fmt.Sprintf("%s-old-%d", vmName.ID(), req.App.Rand.Int31())
-	tmpVMName := server.NewVMName(tmpVMNameStr, 0)
-	err = server.VMRename(vmName, tmpVMName, req.App, req.Stream)
-	if err != nil {
-		return err
-	}
-
-	// remove domains from previous VM so the new one can take its place
-	domains := vm.Config.Domains
-	vm.Config.Domains = nil
-
-	success := false
-	defer func() {
-		if success == false {
-			req.Stream.Infof("rollback: re-creating VM from %s", tmpVMName)
-			// get our domains backs
-			vm.Config.Domains = domains
-			err = server.VMRename(tmpVMName, vmName, req.App, req.Stream)
-			if err != nil {
-				req.Stream.Error(err.Error())
-				return
-			}
-			err = server.VMStartByName(vmName, vm.SecretUUID, req.App, req.Stream)
-			if err != nil {
-				req.Stream.Error(err.Error())
-				return
-			}
-			req.Stream.Info("original VM restored")
-		}
-	}()
-
-	// - re-create VM
-	conf, err := server.NewVMConfigFromTomlReader(strings.NewReader(configFile), req.Stream)
-	if err != nil {
-		return fmt.Errorf("decoding config: %s", err)
-	}
-
-	conf.RestoreBackup = backupName
-
-	// replace original VM author with "rebuilder"
-	_, _, err = server.NewVM(conf, true, req.APIKey.Comment, req.App, req.Stream)
-	if err != nil {
-		req.Stream.Error(err.Error())
-		return fmt.Errorf("Cannot create VM: %s", err)
-	}
-
-	// - delete backup
-	err = req.App.BackupsDB.Delete(backupName)
-	if err != nil {
-		req.Stream.Errorf("unable remove '%s' backup from DB: %s", backupName, err)
-		return nil // not a real error
-	}
-	err = req.App.Libvirt.DeleteVolume(backupName, req.App.Libvirt.Pools.Backups)
-	if err != nil {
-		req.Stream.Errorf("unable remove '%s' backup from storage: %s", backupName, err)
-		return nil // not a real error
-	}
-
-	// - delete original VM
-	err = server.VMDelete(tmpVMName, req.App, req.Stream)
-	if err != nil {
-		return fmt.Errorf("delete VM: %s", err)
-	}
-
-	lock := req.HTTP.FormValue("lock")
-	if lock == "true" {
-		err := server.VMLockUnlock(vmName, true, req.App.VMDB)
-		if err != nil {
-			req.Stream.Failuref("unable to lock '%s': %s", vmName, err)
-			return nil
-		}
-		req.Stream.Info("VM locked")
-	}
-
-	// commit
-	success = true
-
-	return nil
-}
-
 // RebuildVM2 delete VM and rebuilds it from a backup (2nd version, using revisions)
-// TODO: transaction!
-// - rollback: activate rev+0, delete rev+1, delete backup
-func RebuildVM2(req *server.Request, vm *server.VM, vmName *server.VMName) error {
+func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) error {
 	req.SetTarget(vmName.Name)
 
 	if len(vm.Config.Restore) == 0 {
