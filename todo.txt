@@ -2,7 +2,6 @@
 - remove the need to supply the VM name for redefine command?
   - pro: sanity check for and dangerous op
   - cons: looks confusing to the user, change controller logic
-- check if "redefine" command is blocked during rebuilds / WIP (is rebuild a WIP?)
 - shortcut for "do action" (ex: mulch open xyz) with completion ?
 - completion for "-r" on "vm create" command
 - completion for backup mount
