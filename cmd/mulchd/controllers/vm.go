@@ -495,6 +495,15 @@ func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) erro
 		return errors.New("VM is locked")
 	}
 
+	if vm.WIP != server.VMOperationNone {
+		return fmt.Errorf("VM have a work in progress (%s)", string(vm.WIP))
+	}
+
+	running, _ := server.VMIsRunning(vmName, req.App)
+	if running == false {
+		return errors.New("VM should be up and running")
+	}
+
 	configFile := vm.Config.FileContent
 
 	conf, err := server.NewVMConfigFromTomlReader(strings.NewReader(configFile), req.Stream)
