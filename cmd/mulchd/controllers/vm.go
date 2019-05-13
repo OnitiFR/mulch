@@ -483,7 +483,7 @@ func BackupVM(req *server.Request, vmName *server.VMName) (string, error) {
 	return server.VMBackup(vmName, req.App, req.Stream, server.BackupCompressAllow)
 }
 
-// RebuildVM2 delete VM and rebuilds it from a backup (2nd version, using revisions)
+// RebuildVMv2 delete VM and rebuilds it from a backup (2nd version, using revisions)
 func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) error {
 	req.SetTarget(vmName.Name)
 
