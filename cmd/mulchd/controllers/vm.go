@@ -149,6 +149,7 @@ func ActionVMController(req *server.Request) {
 		return
 	}
 	vm := entry.VM
+	req.SetTarget(vmName)
 
 	action := req.HTTP.FormValue("action")
 	switch action {
@@ -297,8 +298,6 @@ func ExecScriptVM(req *server.Request, vm *server.VM, vmName *server.VMName) err
 
 // DoActionVM will execute a "do action" in the VM
 func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error {
-	req.SetTarget(vmName.Name)
-
 	actionName := req.HTTP.FormValue("do_action")
 	arguments := req.HTTP.FormValue("arguments")
 
@@ -485,8 +484,6 @@ func BackupVM(req *server.Request, vmName *server.VMName) (string, error) {
 
 // RebuildVMv2 delete VM and rebuilds it from a backup (2nd version, using revisions)
 func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) error {
-	req.SetTarget(vmName.Name)
-
 	if len(vm.Config.Restore) == 0 {
 		return errors.New("no restore script defined for this VM")
 	}
@@ -614,10 +611,12 @@ func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) erro
 
 // RedefineVM replace VM config file with a new one, for next rebuild
 func RedefineVM(req *server.Request, vm *server.VM) error {
-	req.SetTarget(vm.Config.Name)
-
 	if vm.Locked == true {
 		return errors.New("VM is locked")
+	}
+
+	if vm.WIP != server.VMOperationNone {
+		return fmt.Errorf("VM have a work in progress (%s)", string(vm.WIP))
 	}
 
 	configFile, header, err := req.HTTP.FormFile("config")
