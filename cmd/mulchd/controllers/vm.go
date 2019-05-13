@@ -478,7 +478,7 @@ func GetVMDoActionsController(req *server.Request) {
 	}
 }
 
-// BackupVM launch the backup proccess
+// BackupVM launch the backup process
 func BackupVM(req *server.Request, vmName *server.VMName) (string, error) {
 	return server.VMBackup(vmName, req.App, req.Stream, server.BackupCompressAllow)
 }

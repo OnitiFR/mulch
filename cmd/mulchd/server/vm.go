@@ -987,7 +987,7 @@ func VMDetachBackup(vmName *VMName, app *App) error {
 	return nil
 }
 
-// VMBackup launch the backup proccess (returns backup filename)
+// VMBackup launch the backup process (returns backup filename)
 func VMBackup(vmName *VMName, app *App, log *Log, compressAllow bool) (string, error) {
 	vm, err := app.VMDB.GetByName(vmName)
 	if err != nil {
@@ -1153,8 +1153,8 @@ func VMBackup(vmName *VMName, app *App, log *Log, compressAllow bool) (string, e
 	return volName, nil
 }
 
-// VMRestoreNoChecks launch the restore proccess, this function is limited to (server)
-// internal use, since a few checks are missing because it's supposed to be
+// VMRestoreNoChecks launch the restore process, this function is a symetric
+// of VMBackup, since a few checks are missing because it's supposed to be
 // called -during VM creation- (and not after)
 func VMRestoreNoChecks(vm *VM, vmName *VMName, backup *Backup, app *App, log *Log) error {
 	vm.SetOperation(VMOperationRestore)
