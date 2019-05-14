@@ -591,18 +591,18 @@ func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) erro
 		return fmt.Errorf("delete original VM: %s", err)
 	}
 
+	// commit (too late to rollback, original VM does not exists anymore)
+	success = true
+
 	lock := req.HTTP.FormValue("lock")
 	if lock == "true" {
-		err := server.VMLockUnlock(vmName, true, req.App.VMDB)
+		err := server.VMLockUnlock(newVMName, true, req.App.VMDB)
 		if err != nil {
 			req.Stream.Failuref("unable to lock '%s': %s", vmName, err)
 			return nil
 		}
 		req.Stream.Info("VM locked")
 	}
-
-	// commit
-	success = true
 
 	req.Stream.Infof("downtime: %s", after.Sub(before))
 
