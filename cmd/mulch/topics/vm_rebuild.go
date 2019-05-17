@@ -10,7 +10,7 @@ import (
 var vmRebuildCmd = &cobra.Command{
 	Use:   "rebuild <vm-name>",
 	Short: "Rebuild a VM",
-	Long: `Backup a VM, DELETE IT and re-create it from the backup.
+	Long: `Recreate a VM using its own backup.
 
 Warning: you should consider this operation as a dangerous one, since
 the result relies on backup/restore scripts correctness. You may lose
