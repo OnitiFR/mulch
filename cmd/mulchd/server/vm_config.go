@@ -52,6 +52,7 @@ type VMDoAction struct {
 	ScriptURL   string
 	User        string
 	Description string
+	FromConfig  bool
 }
 
 type tomlVMConfig struct {
@@ -163,6 +164,7 @@ func vmConfigGetDoAction(tDoAction *tomlVMDoAction) (*VMDoAction, error) {
 	doAction.ScriptURL = scriptURL
 	doAction.Description = tDoAction.Description
 	doAction.User = tDoAction.User
+	doAction.FromConfig = true
 
 	return doAction, nil
 }
