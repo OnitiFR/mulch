@@ -470,6 +470,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 
 				// add action
 				newAction := vmDoAction // duplicate
+				newAction.FromConfig = false
 				vm.Config.DoActions[vmDoAction.Name] = &newAction
 				log.Infof("action '%s' added", vmDoAction.Name)
 

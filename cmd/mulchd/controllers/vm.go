@@ -643,7 +643,23 @@ func RedefineVM(req *server.Request, vm *server.VM) error {
 	// change author
 	vm.AuthorKey = req.APIKey.Comment
 
+	oldActions := vm.Config.DoActions
+
+	// redefine config
 	vm.Config = conf
+
+	// re-add old 'from prepare' actions (only if a new 'from config' action with
+	// the same name is not already defined)
+	for name, action := range oldActions {
+		if action.FromConfig == true {
+			continue
+		}
+		if _, exists := vm.Config.DoActions[name]; exists {
+			req.Stream.Warningf("new action '%s' will replace the old one", name)
+			continue
+		}
+		vm.Config.DoActions[name] = action
+	}
 
 	req.App.VMDB.Update()
 	if err != nil {
