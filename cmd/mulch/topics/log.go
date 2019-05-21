@@ -18,6 +18,7 @@ Examples:
 	Aliases: []string{"logs"},
 	Run: func(cmd *cobra.Command, args []string) {
 		call := globalAPI.NewCall("GET", "/log", map[string]string{})
+		call.DisableSpecialMessages = true
 		call.Do()
 	},
 }

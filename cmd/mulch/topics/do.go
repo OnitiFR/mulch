@@ -43,7 +43,6 @@ See [[do-actions]] in TOML description file.
 			}
 
 			call := globalAPI.NewCall("POST", "/vm/"+args[0], params)
-			call.AllowSpecialMessages = true
 			call.Do()
 		}
 	},
