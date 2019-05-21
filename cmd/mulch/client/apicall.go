@@ -31,14 +31,15 @@ type API struct {
 
 // APICall describes a call to the API
 type APICall struct {
-	api          *API
-	Method       string
-	Path         string
-	Args         map[string]string
-	JSONCallback func(io.Reader)
-	DestFilePath string
-	DestStream   *os.File
-	files        map[string]string
+	api                  *API
+	Method               string
+	Path                 string
+	Args                 map[string]string
+	JSONCallback         func(io.Reader)
+	DestFilePath         string
+	DestStream           *os.File
+	AllowSpecialMessages bool
+	files                map[string]string
 }
 
 // NewAPI create a new API instance
@@ -282,9 +283,11 @@ func printJSONStream(body io.ReadCloser, call *APICall) error {
 		}
 		fmt.Printf("%s%s: %s\n", time, mtype, content)
 
-		err = dealWithSpecialMessages(content)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Client error: %s", err.Error())
+		if call.AllowSpecialMessages {
+			err = dealWithSpecialMessages(content)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Client error: %s", err.Error())
+			}
 		}
 	}
 	return retError
