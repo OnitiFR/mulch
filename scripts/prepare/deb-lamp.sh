@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # -- Run with sudo privileges
-# For: Debian 9 / Ubuntu 18.10
+# For: Debian 9 / Ubuntu 18.04 to 19.04
 
 appenv="/home/$_APP_USER/env"
 html_dir="/home/$_APP_USER/public_html/"
@@ -38,6 +38,11 @@ sudo sed -i "s/APACHE_RUN_GROUP=www-data/APACHE_RUN_GROUP=$_APP_USER/" /etc/apac
 sudo sed -i 's/^ServerTokens \(.\+\)$/ServerTokens Prod/' /etc/apache2/conf-enabled/security.conf || exit $?
 
 sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
+# Allow mod_status even if we use RewriteEngine
+<Location /server-status>
+    RewriteEngine off
+</Location>
+
 <Directory $html_dir>
     Options Indexes FollowSymLinks
     # Options is for .htaccess PHP settings and MultiViews
