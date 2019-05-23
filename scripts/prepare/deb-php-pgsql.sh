@@ -108,6 +108,8 @@ host    replication     all             ::1/128                 md5
 EOS
 [ $? -eq 0 ] || exit $?
 
+systemctl restart postgresql || exit $?
+
 sudo bash -c "cat | sudo -iu postgres psql -v ON_ERROR_STOP=1" <<- EOS
 CREATE DATABASE $_APP_USER;
 CREATE USER $_APP_USER WITH PASSWORD '$PGSQL_PASSWORD';
