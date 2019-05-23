@@ -87,6 +87,27 @@ EOS
 [ $? -eq 0 ] || exit $?
 
 # PgSQL
+sudo bash -c "cat > /etc/postgresql/*/main/pg_hba.conf" <<- EOS
+# Modified by Mulch to remove "peer" auth for users (other than postgres)
+# Database administrative login by Unix domain socket
+local   all             postgres                                peer
+
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# "local" is for Unix domain socket connections only
+local   all             all                                     md5
+# IPv4 local connections:
+host    all             all             127.0.0.1/32            md5
+# IPv6 local connections:
+host    all             all             ::1/128                 md5
+# Allow replication connections from localhost, by a user with the
+# replication privilege.
+local   replication     all                                     md5
+host    replication     all             127.0.0.1/32            md5
+host    replication     all             ::1/128                 md5
+EOS
+[ $? -eq 0 ] || exit $?
+
 sudo bash -c "cat | sudo -iu postgres psql -v ON_ERROR_STOP=1" <<- EOS
 CREATE DATABASE $_APP_USER;
 CREATE USER $_APP_USER WITH PASSWORD '$PGSQL_PASSWORD';
@@ -102,3 +123,15 @@ sudo bash -c "echo '. /etc/mulch.env' >> /etc/apache2/envvars" || exit $?
 sudo bash -c "echo 'export \$(grep -v ^\# $appenv | xargs)' >> /etc/apache2/envvars" || exit $?
 
 sudo systemctl restart apache2 || exit $?
+
+echo "_MULCH_ACTION_NAME=db"
+echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/deb_db_adminer.sh"
+echo "_MULCH_ACTION_USER=admin"
+echo "_MULCH_ACTION_DESCRIPTION=Login to Adminer"
+echo "_MULCH_ACTION=commit"
+
+echo "_MULCH_ACTION_NAME=logs"
+echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/deb_apache_logs.sh"
+echo "_MULCH_ACTION_USER=admin"
+echo "_MULCH_ACTION_DESCRIPTION=Show live Apache logs"
+echo "_MULCH_ACTION=commit"
