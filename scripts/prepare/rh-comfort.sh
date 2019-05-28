@@ -41,7 +41,7 @@ EOS
 
 # Powerline
 sudo yum -y install epel-release || exit $?
-sudo yum install python-pip python-pygit2 || exit $?
+sudo yum -y install python-pip python-pygit2 || exit $?
 sudo pip install powerline-status || exit $?
 
 sudo bash -c "cat > /etc/profile.d/powerline.sh" <<- 'EOS'
