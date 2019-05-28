@@ -37,6 +37,11 @@ sudo sed -i "s/APACHE_RUN_GROUP=www-data/APACHE_RUN_GROUP=$_APP_USER/" /etc/apac
 sudo sed -i 's/^ServerTokens \(.\+\)$/ServerTokens Prod/' /etc/apache2/conf-enabled/security.conf || exit $?
 
 sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
+# Allow mod_status even if we use RewriteEngine
+<Location /server-status>
+    RewriteEngine off
+</Location>
+
 <Directory $html_dir>
     Options Indexes FollowSymLinks
     # Options is for .htaccess PHP settings and MultiViews

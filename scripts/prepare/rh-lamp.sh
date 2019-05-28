@@ -56,6 +56,11 @@ User $_APP_USER
 Group $_APP_USER
 ServerTokens Prod
 
+# Allow mod_status even if we use RewriteEngine
+<Location /server-status>
+    RewriteEngine off
+</Location>
+
 <Directory $html_dir>
     Options Indexes FollowSymLinks
     # Options is for .htaccess PHP settings and MultiViews
