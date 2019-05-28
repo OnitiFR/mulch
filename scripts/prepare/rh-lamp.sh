@@ -117,7 +117,7 @@ file="/home/$_MULCH_SUPER_USER/.httpd_env"
 sudo bash -c "cat > $http_env" <<- EOS
 #!/bin/bash
 echo "# generated, do not modify" > $file
-grep ^export /etc/mulch.env | sed 's/^export //' >> $file
+grep ^export /etc/mulch.env | sed 's/; /\n/g' | sed 's/^export //' >> $file
 cat "/home/$_APP_USER/env" >> $file
 EOS
 [ $? -eq 0 ] || exit $?
@@ -168,8 +168,9 @@ EOS
 echo "restart apache2"
 sudo systemctl restart httpd || exit $?
 
-echo "_MULCH_ACTION_NAME=db"
-echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/deb_db_phpmyadmin.sh"
-echo "_MULCH_ACTION_USER=admin"
-echo "_MULCH_ACTION_DESCRIPTION=Login to phpMyAdmin"
-echo "_MULCH_ACTION=commit"
+# TODO: adapt to RH
+#echo "_MULCH_ACTION_NAME=db"
+#echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/deb_db_phpmyadmin.sh"
+#echo "_MULCH_ACTION_USER=admin"
+#echo "_MULCH_ACTION_DESCRIPTION=Login to phpMyAdmin"
+#echo "_MULCH_ACTION=commit"
