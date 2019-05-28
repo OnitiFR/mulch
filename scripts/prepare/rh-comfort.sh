@@ -40,6 +40,7 @@ EOS
 [ $? -eq 0 ] || exit $?
 
 # Powerline
+sudo yum -y install epel-release || exit $?
 sudo yum install python-pip python-pygit2 || exit $?
 sudo pip install powerline-status || exit $?
 
