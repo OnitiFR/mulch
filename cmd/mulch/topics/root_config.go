@@ -12,15 +12,17 @@ import (
 type RootConfig struct {
 	ConfigFile string
 
-	Server *tomlServerConfig
-	Trace  bool
-	Time   bool
+	Server  *tomlServerConfig
+	Aliases map[string]string
+	Trace   bool
+	Time    bool
 }
 
 type tomlServerConfig struct {
-	Name string
-	URL  string
-	Key  string
+	Name  string
+	URL   string
+	Key   string
+	Alias string
 }
 
 type tomlRootConfig struct {
@@ -101,6 +103,17 @@ func NewRootConfig(filename string) (*RootConfig, error) {
 
 	if rootConfig.Server == nil {
 		return nil, fmt.Errorf("unable to find server '%s' in configuration file", tConfig.Default)
+	}
+
+	rootConfig.Aliases = make(map[string]string)
+	for _, server := range tConfig.Server {
+		if server.Alias != "" {
+			_, exists := rootConfig.Aliases[server.Alias]
+			if exists {
+				return nil, fmt.Errorf("multiple declaration of alias '%s'", server.Alias)
+			}
+			rootConfig.Aliases[server.Alias] = server.Name
+		}
 	}
 
 	rootConfig.Trace = tConfig.Trace

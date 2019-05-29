@@ -32,7 +32,6 @@ libvirt API. This is the client.`,
 			globalConfig.Server.Name,
 		)
 	},
-	BashCompletionFunction: bashCompletionFunc,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -68,6 +67,15 @@ func init() {
 	rootCmd.PersistentFlags().Lookup("server").Annotations = serverFlagAnnotation
 }
 
+func setCompletion() {
+	aliases := ""
+	for alias, server := range globalConfig.Aliases {
+		aliases += fmt.Sprintf("%s() { mulch -s %s \"$@\"; }\n", alias, server)
+		aliases += fmt.Sprintf("complete -F __start_mulch %s\n", alias)
+	}
+	rootCmd.BashCompletionFunction = aliases + "\n" + bashCompletionFunc
+}
+
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 
@@ -91,10 +99,13 @@ Example:
 name = "my-mulch"
 url = "http://192.168.10.104:8585"
 key = "gein2xah7keeL33thpe9ahvaegF15TUL3surae3Chue4riokooJ5WuTI80FTWfz2"
+alias = "my"
 
 You can define multiple servers and use -s option to select one, or use
 default = "my-mulch" as a global setting (i.e. before [[server]]).
 First server is the default.
+
+Alias is optionnal but cool, see 'mulch help completion' for informations.
 
 Global settings: trace, time
 Note: you can also use environment variables (TRACE, TIME, SERVER).
@@ -108,6 +119,8 @@ Note: you can also use environment variables (TRACE, TIME, SERVER).
 		globalConfig.Trace,
 		globalConfig.Time,
 	)
+
+	setCompletion()
 
 	if rootCmd.PersistentFlags().Lookup("dump-server").Changed {
 		fmt.Println(globalConfig.Server.Name)
