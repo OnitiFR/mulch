@@ -617,7 +617,7 @@ func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) erro
 
 // RedefineVM replace VM config file with a new one, for next rebuild
 func RedefineVM(req *server.Request, vm *server.VM) error {
-	if vm.Locked == true {
+	if vm.Locked == true && req.HTTP.FormValue("force") != "true" {
 		return errors.New("VM is locked")
 	}
 

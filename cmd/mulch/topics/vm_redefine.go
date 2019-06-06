@@ -2,6 +2,7 @@ package topics
 
 import (
 	"log"
+	"strconv"
 
 	"github.com/spf13/cobra"
 )
@@ -23,7 +24,12 @@ it's an easy way to modify config before VM redefinition.
 `,
 	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		call := globalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{"action": "redefine"})
+		force, _ := cmd.Flags().GetBool("force")
+
+		call := globalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
+			"action": "redefine",
+			"force":  strconv.FormatBool(force),
+		})
 		err := call.AddFile("config", args[1])
 		if err != nil {
 			log.Fatal(err)
@@ -34,4 +40,5 @@ it's an easy way to modify config before VM redefinition.
 
 func init() {
 	vmCmd.AddCommand(vmRedefineCmd)
+	vmRedefineCmd.Flags().BoolP("force", "f", false, "force redefine on a locked VM")
 }
