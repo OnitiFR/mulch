@@ -10,6 +10,7 @@ type APIBackupListEntry struct {
 	DiskName  string
 	VMName    string
 	Created   time.Time
+	AuthorKey string
 	Size      uint64
 	AllocSize uint64
 }

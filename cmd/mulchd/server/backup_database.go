@@ -11,9 +11,10 @@ import (
 
 // Backup describes a VM backup
 type Backup struct {
-	DiskName string
-	Created  time.Time
-	VM       *VM
+	DiskName  string
+	Created   time.Time
+	AuthorKey string
+	VM        *VM
 }
 
 // BackupDatabase describes a persistent Backup instances database

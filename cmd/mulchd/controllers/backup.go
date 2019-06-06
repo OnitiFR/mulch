@@ -55,6 +55,7 @@ func ListBackupsController(req *server.Request) {
 			DiskName:  backup.DiskName,
 			VMName:    backup.VM.Config.Name,
 			Created:   backup.Created,
+			AuthorKey: backup.AuthorKey,
 			Size:      infos.Capacity,
 			AllocSize: infos.Allocation,
 		})
@@ -180,8 +181,9 @@ func UploadBackupController(req *server.Request) {
 
 	// Create a backup in DB with an empty VM
 	backup := &server.Backup{
-		DiskName: header.Filename,
-		Created:  time.Now(),
+		DiskName:  header.Filename,
+		Created:   time.Now(),
+		AuthorKey: req.APIKey.Comment,
 		VM: &server.VM{
 			Config: &server.VMConfig{},
 		},

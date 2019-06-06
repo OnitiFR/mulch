@@ -989,7 +989,7 @@ func VMDetachBackup(vmName *VMName, app *App) error {
 }
 
 // VMBackup launch the backup process (returns backup filename)
-func VMBackup(vmName *VMName, app *App, log *Log, compressAllow bool) (string, error) {
+func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllow bool) (string, error) {
 	vm, err := app.VMDB.GetByName(vmName)
 	if err != nil {
 		return "", err
@@ -1142,9 +1142,10 @@ func VMBackup(vmName *VMName, app *App, log *Log, compressAllow bool) (string, e
 	}
 
 	app.BackupsDB.Add(&Backup{
-		DiskName: volName,
-		Created:  time.Now(),
-		VM:       vm,
+		DiskName:  volName,
+		Created:   time.Now(),
+		AuthorKey: authorKey,
+		VM:        vm,
 	})
 	after := time.Now()
 

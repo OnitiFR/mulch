@@ -57,16 +57,17 @@ func backupListCB(reader io.Reader) {
 		strData := [][]string{}
 		for _, line := range data {
 			strData = append(strData, []string{
-				line.VMName,
-				// line.Created.Format(time.RFC3339),
 				line.DiskName,
+				line.VMName,
+				line.AuthorKey,
+				// line.Created.Format(time.RFC3339),
 				// (datasize.ByteSize(line.Size) * datasize.B).HR(),
 				(datasize.ByteSize(line.AllocSize) * datasize.B).HR(),
 			})
 		}
 
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"VM", "Disk Name", "Size"})
+		table.SetHeader([]string{"Disk Name", "VM", "Author", "Size"})
 		table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 		table.SetCenterSeparator("|")
 		table.AppendBulk(strData)
