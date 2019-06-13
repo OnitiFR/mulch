@@ -5,6 +5,7 @@
 
 appenv="/home/$_APP_USER/env"
 html_dir="/home/$_APP_USER/public_html/"
+pgpass="/home/$_APP_USER/.pgpass"
 
 export DEBIAN_FRONTEND="noninteractive"
 sudo -E apt-get -y -qq install apache2 php php-bcmath php-imagick pwgen postgresql postgresql-client php-pgsql || exit $?
@@ -28,7 +29,10 @@ sudo mkdir -p $html_dir || exit $?
 echo "creating/overwriting index.php..."
 sudo bash -c "echo '<?php echo getenv(\"_VM_NAME\").\" is ready!\";' > $html_dir/index.php" || exit $?
 
-sudo chown -R $_APP_USER:$_APP_USER $html_dir $appenv || exit $?
+sudo bash -c "echo 'localhost:5432:$_APP_USER:$_APP_USER:$PGSQL_PASSWORD' > $pgpass" || exit $?
+
+sudo chown -R $_APP_USER:$_APP_USER $html_dir $appenv $pgpass || exit $?
+sudo chmod 600 $pgpass || exit $?
 
 # run Apache as $_APP_USER
 sudo sed -i "s/APACHE_RUN_USER=www-data/APACHE_RUN_USER=$_APP_USER/" /etc/apache2/envvars || exit $?
@@ -85,9 +89,9 @@ EOS
 
 sudo a2enconf adminer || exit $?
 
-sudo bash -c "cat > /usr/share/adminer/index.php" <<- 'EOS'
+sudo bash -c "cat > /usr/share/adminer/index.php" <<- EOS
 <?php
-header('Location: adminer.php?pgsql=&username=app&db=app');
+header('Location: adminer.php?pgsql=&username=${_APP_USER}&db=${_APP_USER}');
 EOS
 [ $? -eq 0 ] || exit $?
 
@@ -119,7 +123,7 @@ sudo bash -c "cat | sudo -iu postgres psql -v ON_ERROR_STOP=1" <<- EOS
 CREATE DATABASE $_APP_USER;
 CREATE USER $_APP_USER WITH PASSWORD '$PGSQL_PASSWORD';
 GRANT ALL PRIVILEGES ON DATABASE $_APP_USER to $_APP_USER;
-\connect app
+\connect $_APP_USER
 CREATE EXTENSION fuzzystrmatch;
 EOS
 [ $? -eq 0 ] || exit $?
