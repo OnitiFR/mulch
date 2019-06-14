@@ -245,8 +245,8 @@ func (vmdb *VMDatabase) GetNames() []*VMName {
 	return names
 }
 
-// GetByName lookups a VM by its name
-func (vmdb *VMDatabase) GetByName(name *VMName) (*VM, error) {
+// GetEntryByName lookups a VMDatabaseEntry entry by its name
+func (vmdb *VMDatabase) GetEntryByName(name *VMName) (*VMDatabaseEntry, error) {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
@@ -254,7 +254,16 @@ func (vmdb *VMDatabase) GetByName(name *VMName) (*VM, error) {
 	if !exists {
 		return nil, fmt.Errorf("VM %s not found in database", name)
 	}
-	return vm.VM, nil
+	return vm, nil
+}
+
+// GetByName lookups a VM by its name
+func (vmdb *VMDatabase) GetByName(name *VMName) (*VM, error) {
+	entry, err := vmdb.GetEntryByName(name)
+	if err != nil {
+		return nil, err
+	}
+	return entry.VM, nil
 }
 
 // GetActiveEntryByName return the active VM entry with the specified name

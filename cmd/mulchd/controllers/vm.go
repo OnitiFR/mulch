@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,30 @@ import (
 	"github.com/OnitiFR/mulch/common"
 	"golang.org/x/crypto/ssh"
 )
+
+func getEntryFromRequest(vmName string, req *server.Request) (*server.VMDatabaseEntry, error) {
+	var entry *server.VMDatabaseEntry
+	var err error
+
+	revisionParams := req.HTTP.FormValue("revision")
+	if revisionParams != "" {
+		revision, err := strconv.Atoi(revisionParams)
+		if err != nil {
+			return nil, err
+		}
+		entry, err = req.App.VMDB.GetEntryByName(server.NewVMName(vmName, revision))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		entry, err = req.App.VMDB.GetActiveEntryByName(vmName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return entry, nil
+}
 
 // NewVMController creates a new VM
 func NewVMController(req *server.Request) {
@@ -143,7 +168,8 @@ func ActionVMController(req *server.Request) {
 		req.Stream.Failuref("invalid VM name")
 		return
 	}
-	entry, err := req.App.VMDB.GetActiveEntryByName(vmName)
+
+	entry, err := getEntryFromRequest(vmName, req)
 	if err != nil {
 		req.Stream.Failure(err.Error())
 		return
@@ -239,7 +265,7 @@ func DeleteVMController(req *server.Request) {
 	vmName := req.SubPath
 	req.SetTarget(vmName)
 
-	entry, err := req.App.VMDB.GetActiveEntryByName(vmName)
+	entry, err := getEntryFromRequest(vmName, req)
 	if err != nil {
 		req.Stream.Failure(err.Error())
 		return

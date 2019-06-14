@@ -17,11 +17,15 @@ See 'vm list' for VM Names.
 	Args:    cobra.ExactArgs(1),
 	Aliases: []string{"remove"},
 	Run: func(cmd *cobra.Command, args []string) {
-		call := globalAPI.NewCall("DELETE", "/vm/"+args[0], map[string]string{})
+		revision, _ := cmd.Flags().GetString("revision")
+		call := globalAPI.NewCall("DELETE", "/vm/"+args[0], map[string]string{
+			"revision": revision,
+		})
 		call.Do()
 	},
 }
 
 func init() {
 	vmCmd.AddCommand(vmDeleteCmd)
+	vmDeleteCmd.Flags().StringP("revision", "r", "", "revision number")
 }
