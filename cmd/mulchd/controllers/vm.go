@@ -193,39 +193,39 @@ func ActionVMController(req *server.Request) {
 	switch action {
 	case "lock":
 		if vm.Locked {
-			req.Stream.Warningf("'%s' already locked", vmName)
+			req.Stream.Warningf("%s already locked", entry.Name)
 		}
 		err := server.VMLockUnlock(entry.Name, true, req.App.VMDB)
 		if err != nil {
-			req.Stream.Failuref("unable to lock '%s': %s", vmName, err)
+			req.Stream.Failuref("unable to lock %s: %s", entry.Name, err)
 		} else {
-			req.Stream.Successf("'%s' is now locked", vmName)
+			req.Stream.Successf("%s is now locked", entry.Name)
 		}
 	case "unlock":
 		if vm.Locked == false {
-			req.Stream.Warningf("'%s' already unlocked", vmName)
+			req.Stream.Warningf("%s already unlocked", entry.Name)
 		}
 		err := server.VMLockUnlock(entry.Name, false, req.App.VMDB)
 		if err != nil {
-			req.Stream.Failuref("unable to unlock '%s': %s", vmName, err)
+			req.Stream.Failuref("unable to unlock %s: %s", entry.Name, err)
 		} else {
-			req.Stream.Successf("'%s' is now unlocked", vmName)
+			req.Stream.Successf("%s is now unlocked", entry.Name)
 		}
 	case "start":
 		req.Stream.Infof("starting %s", vmName)
 		err := server.VMStartByName(entry.Name, vm.SecretUUID, req.App, req.Stream)
 		if err != nil {
-			req.Stream.Failuref("unable to start '%s': %s", vmName, err)
+			req.Stream.Failuref("unable to start %s: %s", entry.Name, err)
 		} else {
-			req.Stream.Successf("VM '%s' is now up and running", vmName)
+			req.Stream.Successf("VM %s is now up and running", entry.Name)
 		}
 	case "stop":
 		req.Stream.Infof("stopping %s", vmName)
 		err := server.VMStopByName(entry.Name, req.App, req.Stream)
 		if err != nil {
-			req.Stream.Failuref("unable to stop '%s': %s", vmName, err)
+			req.Stream.Failuref("unable to stop %s: %s", entry.Name, err)
 		} else {
-			req.Stream.Successf("VM '%s' is now down", vmName)
+			req.Stream.Successf("VM %s is now down", entry.Name)
 		}
 	case "exec":
 		err := ExecScriptVM(req, vm, entry.Name)
@@ -258,7 +258,14 @@ func ActionVMController(req *server.Request) {
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
 		} else {
-			req.Stream.Successf("VM '%s' redefined (may the sysadmin gods be with you)", vmName)
+			req.Stream.Successf("VM %s redefined (may the sysadmin gods be with you)", entry.Name)
+		}
+	case "activate":
+		err := req.App.VMDB.SetActiveRevision(entry.Name.Name, entry.Name.Revision)
+		if err != nil {
+			req.Stream.Failuref("error: %s", err)
+		} else {
+			req.Stream.Successf("VM %s is now active", entry.Name)
 		}
 	default:
 		req.Stream.Failuref("missing or invalid action ('%s') for '%s'", action, vmName)
