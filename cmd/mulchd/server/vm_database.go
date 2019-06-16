@@ -175,19 +175,19 @@ func (vmdb *VMDatabase) Delete(name *VMName) error {
 	}
 
 	if entryToDelete.Active {
-		// set "previous" instance active (if any)
-		var previous *VMDatabaseEntry
+		// set "highest" instance active (if any)
+		var highest *VMDatabaseEntry
 		maxRevision := -1
 		for _, entry := range vmdb.db {
 			if entry.Name.Name == entryToDelete.Name.Name &&
 				entry.Name.Revision != entryToDelete.Name.Revision &&
 				entry.Name.Revision > maxRevision {
 				maxRevision = entry.Name.Revision
-				previous = entry
+				highest = entry
 			}
 		}
-		if previous != nil {
-			previous.Active = true
+		if highest != nil {
+			highest.Active = true
 		}
 	}
 
