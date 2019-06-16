@@ -32,7 +32,10 @@ See 'vm list' for VM Names.
 			log.Fatal(err.Error())
 		}
 
-		call := globalAPI.NewCall("GET", "/vm/infos/"+args[0], map[string]string{})
+		revision, _ := cmd.Flags().GetString("revision")
+		call := globalAPI.NewCall("GET", "/vm/infos/"+args[0], map[string]string{
+			"revision": revision,
+		})
 		call.JSONCallback = sshCmdInfoCB
 		call.Do()
 	},
@@ -93,7 +96,7 @@ func sshCmdPairCB(reader io.Reader) {
 		"ssh",
 		"-i", privFilePath,
 		"-p", strconv.Itoa(sshPort),
-		user + "@" + sshCmdVM.Name + "@" + hostname,
+		user + "@" + sshCmdVM.Name + "-" + strconv.Itoa(sshCmdVM.Revision) + "@" + hostname,
 	}
 
 	sshPath, err := exec.LookPath("ssh")
@@ -108,4 +111,5 @@ func sshCmdPairCB(reader io.Reader) {
 func init() {
 	rootCmd.AddCommand(sshCmd)
 	sshCmd.Flags().StringVarP(&sshCmdUser, "user", "u", "", "login user (default: super user)")
+	sshCmd.Flags().StringP("revision", "r", "", "revision number")
 }

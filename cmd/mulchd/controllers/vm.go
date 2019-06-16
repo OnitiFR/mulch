@@ -406,16 +406,15 @@ func GetVMConfigController(req *server.Request) {
 		http.Error(req.Response, msg, 400)
 		return
 	}
-	vm, err := req.App.VMDB.GetActiveByName(vmName)
+	entry, err := getEntryFromRequest(vmName, req)
 	if err != nil {
-		msg := fmt.Sprintf("VM '%s' not found", vmName)
-		req.App.Log.Error(msg)
-		http.Error(req.Response, msg, 404)
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 404)
 		return
 	}
 
 	req.Response.Header().Set("Content-Type", "text/plain")
-	req.Println(vm.Config.FileContent)
+	req.Println(entry.VM.Config.FileContent)
 }
 
 // GetVMInfosController return VM informations
@@ -428,13 +427,14 @@ func GetVMInfosController(req *server.Request) {
 		http.Error(req.Response, msg, 400)
 		return
 	}
-	entry, err := req.App.VMDB.GetActiveEntryByName(vmName)
+
+	entry, err := getEntryFromRequest(vmName, req)
 	if err != nil {
-		msg := fmt.Sprintf("VM '%s' not found", vmName)
-		req.App.Log.Error(msg)
-		http.Error(req.Response, msg, 404)
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 404)
 		return
 	}
+
 	vm := entry.VM
 
 	running, _ := server.VMIsRunning(entry.Name, req.App)

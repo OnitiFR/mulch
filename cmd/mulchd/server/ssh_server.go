@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
@@ -78,9 +79,28 @@ func NewSSHProxyServer(app *App) error {
 				return nil, fmt.Errorf("no allowed public key found (%s)", c.RemoteAddr())
 			}
 
-			vm, errG := app.VMDB.GetActiveByName(vmName)
-			if errG != nil {
-				return nil, errG
+			var vm *VM
+
+			if strings.Contains(vmName, "-") {
+				parts := strings.Split(vmName, "-")
+				if len(parts) != 2 {
+					return nil, fmt.Errorf("wrong VM-revision name '%s'", vmName)
+				}
+
+				name := parts[0]
+				revision, errA := strconv.Atoi(parts[1])
+				if errA != nil {
+					return nil, errA
+				}
+				vm, errG = app.VMDB.GetByName(NewVMName(name, revision))
+				if errG != nil {
+					return nil, errG
+				}
+			} else {
+				vm, errG = app.VMDB.GetActiveByName(vmName)
+				if errG != nil {
+					return nil, errG
+				}
 			}
 
 			clientConfig := &ssh.ClientConfig{}

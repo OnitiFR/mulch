@@ -21,7 +21,10 @@ See 'vm list' for VM Names.
 	Args:    cobra.ExactArgs(1),
 	Aliases: []string{"info"},
 	Run: func(cmd *cobra.Command, args []string) {
-		call := globalAPI.NewCall("GET", "/vm/infos/"+args[0], map[string]string{})
+		revision, _ := cmd.Flags().GetString("revision")
+		call := globalAPI.NewCall("GET", "/vm/infos/"+args[0], map[string]string{
+			"revision": revision,
+		})
 		call.JSONCallback = vmInfosDisplay
 		call.Do()
 	},
@@ -46,4 +49,5 @@ func vmInfosDisplay(reader io.Reader) {
 
 func init() {
 	vmCmd.AddCommand(vmInfosCmd)
+	vmInfosCmd.Flags().StringP("revision", "r", "", "revision number")
 }
