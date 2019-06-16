@@ -51,6 +51,12 @@ func NewVMController(req *server.Request) {
 
 	restore := req.HTTP.FormValue("restore")
 	allowNewRevision := req.HTTP.FormValue("allow_new_revision")
+	inactive := req.HTTP.FormValue("inactive")
+
+	active := true
+	if inactive == common.TrueStr {
+		active = false
+	}
 
 	conf, err := server.NewVMConfigFromTomlReader(configFile, req.Stream)
 	if err != nil {
@@ -71,7 +77,7 @@ func NewVMController(req *server.Request) {
 	}
 
 	before := time.Now()
-	_, vmName, err := server.NewVM(conf, true, req.APIKey.Comment, req.App, req.Stream)
+	_, vmName, err := server.NewVM(conf, active, req.APIKey.Comment, req.App, req.Stream)
 	if err != nil {
 		req.Stream.Failuref("Cannot create VM: %s", err)
 		return
@@ -627,7 +633,7 @@ func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) erro
 	success = true
 
 	lock := req.HTTP.FormValue("lock")
-	if lock == "true" {
+	if lock == common.TrueStr {
 		err := server.VMLockUnlock(newVMName, true, req.App.VMDB)
 		if err != nil {
 			req.Stream.Failuref("unable to lock '%s': %s", vmName, err)
@@ -643,7 +649,7 @@ func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) erro
 
 // RedefineVM replace VM config file with a new one, for next rebuild
 func RedefineVM(req *server.Request, vm *server.VM) error {
-	if vm.Locked == true && req.HTTP.FormValue("force") != "true" {
+	if vm.Locked == true && req.HTTP.FormValue("force") != common.TrueStr {
 		return errors.New("VM is locked")
 	}
 

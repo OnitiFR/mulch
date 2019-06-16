@@ -20,10 +20,12 @@ from an existing VM using [unimplemented yet]
 	Run: func(cmd *cobra.Command, args []string) {
 		restore, _ := cmd.Flags().GetString("restore")
 		newRevision, _ := cmd.Flags().GetBool("new-revision")
+		inactive, _ := cmd.Flags().GetBool("inactive")
 
 		call := globalAPI.NewCall("POST", "/vm", map[string]string{
 			"restore":            restore,
 			"allow_new_revision": strconv.FormatBool(newRevision),
+			"inactive":           strconv.FormatBool(inactive),
 		})
 		err := call.AddFile("config", args[0])
 		if err != nil {
@@ -37,5 +39,6 @@ func init() {
 	vmCmd.AddCommand(vmCreateCmd)
 	vmCreateCmd.Flags().StringP("restore", "r", "", "backup to restore")
 	vmCreateCmd.MarkFlagCustom("restore", "__internal_list_backups")
-	vmCreateCmd.Flags().BoolP("new-revision", "n", false, "allow a new revision with the same name (WARNING)")
+	vmCreateCmd.Flags().BoolP("new-revision", "n", false, "allow a new revision with the same name")
+	vmCreateCmd.Flags().BoolP("inactive", "i", false, "do not set this instance as active")
 }
