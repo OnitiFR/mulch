@@ -492,13 +492,13 @@ func GetVMDoActionsController(req *server.Request) {
 		http.Error(req.Response, msg, 400)
 		return
 	}
-	vm, err := req.App.VMDB.GetActiveByName(vmName)
+
+	entry, err := getEntryFromRequest(vmName, req)
 	if err != nil {
-		msg := fmt.Sprintf("VM '%s' not found", vmName)
-		req.App.Log.Error(msg)
-		http.Error(req.Response, msg, 404)
+		req.Stream.Failure(err.Error())
 		return
 	}
+	vm := entry.VM
 
 	var retData common.APIVMDoListEntries
 

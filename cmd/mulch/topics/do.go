@@ -28,9 +28,12 @@ See [[do-actions]] in TOML description file.
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		doListFlagBasic, _ = cmd.Flags().GetBool("basic")
+		revision, _ := cmd.Flags().GetString("revision")
 
 		if len(args) == 1 {
-			call := globalAPI.NewCall("GET", "/vm/do-actions/"+args[0], map[string]string{})
+			call := globalAPI.NewCall("GET", "/vm/do-actions/"+args[0], map[string]string{
+				"revision": revision,
+			})
 			call.JSONCallback = doListCB
 			call.Do()
 		} else {
@@ -40,6 +43,7 @@ See [[do-actions]] in TOML description file.
 				"action":    "do",
 				"do_action": args[1],
 				"arguments": arguments,
+				"revision":  revision,
 			}
 
 			call := globalAPI.NewCall("POST", "/vm/"+args[0], params)
@@ -87,4 +91,5 @@ func doListCB(reader io.Reader) {
 func init() {
 	rootCmd.AddCommand(doCmd)
 	doCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formating")
+	doCmd.Flags().StringP("revision", "r", "", "revision number")
 }

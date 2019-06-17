@@ -25,10 +25,12 @@ it's an easy way to modify config before VM redefinition.
 	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		force, _ := cmd.Flags().GetBool("force")
+		revision, _ := cmd.Flags().GetString("revision")
 
 		call := globalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
-			"action": "redefine",
-			"force":  strconv.FormatBool(force),
+			"action":   "redefine",
+			"force":    strconv.FormatBool(force),
+			"revision": revision,
 		})
 		err := call.AddFile("config", args[1])
 		if err != nil {
@@ -41,4 +43,5 @@ it's an easy way to modify config before VM redefinition.
 func init() {
 	vmCmd.AddCommand(vmRedefineCmd)
 	vmRedefineCmd.Flags().BoolP("force", "f", false, "force redefine on a locked VM")
+	vmRedefineCmd.Flags().StringP("revision", "r", "", "revision number")
 }
