@@ -1,3 +1,4 @@
+- fix file completion with aliases (ex: vm create ~/…)
 - add -f on rebuild for locked VM?
 - auto-rebuild feature (even on lock VM, see above)
 - remove the need to supply the VM name for redefine command?

@@ -17,6 +17,7 @@ import (
 
 var sshCmdVM *common.APIVMInfos
 var sshCmdUser string
+var sshCmdWithRevision bool
 
 //  sshCmd represents the "ssh" command
 var sshCmd = &cobra.Command{
@@ -33,6 +34,10 @@ See 'vm list' for VM Names.
 		}
 
 		revision, _ := cmd.Flags().GetString("revision")
+		sshCmdWithRevision = false
+		if revision != "" {
+			sshCmdWithRevision = true
+		}
 		call := globalAPI.NewCall("GET", "/vm/infos/"+args[0], map[string]string{
 			"revision": revision,
 		})
@@ -91,12 +96,18 @@ func sshCmdPairCB(reader io.Reader) {
 		user = sshCmdUser
 	}
 
+	// legacy (no revision) destination
+	destination := user + "@" + sshCmdVM.Name + "@" + hostname
+	if sshCmdWithRevision {
+		destination = user + "@" + sshCmdVM.Name + "-" + strconv.Itoa(sshCmdVM.Revision) + "@" + hostname
+	}
+
 	// launch 'ssh' command
 	args := []string{
 		"ssh",
 		"-i", privFilePath,
 		"-p", strconv.Itoa(sshPort),
-		user + "@" + sshCmdVM.Name + "-" + strconv.Itoa(sshCmdVM.Revision) + "@" + hostname,
+		destination,
 	}
 
 	sshPath, err := exec.LookPath("ssh")
