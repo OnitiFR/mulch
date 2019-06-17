@@ -127,6 +127,10 @@ Host *
 
 	fmt.Println("Generated aliases:")
 	for _, vm := range *conf.vmList {
+		if vm.Active == false {
+			continue
+		}
+
 		aliasName := vm.Name + "-" + globalConfig.Server.Name
 		fmt.Printf("  %s\n", aliasName)
 		file.WriteString(fmt.Sprintf("Host %s\n", aliasName))
