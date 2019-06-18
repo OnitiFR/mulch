@@ -211,10 +211,8 @@ and upload back a backup to Mulch server in a few commands.
 ![mulch backup mount](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-backup-mount.png)
 
 #### VM rebuild
-Using the backup system, Mulch provides a clean way to rebuild a VM entirely. Rebuilding implies
-the following steps: **backup** scripts, **clone** of the original VM (will be used if rebuild fails),
-**delete** original VM, create a **new VM** with the same description and finally, **restore** the VM using
-the backup. The backup is transient and will be deleted.
+Using the backup system, Mulch provides a clean way to rebuild a VM entirely, using a transient
+backup of itself.
 
 ![mulch vm rebuild](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-vm-rebuild.png)
 
