@@ -1,6 +1,6 @@
 - fix file completion with aliases (ex: vm create ~/…)
-- add -f on rebuild for locked VM?
-- auto-rebuild feature (even on lock VM, see above)
+- auto-rebuild feature (even on lock VM)
+- add --revision to rebuild command
 - remove the need to supply the VM name for redefine command?
   - pro: sanity check for and dangerous op
   - cons: looks confusing to the user, change controller logic
