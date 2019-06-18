@@ -533,8 +533,8 @@ func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) erro
 		return errors.New("no restore script defined for this VM")
 	}
 
-	if vm.Locked == true {
-		return errors.New("VM is locked")
+	if vm.Locked == true && req.HTTP.FormValue("force") != common.TrueStr {
+		return errors.New("VM is locked (see --force)")
 	}
 
 	if vm.WIP != server.VMOperationNone {
@@ -630,6 +630,13 @@ func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) erro
 	after := time.Now()
 	req.Stream.Infof("VM %s is now active", newVMName)
 
+	// get lock status of original VM
+	originalLocked := vm.Locked
+	err = server.VMLockUnlock(vmName, false, req.App.VMDB)
+	if err != nil {
+		return fmt.Errorf("unlocking original VM: %s", err)
+	}
+
 	// - delete rev+0 VM
 	err = server.VMDelete(vmName, req.App, req.Stream)
 	if err != nil {
@@ -640,7 +647,7 @@ func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) erro
 	success = true
 
 	lock := req.HTTP.FormValue("lock")
-	if lock == common.TrueStr {
+	if lock == common.TrueStr || originalLocked {
 		err := server.VMLockUnlock(newVMName, true, req.App.VMDB)
 		if err != nil {
 			req.Stream.Failuref("unable to lock '%s': %s", vmName, err)
@@ -657,7 +664,7 @@ func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) erro
 // RedefineVM replace VM config file with a new one, for next rebuild
 func RedefineVM(req *server.Request, vm *server.VM) error {
 	if vm.Locked == true && req.HTTP.FormValue("force") != common.TrueStr {
-		return errors.New("VM is locked")
+		return errors.New("VM is locked (see --force)")
 	}
 
 	if vm.WIP != server.VMOperationNone {

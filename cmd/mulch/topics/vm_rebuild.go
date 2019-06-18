@@ -21,10 +21,12 @@ See 'vm list' for VM Names.
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		lock, _ := cmd.Flags().GetBool("lock")
+		force, _ := cmd.Flags().GetBool("force")
 
 		call := globalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
 			"action": "rebuild",
 			"lock":   strconv.FormatBool(lock),
+			"force":  strconv.FormatBool(force),
 		})
 		call.Do()
 	},
@@ -32,5 +34,6 @@ See 'vm list' for VM Names.
 
 func init() {
 	vmCmd.AddCommand(vmRebuildCmd)
+	vmRebuildCmd.Flags().BoolP("force", "f", false, "force rebuild of a locked VM")
 	vmRebuildCmd.Flags().BoolP("lock", "l", false, "lock VM on rebuild success")
 }
