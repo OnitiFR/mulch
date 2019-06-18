@@ -20,16 +20,26 @@ done
 tmpfile=$(mktemp)
 rm "$tmpfile"
 
-# now creates a new XFS instead of resizing the the existing template ext2 FS
-# it's way faster on large volumes and do not implies big qcow2 files as a
-# result.
-# TODO : replace the template volume with an empty qcow2 image
-echo "creating FS on $part…"
-sudo mkfs.xfs -f -L backup "$part" > "$tmpfile" 2>&1
+# now tries to create a new XFS instead of resizing the the existing
+# template ext2 FS. It's way faster on large volumes and do not implies
+# big qcow2 files as a result.
+which mkfs.xfs > /dev/null
 if [ $? -ne 0 ]; then
-    cat "$tmpfile"
-    rm "$tmpfile"
-    exit 99
+  echo "resizing FS on $part…"
+  sudo resize2fs "$part" > "$tmpfile" 2>&1
+  if [ $? -ne 0 ]; then
+      cat "$tmpfile"
+      rm "$tmpfile"
+      exit 99
+  fi
+else
+  echo "creating FS on $part… (xfs)"
+  sudo mkfs.xfs -f -L backup "$part" > "$tmpfile" 2>&1
+  if [ $? -ne 0 ]; then
+      cat "$tmpfile"
+      rm "$tmpfile"
+      exit 99
+  fi
 fi
 
 sudo mkdir -p "$_BACKUP" || exit $?
