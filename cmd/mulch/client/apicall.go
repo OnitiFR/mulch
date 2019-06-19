@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/OnitiFR/mulch/common"
+	"github.com/blang/semver"
 	"github.com/c2h5oh/datasize"
 	"github.com/fatih/color"
 )
@@ -219,6 +220,19 @@ func (call *APICall) Do() {
 		}
 	default:
 		log.Fatalf("unsupported content type '%s'", mime)
+	}
+
+	latestClientVersionKnownByServer := resp.Header.Get("Latest-Known-Client-Version")
+	if latestClientVersionKnownByServer != "" {
+		verFromServer, err1 := semver.Make(latestClientVersionKnownByServer)
+		verSelf, err2 := semver.Make(Version)
+		if err1 == nil && err2 == nil && verFromServer.GT(verSelf) {
+			green := color.New(color.FgHiGreen).SprintFunc()
+			yellow := color.New(color.FgHiYellow).SprintFunc()
+			fmt.Printf("\n")
+			fmt.Printf("According to the server, a client update is available: %s → %s\n", yellow(Version), green(latestClientVersionKnownByServer))
+			fmt.Printf("Update:\n    go get -u github.com/OnitiFR/mulch/cmd/mulch\n")
+		}
 	}
 }
 
