@@ -71,7 +71,7 @@ func setCompletion() {
 	aliases := ""
 	for alias, server := range globalConfig.Aliases {
 		aliases += fmt.Sprintf("%s() { mulch -s %s \"$@\"; }\n", alias, server)
-		aliases += fmt.Sprintf("complete -F __start_mulch %s\n", alias)
+		aliases += fmt.Sprintf("complete -o default -F __start_mulch %s\n", alias)
 	}
 	rootCmd.BashCompletionFunction = aliases + "\n" + bashCompletionFunc
 }
