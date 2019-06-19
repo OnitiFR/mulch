@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 )
 
@@ -206,6 +207,7 @@ func (app *App) registerRouteHandlers() {
 
 func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *App) {
 	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+	w.Header().Set("Latest-Known-Client-Version", client.Version)
 
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 
