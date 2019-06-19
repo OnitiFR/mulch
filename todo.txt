@@ -1,4 +1,3 @@
-- fix file completion with aliases (ex: vm create ~/…)
 - auto-rebuild feature (even on lock VM)
 - add --revision to rebuild command
 - remove the need to supply the VM name for redefine command?
@@ -7,7 +6,6 @@
 - hide SSH proxy log from global target? (noisy)
 - list of current SSH connections
 - shortcut for "do action" (ex: mulch open xyz) with completion ?
-- completion for "-r" on "vm create" command
 - completion for backup mount
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
 - "Update available" alert on client (info from server?)
