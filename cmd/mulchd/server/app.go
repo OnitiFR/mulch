@@ -478,6 +478,20 @@ func (app *App) Status() (*common.APIStatus, error) {
 		allocatedDisks += int(vInfos.Allocation / 1024 / 1024)
 	}
 
+	for _, client := range sshServerClients {
+		entry, err := app.VMDB.GetEntryByVM(client.vm)
+		if err != nil {
+			continue
+		}
+		ret.SSHConnections = append(ret.SSHConnections, common.APISSHConnection{
+			FromIP:    client.remoteAddr.String(),
+			FromUser:  client.apiAuth,
+			ToUser:    client.sshUser,
+			ToVMName:  entry.Name.ID(),
+			StartTime: client.startTime,
+		})
+	}
+
 	ret.VMs = vmTotal
 	ret.ActiveVMs = vmActiveTotal
 	ret.HostCPUs = int(infos.Cpus)

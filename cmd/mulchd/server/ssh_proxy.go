@@ -180,7 +180,7 @@ func ListenAndServeProxy(
 					return
 				}
 
-				log.Trace("SSH: connection closed")
+				log.Tracef("SSH: connection closed (%s)", connListener.RemoteAddr())
 			}()
 		}
 	}()

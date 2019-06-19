@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"reflect"
+	"time"
 
 	"github.com/OnitiFR/mulch/common"
 	"github.com/spf13/cobra"
@@ -36,7 +37,20 @@ func statusDisplay(reader io.Reader) {
 	for i := 0; i < v.NumField(); i++ {
 		key := typeOfT.Field(i).Name
 		val := common.InterfaceValueToString(v.Field(i).Interface())
-		fmt.Printf("%s: %s\n", key, val)
+		if key != "SSHConnections" {
+			fmt.Printf("%s: %s\n", key, val)
+		}
+	}
+
+	fmt.Printf("SSHConnections: %d\n", len(data.SSHConnections))
+	for _, conn := range data.SSHConnections {
+		since := time.Now().Sub(conn.StartTime)
+		fmt.Printf(" - from %s@%s to %s@%s (%s)\n",
+			conn.FromUser,
+			conn.FromIP,
+			conn.ToUser,
+			conn.ToVMName,
+			since)
 	}
 }
 

@@ -5,9 +5,22 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 )
+
+type sshServerClient struct {
+	sshClient  *ssh.Client
+	remoteAddr net.Addr
+	vm         *VM
+	vmID       string
+	sshUser    string
+	apiAuth    string
+	startTime  time.Time
+}
+
+var sshServerClients map[net.Addr]*sshServerClient
 
 // NewSSHProxyServer creates and starts our SSH proxy to VMs
 func NewSSHProxyServer(app *App) error {
@@ -27,13 +40,14 @@ func NewSSHProxyServer(app *App) error {
 		return err
 	}
 
-	var clients = make(map[net.Addr]*ssh.Client)
+	sshServerClients = make(map[net.Addr]*sshServerClient)
 
 	config := &ssh.ServerConfig{
 		PublicKeyCallback: func(c ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
 
 			user := ""
 			vmName := ""
+			var client sshServerClient
 
 			apiKey, errG := app.APIKeysDB.GetByPubKey(string(pubKey.Marshal()))
 			if errG != nil {
@@ -49,6 +63,7 @@ func NewSSHProxyServer(app *App) error {
 
 				user = parts[0]
 				vmName = parts[1]
+				client.apiAuth = apiKey.Comment
 				app.Log.Infof("SSH Proxy: %s (API key '%s') %s@%s", c.RemoteAddr(), apiKey.Comment, user, vmName)
 			} else {
 				matchingPubKey, comment, errS := SearchSSHAuthorizedKey(pubKey, app.Config.ProxySSHExtraKeysFile)
@@ -57,6 +72,7 @@ func NewSSHProxyServer(app *App) error {
 				}
 				// Extra public key access
 				if matchingPubKey != nil {
+					client.apiAuth = "[pubKey] " + comment
 					parts := strings.Split(comment, "@")
 					if len(parts) != 2 {
 						return nil, fmt.Errorf("wrong user format '%s' (user@vm needed)", c.User())
@@ -103,6 +119,11 @@ func NewSSHProxyServer(app *App) error {
 				}
 			}
 
+			client.vm = vm
+			client.sshUser = user
+			client.startTime = time.Now()
+			client.remoteAddr = c.RemoteAddr()
+
 			clientConfig := &ssh.ClientConfig{}
 
 			clientConfig.User = user
@@ -113,12 +134,15 @@ func NewSSHProxyServer(app *App) error {
 
 			app.Log.Infof("SSH Proxy: dial %s@%s", user, vm.LastIP)
 
-			client, errD := ssh.Dial("tcp", vm.LastIP+":22", clientConfig)
+			sshClient, errD := ssh.Dial("tcp", vm.LastIP+":22", clientConfig)
 			if errD != nil {
 				return nil, errD
 			}
 
-			clients[c.RemoteAddr()] = client
+			client.sshClient = sshClient
+
+			app.Log.Trace("SSH Proxy: adding client to the map")
+			sshServerClients[c.RemoteAddr()] = &client
 			return nil, nil
 		},
 	}
@@ -131,13 +155,13 @@ func NewSSHProxyServer(app *App) error {
 		config,
 		app.Log,
 		func(c ssh.ConnMetadata) (*ssh.Client, error) {
-			client, _ := clients[c.RemoteAddr()]
-			delete(clients, c.RemoteAddr())
+			client, _ := sshServerClients[c.RemoteAddr()]
+			// we could delete entry here, but we keep it for infos/stats (see status command)
+			app.Log.Tracef("SSH proxy: connection accepted from %s forwarded to %s", c.RemoteAddr(), client.sshClient.RemoteAddr())
 
-			app.Log.Tracef("SSH proxy: connection accepted from %s forwarded to %s", c.RemoteAddr(), client.RemoteAddr())
-
-			return client, err
+			return client.sshClient, err
 		}, func(c ssh.ConnMetadata) error {
+			delete(sshServerClients, c.RemoteAddr())
 			app.Log.Tracef("SSH proxy: connection closed from: %s", c.RemoteAddr())
 			return nil
 		})
