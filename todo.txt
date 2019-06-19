@@ -1,4 +1,3 @@
-- completion for backup mount
 - "Update available" alert on client (info from server?)
 - list of current SSH connections
 - auto-rebuild feature (even on lock VM)
