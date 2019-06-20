@@ -1,4 +1,3 @@
-- list of current SSH connections
 - list of current operations? (rebuilds, backups, etc)
 - auto-rebuild feature (even on lock VM)
 - add --revision to rebuild command
