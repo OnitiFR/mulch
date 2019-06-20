@@ -9,8 +9,8 @@ import (
 // completionCmd represents the "completion" command
 var completionCmd = &cobra.Command{
 	Use:   "completion",
-	Short: "Generates bash completion scripts",
-	Long: `To load completion run
+	Short: "Generates bash completion (see 'mulch help completion')",
+	Long: `To load completion, run:
 
 . <(mulch completion)
 
