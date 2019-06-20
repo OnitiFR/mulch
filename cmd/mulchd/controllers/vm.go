@@ -69,6 +69,14 @@ func NewVMController(req *server.Request) {
 		return
 	}
 
+	operation := req.App.Operations.Add(&server.Operation{
+		Origin:        req.APIKey.Comment,
+		Action:        "create",
+		Ressource:     "vm",
+		RessourceName: conf.Name,
+	})
+	defer req.App.Operations.Remove(operation)
+
 	req.SetTarget(conf.Name)
 
 	if restore != "" {
@@ -184,6 +192,14 @@ func ActionVMController(req *server.Request) {
 	vm := entry.VM
 	action := req.HTTP.FormValue("action")
 
+	operation := req.App.Operations.Add(&server.Operation{
+		Origin:        req.APIKey.Comment,
+		Action:        action,
+		Ressource:     "vm",
+		RessourceName: entry.Name.ID(),
+	})
+	defer req.App.Operations.Remove(operation)
+
 	if action != "do" {
 		// 'do' actions can send "private" special messages to client (like
 		// _MULCH_OPEN_URL) so don't broadcast output to vmName target
@@ -284,7 +300,15 @@ func DeleteVMController(req *server.Request) {
 		return
 	}
 
-	req.Stream.Infof("deleting vm '%s'", vmName)
+	operation := req.App.Operations.Add(&server.Operation{
+		Origin:        req.APIKey.Comment,
+		Action:        "delete",
+		Ressource:     "vm",
+		RessourceName: entry.Name.ID(),
+	})
+	defer req.App.Operations.Remove(operation)
+
+	req.Stream.Infof("deleting vm %s", entry.Name)
 
 	err = server.VMDelete(entry.Name, req.App, req.Stream)
 	if err != nil {
@@ -300,6 +324,14 @@ func ExecScriptVM(req *server.Request, vm *server.VM, vmName *server.VMName) err
 	if err != nil {
 		return fmt.Errorf("'script' field: %s", err)
 	}
+
+	operation := req.App.Operations.Add(&server.Operation{
+		Origin:        req.APIKey.Comment,
+		Action:        "exec",
+		Ressource:     "vm",
+		RessourceName: vmName.ID(),
+	})
+	defer req.App.Operations.Remove(operation)
 
 	running, _ := server.VMIsRunning(vmName, req.App)
 	if running == false {

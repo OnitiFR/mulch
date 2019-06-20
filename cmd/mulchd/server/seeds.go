@@ -239,6 +239,14 @@ func (db *SeedDatabase) seedDownload(seed *Seed, tmpPath string) (string, error)
 	}
 	defer tmpfile.Close()
 
+	operation := db.app.Operations.Add(&Operation{
+		Origin:        "[seeder]",
+		Action:        "download",
+		Ressource:     "seed",
+		RessourceName: seed.As,
+	})
+	defer db.app.Operations.Remove(operation)
+
 	resp, err := http.Get(seed.CurrentURL)
 	if err != nil {
 		return "", err

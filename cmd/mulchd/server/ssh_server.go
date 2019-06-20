@@ -20,8 +20,6 @@ type sshServerClient struct {
 	startTime  time.Time
 }
 
-var sshServerClients map[net.Addr]*sshServerClient
-
 // NewSSHProxyServer creates and starts our SSH proxy to VMs
 func NewSSHProxyServer(app *App) error {
 
@@ -40,7 +38,7 @@ func NewSSHProxyServer(app *App) error {
 		return err
 	}
 
-	sshServerClients = make(map[net.Addr]*sshServerClient)
+	app.sshClients = make(map[net.Addr]*sshServerClient)
 
 	config := &ssh.ServerConfig{
 		PublicKeyCallback: func(c ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
@@ -142,7 +140,7 @@ func NewSSHProxyServer(app *App) error {
 			client.sshClient = sshClient
 
 			app.Log.Trace("SSH Proxy: adding client to the map")
-			sshServerClients[c.RemoteAddr()] = &client
+			app.sshClients[c.RemoteAddr()] = &client
 			return nil, nil
 		},
 	}
@@ -155,13 +153,13 @@ func NewSSHProxyServer(app *App) error {
 		config,
 		app.Log,
 		func(c ssh.ConnMetadata) (*ssh.Client, error) {
-			client, _ := sshServerClients[c.RemoteAddr()]
+			client, _ := app.sshClients[c.RemoteAddr()]
 			// we could delete entry here, but we keep it for infos/stats (see status command)
 			app.Log.Tracef("SSH proxy: connection accepted from %s forwarded to %s", c.RemoteAddr(), client.sshClient.RemoteAddr())
 
 			return client.sshClient, err
 		}, func(c ssh.ConnMetadata) error {
-			delete(sshServerClients, c.RemoteAddr())
+			delete(app.sshClients, c.RemoteAddr())
 			app.Log.Tracef("SSH proxy: connection closed from: %s", c.RemoteAddr())
 			return nil
 		})

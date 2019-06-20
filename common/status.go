@@ -11,6 +11,14 @@ type APISSHConnection struct {
 	StartTime time.Time
 }
 
+// APIOperation is currently exactly matching Operation struct
+type APIOperation struct {
+	Origin        string
+	Action        string
+	Ressource     string
+	RessourceName string
+}
+
 // APIStatus describes host status
 type APIStatus struct {
 	VMs                int
@@ -26,4 +34,5 @@ type APIStatus struct {
 	ProvisionedDisksMB int
 	AllocatedDisksMB   int
 	SSHConnections     []APISSHConnection
+	Operations         []APIOperation
 }

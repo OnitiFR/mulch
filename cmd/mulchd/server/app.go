@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -30,20 +31,22 @@ const (
 
 // App describes an (the?) application
 type App struct {
-	Config    *AppConfig
-	Libvirt   *Libvirt
-	Hub       *Hub
-	PhoneHome *PhoneHomeHub
-	Log       *Log
-	Mux       *http.ServeMux
-	Rand      *rand.Rand
-	SSHPairDB *SSHPairDatabase
-	VMDB      *VMDatabase
-	VMStateDB *VMStateDatabase
-	BackupsDB *BackupDatabase
-	APIKeysDB *APIKeyDatabase
-	Seeder    *SeedDatabase
-	routes    map[string][]*Route
+	Config     *AppConfig
+	Libvirt    *Libvirt
+	Hub        *Hub
+	PhoneHome  *PhoneHomeHub
+	Log        *Log
+	Mux        *http.ServeMux
+	Rand       *rand.Rand
+	SSHPairDB  *SSHPairDatabase
+	VMDB       *VMDatabase
+	VMStateDB  *VMStateDatabase
+	BackupsDB  *BackupDatabase
+	APIKeysDB  *APIKeyDatabase
+	Seeder     *SeedDatabase
+	routes     map[string][]*Route
+	sshClients map[net.Addr]*sshServerClient
+	Operations *OperationList
 }
 
 // NewApp creates a new application
@@ -114,6 +117,8 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	go app.Seeder.Run()
 
 	NewSSHProxyServer(app)
+
+	app.Operations = NewOperationList(app.Rand)
 
 	app.PhoneHome = NewPhoneHomeHub()
 
@@ -478,7 +483,7 @@ func (app *App) Status() (*common.APIStatus, error) {
 		allocatedDisks += int(vInfos.Allocation / 1024 / 1024)
 	}
 
-	for _, client := range sshServerClients {
+	for _, client := range app.sshClients {
 		entry, err := app.VMDB.GetEntryByVM(client.vm)
 		if err != nil {
 			continue
@@ -489,6 +494,15 @@ func (app *App) Status() (*common.APIStatus, error) {
 			ToUser:    client.sshUser,
 			ToVMName:  entry.Name.ID(),
 			StartTime: client.startTime,
+		})
+	}
+
+	for _, operation := range app.Operations.operations {
+		ret.Operations = append(ret.Operations, common.APIOperation{
+			Origin:        operation.Origin,
+			Action:        operation.Action,
+			Ressource:     operation.Ressource,
+			RessourceName: operation.RessourceName,
 		})
 	}
 

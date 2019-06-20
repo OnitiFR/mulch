@@ -37,7 +37,7 @@ func statusDisplay(reader io.Reader) {
 	for i := 0; i < v.NumField(); i++ {
 		key := typeOfT.Field(i).Name
 		val := common.InterfaceValueToString(v.Field(i).Interface())
-		if key != "SSHConnections" {
+		if key != "SSHConnections" && key != "Operations" {
 			fmt.Printf("%s: %s\n", key, val)
 		}
 	}
@@ -51,6 +51,16 @@ func statusDisplay(reader io.Reader) {
 			conn.ToUser,
 			conn.ToVMName,
 			since)
+	}
+
+	fmt.Printf("Operations: %d\n", len(data.Operations))
+	for _, op := range data.Operations {
+		fmt.Printf(" - from %s: %s %s %s\n",
+			op.Origin,
+			op.Action,
+			op.Ressource,
+			op.RessourceName,
+		)
 	}
 }
 

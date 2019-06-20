@@ -129,6 +129,14 @@ func (vmsdb *VMStateDatabase) restoreStates() {
 	coldStates := vmsdb.db
 	var wg sync.WaitGroup
 
+	operation := vmsdb.app.Operations.Add(&Operation{
+		Origin:        "[app]",
+		Action:        "restore_states",
+		Ressource:     "vm",
+		RessourceName: "*",
+	})
+	defer vmsdb.app.Operations.Remove(operation)
+
 	for id, coldState := range coldStates {
 		entry, err := vmsdb.app.VMDB.getEntryByID(id)
 		if err != nil {

@@ -78,6 +78,14 @@ func DeleteBackupController(req *server.Request) {
 	backupName := req.SubPath
 	req.Stream.Infof("deleting backup '%s'", backupName)
 
+	operation := req.App.Operations.Add(&server.Operation{
+		Origin:        req.APIKey.Comment,
+		Action:        "delete",
+		Ressource:     "backup",
+		RessourceName: backupName,
+	})
+	defer req.App.Operations.Remove(operation)
+
 	backup := req.App.BackupsDB.GetByName(backupName)
 	if backup == nil {
 		req.Stream.Failuref("backup '%s' not found in database", backupName)
@@ -108,6 +116,14 @@ func DeleteBackupController(req *server.Request) {
 // DownloadBackupController will download a backup image
 func DownloadBackupController(req *server.Request) {
 	backupName := req.SubPath
+
+	operation := req.App.Operations.Add(&server.Operation{
+		Origin:        req.APIKey.Comment,
+		Action:        "download",
+		Ressource:     "backup",
+		RessourceName: backupName,
+	})
+	defer req.App.Operations.Remove(operation)
 
 	req.Response.Header().Set("Content-Type", "application/octet-stream")
 
@@ -163,6 +179,14 @@ func UploadBackupController(req *server.Request) {
 		req.Stream.Failuref("backup '%s' already exists in database", header.Filename)
 		return
 	}
+
+	operation := req.App.Operations.Add(&server.Operation{
+		Origin:        req.APIKey.Comment,
+		Action:        "upload",
+		Ressource:     "backup",
+		RessourceName: header.Filename,
+	})
+	defer req.App.Operations.Remove(operation)
 
 	req.Stream.Infof("uploading '%s'", header.Filename)
 
