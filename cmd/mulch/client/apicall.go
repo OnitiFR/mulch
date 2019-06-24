@@ -128,36 +128,44 @@ func (call *APICall) Do() {
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		} else {
 			// multipart body, with file upload
-			var buf bytes.Buffer
-			multipartWriter := multipart.NewWriter(&buf)
+			// var buf bytes.Buffer
+			// multipartWriter := multipart.NewWriter(&buf)
 
-			// range call.files
-			for field, filename := range call.files {
-				ff, errM := multipartWriter.CreateFormFile(field, path.Base(filename))
-				if err != nil {
-					log.Fatal(errM)
+			pipeReader, pipeWriter := io.Pipe()
+			multipartWriter := multipart.NewWriter(pipeWriter)
+
+			defer pipeWriter.Close()
+
+			go func() {
+				for fieldname, value := range data {
+					errM := multipartWriter.WriteField(fieldname, value[0])
+					if errM != nil {
+						log.Fatal(errM)
+					}
 				}
-				file, errM := os.Open(filename)
-				if err != nil {
-					log.Fatal(errM)
+
+				// range call.files
+				for field, filename := range call.files {
+					ff, errM := multipartWriter.CreateFormFile(field, path.Base(filename))
+					if err != nil {
+						log.Fatal(errM)
+					}
+					file, errM := os.Open(filename)
+					if err != nil {
+						log.Fatal(errM)
+					}
+					defer file.Close()
+					if _, err = io.Copy(ff, file); err != nil {
+						log.Fatal(err)
+					}
 				}
-				defer file.Close()
-				if _, err = io.Copy(ff, file); err != nil {
+
+				err = multipartWriter.Close()
+				if err != nil {
 					log.Fatal(err)
 				}
-			}
-			for fieldname, value := range data {
-				errM := multipartWriter.WriteField(fieldname, value[0])
-				if errM != nil {
-					log.Fatal(errM)
-				}
-			}
-			err = multipartWriter.Close()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			req, err = http.NewRequest(method, apiURL, &buf)
+			}()
+			req, err = http.NewRequest(method, apiURL, pipeReader)
 			if err != nil {
 				return
 			}
