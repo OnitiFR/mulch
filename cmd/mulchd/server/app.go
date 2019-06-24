@@ -57,6 +57,10 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		routes: make(map[string][]*Route),
 	}
 
+	if os.Getenv("TMPDIR") == "" {
+		os.Setenv("TMPDIR", config.TempPath)
+	}
+
 	app.Hub = NewHub(trace)
 	go app.Hub.Run()
 
