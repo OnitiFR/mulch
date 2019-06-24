@@ -134,9 +134,9 @@ func (call *APICall) Do() {
 			pipeReader, pipeWriter := io.Pipe()
 			multipartWriter := multipart.NewWriter(pipeWriter)
 
-			defer pipeWriter.Close()
-
 			go func() {
+				defer pipeWriter.Close()
+
 				for fieldname, value := range data {
 					errM := multipartWriter.WriteField(fieldname, value[0])
 					if errM != nil {
