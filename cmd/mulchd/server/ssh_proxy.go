@@ -57,6 +57,21 @@ func (proxy *SSHProxy) serveProxy() error {
 	}
 	defer clientConn.Close()
 
+	// send sparses keepalives to detect dead connections to our SSH proxy,
+	// a failed SendRequest will set channels to nil, closing the connections
+	// (should do the same with clientConn for dead guests?)
+	go func() {
+		t := time.NewTicker(5 * time.Minute)
+		defer t.Stop()
+		for range t.C {
+			_, _, err := serverConn.Conn.SendRequest("keepalive@golang.org", true, nil)
+			if err != nil {
+				proxy.log.Tracef("SSH: send keepalive failed: %s", err)
+				return
+			}
+		}
+	}()
+
 	// discard global requests, we won't manage it anyway
 	go ssh.DiscardRequests(reqs)
 
