@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -155,6 +156,13 @@ func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string,
 	// destination server (usual wp-nginx-reverse-proxy behavior)
 	// req.Header.Set("X-Forwarded-Host", req.Host)
 	// req.Host = url.Host
+
+	ip, _, err := net.SplitHostPort(req.RemoteAddr)
+	if err != nil {
+		ip = "invalid-" + req.RemoteAddr
+	}
+	// We erase this header, so it's a bit more… believable.
+	req.Header.Set("X-Real-Ip", ip)
 
 	domain.ReverseProxy.ServeHTTP(res, req)
 }
