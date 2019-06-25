@@ -76,8 +76,8 @@ ServerTokens Prod
     DocumentRoot /home/$_APP_USER/public_html
 
     LogFormat "%{X-Real-Ip}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" combined_real
-    ErrorLog logs/error.log
-    CustomLog logs/access.log combined_real
+    ErrorLog logs/error_log
+    CustomLog logs/access_log combined_real
 </VirtualHost>
 EOS
 [ $? -eq 0 ] || exit $?
@@ -180,3 +180,9 @@ sudo systemctl restart httpd || exit $?
 #echo "_MULCH_ACTION_USER=admin"
 #echo "_MULCH_ACTION_DESCRIPTION=Login to phpMyAdmin"
 #echo "_MULCH_ACTION=commit"
+
+echo "_MULCH_ACTION_NAME=logs"
+echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/rh_apache_logs.sh"
+echo "_MULCH_ACTION_USER=admin"
+echo "_MULCH_ACTION_DESCRIPTION=Show live Apache logs"
+echo "_MULCH_ACTION=commit"
