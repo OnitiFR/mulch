@@ -75,8 +75,9 @@ ServerTokens Prod
     ServerAdmin webmaster@localhost
     DocumentRoot /home/$_APP_USER/public_html
 
+    LogFormat "%{X-Real-Ip}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" combined_real
     ErrorLog logs/error.log
-    CustomLog logs/access.log combined
+    CustomLog logs/access.log combined_real
 </VirtualHost>
 EOS
 [ $? -eq 0 ] || exit $?

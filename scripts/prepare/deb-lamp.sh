@@ -57,8 +57,9 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
     ServerAdmin webmaster@localhost
     DocumentRoot /home/$_APP_USER/public_html
 
+    LogFormat "%{X-Real-Ip}i %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\"" combined_real
     ErrorLog \${APACHE_LOG_DIR}/error.log
-    CustomLog \${APACHE_LOG_DIR}/access.log combined
+    CustomLog \${APACHE_LOG_DIR}/access.log combined_real
 </VirtualHost>
 EOS
 [ $? -eq 0 ] || exit $?
