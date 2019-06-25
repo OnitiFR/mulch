@@ -143,6 +143,13 @@ sudo rm -f /usr/local/lib/pma.tgz
 sudo rm -rf /usr/local/lib/phpMyAdmin/
 sudo mv /usr/local/lib/phpMyAdmin-* /usr/local/lib/phpMyAdmin || exit $?
 
+sudo bash -c "cat > /usr/local/lib/phpMyAdmin/config.inc.php" <<- 'EOS'
+<?php
+# fix for :80 with this (old) phpMyAdmin release
+$cfg['PmaAbsoluteUri'] = "https://" . getenv('_DOMAIN_FIRST') . "/_sql/";
+EOS
+[ $? -eq 0 ] || exit $?
+
 sudo bash -c "cat > /etc/httpd/conf.d/001-phpmyadmin.conf" <<- EOS
 # phpMyAdmin default Apache configuration
 
