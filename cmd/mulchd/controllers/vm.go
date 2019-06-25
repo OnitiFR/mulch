@@ -362,7 +362,8 @@ func ExecScriptVM(req *server.Request, vm *server.VM, vmName *server.VMName) err
 				As:           as,
 			},
 		},
-		Log: req.Stream,
+		Log:          req.Stream,
+		CloseChannel: req.Response.(http.CloseNotifier).CloseNotify(),
 	}
 	err = run.Go()
 	if err != nil {
@@ -417,7 +418,8 @@ func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error
 				Arguments:    arguments,
 			},
 		},
-		Log: req.Stream,
+		Log:          req.Stream,
+		CloseChannel: req.Response.(http.CloseNotifier).CloseNotify(),
 	}
 	err = run.Go()
 	if err != nil {

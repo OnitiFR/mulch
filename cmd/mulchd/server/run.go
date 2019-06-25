@@ -24,6 +24,7 @@ type Run struct {
 	// DialDuration time.Duration
 	Log            *Log
 	StdoutCallback func(string)
+	CloseChannel   <-chan bool
 }
 
 // Go will execute the Run
@@ -44,6 +45,13 @@ func (run *Run) Go() error {
 	if err := run.preparePipes(errorChan); err != nil {
 		return err
 	}
+
+	go func() {
+		// "a receive from a nil channel blocks forever"
+		<-run.CloseChannel
+		run.Log.Warning("Close request received, closing SSH session")
+		run.SSHConn.Session.Close()
+	}()
 
 	if err := run.SSHConn.Session.Run(bootstrap); err != nil {
 		return err
