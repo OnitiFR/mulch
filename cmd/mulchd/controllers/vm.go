@@ -529,7 +529,9 @@ func GetVMDoActionsController(req *server.Request) {
 
 	entry, err := getEntryFromRequest(vmName, req)
 	if err != nil {
-		req.Stream.Failure(err.Error())
+		msg := fmt.Sprintf("VM '%s' not found", vmName)
+		req.App.Log.Error(msg)
+		http.Error(req.Response, msg, 404)
 		return
 	}
 	vm := entry.VM
