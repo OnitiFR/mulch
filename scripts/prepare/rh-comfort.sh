@@ -54,6 +54,12 @@ fi
 EOS
 [ $? -eq 0 ] || exit $?
 
+# add powerline vcs.branch before shell.cwd
+theme="/usr/lib/python2.7/site-packages/powerline/config_files/themes/shell/default.json"
+line=$(grep -n powerline.segments.shell.cwd "$theme" | cut -d: -f1)
+line=$(expr $line - 2)
+sudo sed -i "$line a {\"function\": \"powerline.segments.common.vcs.branch\", \"priority\": 40, \"args\": {\"status_colors\": true}}," "$theme" || exit $?
+
 # add a "open" action (see "do" command) if there's any domain defined
 if [ -n "$_DOMAIN_FIRST" ]; then
     echo "_MULCH_ACTION_NAME=open"
