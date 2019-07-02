@@ -4,7 +4,7 @@
 # For: Debian 9 / Ubuntu 18.10
 
 export DEBIAN_FRONTEND="noninteractive"
-sudo -E apt-get -y -qq install progress mc powerline locate man || exit $?
+sudo -E apt-get -y -qq install progress mc powerline powerline-gitstatus locate man || exit $?
 
 # Set Midnight-Commander as the default editor, and apply
 # a cool setup to it
