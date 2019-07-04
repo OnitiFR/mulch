@@ -120,6 +120,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		return nil, err
 	}
 
+	// TODO: Test with various special chars
 	// err = app.AlertSender.Send(&Alert{
 	// 	Type:    AlertTypeGood,
 	// 	Subject: "Hello",
