@@ -31,22 +31,23 @@ const (
 
 // App describes an (the?) application
 type App struct {
-	Config     *AppConfig
-	Libvirt    *Libvirt
-	Hub        *Hub
-	PhoneHome  *PhoneHomeHub
-	Log        *Log
-	Mux        *http.ServeMux
-	Rand       *rand.Rand
-	SSHPairDB  *SSHPairDatabase
-	VMDB       *VMDatabase
-	VMStateDB  *VMStateDatabase
-	BackupsDB  *BackupDatabase
-	APIKeysDB  *APIKeyDatabase
-	Seeder     *SeedDatabase
-	routes     map[string][]*Route
-	sshClients map[net.Addr]*sshServerClient
-	Operations *OperationList
+	Config      *AppConfig
+	Libvirt     *Libvirt
+	Hub         *Hub
+	PhoneHome   *PhoneHomeHub
+	Log         *Log
+	Mux         *http.ServeMux
+	Rand        *rand.Rand
+	SSHPairDB   *SSHPairDatabase
+	VMDB        *VMDatabase
+	VMStateDB   *VMStateDatabase
+	BackupsDB   *BackupDatabase
+	APIKeysDB   *APIKeyDatabase
+	AlertSender *AlertSender
+	Seeder      *SeedDatabase
+	routes      map[string][]*Route
+	sshClients  map[net.Addr]*sshServerClient
+	Operations  *OperationList
 }
 
 // NewApp creates a new application
@@ -114,13 +115,28 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		return nil, err
 	}
 
+	app.AlertSender, err = NewAlertSender(app.Config.configPath, app.Log)
+	if err != nil {
+		return nil, err
+	}
+
+	// err = app.AlertSender.Send(&Alert{
+	// 	Type:    AlertTypeGood,
+	// 	Subject: "Hello",
+	// 	Content: "Please to meet you with this test",
+	// })
+	// fmt.Println(err)
+
 	err = app.initSeedsDB()
 	if err != nil {
 		return nil, err
 	}
 	go app.Seeder.Run()
 
-	NewSSHProxyServer(app)
+	err = NewSSHProxyServer(app)
+	if err != nil {
+		return nil, err
+	}
 
 	app.Operations = NewOperationList(app.Rand)
 
