@@ -119,14 +119,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: Test with various special chars
-	// err = app.AlertSender.Send(&Alert{
-	// 	Type:    AlertTypeGood,
-	// 	Subject: "Hello",
-	// 	Content: "Please to meet you with this test",
-	// })
-	// fmt.Println(err)
+	app.AlertSender.RunKeepAlive()
 
 	err = app.initSeedsDB()
 	if err != nil {

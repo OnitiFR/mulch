@@ -111,3 +111,17 @@ func (sender *AlertSender) Send(alert *Alert) error {
 
 	return nil
 }
+
+// RunKeepAlive will send a keepalive alert every 24h
+func (sender *AlertSender) RunKeepAlive() {
+	go func() {
+		for {
+			time.Sleep(24 * time.Hour)
+			sender.Send(&Alert{
+				Type:    AlertTypeGood,
+				Subject: "Hi",
+				Content: "I'm alive and able to send alerts. Seeya!",
+			})
+		}
+	}()
+}

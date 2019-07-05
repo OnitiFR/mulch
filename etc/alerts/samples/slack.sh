@@ -9,7 +9,7 @@ fi
 
 payload=$(cat <<EOT
 {
-    "text": "$mark [$TYPE] $(hostname -s) : $SUBJECT - $CONTENT"
+    "text": "$mark [$TYPE] $(hostname -s) : *$SUBJECT* - $CONTENT"
 }
 EOT
 )
