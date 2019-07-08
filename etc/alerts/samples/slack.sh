@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Alert parameters are stored in environment:
+# TYPE ("GOOD" / "BAD")
+# SUBJECT
+# CONTENT
+# Variables content is as harmless as possible: no (single/double) quotes, $, …
+
 hook_url="https://hooks.slack.com/services/xxx"
 
 mark=":exclamation:"

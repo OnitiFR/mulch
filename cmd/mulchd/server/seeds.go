@@ -153,6 +153,14 @@ func (db *SeedDatabase) Run() {
 	}
 }
 
+func seedSendErrorAlert(app *App, seed string) {
+	app.AlertSender.Send(&Alert{
+		Type:    AlertTypeBad,
+		Subject: "Seed error",
+		Content: fmt.Sprintf("Error with seed %s, see seed status for details.", seed),
+	})
+}
+
 func (db *SeedDatabase) runStep() {
 	for name, seed := range db.db {
 		res, err := http.Head(seed.CurrentURL)
@@ -160,6 +168,7 @@ func (db *SeedDatabase) runStep() {
 			msg := fmt.Sprintf("seeder '%s': %s", name, err)
 			db.app.Log.Error(msg)
 			seed.UpdateStatus(msg)
+			seedSendErrorAlert(db.app, name)
 			continue
 		}
 		defer res.Body.Close()
@@ -169,6 +178,7 @@ func (db *SeedDatabase) runStep() {
 			msg := fmt.Sprintf("seeder '%s': undefined Last-Modified header", name)
 			db.app.Log.Error(msg)
 			seed.UpdateStatus(msg)
+			seedSendErrorAlert(db.app, name)
 			continue
 		}
 		t, err := http.ParseTime(lm)
@@ -176,6 +186,7 @@ func (db *SeedDatabase) runStep() {
 			msg := fmt.Sprintf("seeder '%s': can't parse Last-Modified header: %s", name, err)
 			db.app.Log.Error(msg)
 			seed.UpdateStatus(msg)
+			seedSendErrorAlert(db.app, name)
 			continue
 		}
 		if seed.LastModified != t {
@@ -189,6 +200,7 @@ func (db *SeedDatabase) runStep() {
 				msg := fmt.Sprintf("seeder '%s': unable to download image: %s", name, err)
 				db.app.Log.Error(msg)
 				seed.UpdateStatus(msg)
+				seedSendErrorAlert(db.app, name)
 				continue
 			}
 			defer os.Remove(tmpFile)
@@ -203,6 +215,7 @@ func (db *SeedDatabase) runStep() {
 					msg := fmt.Sprintf("seeder '%s': unable to delete old image: %s", name, errR)
 					db.app.Log.Error(msg)
 					seed.UpdateStatus(msg)
+					seedSendErrorAlert(db.app, name)
 					continue
 				}
 			}
@@ -218,6 +231,7 @@ func (db *SeedDatabase) runStep() {
 				msg := fmt.Sprintf("seeder '%s': unable to move image to storage: %s", name, err)
 				db.app.Log.Error(msg)
 				seed.UpdateStatus(msg)
+				seedSendErrorAlert(db.app, name)
 				continue
 			}
 			after := time.Now()
