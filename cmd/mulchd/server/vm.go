@@ -1039,16 +1039,55 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 	}
 	log.Info("backup disk attached")
 
+	pre, err := os.Open(app.Config.GetTemplateFilepath("pre-backup.sh"))
+	if err != nil {
+		return "", err
+	}
+	defer pre.Close()
+
+	post, err := os.Open(app.Config.GetTemplateFilepath("post-backup.sh"))
+	if err != nil {
+		return "", err
+	}
+	defer post.Close()
+
 	// defer detach + vol delete in case of failure
 	commit := false
 	defer func() {
 		if commit == false {
+			log.Info("force post-backup")
+			tasks := []*RunTask{}
+			tasks = append(tasks, &RunTask{
+				ScriptName:   "post-backup.sh",
+				ScriptReader: post,
+				As:           vm.App.Config.MulchSuperUser,
+			})
+			run := &Run{
+				SSHConn: &SSHConnection{
+					User: vm.App.Config.MulchSuperUser,
+					Host: vm.LastIP,
+					Port: 22,
+					Auths: []ssh.AuthMethod{
+						SSHSuperUserAuth,
+					},
+					Log: log,
+				},
+				Tasks: tasks,
+				Log:   log,
+			}
+			errRun := run.Go()
+			if errRun != nil {
+				log.Errorf("failed post-backup: %s", errRun)
+				// continue anyway, it's not fatal
+			}
+
 			log.Info("rollback backup disk creation")
 			errDet := VMDetachBackup(vmName, app)
 			if errDet != nil {
 				log.Errorf("failed trying VMDetachBackup: %s (%s)", errDet, volName)
 				// no return, it may be already detached
 			}
+
 			vol, errDef := app.Libvirt.Pools.Backups.LookupStorageVolByName(volName)
 			if errDef != nil {
 				log.Errorf("failed LookupStorageVolByName: %s (%s)", errDef, volName)
@@ -1062,18 +1101,6 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 			}
 		}
 	}()
-
-	pre, err := os.Open(app.Config.GetTemplateFilepath("pre-backup.sh"))
-	if err != nil {
-		return "", err
-	}
-	defer pre.Close()
-
-	post, err := os.Open(app.Config.GetTemplateFilepath("post-backup.sh"))
-	if err != nil {
-		return "", err
-	}
-	defer post.Close()
 
 	// pre-backup + backup + post-backup
 	tasks := []*RunTask{}
