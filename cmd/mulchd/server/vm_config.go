@@ -13,6 +13,13 @@ import (
 	"github.com/c2h5oh/datasize"
 )
 
+// auto_rebuild setting values
+const (
+	VMAutoRebuildDaily   = "daily"
+	VMAutoRebuildWeekly  = "weekly"
+	VMAutoRebuildMonthly = "weekly"
+)
+
 // VMConfig stores needed parameters for a new VM
 type VMConfig struct {
 	FileContent string // config file content
@@ -31,6 +38,7 @@ type VMConfig struct {
 	BackupDiskSize uint64
 	BackupCompress bool
 	RestoreBackup  string
+	AutoRebuild    string
 
 	Prepare []*VMConfigScript
 	Install []*VMConfigScript
@@ -72,6 +80,7 @@ type tomlVMConfig struct {
 	BackupDiskSize  datasize.ByteSize `toml:"backup_disk_size"`
 	BackupCompress  bool              `toml:"backup_compress"`
 	RestoreBackup   string            `toml:"restore_backup"`
+	AutoRebuild     string            `toml:"auto_rebuild"`
 
 	PreparePrefixURL string `toml:"prepare_prefix_url"`
 	Prepare          []string
@@ -355,6 +364,9 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 		vmConfig.Restore = append(vmConfig.Restore, script)
 	}
 	vmConfig.RestoreBackup = tConfig.RestoreBackup
+
+	// TODO: check value and backup / restore scripts
+	vmConfig.AutoRebuild = tConfig.AutoRebuild
 
 	var actions []*VMDoAction
 
