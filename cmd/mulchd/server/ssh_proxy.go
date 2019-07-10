@@ -60,6 +60,8 @@ func (proxy *SSHProxy) serveProxy() error {
 	// send sparses keepalives to detect dead connections to our SSH proxy,
 	// a failed SendRequest will set channels to nil, closing the connections
 	// (should do the same with clientConn for dead guests?)
+	// TODO: defer-kill this goroutine (currently, we have "send keepalive failed
+	// disconnected by user" errors a few minutes after disconnection)
 	go func() {
 		t := time.NewTicker(5 * time.Minute)
 		defer t.Stop()
