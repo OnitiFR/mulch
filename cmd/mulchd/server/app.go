@@ -140,6 +140,8 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 
 	go app.VMStateDB.Run()
 
+	AutoRebuildSchedule(app)
+
 	// dirty log broadcast tests
 	// go func() {
 	// 	for {
