@@ -37,6 +37,12 @@ redirects = [
     ["www.test1.localhost", "test1.localhost"],
 ]
 
+# Auto-rebuild this VM every week, possible values: daily/weekly/monthly
+# See also auto_rebuild_time global setting.
+# Default is "" (auto-rebuild disabled)
+# You must have backup and restore scripts to enable auto-rebuild.
+auto_rebuild = "weekly"
+
 # If all prepare scripts share the same base URL, you can use prepare_prefix_url.
 # Otherwise, use absolute URL in 'prepare': admin@https://server/script.sh
 # Note: you can use file:// scheme for files on mulchd FS (ex: local git repo)

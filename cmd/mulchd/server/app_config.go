@@ -3,6 +3,8 @@ package server
 import (
 	"fmt"
 	"path"
+	"strconv"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
@@ -37,6 +39,9 @@ type AppConfig struct {
 	// User (sudoer) created by Mulch in VMs
 	MulchSuperUser string
 
+	// Everyday VM auto-rebuild time ("HH:MM")
+	AutoRebuildTime string
+
 	// Seeds
 	Seeds map[string]ConfigSeed
 
@@ -60,6 +65,7 @@ type tomlAppConfig struct {
 	ProxyListenSSH        string `toml:"proxy_listen_ssh"`
 	ProxySSHExtraKeysFile string `toml:"proxy_ssh_extra_keys_file"`
 	MulchSuperUser        string `toml:"mulch_super_user"`
+	AutoRebuildTime       string `toml:"auto_rebuild_time"`
 	Seed                  []tomlConfigSeed
 }
 
@@ -91,6 +97,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		ProxyListenSSH:        ":8022",
 		ProxySSHExtraKeysFile: "",
 		MulchSuperUser:        "admin",
+		AutoRebuildTime:       "23:30",
 	}
 
 	if _, err := toml.DecodeFile(filename, tConfig); err != nil {
@@ -108,6 +115,20 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 
 	appConfig.ProxyListenSSH = tConfig.ProxyListenSSH
 	appConfig.ProxySSHExtraKeysFile = tConfig.ProxySSHExtraKeysFile
+
+	parts := strings.Split(tConfig.AutoRebuildTime, ":")
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("auto_rebuild_time: '%s': wrong format (HH:MM needed)", tConfig.AutoRebuildTime)
+	}
+	hour, err := strconv.Atoi(parts[0])
+	if err != nil || hour > 23 || hour < 0 {
+		return nil, fmt.Errorf("auto_rebuild_time: '%s': invalid hour", tConfig.AutoRebuildTime)
+	}
+	minute, err := strconv.Atoi(parts[1])
+	if err != nil || minute > 59 || minute < 0 {
+		return nil, fmt.Errorf("auto_rebuild_time: '%s': invalid minute", tConfig.AutoRebuildTime)
+	}
+	appConfig.AutoRebuildTime = tConfig.AutoRebuildTime
 
 	for _, seed := range tConfig.Seed {
 		if seed.Name == "" {

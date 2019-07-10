@@ -39,7 +39,7 @@ proxy_ssh_extra_keys_file = ""
 # See https://letsencrypt.org/docs/staging-environment/ to get the
 # staging "Fake LE Root X1" root certificate during tests.
 #
-# For Let's Encrypt production URL, you can use:
+# For Let's Encrypt production URL, you can use this "magic constant":
 # proxy_acme_url = "LETS_ENCRYPT_PRODUCTION"
 # Warning: define a proper email below!
 proxy_acme_url = "https://acme-staging.api.letsencrypt.org/directory"
@@ -51,6 +51,10 @@ proxy_acme_email = "root@localhost.localdomain"
 # Listen addresses (HTTP/HTTPS) for the Resverse Proxy
 proxy_listen_http = ":80"
 proxy_listen_https = ":443"
+
+# Auto-rebuild will check everyday, at specified time, if any VM need
+# an automatic rebuild (according its settings). Format: HH:MM
+auto_rebuild_time = "23:30"
 
 # Sample seeds
 [[seed]]
