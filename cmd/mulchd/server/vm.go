@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
@@ -1428,6 +1429,144 @@ func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// VMRebuild delete VM and rebuilds it from a backup (using revisions)
+func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) error {
+	vm, err := app.VMDB.GetByName(vmName)
+	if err != nil {
+		return err
+	}
+
+	if vm.WIP != VMOperationNone {
+		return fmt.Errorf("VM already have a work in progress (%s)", string(vm.WIP))
+	}
+
+	if len(vm.Config.Restore) == 0 {
+		return errors.New("no restore script defined for this VM")
+	}
+
+	if vm.WIP != VMOperationNone {
+		return fmt.Errorf("VM have a work in progress (%s)", string(vm.WIP))
+	}
+
+	running, _ := VMIsRunning(vmName, app)
+	if running == false {
+		return errors.New("VM should be up and running")
+	}
+
+	configFile := vm.Config.FileContent
+
+	conf, err := NewVMConfigFromTomlReader(strings.NewReader(configFile), log)
+	if err != nil {
+		return fmt.Errorf("decoding config: %s", err)
+	}
+
+	conf.RestoreBackup = BackupBlankRestore
+
+	success := false
+
+	// create VM rev+1
+	// replace original VM author with "rebuilder"
+	newVM, newVMName, err := NewVM(conf, false, authorKey, app, log)
+	if err != nil {
+		log.Error(err.Error())
+		return fmt.Errorf("Cannot create VM: %s", err)
+	}
+
+	defer func() {
+		if success == false {
+			err = VMDelete(newVMName, app, log)
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+	}()
+
+	before := time.Now()
+	// set rev+0 as inactive ("default" behavior, add a --no-downtime flag?)
+	err = app.VMDB.SetActiveRevision(vmName.Name, RevisionNone)
+	if err != nil {
+		return fmt.Errorf("can't disable all revisions: %s", err)
+	}
+
+	defer func() {
+		if success == false {
+			err = app.VMDB.SetActiveRevision(vmName.Name, vmName.Revision)
+			if err != nil {
+				log.Error(err.Error())
+			}
+		}
+	}()
+
+	// backup rev+0
+	backupName, err := VMBackup(vmName, authorKey, app, log, BackupCompressDisable)
+	if err != nil {
+		return fmt.Errorf("creating backup: %s", err)
+	}
+
+	defer func() {
+		// -always- delete backup (success or not)
+		err = app.BackupsDB.Delete(backupName)
+		if err != nil {
+			// not a "real" error
+			log.Errorf("unable remove '%s' backup from DB: %s", backupName, err)
+		} else {
+			err = app.Libvirt.DeleteVolume(backupName, app.Libvirt.Pools.Backups)
+			if err != nil {
+				// not a "real" error
+				log.Errorf("unable remove '%s' backup from storage: %s", backupName, err)
+			}
+		}
+	}()
+
+	backup := app.BackupsDB.GetByName(backupName)
+	if backup == nil {
+		return fmt.Errorf("can't find backup '%s' in DB", backupName)
+	}
+
+	// restore rev+1
+	err = VMRestoreNoChecks(newVM, newVMName, backup, app, log)
+	if err != nil {
+		return fmt.Errorf("restoring backup: %s", err)
+	}
+
+	// activate rev+1
+	err = app.VMDB.SetActiveRevision(newVMName.Name, newVMName.Revision)
+	if err != nil {
+		return fmt.Errorf("can't enable new revision: %s", err)
+	}
+	after := time.Now()
+	log.Infof("VM %s is now active", newVMName)
+
+	// get lock status of original VM
+	originalLocked := vm.Locked
+	err = VMLockUnlock(vmName, false, app.VMDB)
+	if err != nil {
+		return fmt.Errorf("unlocking original VM: %s", err)
+	}
+
+	// - delete rev+0 VM
+	err = VMDelete(vmName, app, log)
+	if err != nil {
+		return fmt.Errorf("delete original VM: %s", err)
+	}
+
+	// commit (too late to rollback, original VM does not exists anymore)
+	success = true
+
+	if lock || originalLocked {
+		err := VMLockUnlock(newVMName, true, app.VMDB)
+		if err != nil {
+			log.Failuref("unable to lock '%s': %s", vmName, err)
+			return nil
+		}
+		log.Info("VM locked")
+	}
+
+	log.Infof("downtime: %s", after.Sub(before))
 
 	return nil
 }

@@ -8,7 +8,6 @@ import (
 	"path"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
@@ -565,136 +564,14 @@ func BackupVM(req *server.Request, vmName *server.VMName) (string, error) {
 
 // RebuildVMv2 delete VM and rebuilds it from a backup (2nd version, using revisions)
 func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) error {
-	if len(vm.Config.Restore) == 0 {
-		return errors.New("no restore script defined for this VM")
-	}
 
 	if vm.Locked == true && req.HTTP.FormValue("force") != common.TrueStr {
 		return errors.New("VM is locked (see --force)")
 	}
 
-	if vm.WIP != server.VMOperationNone {
-		return fmt.Errorf("VM have a work in progress (%s)", string(vm.WIP))
-	}
-
-	running, _ := server.VMIsRunning(vmName, req.App)
-	if running == false {
-		return errors.New("VM should be up and running")
-	}
-
-	configFile := vm.Config.FileContent
-
-	conf, err := server.NewVMConfigFromTomlReader(strings.NewReader(configFile), req.Stream)
-	if err != nil {
-		return fmt.Errorf("decoding config: %s", err)
-	}
-
-	conf.RestoreBackup = server.BackupBlankRestore
-
-	success := false
-
-	// create VM rev+1
-	// replace original VM author with "rebuilder"
-	newVM, newVMName, err := server.NewVM(conf, false, req.APIKey.Comment, req.App, req.Stream)
-	if err != nil {
-		req.Stream.Error(err.Error())
-		return fmt.Errorf("Cannot create VM: %s", err)
-	}
-
-	defer func() {
-		if success == false {
-			err = server.VMDelete(newVMName, req.App, req.Stream)
-			if err != nil {
-				req.Stream.Error(err.Error())
-			}
-		}
-	}()
-
-	before := time.Now()
-	// set rev+0 as inactive ("default" behavior, add a --no-downtime flag?)
-	err = req.App.VMDB.SetActiveRevision(vmName.Name, server.RevisionNone)
-	if err != nil {
-		return fmt.Errorf("can't disable all revisions: %s", err)
-	}
-
-	defer func() {
-		if success == false {
-			err = req.App.VMDB.SetActiveRevision(vmName.Name, vmName.Revision)
-			if err != nil {
-				req.Stream.Error(err.Error())
-			}
-		}
-	}()
-
-	// backup rev+0
-	backupName, err := server.VMBackup(vmName, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressDisable)
-	if err != nil {
-		return fmt.Errorf("creating backup: %s", err)
-	}
-
-	defer func() {
-		// -always- delete backup (success or not)
-		err = req.App.BackupsDB.Delete(backupName)
-		if err != nil {
-			// not a "real" error
-			req.Stream.Errorf("unable remove '%s' backup from DB: %s", backupName, err)
-		} else {
-			err = req.App.Libvirt.DeleteVolume(backupName, req.App.Libvirt.Pools.Backups)
-			if err != nil {
-				// not a "real" error
-				req.Stream.Errorf("unable remove '%s' backup from storage: %s", backupName, err)
-			}
-		}
-	}()
-
-	backup := req.App.BackupsDB.GetByName(backupName)
-	if backup == nil {
-		return fmt.Errorf("can't find backup '%s' in DB", backupName)
-	}
-
-	// restore rev+1
-	err = server.VMRestoreNoChecks(newVM, newVMName, backup, req.App, req.Stream)
-	if err != nil {
-		return fmt.Errorf("restoring backup: %s", err)
-	}
-
-	// activate rev+1
-	err = req.App.VMDB.SetActiveRevision(newVMName.Name, newVMName.Revision)
-	if err != nil {
-		return fmt.Errorf("can't enable new revision: %s", err)
-	}
-	after := time.Now()
-	req.Stream.Infof("VM %s is now active", newVMName)
-
-	// get lock status of original VM
-	originalLocked := vm.Locked
-	err = server.VMLockUnlock(vmName, false, req.App.VMDB)
-	if err != nil {
-		return fmt.Errorf("unlocking original VM: %s", err)
-	}
-
-	// - delete rev+0 VM
-	err = server.VMDelete(vmName, req.App, req.Stream)
-	if err != nil {
-		return fmt.Errorf("delete original VM: %s", err)
-	}
-
-	// commit (too late to rollback, original VM does not exists anymore)
-	success = true
-
 	lock := req.HTTP.FormValue("lock")
-	if lock == common.TrueStr || originalLocked {
-		err := server.VMLockUnlock(newVMName, true, req.App.VMDB)
-		if err != nil {
-			req.Stream.Failuref("unable to lock '%s': %s", vmName, err)
-			return nil
-		}
-		req.Stream.Info("VM locked")
-	}
 
-	req.Stream.Infof("downtime: %s", after.Sub(before))
-
-	return nil
+	return server.VMRebuild(vmName, lock == common.TrueStr, req.APIKey.Comment, req.App, req.Stream)
 }
 
 // RedefineVM replace VM config file with a new one, for next rebuild
