@@ -1,9 +1,3 @@
-- auto-rebuild feature (even on lock VM)
-  - crontab like? (why no using cron, then?) or simple daily/weekly/monthly + hour?
-  - no simultaneous rebuild?
-  - "max hour" setting?
-- some sort of "alert log" / "alert script" for auto-rebuild failures or seed update failures?
-- proxy reload signal "cooldown"?
 - add --revision to rebuild command
 - remove the need to supply the VM name for redefine command?
   - pro: sanity check for a dangerous op
