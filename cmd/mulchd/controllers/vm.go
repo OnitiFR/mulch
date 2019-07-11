@@ -500,6 +500,8 @@ func GetVMInfosController(req *server.Request) {
 		AppUser:             vm.Config.AppUser,
 		AuthorKey:           vm.AuthorKey,
 		InitDate:            vm.InitDate,
+		LastRebuildDuration: vm.LastRebuildDuration,
+		LastRebuildDowntime: vm.LastRebuildDowntime,
 		Locked:              vm.Locked,
 		Up:                  running,
 	}

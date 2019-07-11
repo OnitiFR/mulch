@@ -40,21 +40,23 @@ const (
 	BackupCompressDisable = false
 )
 
-// BackupBlankRestore is used to disable install scripts during a
-// a VM creation (and then restore a backup later)
+// BackupBlankRestore disables *install* scripts during a
+// a VM creation (so we can restore backup a bit later)
 const BackupBlankRestore = "-"
 
 // VM defines a virtual machine ("domain")
 type VM struct {
-	LibvirtUUID string
-	SecretUUID  string
-	App         *App
-	Config      *VMConfig
-	AuthorKey   string
-	InitDate    time.Time
-	LastIP      string
-	Locked      bool
-	WIP         VMOperation
+	LibvirtUUID         string
+	SecretUUID          string
+	App                 *App
+	Config              *VMConfig
+	AuthorKey           string
+	InitDate            time.Time
+	LastIP              string
+	Locked              bool
+	WIP                 VMOperation
+	LastRebuildDuration time.Duration
+	LastRebuildDowntime time.Duration
 }
 
 // SetOperation change VM WIP
@@ -1435,6 +1437,8 @@ func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 
 // VMRebuild delete VM and rebuilds it from a backup (using revisions)
 func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) error {
+	rebuildStart := time.Now()
+
 	vm, err := app.VMDB.GetByName(vmName)
 	if err != nil {
 		return err
@@ -1485,7 +1489,7 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 		}
 	}()
 
-	before := time.Now()
+	downtimeStart := time.Now()
 	// set rev+0 as inactive ("default" behavior, add a --no-downtime flag?)
 	err = app.VMDB.SetActiveRevision(vmName.Name, RevisionNone)
 	if err != nil {
@@ -1538,7 +1542,7 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 	if err != nil {
 		return fmt.Errorf("can't enable new revision: %s", err)
 	}
-	after := time.Now()
+	downtimeEnd := time.Now()
 	log.Infof("VM %s is now active", newVMName)
 
 	// get lock status of original VM
@@ -1566,7 +1570,16 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 		log.Info("VM locked")
 	}
 
-	log.Infof("downtime: %s", after.Sub(before))
+	rebuildEnd := time.Now()
+
+	downtime := downtimeEnd.Sub(downtimeStart)
+	rebuildtime := rebuildEnd.Sub(rebuildStart)
+
+	newVM.LastRebuildDowntime = downtime
+	newVM.LastRebuildDuration = rebuildtime
+	app.VMDB.Update()
+
+	log.Infof("downtime: %s", downtime)
 
 	return nil
 }

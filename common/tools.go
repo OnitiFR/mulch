@@ -55,6 +55,8 @@ func InterfaceValueToString(iv interface{}) string {
 		return strconv.FormatBool(iv.(bool))
 	case time.Time:
 		return iv.(time.Time).String()
+	case time.Duration:
+		return iv.(time.Duration).String()
 	}
 	return "INVALID_TYPE"
 }

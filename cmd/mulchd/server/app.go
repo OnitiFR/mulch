@@ -140,24 +140,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 
 	go app.VMStateDB.Run()
 
-	AutoRebuildSchedule(app)
-
-	// dirty log broadcast tests
-	// go func() {
-	// 	for {
-	// 		delay := app.Rand.Intn(12000)
-	// 		time.Sleep(time.Duration(delay) * time.Millisecond)
-	// 		app.Log.Tracef("Test %d", delay)
-	// 	}
-	// }()
-	// go func() {
-	// 	for {
-	// 		delay := app.Rand.Intn(12000)
-	// 		time.Sleep(time.Duration(delay) * time.Millisecond)
-	// 		fmt.Printf("INFO(): test instance 1 (%d)\n", delay)
-	// 		app.Hub.Broadcast(mulch.NewMessage(mulch.MessageInfo, "instance-1", "Test instance 1"))
-	// 	}
-	// }()
+	go AutoRebuildSchedule(app)
 
 	return app, nil
 }

@@ -17,6 +17,8 @@ type APIVMInfos struct {
 	SuperUser           string
 	AppUser             string
 	InitDate            time.Time
+	LastRebuildDuration time.Duration
+	LastRebuildDowntime time.Duration
 	AuthorKey           string
 	Locked              bool
 	Up                  bool

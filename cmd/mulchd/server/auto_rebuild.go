@@ -6,8 +6,8 @@ import (
 
 // AutoRebuildSchedule will schedule auto-rebuilds
 func AutoRebuildSchedule(app *App) {
-	// big relaxing, so we don't compete with VM state restore, seed updating
-	// and other mulchd startup stuff.
+	// big relaxing, so we don't compete too much with VM state restore,
+	// seed updating and other mulchd startup stuff.
 	time.Sleep(5 * time.Minute)
 
 	for {
