@@ -2,15 +2,11 @@ package server
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
-	"path"
-	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
@@ -31,23 +27,24 @@ const (
 
 // App describes an (the?) application
 type App struct {
-	Config      *AppConfig
-	Libvirt     *Libvirt
-	Hub         *Hub
-	PhoneHome   *PhoneHomeHub
-	Log         *Log
-	Mux         *http.ServeMux
-	Rand        *rand.Rand
-	SSHPairDB   *SSHPairDatabase
-	VMDB        *VMDatabase
-	VMStateDB   *VMStateDatabase
-	BackupsDB   *BackupDatabase
-	APIKeysDB   *APIKeyDatabase
-	AlertSender *AlertSender
-	Seeder      *SeedDatabase
-	routes      map[string][]*Route
-	sshClients  map[net.Addr]*sshServerClient
-	Operations  *OperationList
+	Config        *AppConfig
+	Libvirt       *Libvirt
+	Hub           *Hub
+	PhoneHome     *PhoneHomeHub
+	Log           *Log
+	Mux           *http.ServeMux
+	Rand          *rand.Rand
+	SSHPairDB     *SSHPairDatabase
+	VMDB          *VMDatabase
+	VMStateDB     *VMStateDatabase
+	BackupsDB     *BackupDatabase
+	APIKeysDB     *APIKeyDatabase
+	AlertSender   *AlertSender
+	Seeder        *SeedDatabase
+	routes        map[string][]*Route
+	sshClients    map[net.Addr]*sshServerClient
+	Operations    *OperationList
+	ProxyReloader *ProxyReloader
 }
 
 // NewApp creates a new application
@@ -197,7 +194,8 @@ func (app *App) initVMDB() error {
 		app.Log.Infof("migrate completed (entry count: %d)", len(migrate.dbv2))
 	}
 
-	vmdb, err := NewVMDatabase(dbPath, domainDbPath, app.sendProxyReloadSignal)
+	app.ProxyReloader = NewProxyReloader(app)
+	vmdb, err := NewVMDatabase(dbPath, domainDbPath, app.ProxyReloader.Request)
 	if err != nil {
 		return err
 	}
@@ -351,34 +349,6 @@ func (app *App) initLibvirtNetwork() error {
 	app.Libvirt.NetworkXML = netcfg
 
 	return nil
-}
-
-func (app *App) sendProxyReloadSignal() {
-	lastPidFilename := path.Clean(app.Config.DataPath + "/mulch-proxy-last.pid")
-	data, err := ioutil.ReadFile(lastPidFilename)
-	if err != nil {
-		app.Log.Errorf("reloading mulch-proxy config: %s", err)
-		return
-	}
-
-	pid, err := strconv.Atoi(string(data))
-	if err != nil {
-		app.Log.Errorf("reloading mulch-proxy config: pid '%s': %s", data, err)
-		return
-	}
-
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		app.Log.Errorf("reloading mulch-proxy config: process: %s", err)
-		return
-	}
-
-	err = p.Signal(syscall.SIGHUP)
-	if err != nil {
-		app.Log.Errorf("reloading mulch-proxy config: signal: %s", err)
-		return
-	}
-	app.Log.Info("HUP signal sent to mulch-proxy")
 }
 
 // Run will start the app (in the foreground)
