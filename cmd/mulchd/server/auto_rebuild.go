@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -20,8 +21,61 @@ func AutoRebuildSchedule(app *App) {
 }
 
 func autoRebuildStart(app *App) {
-	// TODO:
-	// - add VM info LastRebuildDate, LastRebuildDuration (+ export VM status)
-	// - loop VMs, check last rebuild, rebuild if needed
-	app.Log.Info("auto-rebuild")
+	vmNames := app.VMDB.GetNames()
+	for _, vmName := range vmNames {
+		err := autoRebuildVM(vmName, app)
+		if err != nil {
+			app.Log.Errorf("error rebuilding %s: %s", vmName, err)
+			app.AlertSender.Send(&Alert{
+				Type:    AlertTypeBad,
+				Subject: "Auto-rebuild",
+				Content: fmt.Sprintf("error rebuilding %s, see server log", vmName.ID()),
+			})
+		}
+	}
+}
+
+func autoRebuildVM(vmName *VMName, app *App) error {
+	entry, err := app.VMDB.GetEntryByName(vmName)
+	if err != nil {
+		return err
+	}
+
+	// we currently rebuild only active VMs
+	if entry.Active == false {
+		return nil
+	}
+
+	running, _ := VMIsRunning(vmName, app)
+	if running == false {
+		// VM is down, this is not an error (i guess?)
+		return nil
+	}
+
+	vm, err := app.VMDB.GetByName(vmName)
+	if err != nil {
+		return err
+	}
+
+	lastRebuild := time.Now().Sub(vm.InitDate)
+	rebuild := false
+
+	if vm.Config.AutoRebuild == VMAutoRebuildDaily && lastRebuild > 24*time.Hour {
+		rebuild = true
+	}
+
+	if vm.Config.AutoRebuild == VMAutoRebuildWeekly && lastRebuild > 7*24*time.Hour {
+		rebuild = true
+	}
+
+	if vm.Config.AutoRebuild == VMAutoRebuildMonthly && lastRebuild > 30*24*time.Hour {
+		rebuild = true
+	}
+
+	if !rebuild {
+		return nil
+	}
+
+	app.Log.Infof("auto-rebuilding %s", vmName)
+	return VMRebuild(vmName, false, vm.AuthorKey, app, app.Log)
 }
