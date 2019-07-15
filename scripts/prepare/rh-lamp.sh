@@ -73,7 +73,7 @@ ServerTokens Prod
 
 <VirtualHost *:80>
     ServerAdmin webmaster@localhost
-    DocumentRoot /home/$_APP_USER/public_html
+    DocumentRoot $html_dir
 
     LogFormat "%{X-Real-Ip}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" combined_real
     ErrorLog logs/error_log

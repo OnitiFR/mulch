@@ -58,7 +58,7 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 
 <VirtualHost *:80>
     ServerAdmin webmaster@localhost
-    DocumentRoot /home/$_APP_USER/public_html
+    DocumentRoot $html_dir
 
     ErrorLog \${APACHE_LOG_DIR}/error.log
     CustomLog \${APACHE_LOG_DIR}/access.log combined
