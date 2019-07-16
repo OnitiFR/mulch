@@ -399,6 +399,8 @@ func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error
 		return err
 	}
 
+	before := time.Now()
+
 	run := &server.Run{
 		SSHConn: &server.SSHConnection{
 			User: vm.App.Config.MulchSuperUser,
@@ -425,7 +427,9 @@ func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error
 		return err
 	}
 
-	req.Stream.Success("script returned 0")
+	after := time.Now()
+
+	req.Stream.Successf("script returned 0 (%s)", after.Sub(before))
 	return nil
 }
 
