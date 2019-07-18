@@ -64,7 +64,7 @@ sudo sed -i "$line a {\"function\": \"powerline.segments.common.vcs.branch\", \"
 if [ -n "$_DOMAIN_FIRST" ]; then
     echo "_MULCH_ACTION_NAME=open"
     echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/open.sh"
-    echo "_MULCH_ACTION_USER=app"
+    echo "_MULCH_ACTION_USER=$_APP_USER"
     echo "_MULCH_ACTION_DESCRIPTION=Open VM first domain in the browser"
     echo "_MULCH_ACTION=commit"
 fi
