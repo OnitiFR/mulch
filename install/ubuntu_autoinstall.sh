@@ -81,7 +81,7 @@ echo "Sample ~/.toml file:"
 echo ""
 echo '[[server]]'
 echo 'name = "demo"'
-echo 'url = "http://xxxxx:8585"'
+echo 'url = "http://xxxxx:8686"'
 echo 'key = "xxxxx"'
 echo ""
 echo "See also https://letsencrypt.org/docs/staging-environment/ to add the 'fake LE root' certificate to your browser for HTTPS tests (and change proxy_acme_email with your own email address)"

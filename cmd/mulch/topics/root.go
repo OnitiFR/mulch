@@ -97,7 +97,7 @@ Example:
 
 [[server]]
 name = "my-mulch"
-url = "http://192.168.10.104:8585"
+url = "http://192.168.10.104:8686"
 key = "gein2xah7keeL33thpe9ahvaegF15TUL3surae3Chue4riokooJ5WuTI80FTWfz2"
 alias = "my"
 

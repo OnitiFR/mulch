@@ -2,7 +2,12 @@
 # Values here are defaults (except for seeds)
 
 # Listen address of Mulchd API server (no IP = all interfaces)
-listen = ":8585"
+listen = ":8686"
+
+# Enable HTTPS-only for *API server*, using a Let's Encrypt certificate
+# with specified domain. Default ("") is HTTP-only.
+# See also proxy_acme_* settings below, we share these settings with the proxy.
+listen_https_domain = ""
 
 # URI libvirt will use to contact the hypervisor
 libvirt_uri = "qemu:///system"

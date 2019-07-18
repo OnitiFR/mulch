@@ -43,7 +43,7 @@ func CloudInitCreate(volumeName string, vmName *VMName, vm *VM, app *App, log *L
 	volTemplate := app.Config.GetTemplateFilepath("volume.xml")
 	userDataTemplate := app.Config.GetTemplateFilepath("ci-user-data.yml")
 
-	phURL := "http://" + app.Libvirt.NetworkXML.IPs[0].Address + app.Config.Listen + "/phone"
+	phURL := "http://" + app.Libvirt.NetworkXML.IPs[0].Address + strconv.Itoa(AppPhoneServerPost) + "/phone"
 
 	sshKeyPair := app.SSHPairDB.GetByName(SSHSuperUserPair)
 	if sshKeyPair == nil {

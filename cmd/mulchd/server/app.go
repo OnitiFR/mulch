@@ -25,6 +25,9 @@ const (
 	AppNetwork = "mulch"
 )
 
+// AppPhoneServerPost for "phone home" internal HTTP server
+const AppPhoneServerPost = 8585
+
 // App describes an (the?) application
 type App struct {
 	Config        *AppConfig
@@ -133,7 +136,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 
 	app.PhoneHome = NewPhoneHomeHub()
 
-	app.Mux = http.NewServeMux()
+	app.initAPIServer()
 
 	go app.VMStateDB.Run()
 
@@ -351,7 +354,14 @@ func (app *App) initLibvirtNetwork() error {
 	return nil
 }
 
+func (app *App) initAPIServer() {
+	app.Mux = http.NewServeMux()
+}
+
 // Run will start the app (in the foreground)
+// api-https references:
+// - mulch-proxy (of course)
+// - https://blog.kowalczyk.info/article/Jl3G/https-for-free-in-go-with-little-help-of-lets-encrypt.html
 func (app *App) Run() {
 	app.Log.Infof("API server listening on %s", app.Config.Listen)
 	app.registerRouteHandlers()

@@ -14,6 +14,9 @@ type AppConfig struct {
 	// address where the API server will listen
 	Listen string
 
+	// API server HTTPS domain name (HTTP otherwise)
+	ListenHTTPSDomain bool
+
 	// URI to libvirtd (qemu only, currently)
 	LibVirtURI string
 
@@ -57,6 +60,7 @@ type ConfigSeed struct {
 
 type tomlAppConfig struct {
 	Listen                string
+	ListenHTTPSDomain     bool   `toml:"listen_https"`
 	LibVirtURI            string `toml:"libvirt_uri"`
 	StoragePath           string `toml:"storage_path"`
 	DataPath              string `toml:"data_path"`
@@ -88,7 +92,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 
 	// defaults (if not in the file)
 	tConfig := &tomlAppConfig{
-		Listen:                ":8585",
+		Listen:                ":8686",
 		LibVirtURI:            "qemu:///system",
 		StoragePath:           "./var/storage", // example: /srv/mulch
 		DataPath:              "./var/data",    // example: /var/lib/mulch
@@ -104,8 +108,23 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		return nil, err
 	}
 
-	// no check here for most of config elements, it's done later
+	partsL := strings.Split(tConfig.Listen, ":")
+	if len(partsL) != 2 {
+		return nil, fmt.Errorf("listen: '%s': wrong format (ex: ':8686')", tConfig.Listen)
+	}
+
+	listenPort, err := strconv.Atoi(partsL[1])
+	if err != nil {
+		return nil, fmt.Errorf("listen: '%s': wrong port number", tConfig.Listen)
+	}
+
+	if listenPort == AppPhoneServerPost {
+		return nil, fmt.Errorf("listen address '%s' is reserved for internal use", tConfig.Listen)
+	}
 	appConfig.Listen = tConfig.Listen
+	appConfig.ListenHTTPSDomain = tConfig.ListenHTTPSDomain
+
+	// no check here for most of config elements, it's done later
 	appConfig.LibVirtURI = tConfig.LibVirtURI
 	appConfig.StoragePath = tConfig.StoragePath
 	appConfig.DataPath = tConfig.DataPath
@@ -116,15 +135,15 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	appConfig.ProxyListenSSH = tConfig.ProxyListenSSH
 	appConfig.ProxySSHExtraKeysFile = tConfig.ProxySSHExtraKeysFile
 
-	parts := strings.Split(tConfig.AutoRebuildTime, ":")
-	if len(parts) != 2 {
+	partsAr := strings.Split(tConfig.AutoRebuildTime, ":")
+	if len(partsAr) != 2 {
 		return nil, fmt.Errorf("auto_rebuild_time: '%s': wrong format (HH:MM needed)", tConfig.AutoRebuildTime)
 	}
-	hour, err := strconv.Atoi(parts[0])
+	hour, err := strconv.Atoi(partsAr[0])
 	if err != nil || hour > 23 || hour < 0 {
 		return nil, fmt.Errorf("auto_rebuild_time: '%s': invalid hour", tConfig.AutoRebuildTime)
 	}
-	minute, err := strconv.Atoi(parts[1])
+	minute, err := strconv.Atoi(partsAr[1])
 	if err != nil || minute > 59 || minute < 0 {
 		return nil, fmt.Errorf("auto_rebuild_time: '%s': invalid minute", tConfig.AutoRebuildTime)
 	}

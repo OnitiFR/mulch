@@ -133,7 +133,7 @@ Mulch currently have 3 components :
  - `mulchd`: the server daemon
  - `mulch-proxy`: the HTTP proxy
 
-**Mulchd** receive requests from Mulch clients (REST API, HTTP, port `8585`) for VM management.
+**Mulchd** receive requests from Mulch clients (REST API, HTTP, port `8686`) for VM management.
 Application serving is done through HTTP(S) requests to **mulch-proxy** (ports `80` and `443`) and
 SSH proxied access is done by mulchd (port `8022`).
 
@@ -244,7 +244,7 @@ That's it, you can now run `mulch` command. It will show you a sample configurat
 ```toml
 [[server]]
 name = "my-mulch"
-url = "http://192.168.10.104:8585"
+url = "http://192.168.10.104:8686"
 key = "gein2xah7keeL33thpe9ahvaegF15TUL3surae3Chue4riokooJ5WuTI80FTWfz2"
 ```
 Of course, you'll need to get your own API key / server URL (and set file mode to `0600`, key is private)
