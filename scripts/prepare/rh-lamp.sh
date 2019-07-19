@@ -183,12 +183,12 @@ sudo systemctl restart httpd || exit $?
 
 echo "_MULCH_ACTION_NAME=db"
 echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/rh_db_phpmyadmin.sh"
-echo "_MULCH_ACTION_USER=admin"
+echo "_MULCH_ACTION_USER=$_MULCH_SUPER_USER"
 echo "_MULCH_ACTION_DESCRIPTION=Login to phpMyAdmin"
 echo "_MULCH_ACTION=commit"
 
 echo "_MULCH_ACTION_NAME=logs"
 echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/rh_apache_logs.sh"
-echo "_MULCH_ACTION_USER=admin"
+echo "_MULCH_ACTION_USER=$_MULCH_SUPER_USER"
 echo "_MULCH_ACTION_DESCRIPTION=Show live Apache logs"
 echo "_MULCH_ACTION=commit"

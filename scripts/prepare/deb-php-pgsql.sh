@@ -66,7 +66,6 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 EOS
 [ $? -eq 0 ] || exit $?
 
-sudo a2enmod rewrite || exit $?
 sudo a2enmod rewrite expires || exit $?
 
 # Adminer
@@ -137,12 +136,12 @@ sudo systemctl restart apache2 || exit $?
 
 echo "_MULCH_ACTION_NAME=db"
 echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/deb_db_adminer.sh"
-echo "_MULCH_ACTION_USER=admin"
+echo "_MULCH_ACTION_USER=$_MULCH_SUPER_USER"
 echo "_MULCH_ACTION_DESCRIPTION=Login to Adminer"
 echo "_MULCH_ACTION=commit"
 
 echo "_MULCH_ACTION_NAME=logs"
 echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/deb_apache_logs.sh"
-echo "_MULCH_ACTION_USER=admin"
+echo "_MULCH_ACTION_USER=$_MULCH_SUPER_USER"
 echo "_MULCH_ACTION_DESCRIPTION=Show live Apache logs"
 echo "_MULCH_ACTION=commit"

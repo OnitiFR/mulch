@@ -529,6 +529,12 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 			},
 			Tasks: tasks,
 			Log:   log,
+			StdoutCallback: func(line string) {
+				// 'install' step is not called during a rebuild
+				if isVar, _ := common.StringIsVariable(line, "_MULCH_ACTION"); isVar {
+					log.Warningf("Ignored: actions are supported only for 'prepare' scripts")
+				}
+			},
 		}
 		err = run.Go()
 		if err != nil {
