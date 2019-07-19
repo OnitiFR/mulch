@@ -358,7 +358,7 @@ func (app *App) initAPIServer() {
 	app.Mux = http.NewServeMux()
 }
 
-// Run will start the app (in the foreground)
+// Run will start the app (foreground)
 // api-https references:
 // - mulch-proxy (of course)
 // - https://blog.kowalczyk.info/article/Jl3G/https-for-free-in-go-with-little-help-of-lets-encrypt.html
