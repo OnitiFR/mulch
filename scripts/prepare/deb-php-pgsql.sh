@@ -66,7 +66,6 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 EOS
 [ $? -eq 0 ] || exit $?
 
-sudo a2enmod rewrite || exit $?
 sudo a2enmod rewrite expires || exit $?
 
 # Adminer
