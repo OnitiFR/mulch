@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
@@ -30,32 +31,35 @@ const AppPhoneServerPost = 8585
 
 // App describes an (the?) application
 type App struct {
-	Config        *AppConfig
-	Libvirt       *Libvirt
-	Hub           *Hub
-	PhoneHome     *PhoneHomeHub
-	Log           *Log
-	Mux           *http.ServeMux
-	Rand          *rand.Rand
-	SSHPairDB     *SSHPairDatabase
-	VMDB          *VMDatabase
-	VMStateDB     *VMStateDatabase
-	BackupsDB     *BackupDatabase
-	APIKeysDB     *APIKeyDatabase
-	AlertSender   *AlertSender
-	Seeder        *SeedDatabase
-	routes        map[string][]*Route
-	sshClients    map[net.Addr]*sshServerClient
-	Operations    *OperationList
-	ProxyReloader *ProxyReloader
+	Config         *AppConfig
+	Libvirt        *Libvirt
+	Hub            *Hub
+	PhoneHome      *PhoneHomeHub
+	Log            *Log
+	MuxInternal    *http.ServeMux
+	MuxAPI         *http.ServeMux
+	Rand           *rand.Rand
+	SSHPairDB      *SSHPairDatabase
+	VMDB           *VMDatabase
+	VMStateDB      *VMStateDatabase
+	BackupsDB      *BackupDatabase
+	APIKeysDB      *APIKeyDatabase
+	AlertSender    *AlertSender
+	Seeder         *SeedDatabase
+	routesInternal map[string][]*Route
+	routesAPI      map[string][]*Route
+	sshClients     map[net.Addr]*sshServerClient
+	Operations     *OperationList
+	ProxyReloader  *ProxyReloader
 }
 
 // NewApp creates a new application
 func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app := &App{
-		Config: config,
-		Rand:   rand.New(rand.NewSource(time.Now().UnixNano())),
-		routes: make(map[string][]*Route),
+		Config:         config,
+		Rand:           rand.New(rand.NewSource(time.Now().UnixNano())),
+		routesInternal: make(map[string][]*Route),
+		routesAPI:      make(map[string][]*Route),
 	}
 
 	if os.Getenv("TMPDIR") == "" {
@@ -136,7 +140,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 
 	app.PhoneHome = NewPhoneHomeHub()
 
-	app.initAPIServer()
+	app.initWebServers()
 
 	go app.VMStateDB.Run()
 
@@ -354,8 +358,9 @@ func (app *App) initLibvirtNetwork() error {
 	return nil
 }
 
-func (app *App) initAPIServer() {
-	app.Mux = http.NewServeMux()
+func (app *App) initWebServers() {
+	app.MuxInternal = http.NewServeMux()
+	app.MuxAPI = http.NewServeMux()
 }
 
 // Run will start the app (foreground)
@@ -363,12 +368,26 @@ func (app *App) initAPIServer() {
 // - mulch-proxy (of course)
 // - https://blog.kowalczyk.info/article/Jl3G/https-for-free-in-go-with-little-help-of-lets-encrypt.html
 func (app *App) Run() {
-	app.Log.Infof("API server listening on %s", app.Config.Listen)
-	app.registerRouteHandlers()
-	err := http.ListenAndServe(app.Config.Listen, app.Mux)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
-	}
+	app.registerRouteHandlers(app.MuxInternal, app.routesInternal)
+	app.registerRouteHandlers(app.MuxAPI, app.routesAPI)
+
+	errChan := make(chan error)
+
+	go func() {
+		app.Log.Infof("API server listening on %s", app.Config.Listen)
+		err := http.ListenAndServe(app.Config.Listen, app.MuxAPI)
+		errChan <- fmt.Errorf("ListenAndServe API server: %s", err)
+	}()
+
+	go func() {
+		listen := app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(AppPhoneServerPost)
+		app.Log.Infof("Internal server listening on %s", listen)
+		err := http.ListenAndServe(listen, app.MuxInternal)
+		errChan <- fmt.Errorf("ListenAndServe internal server: %s", err)
+	}()
+
+	err := <-errChan
+	log.Fatalf("error: %s", err)
 }
 
 // Close is not called yet

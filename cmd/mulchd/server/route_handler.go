@@ -21,6 +21,12 @@ const (
 	RouteTypeStream = 1
 )
 
+// Route muxer
+const (
+	RouteInternal = "internal"
+	RouteAPI      = "api"
+)
+
 // Route describes a route to a handler
 type Route struct {
 	Route        string
@@ -130,8 +136,8 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 	}
 }
 
-// AddRoute adds a new route to the muxer
-func (app *App) AddRoute(route *Route) error {
+// AddRoute adds a new route to the given route muxer
+func (app *App) AddRoute(route *Route, routeMuxer string) error {
 
 	if route.Route == "" {
 		return errors.New("field Route is not set")
@@ -163,13 +169,20 @@ func (app *App) AddRoute(route *Route) error {
 	route.method = method
 	route.path = path
 
-	app.routes[path] = append(app.routes[path], route)
+	switch routeMuxer {
+	case RouteInternal:
+		app.routesInternal[path] = append(app.routesInternal[path], route)
+	case RouteAPI:
+		app.routesAPI[path] = append(app.routesAPI[path], route)
+	default:
+		return fmt.Errorf("unknown muxer '%s'", routeMuxer)
+	}
 
 	return nil
 }
 
-func (app *App) registerRouteHandlers() {
-	for _path, _routes := range app.routes {
+func (app *App) registerRouteHandlers(mux *http.ServeMux, inRoutes map[string][]*Route) {
+	for _path, _routes := range inRoutes {
 		// capture _path, _routes in the closure
 		go func(path string, routes []*Route) {
 			// look for duplicated methods in routes
@@ -182,7 +195,7 @@ func (app *App) registerRouteHandlers() {
 				methods[route.method] = true
 			}
 
-			app.Mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+			mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 				ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 				app.Log.Tracef("HTTP call: %s %s %s [%s]", ip, r.Method, path, r.UserAgent())
 
