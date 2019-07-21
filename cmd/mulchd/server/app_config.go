@@ -15,7 +15,7 @@ type AppConfig struct {
 	Listen string
 
 	// API server HTTPS domain name (HTTP otherwise)
-	ListenHTTPSDomain bool
+	ListenHTTPSDomain string
 
 	// URI to libvirtd (qemu only, currently)
 	LibVirtURI string
@@ -60,7 +60,7 @@ type ConfigSeed struct {
 
 type tomlAppConfig struct {
 	Listen                string
-	ListenHTTPSDomain     bool   `toml:"listen_https"`
+	ListenHTTPSDomain     string `toml:"listen_https_domain"`
 	LibVirtURI            string `toml:"libvirt_uri"`
 	StoragePath           string `toml:"storage_path"`
 	DataPath              string `toml:"data_path"`

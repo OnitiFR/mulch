@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/OnitiFR/mulch/common"
 	libvirt "github.com/libvirt/libvirt-go"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 // Mulch storage and network names, see the following usages:
@@ -374,9 +376,47 @@ func (app *App) Run() {
 	errChan := make(chan error)
 
 	go func() {
-		app.Log.Infof("API server listening on %s", app.Config.Listen)
-		err := http.ListenAndServe(app.Config.Listen, app.MuxAPI)
-		errChan <- fmt.Errorf("ListenAndServe API server: %s", err)
+		if app.Config.ListenHTTPSDomain == "" {
+			app.Log.Infof("API server listening on %s (HTTP)", app.Config.Listen)
+			err := http.ListenAndServe(app.Config.Listen, app.MuxAPI)
+			errChan <- fmt.Errorf("ListenAndServe API server: %s", err)
+		} else {
+			app.Log.Infof("API server listening on %s (HTTPS, %s)", app.Config.Listen, app.Config.ListenHTTPSDomain)
+			hostPolicy := func(ctx context.Context, host string) error {
+				if host == app.Config.ListenHTTPSDomain {
+					return nil
+				}
+				return fmt.Errorf("acme/autocert: only %s host is allowed", app.Config.ListenHTTPSDomain)
+			}
+
+			// bellow this line, nothing is correct, I just pasted a lot of
+			// reference code and gone to bed.
+
+			mux := &http.ServeMux{}
+			// mux.HandleFunc("/", handleIndex)
+
+			// set timeouts so that a slow or malicious client doesn't
+			// hold resources forever
+			httpsSrv := &http.Server{
+				ReadTimeout:  5 * time.Second,
+				WriteTimeout: 5 * time.Second,
+				IdleTimeout:  120 * time.Second,
+				Handler:      handler,
+			}
+			m := &autocert.Manager{
+				Prompt:     autocert.AcceptTOS,
+				HostPolicy: hostPolicy,
+				Cache:      autocert.DirCache(""), // TODO!
+			}
+			// httpsSrv.Addr = ":443"
+			// httpsSrv.TLSConfig = &tls.Config{GetCertificate: m.GetCertificate}
+
+			// http.ListenAndServeTLS(addr, certFile, keyFile, handler)
+			err := httpsSrv.ListenAndServeTLS("", "")
+			if err != nil {
+				errChan <- fmt.Errorf("ListendAndServeTLS API server: %s", err)
+			}
+		}
 	}()
 
 	go func() {
