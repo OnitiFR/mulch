@@ -24,16 +24,21 @@ type AppConfig struct {
 	// Listen HTTPS address
 	HTTPSAddress string
 
+	// Mulch-proxy is in charge of Mulchd HTTPS LE certificate generation,
+	// since port 80/443 is needed for that.
+	ListenHTTPSDomain string
+
 	// global mulchd configuration path
 	configPath string
 }
 
 type tomlAppConfig struct {
-	DataPath     string `toml:"data_path"`
-	AcmeURL      string `toml:"proxy_acme_url"`
-	AcmeEmail    string `toml:"proxy_acme_email"`
-	HTTPAddress  string `toml:"proxy_listen_http"`
-	HTTPSAddress string `toml:"proxy_listen_https"`
+	DataPath          string `toml:"data_path"`
+	AcmeURL           string `toml:"proxy_acme_url"`
+	AcmeEmail         string `toml:"proxy_acme_email"`
+	HTTPAddress       string `toml:"proxy_listen_http"`
+	HTTPSAddress      string `toml:"proxy_listen_https"`
+	ListenHTTPSDomain string `toml:"listen_https_domain"`
 }
 
 // NewAppConfigFromTomlFile return a AppConfig using
@@ -68,6 +73,8 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	appConfig.AcmeEmail = tConfig.AcmeEmail
 	appConfig.HTTPAddress = tConfig.HTTPAddress
 	appConfig.HTTPSAddress = tConfig.HTTPSAddress
+
+	appConfig.ListenHTTPSDomain = tConfig.ListenHTTPSDomain
 
 	return appConfig, nil
 }

@@ -6,7 +6,8 @@ listen = ":8686"
 
 # Enable HTTPS-only for *API server*, using a Let's Encrypt certificate
 # with specified domain. Default ("") is HTTP-only.
-# See also proxy_acme_* settings below, we share these settings with the proxy.
+# See also proxy_acme_* settings below since the certificate is generated
+# by mulch-proxy (port 443)
 listen_https_domain = ""
 
 # URI libvirt will use to contact the hypervisor
@@ -47,6 +48,7 @@ proxy_ssh_extra_keys_file = ""
 # For Let's Encrypt production URL, you can use this "magic constant":
 # proxy_acme_url = "LETS_ENCRYPT_PRODUCTION"
 # Warning: define a proper email below!
+# Warning: you may have to clear ./data/certs/ directory if you change this setting
 proxy_acme_url = "https://acme-staging.api.letsencrypt.org/directory"
 
 # Email will be used by CAs, such as Let's Encrypt, to notify about

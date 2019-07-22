@@ -37,6 +37,7 @@ type ProxyServerConfig struct {
 	DirectoryURL          string
 	DomainDB              *DomainDatabase
 	ErrorHTMLTemplateFile string
+	MulchdHTTPSDomain     string // (for mulchd)
 	Log                   *Log
 }
 
@@ -131,8 +132,11 @@ func (proxy *ProxyServer) genErrorPage(code int, message string) (string, error)
 }
 
 func (proxy *ProxyServer) hostPolicy(ctx context.Context, host string) error {
-	_, err := proxy.DomainDB.GetByName(host)
+	if host == proxy.config.MulchdHTTPSDomain && proxy.config.MulchdHTTPSDomain != "" {
+		return nil
+	}
 
+	_, err := proxy.DomainDB.GetByName(host)
 	if err == nil {
 		return nil
 	}

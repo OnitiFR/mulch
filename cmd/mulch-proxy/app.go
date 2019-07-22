@@ -51,6 +51,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		DirectoryURL:          app.Config.AcmeURL,
 		DomainDB:              ddb,
 		ErrorHTMLTemplateFile: path.Clean(app.Config.configPath + "/templates/error_page.html"),
+		MulchdHTTPSDomain:     app.Config.ListenHTTPSDomain,
 		Log:                   app.Log,
 	})
 
