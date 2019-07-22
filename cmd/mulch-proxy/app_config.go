@@ -6,9 +6,6 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// LEProductionString is the magic string to use production LE directory
-const LEProductionString = "LETS_ENCRYPT_PRODUCTION"
-
 // AppConfig describes the general configuration of an App
 type AppConfig struct {
 	// persistent storage
@@ -64,7 +61,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	appConfig.DataPath = tConfig.DataPath
 
 	appConfig.AcmeURL = tConfig.AcmeURL
-	if appConfig.AcmeURL == LEProductionString {
+	if appConfig.AcmeURL == common.LEProductionString {
 		appConfig.AcmeURL = "" // acme package default is production directory
 	}
 	appConfig.AcmeEmail = tConfig.AcmeEmail

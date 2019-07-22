@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"math/rand"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/OnitiFR/mulch/common"
 	libvirt "github.com/libvirt/libvirt-go"
+	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 )
 
@@ -365,10 +367,7 @@ func (app *App) initWebServers() {
 	app.MuxAPI = http.NewServeMux()
 }
 
-// Run will start the app (foreground)
-// api-https references:
-// - mulch-proxy (of course)
-// - https://blog.kowalczyk.info/article/Jl3G/https-for-free-in-go-with-little-help-of-lets-encrypt.html
+// Run will start the app servers (foreground)
 func (app *App) Run() {
 	app.registerRouteHandlers(app.MuxInternal, app.routesInternal)
 	app.registerRouteHandlers(app.MuxAPI, app.routesAPI)
@@ -377,10 +376,18 @@ func (app *App) Run() {
 
 	go func() {
 		if app.Config.ListenHTTPSDomain == "" {
+			// HTTP API Server
 			app.Log.Infof("API server listening on %s (HTTP)", app.Config.Listen)
 			err := http.ListenAndServe(app.Config.Listen, app.MuxAPI)
 			errChan <- fmt.Errorf("ListenAndServe API server: %s", err)
 		} else {
+			// HTTPS API Server
+			cacheDir, err := common.InitCertCache(app.Config.DataPath + "/certs")
+			if err != nil {
+				errChan <- err
+				return
+			}
+
 			app.Log.Infof("API server listening on %s (HTTPS, %s)", app.Config.Listen, app.Config.ListenHTTPSDomain)
 			hostPolicy := func(ctx context.Context, host string) error {
 				if host == app.Config.ListenHTTPSDomain {
@@ -389,30 +396,25 @@ func (app *App) Run() {
 				return fmt.Errorf("acme/autocert: only %s host is allowed", app.Config.ListenHTTPSDomain)
 			}
 
-			// bellow this line, nothing is correct, I just pasted a lot of
-			// reference code and gone to bed.
-
-			mux := &http.ServeMux{}
-			// mux.HandleFunc("/", handleIndex)
-
-			// set timeouts so that a slow or malicious client doesn't
-			// hold resources forever
-			httpsSrv := &http.Server{
-				ReadTimeout:  5 * time.Second,
-				WriteTimeout: 5 * time.Second,
-				IdleTimeout:  120 * time.Second,
-				Handler:      handler,
-			}
-			m := &autocert.Manager{
+			manager := &autocert.Manager{
 				Prompt:     autocert.AcceptTOS,
 				HostPolicy: hostPolicy,
-				Cache:      autocert.DirCache(""), // TODO!
+				Cache:      autocert.DirCache(cacheDir),
+				Email:      app.Config.AcmeEmail,
 			}
-			// httpsSrv.Addr = ":443"
-			// httpsSrv.TLSConfig = &tls.Config{GetCertificate: m.GetCertificate}
 
-			// http.ListenAndServeTLS(addr, certFile, keyFile, handler)
-			err := httpsSrv.ListenAndServeTLS("", "")
+			if app.Config.AcmeURL != "" {
+				manager.Client = &acme.Client{
+					DirectoryURL: app.Config.AcmeURL,
+				}
+			}
+
+			httpsSrv := &http.Server{
+				Handler:   app.MuxAPI,
+				Addr:      app.Config.Listen,
+				TLSConfig: &tls.Config{GetCertificate: manager.GetCertificate},
+			}
+			err = httpsSrv.ListenAndServeTLS("", "")
 			if err != nil {
 				errChan <- fmt.Errorf("ListendAndServeTLS API server: %s", err)
 			}

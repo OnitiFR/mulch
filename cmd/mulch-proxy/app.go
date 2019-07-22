@@ -38,7 +38,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		return nil, err
 	}
 
-	cacheDir, err := app.initCertCache()
+	cacheDir, err := common.InitCertCache(app.Config.DataPath + "/certs")
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		DirectoryURL:          app.Config.AcmeURL,
 		DomainDB:              ddb,
 		ErrorHTMLTemplateFile: path.Clean(app.Config.configPath + "/templates/error_page.html"),
-		Log: app.Log,
+		Log:                   app.Log,
 	})
 
 	app.ProxyServer.RefreshReverseProxies()
@@ -82,34 +82,6 @@ func (app *App) createDomainDB() (*DomainDatabase, error) {
 	app.Log.Infof("found %d domain(s) in database %s", ddb.Count(), dbPath)
 
 	return ddb, nil
-}
-
-func (app *App) initCertCache() (string, error) {
-	cacheDir := path.Clean(app.Config.DataPath + "/certs")
-
-	stat, err := os.Stat(cacheDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			app.Log.Infof("%s does not exists, let's create it", cacheDir)
-			errM := os.Mkdir(cacheDir, 0700)
-			if errM != nil {
-				return "", errM
-			}
-			return cacheDir, nil
-		}
-		return "", err
-	}
-
-	if stat.IsDir() == false {
-		return "", fmt.Errorf("%s is not a directory", cacheDir)
-	}
-
-	if stat.Mode() != os.ModeDir|os.FileMode(0700) {
-		fmt.Println(stat.Mode())
-		return "", fmt.Errorf("%s: only the owner should be able to read/write this directory (mode 0700)", cacheDir)
-	}
-
-	return cacheDir, nil
 }
 
 func (app *App) initSigHUPHandler() {
