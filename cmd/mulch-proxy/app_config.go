@@ -4,7 +4,6 @@ import (
 	"path"
 
 	"github.com/BurntSushi/toml"
-	"github.com/OnitiFR/mulch/common"
 )
 
 // AppConfig describes the general configuration of an App
@@ -67,7 +66,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	appConfig.DataPath = tConfig.DataPath
 
 	appConfig.AcmeURL = tConfig.AcmeURL
-	if appConfig.AcmeURL == common.LEProductionString {
+	if appConfig.AcmeURL == LEProductionString {
 		appConfig.AcmeURL = "" // acme package default is production directory
 	}
 	appConfig.AcmeEmail = tConfig.AcmeEmail

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"crypto/tls"
 	"fmt"
 	"log"
@@ -14,8 +13,6 @@ import (
 
 	"github.com/OnitiFR/mulch/common"
 	libvirt "github.com/libvirt/libvirt-go"
-	"golang.org/x/crypto/acme"
-	"golang.org/x/crypto/acme/autocert"
 )
 
 // Mulch storage and network names, see the following usages:
@@ -382,39 +379,23 @@ func (app *App) Run() {
 			errChan <- fmt.Errorf("ListenAndServe API server: %s", err)
 		} else {
 			// HTTPS API Server
-			cacheDir, err := common.InitCertCache(app.Config.DataPath + "/certs")
-			if err != nil {
-				errChan <- err
-				return
-			}
-
 			app.Log.Infof("API server listening on %s (HTTPS, %s)", app.Config.Listen, app.Config.ListenHTTPSDomain)
-			hostPolicy := func(ctx context.Context, host string) error {
-				if host == app.Config.ListenHTTPSDomain {
-					return nil
-				}
-				return fmt.Errorf("acme/autocert: only %s host is allowed", app.Config.ListenHTTPSDomain)
+
+			manager := &CertManager{
+				CertDir: app.Config.DataPath + "/certs",
+				Domain:  app.Config.ListenHTTPSDomain,
+				Log:     app.Log,
 			}
 
-			manager := &autocert.Manager{
-				Prompt:     autocert.AcceptTOS,
-				HostPolicy: hostPolicy,
-				Cache:      autocert.DirCache(cacheDir),
-				Email:      app.Config.AcmeEmail,
-			}
-
-			if app.Config.AcmeURL != "" {
-				manager.Client = &acme.Client{
-					DirectoryURL: app.Config.AcmeURL,
-				}
-			}
+			manager.ScheduleSelfCalls()
 
 			httpsSrv := &http.Server{
 				Handler:   app.MuxAPI,
 				Addr:      app.Config.Listen,
-				TLSConfig: &tls.Config{GetCertificate: manager.GetCertificate},
+				TLSConfig: &tls.Config{GetCertificate: manager.GetAPICertificate},
 			}
-			err = httpsSrv.ListenAndServeTLS("", "")
+
+			err := httpsSrv.ListenAndServeTLS("", "")
 			if err != nil {
 				errChan <- fmt.Errorf("ListendAndServeTLS API server: %s", err)
 			}

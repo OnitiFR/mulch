@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/OnitiFR/mulch/common"
 )
 
 // AppConfig describes the general configuration of an App
@@ -43,12 +42,6 @@ type AppConfig struct {
 	// User (sudoer) created by Mulch in VMs
 	MulchSuperUser string
 
-	// ACME directory server
-	AcmeURL string
-
-	// ACME for issued certificate alerts
-	AcmeEmail string
-
 	// Everyday VM auto-rebuild time ("HH:MM")
 	AutoRebuildTime string
 
@@ -76,8 +69,6 @@ type tomlAppConfig struct {
 	ProxyListenSSH        string `toml:"proxy_listen_ssh"`
 	ProxySSHExtraKeysFile string `toml:"proxy_ssh_extra_keys_file"`
 	MulchSuperUser        string `toml:"mulch_super_user"`
-	AcmeURL               string `toml:"proxy_acme_url"`
-	AcmeEmail             string `toml:"proxy_acme_email"`
 	AutoRebuildTime       string `toml:"auto_rebuild_time"`
 	Seed                  []tomlConfigSeed
 }
@@ -110,8 +101,6 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		ProxyListenSSH:        ":8022",
 		ProxySSHExtraKeysFile: "",
 		MulchSuperUser:        "admin",
-		AcmeURL:               "https://acme-staging.api.letsencrypt.org/directory",
-		AcmeEmail:             "root@localhost.localdomain",
 		AutoRebuildTime:       "23:30",
 	}
 
@@ -142,12 +131,6 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	appConfig.TempPath = tConfig.TempPath
 	appConfig.VMPrefix = tConfig.VMPrefix
 	appConfig.MulchSuperUser = tConfig.MulchSuperUser
-
-	appConfig.AcmeURL = tConfig.AcmeURL
-	if appConfig.AcmeURL == common.LEProductionString {
-		appConfig.AcmeURL = "" // acme package default is production directory
-	}
-	appConfig.AcmeEmail = tConfig.AcmeEmail
 
 	appConfig.ProxyListenSSH = tConfig.ProxyListenSSH
 	appConfig.ProxySSHExtraKeysFile = tConfig.ProxySSHExtraKeysFile

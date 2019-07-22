@@ -38,7 +38,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		return nil, err
 	}
 
-	cacheDir, err := common.InitCertCache(app.Config.DataPath + "/certs")
+	cacheDir, err := InitCertCache(app.Config.DataPath + "/certs")
 	if err != nil {
 		return nil, err
 	}
