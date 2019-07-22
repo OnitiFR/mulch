@@ -4,6 +4,7 @@ import (
 	"path"
 
 	"github.com/BurntSushi/toml"
+	"github.com/OnitiFR/mulch/common"
 )
 
 // AppConfig describes the general configuration of an App

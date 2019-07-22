@@ -1,8 +1,8 @@
 #!/bin/bash
 
 echo "This is a Mulch server install script for Ubuntu."
-echo "It was tested on 18.04 to 19.04, witch default server install."
-echo "It's intended to be used for a quick demo install, since most settings are left to their default."
+echo "It was tested on 18.04 to 19.04, with default server install."
+echo "It's intended to be used for a quick demo install, since most settings are left to default values."
 echo ""
 echo "This script will install packages, services, create users, etc. IT MAY BUTCHER YOUR SYSTEM!"
 echo "So use it on a blank test server, not on an \"important\" system."
