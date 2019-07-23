@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/OnitiFR/mulch/common"
 )
 
 // CertManager for HTTPS API server, using mulch-proxy certificates
@@ -66,6 +68,12 @@ func (cm *CertManager) GetAPICertificate(hello *tls.ClientHelloInfo) (*tls.Certi
 	}
 
 	certPath := path.Clean(cm.CertDir + "/" + name)
+
+	if !common.PathExist(certPath) {
+		// the certificate does not exists (yet), let's try to create it
+		cm.Log.Tracef("'%s' does not exists yet", certPath)
+		cm.selfCall()
+	}
 
 	infos, err := os.Stat(certPath)
 	if err != nil {
@@ -122,7 +130,12 @@ func (cm *CertManager) GetAPICertificate(hello *tls.ClientHelloInfo) (*tls.Certi
 
 func (cm *CertManager) selfCall() error {
 	cm.Log.Trace("self HTTPS URL call to generate/renew certificate")
-	res, err := http.Get("https://" + cm.Domain + "/")
+
+	timeout := time.Duration(10 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+	res, err := client.Get("https://" + cm.Domain + "/")
 	if err != nil {
 		return err
 	}
