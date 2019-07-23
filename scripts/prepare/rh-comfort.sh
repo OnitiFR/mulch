@@ -35,6 +35,15 @@ sudo bash -c "cat > /etc/profile.d/mulch.sh" <<- EOS
 if ! shopt -oq posix; then
   alias $sualias="sudo -iu $_APP_USER"
   alias e="mcedit"
+  alias ll="ls -la --color"
+  alias l="ls"
+
+  alias gt="git status -s"
+  alias gd="git diff"
+  alias gp="git push"
+  alias gl="git pull"
+  alias ga="git add -A"
+  alias gc="git commit -m"
 fi
 EOS
 [ $? -eq 0 ] || exit $?
