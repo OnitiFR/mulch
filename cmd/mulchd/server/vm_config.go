@@ -17,7 +17,7 @@ import (
 const (
 	VMAutoRebuildDaily   = "daily"
 	VMAutoRebuildWeekly  = "weekly"
-	VMAutoRebuildMonthly = "weekly"
+	VMAutoRebuildMonthly = "monthly"
 )
 
 // VMConfig stores needed parameters for a new VM
