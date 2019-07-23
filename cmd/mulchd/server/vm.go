@@ -1454,8 +1454,16 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 		return fmt.Errorf("VM already have a work in progress (%s)", string(vm.WIP))
 	}
 
-	if len(vm.Config.Restore) == 0 {
-		return errors.New("no restore script defined for this VM")
+	if len(vm.Config.Restore) > 0 && len(vm.Config.Backup) == 0 {
+		return errors.New("restore script(s) defined but no backup script found")
+	}
+	if len(vm.Config.Backup) > 0 && len(vm.Config.Restore) == 0 {
+		return errors.New("backup script(s) defined but no restore script found")
+	}
+
+	backupAndRestore := true
+	if len(vm.Config.Restore) == 0 && len(vm.Config.Backup) == 0 {
+		backupAndRestore = false
 	}
 
 	if vm.WIP != VMOperationNone {
@@ -1474,7 +1482,11 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 		return fmt.Errorf("decoding config: %s", err)
 	}
 
-	conf.RestoreBackup = BackupBlankRestore
+	if backupAndRestore {
+		conf.RestoreBackup = BackupBlankRestore
+	} else {
+		conf.RestoreBackup = ""
+	}
 
 	success := false
 
@@ -1511,36 +1523,38 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 		}
 	}()
 
-	// backup rev+0
-	backupName, err := VMBackup(vmName, authorKey, app, log, BackupCompressDisable)
-	if err != nil {
-		return fmt.Errorf("creating backup: %s", err)
-	}
-
-	defer func() {
-		// -always- delete backup (success or not)
-		err = app.BackupsDB.Delete(backupName)
+	if backupAndRestore {
+		// backup rev+0
+		backupName, err := VMBackup(vmName, authorKey, app, log, BackupCompressDisable)
 		if err != nil {
-			// not a "real" error
-			log.Errorf("unable remove '%s' backup from DB: %s", backupName, err)
-		} else {
-			err = app.Libvirt.DeleteVolume(backupName, app.Libvirt.Pools.Backups)
+			return fmt.Errorf("creating backup: %s", err)
+		}
+
+		defer func() {
+			// -always- delete backup (success or not)
+			err = app.BackupsDB.Delete(backupName)
 			if err != nil {
 				// not a "real" error
-				log.Errorf("unable remove '%s' backup from storage: %s", backupName, err)
+				log.Errorf("unable remove '%s' backup from DB: %s", backupName, err)
+			} else {
+				err = app.Libvirt.DeleteVolume(backupName, app.Libvirt.Pools.Backups)
+				if err != nil {
+					// not a "real" error
+					log.Errorf("unable remove '%s' backup from storage: %s", backupName, err)
+				}
 			}
+		}()
+
+		backup := app.BackupsDB.GetByName(backupName)
+		if backup == nil {
+			return fmt.Errorf("can't find backup '%s' in DB", backupName)
 		}
-	}()
 
-	backup := app.BackupsDB.GetByName(backupName)
-	if backup == nil {
-		return fmt.Errorf("can't find backup '%s' in DB", backupName)
-	}
-
-	// restore rev+1
-	err = VMRestoreNoChecks(newVM, newVMName, backup, app, log)
-	if err != nil {
-		return fmt.Errorf("restoring backup: %s", err)
+		// restore rev+1
+		err = VMRestoreNoChecks(newVM, newVMName, backup, app, log)
+		if err != nil {
+			return fmt.Errorf("restoring backup: %s", err)
+		}
 	}
 
 	// activate rev+1

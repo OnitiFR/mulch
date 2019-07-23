@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -369,9 +368,6 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 	if tConfig.AutoRebuild != "" && tConfig.AutoRebuild != VMAutoRebuildDaily &&
 		tConfig.AutoRebuild != VMAutoRebuildWeekly && tConfig.AutoRebuild != VMAutoRebuildMonthly {
 		return nil, fmt.Errorf("'%s' is not a correct value for auto_rebuild setting", tConfig.AutoRebuild)
-	}
-	if tConfig.AutoRebuild != "" && (len(tConfig.Backup) == 0 || len(tConfig.Restore) == 0) {
-		return nil, errors.New("backup and restore scripts are needed for auto_rebuild")
 	}
 	vmConfig.AutoRebuild = tConfig.AutoRebuild
 
