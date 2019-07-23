@@ -1,4 +1,3 @@
-- allow rebuild of "no backup/restore" instances
 - hardening of <filterref filter='clean-traffic'> with fixed IP addr?
 - add --revision to rebuild command
 - remove the need to supply the VM name for redefine command?
