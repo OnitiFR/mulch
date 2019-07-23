@@ -20,4 +20,4 @@
     - in client, make the non-200 error message silent in stream mode?
 
 - check connection and access rights
-- differentiate "rights issues" from  "libvirtd not running" issues
+- differentiate "rights issues" from "libvirtd not running" issues
