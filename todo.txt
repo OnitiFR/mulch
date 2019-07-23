@@ -1,3 +1,5 @@
+- allow rebuild of "no backup/restore" instances
+- hardening of <filterref filter='clean-traffic'> with fixed IP addr?
 - add --revision to rebuild command
 - remove the need to supply the VM name for redefine command?
   - pro: sanity check for a dangerous op
@@ -17,9 +19,6 @@
 
 - change HTTP code from 200 to 4XX in controllers when things fails (ex: req.Stream.Failure)
     - in client, make the non-200 error message silent in stream mode?
-
-- create a specific HTTP muxer for /phone (only listening on mulch's virbr)
-- hardening of <filterref filter='clean-traffic'> with fixed IP addr?
 
 - check connection and access rights
 - differentiate "rights issues" from  "libvirtd not running" issues
