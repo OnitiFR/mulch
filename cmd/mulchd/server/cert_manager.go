@@ -14,12 +14,9 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 )
-
-// TODO:
-// - add cert memory cache (based on last modified date)
-// - add periodic auto-call to refresh cert
 
 // CertManager for HTTPS API server, using mulch-proxy certificates
 type CertManager struct {
@@ -28,6 +25,7 @@ type CertManager struct {
 	Log         *Log
 	certModTime time.Time
 	cachedCert  *tls.Certificate
+	mutex       sync.Mutex
 }
 
 // -- Ripped from acme/autocert package
@@ -59,8 +57,8 @@ func parsePrivateKey(der []byte) (crypto.Signer, error) {
 
 // GetAPICertificate implements tls.Config GetCertificate callback
 func (cm *CertManager) GetAPICertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	// c.Lock()
-	// defer c.Unlock()
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
 
 	name := hello.ServerName
 	if name != cm.Domain {
@@ -74,7 +72,7 @@ func (cm *CertManager) GetAPICertificate(hello *tls.ClientHelloInfo) (*tls.Certi
 		return nil, fmt.Errorf("stat '%s': %s", certPath, err)
 	}
 
-	// mtime not modified, returning cached cert
+	// unmodified mtime, returning cached certificate
 	if infos.ModTime().Equal(cm.certModTime) {
 		return cm.cachedCert, nil
 	}
