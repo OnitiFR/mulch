@@ -8,7 +8,6 @@
 - 'vm infos' command: add domains ?
 - flag for compression / no compression on "vm backup"
 - check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
--- https API + dedicated server for "phonehome"
 - challenge based auth?
 - rights / limited access
 - mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
