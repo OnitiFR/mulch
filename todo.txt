@@ -1,4 +1,4 @@
-- hardening of <filterref filter='clean-traffic'> with fixed IP addr?
+- add "since" info on Operations? (and add do action itself, not only vm name?)
 - add --revision to rebuild command
 - remove the need to supply the VM name for redefine command?
   - pro: sanity check for a dangerous op
@@ -6,7 +6,7 @@
 - hide SSH proxy log from global target? (noisy)
 - shortcut for "do action" (ex: mulch open xyz) with completion ?
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
-- 'vm infos' command: add domains ?
+- 'vm infos' command: add domains? add IP?
 - flag for compression / no compression on "vm backup"
 - check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
 - challenge based auth?
