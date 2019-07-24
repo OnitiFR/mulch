@@ -44,7 +44,7 @@
     <suspend-to-disk enabled='no'/>
   </pm>
   <devices>
-    <!-- OK for Fedora 28, may be different for you -->
+    <!-- OK for Fedora 30, may be different for you -->
     <!-- ex: Ubuntu 18.04: /usr/bin/kvm -->
     <emulator>/usr/bin/qemu-kvm</emulator>
 
@@ -94,7 +94,10 @@
       <source bridge='virbrX'/>
       <model type='virtio'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-      <filterref filter='clean-traffic'/>
+      <filterref filter='clean-traffic'>
+          <parameter name='CTRL_IP_LEARNING' value='dhcp'/>
+          <parameter name='DHCPSERVER' value='10.104.0.1'/>
+      </filterref>
     </interface>
     <serial type='pty'>
       <target type='isa-serial' port='0'>
