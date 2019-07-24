@@ -7,7 +7,11 @@ appenv="/home/$_APP_USER/env"
 html_dir="/home/$_APP_USER/public_html/"
 
 export DEBIAN_FRONTEND="noninteractive"
-sudo -E apt-get -y -qq install apache2 php php-intl php-bcmath php-imagick mariadb-server phpmyadmin pwgen || exit $?
+# NB: second line (mysql, curl, …) install phpMyAdmin dependencies
+sudo -E apt-get -y -qq install apache2 php \
+    php-mysql php-curl php-zip php-bz2 php-gd php-mbstring php-xml php-pear php-php-gettext \
+    php-intl php-bcmath php-imagick \
+    mariadb-server pwgen || exit $?
 
 MYSQL_PASSWORD=$(pwgen -1 16)
 [ $? -eq 0 ] || exit $?
@@ -64,25 +68,70 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 EOS
 [ $? -eq 0 ] || exit $?
 
-# change to /_sql instead of /phpmyadmin
-sudo sed -i 's|Alias /phpmyadmin|Alias /_sql|' /etc/phpmyadmin/apache.conf || exit $?
+sudo -E apt-get -y -qq install phpmyadmin
+if [ $? -ne 0 ]; then
+    # on Debian 10, phpMyAdmin is not available (yet?)
+    sudo -E apt-get -y -qq install jq || exit $?
+    latest="$(curl -fsSL 'https://www.phpmyadmin.net/home_page/version.json' | jq -r '.version')"
 
-sudo bash -c "cat >> /etc/phpmyadmin/apache.conf" <<- EOS
+    url="https://files.phpmyadmin.net/phpMyAdmin/${latest}/phpMyAdmin-${latest}-all-languages.tar.gz"
+    sudo curl -s $url --output /usr/local/lib/pma.tgz || exit $?
+    sudo tar xzf /usr/local/lib/pma.tgz -C /usr/share || exit $?
+    sudo rm -f /usr/local/lib/pma.tgz
+    sudo rm -rf /usr/share/phpmyadmin/
+    sudo mv /usr/share/phpMyAdmin-* /usr/share/phpmyadmin || exit $?
+
+    sudo mkdir /usr/share/phpmyadmin/tmp || exit $?
+    sudo chown $_APP_USER:$_APP_USER /usr/share/phpmyadmin/tmp || exit $?
+
+    sudo bash -c "cat > /etc/apache2/conf-available/phpmyadmin.conf" <<- EOS
+# phpMyAdmin default Apache configuration
+
+Alias /_sql /usr/share/phpmyadmin
+
+<Directory /usr/share/phpmyadmin>
+    Require all granted
+    php_admin_value mbstring.func_overload 0
+</Directory>
+
+# Disallow web access to directories that don't need it
+<Directory /usr/share/phpmyadmin/templates>
+    Require all denied
+</Directory>
+<Directory /usr/share/phpmyadmin/libraries>
+    Require all denied
+</Directory>
+<Directory /usr/share/phpmyadmin/setup/lib>
+    Require all denied
+</Directory>
+
 <Directory /usr/share/phpmyadmin>
         php_admin_value upload_max_filesize 64M
         php_admin_value post_max_size 64M
 </Directory>
 EOS
-[ $? -eq 0 ] || exit $?
+    [ $? -eq 0 ] || exit $?
+else
+    # change to /_sql instead of /phpmyadmin
+    sudo sed -i 's|Alias /phpmyadmin|Alias /_sql|' /etc/phpmyadmin/apache.conf || exit $?
+    sudo bash -c "cat >> /etc/phpmyadmin/apache.conf" <<- EOS
+<Directory /usr/share/phpmyadmin>
+        php_admin_value upload_max_filesize 64M
+        php_admin_value post_max_size 64M
+</Directory>
+EOS
+    [ $? -eq 0 ] || exit $?
 
-# bug: phpMyAdmin < 4.8 + PHP 7.2 = count() error
-# tested targets: Ubuntu 18.04 / 18.10 / 19.04
-# remaining tests: Ubuntu 16.04, Debian 9
-if grep --quiet -E 'Ubuntu 18.04|Ubuntu 18.10|Ubuntu 19.04' /etc/issue; then
-    sudo sed -i "s/|\s*\((count(\$analyzed_sql_results\['select_expr'\]\)/| (\1)/g" /usr/share/phpmyadmin/libraries/sql.lib.php || exit $?
+    # bug: phpMyAdmin < 4.8 + PHP 7.2 = count() error
+    # tested targets: Ubuntu 18.04 / 18.10 / 19.04
+    # remaining tests: Ubuntu 16.04, Debian 9
+    if grep --quiet -E 'Ubuntu 18.04|Ubuntu 18.10|Ubuntu 19.04' /etc/issue; then
+        sudo sed -i "s/|\s*\((count(\$analyzed_sql_results\['select_expr'\]\)/| (\1)/g" /usr/share/phpmyadmin/libraries/sql.lib.php || exit $?
+    fi
+
+    sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf || exit $?
 fi
 
-sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf || exit $?
 sudo a2enconf phpmyadmin || exit $?
 sudo a2enmod rewrite expires || exit $?
 
