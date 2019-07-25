@@ -19,7 +19,7 @@ sudo chmod 770 "$dest_dir" || exit $?
 # remove any older "session"
 rm -f $dest_dir/*
 
-if [ -d /usr/share/phpmyadmin/auth.html ]; then
+if [ -f /usr/share/phpmyadmin/auth.html ]; then
     # new method
     cat > $fullname <<- EOS
 <?php
@@ -33,6 +33,7 @@ session_name('SignonSession');
 \$_SESSION['PMA_single_signon_password'] = '$MYSQL_PASSWORD';
 
 @session_write_close();
+unlink(__FILE__);
 header('Location: ../index.php');
     EOS
     [ $? -eq 0 ] || exit $?
