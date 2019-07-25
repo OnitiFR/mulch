@@ -35,7 +35,7 @@ session_name('SignonSession');
 @session_write_close();
 unlink(__FILE__);
 header('Location: ../index.php');
-    EOS
+EOS
     [ $? -eq 0 ] || exit $?
 else
     # old method
