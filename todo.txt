@@ -7,6 +7,7 @@
 - shortcut for "do action" (ex: mulch open xyz) with completion ?
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
 - 'vm infos' command: add domains? add IP?
+- server status: add uptime
 - flag for compression / no compression on "vm backup"
 - check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
 - challenge based auth?

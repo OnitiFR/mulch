@@ -173,6 +173,14 @@ func (db *SeedDatabase) runStep() {
 		}
 		defer res.Body.Close()
 
+		if res.StatusCode != http.StatusOK {
+			msg := fmt.Sprintf("response was %s (%v)", res.Status, res.StatusCode)
+			db.app.Log.Error(msg)
+			seed.UpdateStatus(msg)
+			seedSendErrorAlert(db.app, name)
+			continue
+		}
+
 		lm := res.Header.Get("Last-Modified")
 		if lm == "" {
 			msg := fmt.Sprintf("seeder '%s': undefined Last-Modified header", name)
@@ -266,6 +274,10 @@ func (db *SeedDatabase) seedDownload(seed *Seed, tmpPath string) (string, error)
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("response was %s (%v)", resp.Status, resp.StatusCode)
+	}
 
 	total, _ := strconv.Atoi(resp.Header.Get("Content-Length"))
 	seed.Size = uint64(total)
