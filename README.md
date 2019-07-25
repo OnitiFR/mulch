@@ -296,6 +296,6 @@ For a quick demo installation on a **blank** Ubuntu or Debian system, you may al
 auto-install script (with root privileges):
 ```
 wget https://raw.github.com/OnitiFR/mulch/master/install/deb_ubuntu_autoinstall.sh
-chmod +x ubuntu_autoinstall.sh
-./ubuntu_autoinstall.sh
+chmod +x deb_ubuntu_autoinstall.sh
+./deb_ubuntu_autoinstall.sh
 ```

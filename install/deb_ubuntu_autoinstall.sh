@@ -3,7 +3,9 @@
 # Debian 10: git, pkg-config, build-essential, qemu-kvm
 
 echo "This is a Mulch server install script for Ubuntu."
-echo "It was tested on 18.04 to 19.04, with default server install."
+echo "It was tested on: (default server install)"
+echo " - Ubuntu 18.04 to 19.04"
+echo " - Debian 10"
 echo "It's intended to be used for a quick demo install, since most settings are left to default values."
 echo ""
 echo "This script will install packages, services, create users, etc. IT MAY BUTCHER YOUR SYSTEM!"
