@@ -264,10 +264,13 @@ How do I install the server? (mulchd and mulch-proxy)
 
 ### Requirements:
 
-#### Ubuntu: (19.04 / 18.10 / 18.04)
+#### Ubuntu (19.04 / 18.10 / 18.04) / Debian (10)
+Note : Debian 9 is not supported (libvirt is too old [missing disk aliases])
 ```
 sudo apt install golang-go
 sudo apt install ebtables gawk libxml2-utils libcap2-bin dnsmasq libvirt-daemon-system libvirt-dev
+sudo apt install git pkg-config build-essential qemu-kvm
+sudo usermod -aG libvirt USER # replace USER by the user running mulchd
 ```
 
 #### Fedora:
@@ -279,16 +282,6 @@ sudo usermod -aG libvirt USER # replace USER by the user running mulchd
 sudo setfacl -m g:qemu:x /home/USER/
 ```
 
-#### Debian 9: (Unsupported! libvirt is too old [missing disk aliases])
-Download and install a newer release of Go than provided
-packages, see https://golang.org/dl/
-```
-sudo apt install build-essential pkg-config git gawk libxml2-utils
-sudo apt install qemu-kvm ebtables libcap2-bin bridge-utils dnsmasq libvirt-daemon-system libvirt-dev
-sudo usermod -aG libvirt USER # replace USER by the user running mulchd
-```
-
-
 ### Install:
 As a user:
  - `go get -u github.com/OnitiFR/mulch/cmd/...`
@@ -299,10 +292,10 @@ The install script will give you details about installation: destination, rights
 
 
 ### Quick demo install:
-For a quick demo installation on a **blank** Ubuntu system, you may also use this standalone
+For a quick demo installation on a **blank** Ubuntu or Debian system, you may also use this standalone
 auto-install script (with root privileges):
 ```
-wget https://raw.github.com/OnitiFR/mulch/master/install/ubuntu_autoinstall.sh
+wget https://raw.github.com/OnitiFR/mulch/master/install/deb_ubuntu_autoinstall.sh
 chmod +x ubuntu_autoinstall.sh
 ./ubuntu_autoinstall.sh
 ```

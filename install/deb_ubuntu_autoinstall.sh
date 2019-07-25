@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Debian 10: git, pkg-config, build-essential, qemu-kvm
+
 echo "This is a Mulch server install script for Ubuntu."
 echo "It was tested on 18.04 to 19.04, with default server install."
 echo "It's intended to be used for a quick demo install, since most settings are left to default values."
@@ -18,9 +20,17 @@ if [ "$uid" -ne 0 ]; then
     exit 1
 fi
 
-apt -y -qq install golang-go || exit $?
-apt -y -qq install ebtables gawk libxml2-utils libcap2-bin dnsmasq libvirt-daemon-system libvirt-dev || exit $?
-useradd mulch -s /bin/bash -m -G libvirt || exit $?
+# 1st line is Debian (10) specific
+apt -y -qq install \
+    git pkg-config build-essential qemu-kvm \
+    golang-go \
+    ebtables gawk libxml2-utils libcap2-bin dnsmasq \
+    libvirt-daemon-system libvirt-dev \
+    || exit $?
+
+if [ ! -d /home/mulch ]; then
+    useradd mulch -s /bin/bash -m -G libvirt || exit $?
+fi
 
 echo "Compiling and installing mulch…"
 sudo -iu mulch go get -u github.com/OnitiFR/mulch/cmd/... || exit $?
