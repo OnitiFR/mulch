@@ -715,7 +715,7 @@ func VMStartByName(name *VMName, secretUUID string, app *App, log *Log) error {
 		return err
 	}
 
-	log.Info("started, waiting phone call")
+	log.Infof("started, waiting phone call (%s)", name)
 
 	phone := app.PhoneHome.Register(secretUUID)
 	defer phone.Unregister()
@@ -723,10 +723,10 @@ func VMStartByName(name *VMName, secretUUID string, app *App, log *Log) error {
 	for done := false; done == false; {
 		select {
 		case <-time.After(10 * time.Minute):
-			return errors.New("vm is too long to start, something probably went wrong")
+			return fmt.Errorf("vm is too long to start, something probably went wrong (%s)", name)
 		case <-phone.PhoneCalls:
 			done = true
-			log.Info("vm phoned home")
+			log.Infof("vm %s phoned home", name)
 		}
 	}
 
