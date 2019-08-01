@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
-	libvirt "github.com/libvirt/libvirt-go"
+	libvirt "gopkg.in/libvirt/libvirt-go.v5"
 )
 
 // Mulch storage and network names, see the following usages:

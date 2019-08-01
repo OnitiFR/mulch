@@ -3,7 +3,7 @@ package volumes
 import (
 	"io"
 
-	"github.com/libvirt/libvirt-go"
+	"gopkg.in/libvirt/libvirt-go.v5"
 )
 
 // VolumeTransfert contains source and destination for the transfert operation

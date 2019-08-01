@@ -12,7 +12,7 @@ import (
 
 	"github.com/OnitiFR/mulch/common"
 	"github.com/c2h5oh/datasize"
-	"github.com/libvirt/libvirt-go"
+	"gopkg.in/libvirt/libvirt-go.v5"
 )
 
 // SeedDatabase describes a persistent DataBase of Seed structures

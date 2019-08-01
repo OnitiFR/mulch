@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/libvirt/libvirt-go"
+	"gopkg.in/libvirt/libvirt-go.v5"
 )
 
 // VolumeDownload contains source and destination for the download operation

@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
-	"github.com/libvirt/libvirt-go"
-	"github.com/libvirt/libvirt-go-xml"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/ssh"
+	"gopkg.in/libvirt/libvirt-go-xml.v5"
+	"gopkg.in/libvirt/libvirt-go.v5"
 )
 
 // Aliases for vm.xml file
