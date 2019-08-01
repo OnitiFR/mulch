@@ -8,6 +8,7 @@
   - SSH Proxy: 1.2.3.4:12345 (proxy_ssh_extra_keys_file) nosee@myvm
   - SSH Proxy: dial nosee@10.104.20.0
   - API call: 1.2.3.4 GET /log (key: foobar)
+  - client downloaded xxx.qcow2
 - shortcut for "do action" (ex: mulch open xyz) with completion ?
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
 - 'vm infos' command: add domains? add IP?
