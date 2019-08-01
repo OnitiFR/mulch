@@ -710,6 +710,8 @@ func VMStartByName(name *VMName, secretUUID string, app *App, log *Log) error {
 		return errors.New("VM is not down")
 	}
 
+	log.Infof("starting %s", name)
+
 	err = domain.Create()
 	if err != nil {
 		return err
