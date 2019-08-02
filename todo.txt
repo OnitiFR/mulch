@@ -1,6 +1,8 @@
-- investigate why we seem to lose contact with VMs when restarting libvirtd (dhcp/dnsmasq? ebtables? CTRL_IP_LEARNING?)
 - find another way than CTRL_IP_LEARNING=dhcp to secure VM from DHCP spoofing
-  - (it was removed because it seems unreliable for us, at least during massive VM state restore) 
+  - (it was removed because it seems unreliable for us, at least during massive VM state restore)
+  - DHCPDSERVER + allow-dhcp-server rule?
+- investigate why we seem to lose contact with VMs when killing/restarting libvirtd
+  - (dhcp/dnsmasq? ebtables? CTRL_IP_LEARNING=dhcp?)
 - libvirtd watchdog + alert
 - remove "VM stop" on VM deletion?
 - add "since" info on Operations? (and add do action itself, not only vm name?)
