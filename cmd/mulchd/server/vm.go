@@ -712,15 +712,15 @@ func VMStartByName(name *VMName, secretUUID string, app *App, log *Log) error {
 
 	log.Infof("starting %s", name)
 
+	phone := app.PhoneHome.Register(secretUUID)
+	defer phone.Unregister()
+
 	err = domain.Create()
 	if err != nil {
 		return err
 	}
 
 	log.Infof("started, waiting phone call (%s)", name)
-
-	phone := app.PhoneHome.Register(secretUUID)
-	defer phone.Unregister()
 
 	for done := false; done == false; {
 		select {
