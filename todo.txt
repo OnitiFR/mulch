@@ -7,6 +7,7 @@
 - clean VM XML template
 - add --keep-on-failure for VM creation?
 - remove "VM stop" on VM deletion?
+- have a look at ansible?
 - add "since" info on Operations? (and add do action itself, not only vm name?)
 - add --revision to rebuild command
 - remove the need to supply the VM name for redefine command?
