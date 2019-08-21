@@ -58,9 +58,10 @@ __internal_list_seeds() {
 }
 
 __internal_doaction() {
+	local prev_prev=${COMP_WORDS[COMP_CWORD-2]}
     if [ "$prev" =  "do" ]; then
         __internal_list_vms
-    elif [ "${words[ $((c-2)) ]}" =  "do" ]; then
+    elif [ "$prev_prev" =  "do" ]; then
         __internal_list_actions $prev
     fi
 }
