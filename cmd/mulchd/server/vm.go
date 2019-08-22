@@ -57,6 +57,8 @@ type VM struct {
 	WIP                 VMOperation
 	LastRebuildDuration time.Duration
 	LastRebuildDowntime time.Duration
+	AssignedMAC         string
+	AssignedIPv4        string
 }
 
 // SetOperation change VM WIP
@@ -180,6 +182,15 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 		return nil, nil, err
 	}
 
+	// We assign static DHCP leases for network security reasons (see clean-traffic nwfilter)
+	// DEV /!\
+	// should loop over all other VMs for duplicate address
+	vm.AssignedMAC = fmt.Sprintf("52:54:00:%02x:%02x:%02x", app.Rand.Intn(255), app.Rand.Intn(255), app.Rand.Intn(255))
+	// same + use network dhcp range (convert to 32 bits and use regular '>=' and '>=' operators and back to string)
+	vm.AssignedIPv4 = fmt.Sprintf("10.104.104.%d", app.Rand.Intn(254))
+
+	app.Libvirt.RebuildDHCPStaticHosts(vm, app)
+
 	// 1 - copy from reference image
 	log.Infof("creating VM disk '%s'", diskName)
 	err = app.Libvirt.CreateDiskFromSeed(
@@ -282,7 +293,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	for _, intf := range domcfg.Devices.Interfaces {
 		if intf.Alias != nil && intf.Alias.Name == VMNetworkAliasBridge {
 			intf.Source.Bridge.Bridge = app.Libvirt.NetworkXML.Bridge.Name
-			intf.MAC.Address = fmt.Sprintf("52:54:00:%02x:%02x:%02x", app.Rand.Intn(255), app.Rand.Intn(255), app.Rand.Intn(255))
+			intf.MAC.Address = vm.AssignedMAC
 			foundInterfaces++
 		}
 	}

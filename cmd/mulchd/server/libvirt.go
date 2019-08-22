@@ -584,3 +584,40 @@ func (lv *Libvirt) BackupCompress(volName string, template string, tmpPath strin
 
 	return nil
 }
+
+// RebuildDHCPStaticHosts will update Mulch network DHCP static hosts list
+func (lv *Libvirt) RebuildDHCPStaticHosts(additionalVM *VM, app *App) error {
+	_, err := lv.GetConnection()
+	if err != nil {
+		return err
+	}
+	previousHosts := lv.NetworkXML.IPs[0].DHCP.Hosts
+	var newHosts []libvirtxml.NetworkDHCPHost
+
+	for _, host := range previousHosts {
+		if !strings.HasPrefix(host.Name, app.Config.VMPrefix) {
+			newHosts = append(newHosts, host)
+		}
+	}
+
+	vmNames := app.VMDB.GetNames()
+	for _, name := range vmNames {
+		vm, err := app.VMDB.GetByName(name)
+		if err != nil {
+			return fmt.Errorf("VM '%s': %s", name, err)
+		}
+		newHost := libvirtxml.NetworkDHCPHost{}
+		newHost.Name = name.ID()
+		newHost.IP = vm.AssignedIPv4
+		newHost.MAC = vm.AssignedMAC
+		newHosts = append(newHosts, newHost)
+	}
+
+	fmt.Println(previousHosts)
+	fmt.Println(newHosts)
+
+	// marshal + update
+	// err := lv.Network.Update(cmd, section, parentIndex, xml, flags)
+
+	return nil
+}

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
+	libvirtxml "gopkg.in/libvirt/libvirt-go-xml.v5"
 	libvirt "gopkg.in/libvirt/libvirt-go.v5"
 )
 
@@ -228,21 +229,53 @@ func (app *App) initVMDB() error {
 			app.Log.Warningf("VM '%s' does not exists in libvirt, deleting from Mulch DB", name)
 			app.VMDB.Delete(name)
 		} else {
-			vm, err2 := app.VMDB.GetByName(name)
-			uuid, err1 := dom.GetUUIDString()
-			dom.Free()
+			func() { // use an anonymous func for the defer
+				vm, err2 := app.VMDB.GetByName(name)
+				uuid, err1 := dom.GetUUIDString()
+				defer dom.Free()
 
-			if err1 != nil || err2 != nil {
-				app.Log.Errorf("database checking failure: %s / %s", err1, err2)
-			}
+				if err1 != nil || err2 != nil {
+					app.Log.Errorf("database checking failure: %s / %s (%s)", err1, err2, name)
+				}
 
-			if uuid != vm.LibvirtUUID {
-				app.Log.Warningf("libvirt UUID mismatch for VM '%s'", name)
-			}
+				if uuid != vm.LibvirtUUID {
+					app.Log.Warningf("libvirt UUID mismatch for VM '%s'", name)
+				}
 
-			// + "rebuild" parts of the VM in the DB? (ex : App)
-			// we are erasing original values like vm.App.Config that can be useful, no ?
-			vm.App = app
+				// upgrade new VM fields
+				if vm.AssignedIPv4 == "" {
+					vm.AssignedIPv4 = vm.LastIP
+				}
+				if vm.AssignedMAC == "" {
+					xmldoc, err := dom.GetXMLDesc(0)
+					if err != nil {
+						app.Log.Errorf("VM %s: %s", name, err)
+						return
+					}
+
+					domcfg := &libvirtxml.Domain{}
+					err = domcfg.Unmarshal(xmldoc)
+					if err != nil {
+						app.Log.Errorf("VM %s: %s", name, err)
+						return
+					}
+					foundInterfaces := 0
+					for _, intf := range domcfg.Devices.Interfaces {
+						if intf.Alias != nil && intf.Alias.Name == VMNetworkAliasBridge {
+							vm.AssignedMAC = intf.MAC.Address
+							foundInterfaces++
+						}
+					}
+					if foundInterfaces != 1 {
+						app.Log.Errorf("VM %s: can't find exactly one %s network interface", name, VMNetworkAliasBridge)
+						return
+					}
+
+				}
+
+				// + "rebuild" parts of the VM in the DB? (ex : App)
+				vm.App = app
+			}()
 		}
 	}
 
@@ -361,6 +394,11 @@ func (app *App) initLibvirtNetwork() error {
 
 	app.Libvirt.Network = net
 	app.Libvirt.NetworkXML = netcfg
+
+	err = app.Libvirt.RebuildDHCPStaticHosts(nil, app)
+	if err != nil {
+		return fmt.Errorf("RebuildDHCPStaticHosts: %s", err)
+	}
 
 	return nil
 }
