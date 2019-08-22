@@ -720,7 +720,7 @@ func VMStartByName(name *VMName, secretUUID string, app *App, log *Log) error {
 		return err
 	}
 
-	log.Infof("started, waiting phone call (%s)", name)
+	log.Infof("started, waiting phone call from %s", name)
 
 	for done := false; done == false; {
 		select {
