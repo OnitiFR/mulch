@@ -395,9 +395,10 @@ func (app *App) initLibvirtNetwork() error {
 	app.Libvirt.Network = net
 	app.Libvirt.NetworkXML = netcfg
 
-	err = app.Libvirt.RebuildDHCPStaticHosts(nil, app)
+	// clean DHCP leases
+	err = app.Libvirt.AddDHCPStaticHost(nil, app)
 	if err != nil {
-		return fmt.Errorf("RebuildDHCPStaticHosts: %s", err)
+		return fmt.Errorf("AddDHCPStaticHost: %s", err)
 	}
 
 	return nil

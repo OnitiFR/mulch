@@ -189,7 +189,11 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	// same + use network dhcp range (convert to 32 bits and use regular '>=' and '>=' operators and back to string)
 	vm.AssignedIPv4 = fmt.Sprintf("10.104.104.%d", app.Rand.Intn(254))
 
-	app.Libvirt.RebuildDHCPStaticHosts(vm, app)
+	app.Libvirt.AddDHCPStaticHost(&libvirtxml.NetworkDHCPHost{
+		Name: vmName.LibvirtDomainName(app),
+		MAC:  vm.AssignedMAC,
+		IP:   vm.AssignedIPv4,
+	}, app)
 
 	// 1 - copy from reference image
 	log.Infof("creating VM disk '%s'", diskName)

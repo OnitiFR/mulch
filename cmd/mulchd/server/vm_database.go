@@ -250,11 +250,11 @@ func (vmdb *VMDatabase) GetEntryByName(name *VMName) (*VMDatabaseEntry, error) {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
-	vm, exists := vmdb.db[name.ID()]
+	entry, exists := vmdb.db[name.ID()]
 	if !exists {
 		return nil, fmt.Errorf("VM %s not found in database", name)
 	}
-	return vm, nil
+	return entry, nil
 }
 
 // GetByName lookups a VM by its name
@@ -262,6 +262,18 @@ func (vmdb *VMDatabase) GetByName(name *VMName) (*VM, error) {
 	entry, err := vmdb.GetEntryByName(name)
 	if err != nil {
 		return nil, err
+	}
+	return entry.VM, nil
+}
+
+// GetByNameID lookups a VM by its name-id (low-level, should not use)
+func (vmdb *VMDatabase) GetByNameID(id string) (*VM, error) {
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
+	entry, exists := vmdb.db[id]
+	if !exists {
+		return nil, fmt.Errorf("VM id %s not found in database", id)
 	}
 	return entry.VM, nil
 }

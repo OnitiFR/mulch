@@ -52,6 +52,11 @@ func PhoneController(req *server.Request) {
 			return
 		}
 		req.App.Log.Infof("phoning VM is %s", entry.Name)
+
+		if vm.AssignedIPv4 != "" && vm.AssignedIPv4 != ip {
+			req.App.Log.Errorf("vm %s does not use it's assigned IP! (is '%s', should be '%s')", entry.Name, ip, vm.AssignedIPv4)
+		}
+
 		if vm.LastIP != ip {
 			req.App.Log.Warningf("vm IP changed since last call (from '%s' to '%s')", vm.LastIP, ip)
 
