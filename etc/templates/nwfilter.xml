@@ -1,0 +1,13 @@
+<filter name='mulch-filter' chain='root'>
+  <!-- deny DHCP answsers -->
+  <rule action='drop' direction='out' priority='-701'>
+    <ip protocol='udp' dstportstart='68'/>
+  </rule>
+
+  <!-- deny SMTP out -->
+  <rule action='drop' direction='out' priority='-701'>
+    <ip protocol='tcp' dstportstart='25'/>
+  </rule>
+
+  <filterref filter='clean-traffic'/>
+</filter>

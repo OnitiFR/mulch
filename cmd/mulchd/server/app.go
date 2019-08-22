@@ -24,7 +24,8 @@ const (
 	AppStorageDisks     = "mulch-disks"
 	AppStorageBackups   = "mulch-backups"
 
-	AppNetwork = "mulch"
+	AppNetwork  = "mulch"
+	AppNWFilter = "mulch-filter"
 )
 
 // AppPhoneServerPost for "phone home" internal HTTP server
@@ -116,6 +117,11 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	}
 
 	err = app.initLibvirtNetwork()
+	if err != nil {
+		return nil, err
+	}
+
+	err = app.initLibvirtNWFilter()
 	if err != nil {
 		return nil, err
 	}
@@ -356,6 +362,18 @@ func (app *App) initLibvirtNetwork() error {
 	app.Libvirt.Network = net
 	app.Libvirt.NetworkXML = netcfg
 
+	return nil
+}
+
+func (app *App) initLibvirtNWFilter() error {
+	_, err := app.Libvirt.GetOrCreateNWFilter(
+		AppNWFilter,
+		app.Config.GetTemplateFilepath("nwfilter.xml"),
+		app.Log)
+
+	if err != nil {
+		return fmt.Errorf("initLibvirtNWFilter: %s", err)
+	}
 	return nil
 }
 

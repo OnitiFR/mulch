@@ -251,6 +251,36 @@ func (lv *Libvirt) GetOrCreateNetwork(networkName string, templateFile string, l
 	return net, netcfg, nil
 }
 
+// GetOrCreateNWFilter create (if necessary) and return a libvirt network filter
+func (lv *Libvirt) GetOrCreateNWFilter(filterName string, templateFile string, log *Log) (*libvirt.NWFilter, error) {
+	conn, errC := lv.GetConnection()
+	if errC != nil {
+		return nil, errC
+	}
+
+	filter, errL := conn.LookupNWFilterByName(filterName)
+	if errL != nil {
+		virtErr := errL.(libvirt.Error)
+		if virtErr.Domain == libvirt.FROM_NWFILTER && virtErr.Code == libvirt.ERR_NO_NWFILTER {
+			log.Info(fmt.Sprintf("nwfilter '%s' not found, it's OK, let's create it", filterName))
+
+			xml, err := ioutil.ReadFile(templateFile)
+			if err != nil {
+				return nil, fmt.Errorf("GetOrCreateNWFilter: %s: %s", templateFile, err)
+			}
+
+			filter, err = conn.NWFilterDefineXML(string(xml))
+			if err != nil {
+				return nil, fmt.Errorf("GetOrCreateNWFilter: NWFilterDefineXML: %s", err)
+			}
+		} else {
+			return nil, fmt.Errorf("GetOrCreateNetwork: Unexpected error: %s", errL)
+		}
+	}
+
+	return filter, nil
+}
+
 // CloneVolume clones a source volume to a destination volume in the same pool
 func (lv *Libvirt) CloneVolume(srcVolName string, srcPool *libvirt.StoragePool, dstVolName string, dstPool *libvirt.StoragePool, dstPoolXML *libvirtxml.StoragePool, volumeTemplateFile string, log *Log) error {
 	conn, errC := lv.GetConnection()
