@@ -94,7 +94,9 @@
       <source bridge='virbrX'/>
       <model type='virtio'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-      <filterref filter='mulch-filter'/>
+      <filterref filter='mulch-filter'>
+        <parameter name='IP' value='0.0.0.0'/>
+      </filterref>
     </interface>
     <serial type='pty'>
       <target type='isa-serial' port='0'>

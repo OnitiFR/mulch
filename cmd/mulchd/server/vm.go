@@ -181,13 +181,12 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	if err != nil {
 		return nil, nil, err
 	}
-
 	// We assign static DHCP leases for network security reasons (see clean-traffic nwfilter)
-	// DEV /!\
-	// should loop over all other VMs for duplicate address
-	vm.AssignedMAC = fmt.Sprintf("52:54:00:%02x:%02x:%02x", app.Rand.Intn(255), app.Rand.Intn(255), app.Rand.Intn(255))
-	// same + use network dhcp range (convert to 32 bits and use regular '>=' and '>=' operators and back to string)
-	vm.AssignedIPv4 = fmt.Sprintf("10.104.104.%d", app.Rand.Intn(254))
+	vm.AssignedMAC = RandomUniqueMAC(app)
+	vm.AssignedIPv4, err = RandomUniqueIPv4(app)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	app.Libvirt.AddDHCPStaticHost(&libvirtxml.NetworkDHCPHost{
 		Name: vmName.LibvirtDomainName(app),
@@ -296,14 +295,32 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	foundInterfaces := 0
 	for _, intf := range domcfg.Devices.Interfaces {
 		if intf.Alias != nil && intf.Alias.Name == VMNetworkAliasBridge {
+			// Source and MAC are pointer, we can modify values thru "intf"
 			intf.Source.Bridge.Bridge = app.Libvirt.NetworkXML.Bridge.Name
 			intf.MAC.Address = vm.AssignedMAC
+			if intf.FilterRef == nil {
+				return nil, nil, errors.New("vm xml file: no filterref found for network interface")
+			}
+			if intf.FilterRef.Filter != AppNWFilter {
+				return nil, nil, fmt.Errorf("vm xml file: need filterref '%s'", AppNWFilter)
+			}
+			foundParam := 0
+			for index, param := range intf.FilterRef.Parameters {
+				if param.Name == "IP" {
+					// Parameters are not pointer, we need to use the index to modify values
+					intf.FilterRef.Parameters[index].Value = vm.AssignedIPv4
+					foundParam++
+				}
+			}
+			if foundParam != 1 {
+				return nil, nil, fmt.Errorf("vm xml file: found %d IP parameter(s) for %s filter, exactly one is needed", foundParam, AppNWFilter)
+			}
 			foundInterfaces++
 		}
 	}
 
 	if foundInterfaces != 1 {
-		return nil, nil, fmt.Errorf("vm xml file: found %d interface(s) with 'ua-mulch-bridge' alias, one is needed", foundInterfaces)
+		return nil, nil, fmt.Errorf("vm xml file: found %d interface(s) with 'ua-mulch-bridge' alias, exactly one is needed", foundInterfaces)
 	}
 
 	xml2, err := domcfg.Marshal()
