@@ -9,7 +9,6 @@
     <ip protocol='tcp' dstportstart='25'/>
   </rule>
 
-  <filterref filter='clean-traffic'>
-    <parameter name='IP' value='$IP'/>
-  </filterref>
+  <!-- this filter will use our own $IP parameter -->
+  <filterref filter='clean-traffic'/>
 </filter>
