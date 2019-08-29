@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # -- Run with sudo privileges
-# For: Debian 9 / Ubuntu 18.10
+# For: Debian 9+ / Ubuntu 18.10+
 
 export DEBIAN_FRONTEND="noninteractive"
 sudo -E apt-get -y -qq install progress mc powerline locate man || exit $?
@@ -51,6 +51,12 @@ if ! shopt -oq posix; then
 fi
 EOS
 [ $? -eq 0 ] || exit $?
+
+# show VM name on powerline
+theme="/usr/share/powerline/config_files/themes/shell/default_leftonly.json"
+sudo sed -i "s/\"function\": \"powerline.segments.common.net.hostname\",/\"function\": \"powerline.segments.common.env.environment\", \"args\": {\"variable\": \"_VM_NAME\"},/" "$theme" || exit $?
+scheme="/usr/share/powerline/config_files/colorschemes/shell/default.json"
+sudo sed -i "s/\"bg\": \"darkestgreen\"/\"bg\": \"mediumorange\"/g" "$scheme" || exit $?
 
 sudo bash -c "cat > /etc/profile.d/powerline.sh" <<- EOS
 if ! shopt -oq posix; then
