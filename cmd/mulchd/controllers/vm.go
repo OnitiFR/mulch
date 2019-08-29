@@ -51,10 +51,16 @@ func NewVMController(req *server.Request) {
 	restore := req.HTTP.FormValue("restore")
 	allowNewRevision := req.HTTP.FormValue("allow_new_revision")
 	inactive := req.HTTP.FormValue("inactive")
+	keepOnFailure := req.HTTP.FormValue("keep_on_failure")
 
 	active := true
 	if inactive == common.TrueStr {
 		active = false
+	}
+
+	allowScriptFailure := server.VMStopOnScriptFailure
+	if keepOnFailure == common.TrueStr {
+		allowScriptFailure = server.VMAllowScriptFailure
 	}
 
 	conf, err := server.NewVMConfigFromTomlReader(configFile, req.Stream)
@@ -84,7 +90,7 @@ func NewVMController(req *server.Request) {
 	}
 
 	before := time.Now()
-	_, vmName, err := server.NewVM(conf, active, req.APIKey.Comment, req.App, req.Stream)
+	_, vmName, err := server.NewVM(conf, active, allowScriptFailure, req.APIKey.Comment, req.App, req.Stream)
 	if err != nil {
 		req.Stream.Failuref("Cannot create VM: %s", err)
 		return

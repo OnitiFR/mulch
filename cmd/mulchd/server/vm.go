@@ -40,6 +40,12 @@ const (
 	BackupCompressDisable = false
 )
 
+// New VM : allow script failures?
+const (
+	VMStopOnScriptFailure = false // default, safe behavior
+	VMAllowScriptFailure  = true
+)
+
 // BackupBlankRestore disables *install* scripts during a
 // a VM creation (so we can restore backup a bit later)
 const BackupBlankRestore = "-"
@@ -105,7 +111,7 @@ func vmGenVolumesNames(vmName *VMName) (string, string) {
 // NewVM builds a new virtual machine from config
 // TODO: this function is HUUUGE and needs to be splitted. It's tricky
 // because there's a "transaction" here.
-func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log) (*VM, *VMName, error) {
+func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey string, app *App, log *Log) (*VM, *VMName, error) {
 	log.Infof("creating new VM '%s'", vmConfig.Name)
 
 	commit := false
@@ -181,7 +187,7 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	if err != nil {
 		return nil, nil, err
 	}
-	// We assign static DHCP leases for network security reasons (see clean-traffic nwfilter)
+	// we assign static DHCP leases for network security reasons (see clean-traffic nwfilter)
 	vm.AssignedMAC = RandomUniqueMAC(app)
 	vm.AssignedIPv4, err = RandomUniqueIPv4(app)
 	if err != nil {
@@ -516,7 +522,10 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 	}
 	err = run.Go()
 	if err != nil {
-		return nil, nil, err
+		if !allowScriptFailure {
+			return nil, nil, err
+		}
+		log.Error(err.Error())
 	}
 
 	if errDoAction != nil {
@@ -570,7 +579,10 @@ func NewVM(vmConfig *VMConfig, active bool, authorKey string, app *App, log *Log
 		}
 		err = run.Go()
 		if err != nil {
-			return nil, nil, err
+			if !allowScriptFailure {
+				return nil, nil, err
+			}
+			log.Error(err.Error())
 		}
 	}
 
@@ -1526,7 +1538,7 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 
 	// create VM rev+1
 	// replace original VM author with "rebuilder"
-	newVM, newVMName, err := NewVM(conf, false, authorKey, app, log)
+	newVM, newVMName, err := NewVM(conf, false, VMStopOnScriptFailure, authorKey, app, log)
 	if err != nil {
 		log.Error(err.Error())
 		return fmt.Errorf("Cannot create VM: %s", err)
