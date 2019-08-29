@@ -3,9 +3,6 @@
 # -- Run with sudo privileges
 # For: CentOS 7
 
-# TODO:
-# powerline?
-
 sudo yum -y install mc mlocate man || exit $?
 
 sudo bash -c "cat > /usr/share/mc/mc.ini" <<- EOS
@@ -63,11 +60,12 @@ fi
 EOS
 [ $? -eq 0 ] || exit $?
 
-# add powerline vcs.branch before shell.cwd
+# add powerline vcs.branch before shell.cwd + show VM name instead of hostname
 theme="/usr/lib/python2.7/site-packages/powerline/config_files/themes/shell/default.json"
 line=$(grep -n powerline.segments.shell.cwd "$theme" | cut -d: -f1)
 line=$(expr $line - 2)
 sudo sed -i "$line a {\"function\": \"powerline.segments.common.vcs.branch\", \"priority\": 40, \"args\": {\"status_colors\": true}}," "$theme" || exit $?
+sudo sed -i "s/\"function\": \"powerline.segments.common.net.hostname\",/\"function\": \"powerline.segments.common.env.environment\", \"args\": {\"variable\": \"_VM_NAME\"},/" "$theme" || exit $?
 
 # add a "open" action (see "do" command) if there's any domain defined
 if [ -n "$_DOMAIN_FIRST" ]; then
