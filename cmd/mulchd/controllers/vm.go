@@ -498,9 +498,15 @@ func GetVMInfosController(req *server.Request) {
 		return
 	}
 
+	var domains []string
+	for _, domain := range vm.Config.Domains {
+		domains = append(domains, domain.Name)
+	}
+
 	data := &common.APIVMInfos{
 		Name:                entry.Name.Name,
 		Revision:            entry.Name.Revision,
+		Up:                  running,
 		Active:              entry.Active,
 		Seed:                vm.Config.Seed,
 		CPUCount:            vm.Config.CPUCount,
@@ -509,6 +515,7 @@ func GetVMInfosController(req *server.Request) {
 		AllocatedDiskSizeMB: (vInfos.Allocation / 1024 / 1024),
 		BackupDiskSizeMB:    (vm.Config.BackupDiskSize / 1024 / 1024),
 		Hostname:            vm.Config.Hostname,
+		Domains:             domains,
 		SuperUser:           vm.App.Config.MulchSuperUser,
 		AppUser:             vm.Config.AppUser,
 		AuthorKey:           vm.AuthorKey,
@@ -516,7 +523,8 @@ func GetVMInfosController(req *server.Request) {
 		LastRebuildDuration: vm.LastRebuildDuration,
 		LastRebuildDowntime: vm.LastRebuildDowntime,
 		Locked:              vm.Locked,
-		Up:                  running,
+		AssignedIPv4:        vm.AssignedIPv4,
+		AssignedMAC:         vm.AssignedMAC,
 	}
 
 	req.Response.Header().Set("Content-Type", "application/json")

@@ -57,6 +57,8 @@ func InterfaceValueToString(iv interface{}) string {
 		return iv.(time.Time).String()
 	case time.Duration:
 		return iv.(time.Duration).String()
+	case []string:
+		return strings.Join(iv.([]string), ", ")
 	}
 	return "INVALID_TYPE"
 }

@@ -7,6 +7,7 @@ type APIVMInfos struct {
 	Name                string
 	Revision            int
 	Active              bool
+	Up                  bool
 	Seed                string
 	CPUCount            int
 	RAMSizeMB           uint64
@@ -14,6 +15,7 @@ type APIVMInfos struct {
 	AllocatedDiskSizeMB uint64
 	BackupDiskSizeMB    uint64
 	Hostname            string
+	Domains             []string
 	SuperUser           string
 	AppUser             string
 	InitDate            time.Time
@@ -21,5 +23,6 @@ type APIVMInfos struct {
 	LastRebuildDowntime time.Duration
 	AuthorKey           string
 	Locked              bool
-	Up                  bool
+	AssignedIPv4        string
+	AssignedMAC         string
 }

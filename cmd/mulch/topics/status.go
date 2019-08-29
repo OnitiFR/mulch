@@ -53,7 +53,6 @@ func statusDisplay(reader io.Reader, headers http.Header) {
 
 	fmt.Printf("SSHConnections: %d\n", len(data.SSHConnections))
 	for _, conn := range data.SSHConnections {
-		// TODO: use server time
 		since := referenceTime.Sub(conn.StartTime)
 		fmt.Printf(" - from %s@%s to %s@%s (%s)\n",
 			conn.FromUser,
@@ -65,7 +64,6 @@ func statusDisplay(reader io.Reader, headers http.Header) {
 
 	fmt.Printf("Operations: %d\n", len(data.Operations))
 	for _, op := range data.Operations {
-		// TODO: use server time
 		since := referenceTime.Sub(op.StartTime)
 		fmt.Printf(" - from %s: %s %s %s (%s)\n",
 			op.Origin,

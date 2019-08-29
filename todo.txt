@@ -2,7 +2,6 @@
   - (dhcp/dnsmasq? ebtables? mulch-netowrk restart?)
 - libvirtd watchdog + alert (ex: timeout in VMStateDatabase?)
 - clean VM XML template
-- remove "VM stop" on VM deletion?
 - have a look at ansible? (for sample scripts)
 - create a nice and shiny website for Mulch project
 - VM tags
@@ -12,7 +11,6 @@
   - remove: change controller logic
 - shortcut for "do action" (ex: mulch open xyz) with completion ?
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
-- 'vm infos' command: add domains? add IP?
 - server status: add uptime
 - flag for compression / no compression on "vm backup"
 - check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
