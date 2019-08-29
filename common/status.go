@@ -17,6 +17,7 @@ type APIOperation struct {
 	Action        string
 	Ressource     string
 	RessourceName string
+	StartTime     time.Time
 }
 
 // APIStatus describes host status

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 
@@ -52,7 +53,7 @@ See [[do-actions]] in TOML description file.
 	},
 }
 
-func doListCB(reader io.Reader) {
+func doListCB(reader io.Reader, headers http.Header) {
 	var data common.APIVMDoListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

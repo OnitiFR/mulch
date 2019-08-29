@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"math/rand"
+	"time"
 )
 
 // Basic operation list, only for 'status' command currently. That's why
@@ -18,6 +19,7 @@ type Operation struct {
 	Action        string // delete, remove, rebuild, …
 	Ressource     string // backup, seed, vm, …
 	RessourceName string // VM name, seed name, …
+	StartTime     time.Time
 }
 
 // OperationList is a list of currently running operations
@@ -37,6 +39,7 @@ func NewOperationList(rand *rand.Rand) *OperationList {
 // Add an operation to the list
 func (db *OperationList) Add(op *Operation) string {
 	id := fmt.Sprintf("operation-%d", rand.Int31())
+	op.StartTime = time.Now()
 	db.operations[id] = op
 	return id
 }

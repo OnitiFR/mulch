@@ -36,7 +36,7 @@ type APICall struct {
 	Method                 string
 	Path                   string
 	Args                   map[string]string
-	JSONCallback           func(io.Reader)
+	JSONCallback           func(io.Reader, http.Header)
 	DestFilePath           string
 	DestStream             *os.File
 	DisableSpecialMessages bool
@@ -211,7 +211,7 @@ func (call *APICall) Do() {
 		if call.JSONCallback == nil {
 			log.Fatalf("no JSON callback defined for %s %s", call.Method, call.Path)
 		}
-		call.JSONCallback(resp.Body)
+		call.JSONCallback(resp.Body, resp.Header)
 		// return? call.callback?
 	case "application/octet-stream":
 		if call.DestFilePath == "" && call.DestStream == nil {

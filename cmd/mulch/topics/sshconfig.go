@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/OnitiFR/mulch/common"
@@ -57,7 +58,7 @@ For each VM, two aliases are available:
 	},
 }
 
-func sshConfigCmdPairCB(reader io.Reader) {
+func sshConfigCmdPairCB(reader io.Reader, headers http.Header) {
 	var data common.APISSHPair
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)
@@ -84,7 +85,7 @@ func sshConfigCmdPairCB(reader io.Reader) {
 	call.Do()
 }
 
-func sshConfigCmdVMListCB(reader io.Reader) {
+func sshConfigCmdVMListCB(reader io.Reader, headers http.Header) {
 	var data common.APIVMListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

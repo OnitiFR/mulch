@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/OnitiFR/mulch/common"
@@ -25,7 +26,7 @@ var keyListCmd = &cobra.Command{
 	},
 }
 
-func keyListCB(reader io.Reader) {
+func keyListCB(reader io.Reader, headers http.Header) {
 	var data common.APIKeyListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

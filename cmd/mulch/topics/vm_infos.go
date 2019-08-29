@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"reflect"
 
 	"github.com/OnitiFR/mulch/common"
@@ -30,7 +31,7 @@ See 'vm list' for VM Names.
 	},
 }
 
-func vmInfosDisplay(reader io.Reader) {
+func vmInfosDisplay(reader io.Reader, headers http.Header) {
 	var data common.APIVMInfos
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

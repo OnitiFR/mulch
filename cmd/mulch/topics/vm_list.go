@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 
@@ -31,7 +32,7 @@ var vmListCmd = &cobra.Command{
 	},
 }
 
-func vmListCB(reader io.Reader) {
+func vmListCB(reader io.Reader, headers http.Header) {
 	var data common.APIVMListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

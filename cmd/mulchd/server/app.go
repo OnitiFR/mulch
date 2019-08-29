@@ -581,6 +581,7 @@ func (app *App) Status() (*common.APIStatus, error) {
 			Action:        operation.Action,
 			Ressource:     operation.Ressource,
 			RessourceName: operation.RessourceName,
+			StartTime:     operation.StartTime,
 		})
 	}
 

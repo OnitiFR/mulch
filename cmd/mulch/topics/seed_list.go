@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
@@ -32,7 +33,7 @@ var seedListCmd = &cobra.Command{
 	},
 }
 
-func seedsCB(reader io.Reader) {
+func seedsCB(reader io.Reader, headers http.Header) {
 	var data common.APISeedListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

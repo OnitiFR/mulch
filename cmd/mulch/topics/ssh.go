@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
@@ -46,7 +47,7 @@ See 'vm list' for VM Names.
 	},
 }
 
-func sshCmdInfoCB(reader io.Reader) {
+func sshCmdInfoCB(reader io.Reader, headers http.Header) {
 	var data common.APIVMInfos
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)
@@ -65,7 +66,7 @@ func sshCmdInfoCB(reader io.Reader) {
 
 }
 
-func sshCmdPairCB(reader io.Reader) {
+func sshCmdPairCB(reader io.Reader, headers http.Header) {
 	var data common.APISSHPair
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

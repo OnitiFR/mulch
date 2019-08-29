@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/OnitiFR/mulch/common"
@@ -36,7 +37,7 @@ var backupListCmd = &cobra.Command{
 	},
 }
 
-func backupListCB(reader io.Reader) {
+func backupListCB(reader io.Reader, headers http.Header) {
 	var data common.APIBackupListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

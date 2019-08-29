@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"reflect"
 
 	"github.com/OnitiFR/mulch/common"
@@ -24,7 +25,7 @@ var seedStatusCmd = &cobra.Command{
 	},
 }
 
-func seedStatusCB(reader io.Reader) {
+func seedStatusCB(reader io.Reader, headers http.Header) {
 	var data common.APISeedStatus
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

@@ -190,20 +190,23 @@ func ActionVMController(req *server.Request) {
 
 	vm := entry.VM
 	action := req.HTTP.FormValue("action")
-
-	operation := req.App.Operations.Add(&server.Operation{
-		Origin:        req.APIKey.Comment,
-		Action:        action,
-		Ressource:     "vm",
-		RessourceName: entry.Name.ID(),
-	})
-	defer req.App.Operations.Remove(operation)
+	operationAction := action
 
 	if action != "do" {
 		// 'do' actions can send "private" special messages to client (like
 		// _MULCH_OPEN_URL) so don't broadcast output to vmName target
 		req.SetTarget(vmName)
+	} else {
+		operationAction = "do:" + req.HTTP.FormValue("do_action")
 	}
+
+	operation := req.App.Operations.Add(&server.Operation{
+		Origin:        req.APIKey.Comment,
+		Action:        operationAction,
+		Ressource:     "vm",
+		RessourceName: entry.Name.ID(),
+	})
+	defer req.App.Operations.Remove(operation)
 
 	switch action {
 	case "lock":

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"reflect"
 	"time"
 
@@ -24,7 +25,7 @@ var statusCmd = &cobra.Command{
 	},
 }
 
-func statusDisplay(reader io.Reader) {
+func statusDisplay(reader io.Reader, headers http.Header) {
 	var data common.APIStatus
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)
@@ -42,9 +43,18 @@ func statusDisplay(reader io.Reader) {
 		}
 	}
 
+	referenceTime := time.Now()
+	if headers.Get("Date") != "" {
+		date, err := http.ParseTime(headers.Get("Date"))
+		if err == nil {
+			referenceTime = date
+		}
+	}
+
 	fmt.Printf("SSHConnections: %d\n", len(data.SSHConnections))
 	for _, conn := range data.SSHConnections {
-		since := time.Now().Sub(conn.StartTime)
+		// TODO: use server time
+		since := referenceTime.Sub(conn.StartTime)
 		fmt.Printf(" - from %s@%s to %s@%s (%s)\n",
 			conn.FromUser,
 			conn.FromIP,
@@ -55,11 +65,14 @@ func statusDisplay(reader io.Reader) {
 
 	fmt.Printf("Operations: %d\n", len(data.Operations))
 	for _, op := range data.Operations {
-		fmt.Printf(" - from %s: %s %s %s\n",
+		// TODO: use server time
+		since := referenceTime.Sub(op.StartTime)
+		fmt.Printf(" - from %s: %s %s %s (%s)\n",
 			op.Origin,
 			op.Action,
 			op.Ressource,
 			op.RessourceName,
+			since,
 		)
 	}
 }
