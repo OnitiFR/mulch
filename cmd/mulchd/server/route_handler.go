@@ -254,9 +254,9 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 			return
 		}
 		request.APIKey = key
-		app.Log.Infof("API call: %s %s %s (key: %s)", ip, r.Method, route.path, key.Comment)
+		app.Log.Tracef("API call: %s %s %s (key: %s)", ip, r.Method, route.path, key.Comment)
 	} else {
-		app.Log.Infof("API call: %s %s %s", ip, r.Method, route.path)
+		app.Log.Tracef("API call: %s %s %s", ip, r.Method, route.path)
 	}
 
 	switch route.Type {

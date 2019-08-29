@@ -164,7 +164,7 @@ func DownloadBackupController(req *server.Request) {
 		http.Error(req.Response, err.Error(), 500)
 		return
 	}
-	req.App.Log.Infof("client downloaded %s (%s)", backupName, (datasize.ByteSize(bytesWritten) * datasize.B).HR())
+	req.App.Log.Tracef("client downloaded %s (%s)", backupName, (datasize.ByteSize(bytesWritten) * datasize.B).HR())
 }
 
 // UploadBackupController will upload a backup image to storage

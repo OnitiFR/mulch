@@ -62,7 +62,7 @@ func NewSSHProxyServer(app *App) error {
 				user = parts[0]
 				vmName = parts[1]
 				client.apiAuth = apiKey.Comment
-				app.Log.Infof("SSH Proxy: %s (API key '%s') %s@%s", c.RemoteAddr(), apiKey.Comment, user, vmName)
+				app.Log.Tracef("SSH Proxy: %s (API key '%s') %s@%s", c.RemoteAddr(), apiKey.Comment, user, vmName)
 			} else {
 				matchingPubKey, comment, errS := SearchSSHAuthorizedKey(pubKey, app.Config.ProxySSHExtraKeysFile)
 				if errS != nil {
@@ -85,7 +85,7 @@ func NewSSHProxyServer(app *App) error {
 						vmName = c.User()
 					}
 
-					app.Log.Infof("SSH Proxy: %s (proxy_ssh_extra_keys_file) %s@%s", c.RemoteAddr(), user, vmName)
+					app.Log.Tracef("SSH Proxy: %s (proxy_ssh_extra_keys_file) %s@%s", c.RemoteAddr(), user, vmName)
 				}
 			}
 
@@ -130,7 +130,7 @@ func NewSSHProxyServer(app *App) error {
 			}
 			clientConfig.HostKeyCallback = ssh.InsecureIgnoreHostKey()
 
-			app.Log.Infof("SSH Proxy: dial %s@%s", user, vm.LastIP)
+			app.Log.Tracef("SSH Proxy: dial %s@%s", user, vm.LastIP)
 
 			sshClient, errD := ssh.Dial("tcp", vm.LastIP+":22", clientConfig)
 			if errD != nil {
