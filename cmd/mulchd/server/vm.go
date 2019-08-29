@@ -456,6 +456,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	var errDoAction error
 
 	run := &Run{
+		Caption: "prepare",
 		SSHConn: &SSHConnection{
 			User: vm.App.Config.MulchSuperUser,
 			Host: vm.LastIP,
@@ -559,6 +560,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		}
 
 		run := &Run{
+			Caption: "install",
 			SSHConn: &SSHConnection{
 				User: vm.App.Config.MulchSuperUser,
 				Host: vm.LastIP,
@@ -1118,6 +1120,7 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 				As:           vm.App.Config.MulchSuperUser,
 			})
 			run := &Run{
+				Caption: "",
 				SSHConn: &SSHConnection{
 					User: vm.App.Config.MulchSuperUser,
 					Host: vm.LastIP,
@@ -1187,6 +1190,7 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 	})
 
 	run := &Run{
+		Caption: "backup",
 		SSHConn: &SSHConnection{
 			User: vm.App.Config.MulchSuperUser,
 			Host: vm.LastIP,
@@ -1315,6 +1319,7 @@ func VMRestoreNoChecks(vm *VM, vmName *VMName, backup *Backup, app *App, log *Lo
 		As:           vm.App.Config.MulchSuperUser,
 	})
 	run := &Run{
+		Caption: "restore",
 		SSHConn: &SSHConnection{
 			User: vm.App.Config.MulchSuperUser,
 			Host: vm.LastIP,

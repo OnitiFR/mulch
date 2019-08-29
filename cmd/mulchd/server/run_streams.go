@@ -71,7 +71,7 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) error {
 
 	for num, task := range run.Tasks {
 
-		run.Log.Infof("------ script: %s ------", task.ScriptName)
+		run.Log.Infof("------ [%s] script: %s ------", run.Caption, task.ScriptName)
 
 		var scanner *bufio.Scanner
 

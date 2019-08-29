@@ -16,6 +16,7 @@ type RunTask struct {
 
 // Run is a list of Tasks on Host, including task results
 type Run struct {
+	Caption string
 	SSHConn *SSHConnection
 	Tasks   []*RunTask
 	// CurrentTask int
