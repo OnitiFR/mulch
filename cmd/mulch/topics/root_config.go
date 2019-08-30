@@ -119,5 +119,12 @@ func NewRootConfig(filename string) (*RootConfig, error) {
 	rootConfig.Trace = tConfig.Trace
 	rootConfig.Time = tConfig.Time
 
+	if rootCmd.PersistentFlags().Lookup("dump-servers").Changed {
+		for _, server := range tConfig.Server {
+			fmt.Println(server.Name)
+		}
+		os.Exit(0)
+	}
+
 	return rootConfig, nil
 }

@@ -57,7 +57,9 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("trace", "t", false, "also show server TRACE messages (debug)")
 	rootCmd.PersistentFlags().BoolP("time", "d", false, "show server timestamps on messages")
 	rootCmd.PersistentFlags().StringP("server", "s", "", "selected server in the config file")
+	rootCmd.PersistentFlags().BoolP("dump-servers", "", false, "dump server list and exit")
 
+	// remember to add a small tip on global help
 	rootCmd.PersistentFlags().BoolP("dump-server", "", false, "dump current server name (useful for completion)")
 	rootCmd.PersistentFlags().MarkHidden("dump-server")
 
@@ -124,7 +126,7 @@ Note: you can also use environment variables (TRACE, TIME, SERVER).
 
 	if rootCmd.PersistentFlags().Lookup("dump-server").Changed {
 		fmt.Println(globalConfig.Server.Name)
-		os.Exit(1)
+		os.Exit(0)
 	}
 
 }
