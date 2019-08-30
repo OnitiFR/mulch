@@ -59,7 +59,6 @@ func init() {
 	rootCmd.PersistentFlags().StringP("server", "s", "", "selected server in the config file")
 	rootCmd.PersistentFlags().BoolP("dump-servers", "", false, "dump server list and exit")
 
-	// remember to add a small tip on global help
 	rootCmd.PersistentFlags().BoolP("dump-server", "", false, "dump current server name (useful for completion)")
 	rootCmd.PersistentFlags().MarkHidden("dump-server")
 
