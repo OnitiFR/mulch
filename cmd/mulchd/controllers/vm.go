@@ -411,6 +411,7 @@ func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error
 	before := time.Now()
 
 	run := &server.Run{
+		Caption: "do",
 		SSHConn: &server.SSHConnection{
 			User: vm.App.Config.MulchSuperUser,
 			Host: vm.LastIP,
