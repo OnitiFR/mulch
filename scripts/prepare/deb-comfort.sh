@@ -6,7 +6,7 @@
 export DEBIAN_FRONTEND="noninteractive"
 sudo -E apt-get -y -qq install progress mc powerline locate man || exit $?
 
-# powerline-gitstatus for Ubuntu > 18.10
+# powerline-gitstatus for Ubuntu >= 18.10
 available=$(sudo apt-cache search --names-only '^powerline-gitstatus$' | wc -l)
 if [ $available -gt 0 ]; then
     sudo -E apt-get -y -qq install powerline-gitstatus || exit $?
@@ -53,8 +53,8 @@ EOS
 [ $? -eq 0 ] || exit $?
 
 # powerline: show VM name on prompt instead of hostname
-theme="/usr/share/powerline/config_files/themes/shell/default_leftonly.json"
-sudo sed -i "s/\"function\": \"powerline.segments.common.net.hostname\",/\"function\": \"powerline.segments.common.env.environment\", \"args\": {\"variable\": \"_VM_NAME\"},/" "$theme" || exit $?
+themes="/usr/share/powerline/config_files/themes/shell/default*.json"
+sudo sed -i "s/\"function\": \"powerline.segments.common.net.hostname\",/\"function\": \"powerline.segments.common.env.environment\", \"args\": {\"variable\": \"_VM_NAME\"},/" $theme || exit $?
 
 sudo bash -c "cat > /etc/profile.d/powerline.sh" <<- EOS
 if ! shopt -oq posix; then
