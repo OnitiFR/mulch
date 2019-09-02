@@ -54,7 +54,7 @@ EOS
 
 # powerline: show VM name on prompt instead of hostname
 themes="/usr/share/powerline/config_files/themes/shell/default*.json"
-sudo sed -i "s/\"function\": \"powerline.segments.common.net.hostname\",/\"function\": \"powerline.segments.common.env.environment\", \"args\": {\"variable\": \"_VM_NAME\"},/" $theme || exit $?
+sudo sed -i "s/\"function\": \"powerline.segments.common.net.hostname\",/\"function\": \"powerline.segments.common.env.environment\", \"args\": {\"variable\": \"_VM_NAME\"},/" $themes || exit $?
 
 sudo bash -c "cat > /etc/profile.d/powerline.sh" <<- EOS
 if ! shopt -oq posix; then
