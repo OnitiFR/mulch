@@ -193,7 +193,7 @@ func ListenAndServeProxy(
 
 			go func() {
 				if err := sshconn.serveProxy(); err != nil {
-					log.Errorf("SSH: proxy serving error: %s", err)
+					log.Tracef("SSH: proxy serving error: %s", err)
 					return
 				}
 
