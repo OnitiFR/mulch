@@ -21,6 +21,7 @@
 - support passphrase for Mulch SSH key?
 - move SSH Keys and MulchSuperUser to VM level?
 - check for missing response.Body.Close() (or things like that)
+- check for io.Reader bad usages ("they must record the number of bytes read into the buffer, reslice the buffer, process that data, and only then, consult the error." https://dave.cheney.net/2019/09/05/dont-force-allocations-on-the-callers-of-your-api)
 
 - change HTTP code from 200 to 4XX in controllers when things fails (ex: req.Stream.Failure)
     - in client, make the non-200 error message silent in stream mode?
