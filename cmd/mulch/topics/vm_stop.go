@@ -9,6 +9,7 @@ var vmStopCmd = &cobra.Command{
 	Use:   "stop <vm-name>",
 	Short: "Stop a VM",
 	Long: `Stop a VM by its name. The VM must be up to be stopped.
+
 See 'vm list' for VM Names.
 `,
 	Args: cobra.ExactArgs(1),

@@ -21,6 +21,7 @@ var doCmd = &cobra.Command{
 	Use:   "do <vm-name> [action] [arguments]",
 	Short: "Do action on VM",
 	Long: `Execute a 'do action' on a VM.
+
 If no action is given, a list of available actions for the VM will be shown.
 You can give arguments to the script, but you may have to use -- for script flags.
 Ex: mulch do myvm open -- -fullscreen

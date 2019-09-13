@@ -9,6 +9,7 @@ var vmLockCmd = &cobra.Command{
 	Use:   "lock <vm-name>",
 	Short: "Lock a VM",
 	Long: `Lock a VM (by its name). It's not possible to delete a locked VM.
+
 See 'vm list' for VM Names.
 `,
 	Args: cobra.ExactArgs(1),

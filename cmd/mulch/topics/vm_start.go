@@ -9,6 +9,7 @@ var vmStartCmd = &cobra.Command{
 	Use:   "start <vm-name>",
 	Short: "Start a VM",
 	Long: `Start a VM by its name. The VM must be down to be started.
+
 See 'vm list' for VM Names.
 `,
 	Args: cobra.ExactArgs(1),

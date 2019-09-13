@@ -9,6 +9,7 @@ var vmConfigCmd = &cobra.Command{
 	Use:   "config <vm-name>",
 	Short: "Get config of a VM",
 	Long: `Return the config file used for VM creation.
+
 See 'vm list' for VM Names.
 `,
 	Args: cobra.ExactArgs(1),

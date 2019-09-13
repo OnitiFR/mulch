@@ -12,7 +12,7 @@ var backupCatCmd = &cobra.Command{
 	Short: "Download a backup to stdout",
 	Long: `Download a backup to stdout, allowing you to pipe output somewhere.
 
-	Errors are still sent to stderr.
+Errors are still sent to stderr.
 	`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

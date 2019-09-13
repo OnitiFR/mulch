@@ -9,6 +9,7 @@ var vmDeleteCmd = &cobra.Command{
 	Use:   "delete <vm-name>",
 	Short: "Delete a VM",
 	Long: `Delete a VM (by its name) and all related volumes and disks.
+
 I REPEAT: no data remains after this operation!
 Note: A locked VM can't be deleted.
 

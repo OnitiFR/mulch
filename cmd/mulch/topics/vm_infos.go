@@ -17,6 +17,7 @@ var vmInfosCmd = &cobra.Command{
 	Use:   "infos <vm-name>",
 	Short: "Get informations about a VM",
 	Long: `Return the config file used for VM creation.
+
 See 'vm list' for VM Names.
 `,
 	Args:    cobra.ExactArgs(1),

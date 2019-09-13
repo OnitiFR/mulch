@@ -9,6 +9,7 @@ var vmUnlockCmd = &cobra.Command{
 	Use:   "unlock <vm-name>",
 	Short: "Unlock a VM",
 	Long: `Unlock a VM (by its name), allowing the VM to be deleted.
+
 See 'vm list' for VM Names.
 `,
 	Args: cobra.ExactArgs(1),

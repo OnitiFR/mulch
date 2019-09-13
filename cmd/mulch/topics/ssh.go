@@ -25,6 +25,7 @@ var sshCmd = &cobra.Command{
 	Use:   "ssh <vm-name>",
 	Short: "Open a SSH session",
 	Long: `Open a SSH shell session to the VM.
+
 See 'vm list' for VM Names.
 `,
 	Args: cobra.ExactArgs(1),

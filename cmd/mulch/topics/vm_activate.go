@@ -9,10 +9,10 @@ var vmActivateCmd = &cobra.Command{
 	Use:   "activate <vm-name> <revision>",
 	Short: "Activate a VM",
 	Long: `Activate a specific VM revision, when multiple revision are
-	available.
+available.
 
-	The reverse proxy will instantly send requests to the new active revision,
-	and all VM commands (ex: lock, backup, ...) will defaults to this revision.
+The reverse proxy will instantly send requests to the new active revision,
+and all VM commands (ex: lock, backup, ...) will defaults to this revision.
 `,
 	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
