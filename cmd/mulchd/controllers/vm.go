@@ -104,6 +104,12 @@ func NewVMController(req *server.Request) {
 // ListVMsController list VMs
 func ListVMsController(req *server.Request) {
 	req.Response.Header().Set("Content-Type", "application/json")
+
+	basicListing := false
+	if req.HTTP.FormValue("basic") == common.TrueStr {
+		basicListing = true
+	}
+
 	vmNames := req.App.VMDB.GetNames()
 
 	var retData common.APIVMListEntries
@@ -114,6 +120,12 @@ func ListVMsController(req *server.Request) {
 			req.App.Log.Error(msg)
 			http.Error(req.Response, msg, 500)
 			return
+		}
+
+		if basicListing {
+			retData = append(retData, common.APIVMListEntry{
+				Name: vmName.Name,
+			})
 		}
 
 		domain, err := req.App.Libvirt.GetDomainByName(vmName.LibvirtDomainName(req.App))

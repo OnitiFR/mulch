@@ -26,7 +26,9 @@ var vmListCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		vmListFlagBasic, _ = cmd.Flags().GetBool("basic")
 
-		call := globalAPI.NewCall("GET", "/vm", map[string]string{})
+		call := globalAPI.NewCall("GET", "/vm", map[string]string{
+			"basic": strconv.FormatBool(vmListFlagBasic),
+		})
 		call.JSONCallback = vmListCB
 		call.Do()
 	},
