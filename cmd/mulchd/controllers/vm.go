@@ -112,82 +112,96 @@ func ListVMsController(req *server.Request) {
 
 	vmNames := req.App.VMDB.GetNames()
 
-	var retData common.APIVMListEntries
-	for _, vmName := range vmNames {
-		vm, err := req.App.VMDB.GetByName(vmName)
-		if err != nil {
-			msg := fmt.Sprintf("VM %s: %s", vmName, err)
-			req.App.Log.Error(msg)
-			http.Error(req.Response, msg, 500)
-			return
-		}
-
-		if basicListing {
-			retData = append(retData, common.APIVMListEntry{
+	if basicListing {
+		var retData common.APIVMBasicListEntries
+		for _, vmName := range vmNames {
+			retData = append(retData, common.APIVMBasicListEntry{
 				Name: vmName.Name,
 			})
 		}
-
-		domain, err := req.App.Libvirt.GetDomainByName(vmName.LibvirtDomainName(req.App))
-		if err != nil {
-			msg := fmt.Sprintf("VM %s: %s", vmName, err)
-			req.App.Log.Error(msg)
-			http.Error(req.Response, msg, 500)
-			return
-		}
-		if domain == nil {
-			msg := fmt.Sprintf("VM %s: does not exists in libvirt", vmName)
-			req.App.Log.Error(msg)
-			http.Error(req.Response, msg, 500)
-			return
-		}
-		defer domain.Free()
-
-		state, _, err := domain.GetState()
-		if err != nil {
-			msg := fmt.Sprintf("VM %s: %s", vmName, err)
-			req.App.Log.Error(msg)
-			http.Error(req.Response, msg, 500)
-			return
-		}
-
-		active, err := req.App.VMDB.IsVMActive(vmName)
-		if err != nil {
-			msg := fmt.Sprintf("VM %s: %s", vmName, err)
-			req.App.Log.Error(msg)
-			http.Error(req.Response, msg, 500)
-			return
-		}
-
-		// if state == libvirt.DOMAIN_RUNNING {
-		// 	// check if services are running? (SSH? port?)
-		// }
-
-		retData = append(retData, common.APIVMListEntry{
-			Name:      vmName.Name,
-			Revision:  vmName.Revision,
-			Active:    active,
-			LastIP:    vm.LastIP,
-			State:     server.LibvirtDomainStateToString(state),
-			Locked:    vm.Locked,
-			WIP:       string(vm.WIP),
-			SuperUser: vm.App.Config.MulchSuperUser,
-			AppUser:   vm.Config.AppUser,
+		sort.Slice(retData, func(i, j int) bool {
+			return retData[i].Name < retData[j].Name
 		})
-	}
 
-	sort.Slice(retData, func(i, j int) bool {
-		if retData[i].Name == retData[j].Name {
-			return retData[i].Revision < retData[j].Revision
+		enc := json.NewEncoder(req.Response)
+		err := enc.Encode(&retData)
+		if err != nil {
+			req.App.Log.Error(err.Error())
+			http.Error(req.Response, err.Error(), 500)
 		}
-		return retData[i].Name < retData[j].Name
-	})
+	} else {
 
-	enc := json.NewEncoder(req.Response)
-	err := enc.Encode(&retData)
-	if err != nil {
-		req.App.Log.Error(err.Error())
-		http.Error(req.Response, err.Error(), 500)
+		var retData common.APIVMListEntries
+		for _, vmName := range vmNames {
+			vm, err := req.App.VMDB.GetByName(vmName)
+			if err != nil {
+				msg := fmt.Sprintf("VM %s: %s", vmName, err)
+				req.App.Log.Error(msg)
+				http.Error(req.Response, msg, 500)
+				return
+			}
+
+			domain, err := req.App.Libvirt.GetDomainByName(vmName.LibvirtDomainName(req.App))
+			if err != nil {
+				msg := fmt.Sprintf("VM %s: %s", vmName, err)
+				req.App.Log.Error(msg)
+				http.Error(req.Response, msg, 500)
+				return
+			}
+			if domain == nil {
+				msg := fmt.Sprintf("VM %s: does not exists in libvirt", vmName)
+				req.App.Log.Error(msg)
+				http.Error(req.Response, msg, 500)
+				return
+			}
+			defer domain.Free()
+
+			state, _, err := domain.GetState()
+			if err != nil {
+				msg := fmt.Sprintf("VM %s: %s", vmName, err)
+				req.App.Log.Error(msg)
+				http.Error(req.Response, msg, 500)
+				return
+			}
+
+			active, err := req.App.VMDB.IsVMActive(vmName)
+			if err != nil {
+				msg := fmt.Sprintf("VM %s: %s", vmName, err)
+				req.App.Log.Error(msg)
+				http.Error(req.Response, msg, 500)
+				return
+			}
+
+			// if state == libvirt.DOMAIN_RUNNING {
+			// 	// check if services are running? (SSH? port?)
+			// }
+
+			retData = append(retData, common.APIVMListEntry{
+				Name:      vmName.Name,
+				Revision:  vmName.Revision,
+				Active:    active,
+				LastIP:    vm.LastIP,
+				State:     server.LibvirtDomainStateToString(state),
+				Locked:    vm.Locked,
+				WIP:       string(vm.WIP),
+				SuperUser: vm.App.Config.MulchSuperUser,
+				AppUser:   vm.Config.AppUser,
+			})
+		}
+
+		sort.Slice(retData, func(i, j int) bool {
+			if retData[i].Name == retData[j].Name {
+				return retData[i].Revision < retData[j].Revision
+			}
+			return retData[i].Name < retData[j].Name
+		})
+
+		enc := json.NewEncoder(req.Response)
+		err := enc.Encode(&retData)
+		if err != nil {
+			req.App.Log.Error(err.Error())
+			http.Error(req.Response, err.Error(), 500)
+		}
 	}
 }
 

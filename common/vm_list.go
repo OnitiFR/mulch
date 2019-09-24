@@ -15,3 +15,12 @@ type APIVMListEntry struct {
 	SuperUser string
 	AppUser   string
 }
+
+// APIVMBasicListEntries is a light variant of APIVMListEntries
+// This is useful for quick requests (like completion)
+type APIVMBasicListEntries []APIVMBasicListEntry
+
+// APIVMBasicListEntry is a basic (light) entry for a VM
+type APIVMBasicListEntry struct {
+	Name string
+}
