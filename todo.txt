@@ -1,3 +1,4 @@
+- remove multiple upgrade messages when muliple APICall (ex: ssh-config)
 - cut SSH connections when VM delete?
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
   - (dhcp/dnsmasq? ebtables? mulch-netowrk restart?)
