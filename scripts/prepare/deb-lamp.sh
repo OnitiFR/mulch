@@ -3,6 +3,9 @@
 # -- Run with sudo privileges
 # For: Debian 9 / Ubuntu 18.04 to 19.04
 
+# You may define MULCH_HTTP_BASIC_AUTH env var for a simple basic
+# HTTP authentication (format user:password, avoid special shell chars)
+
 appenv="/home/$_APP_USER/env"
 html_dir="/home/$_APP_USER/public_html/"
 
@@ -41,6 +44,21 @@ sudo sed -i "s/APACHE_RUN_GROUP=www-data/APACHE_RUN_GROUP=$_APP_USER/" /etc/apac
 
 sudo sed -i 's/^ServerTokens \(.\+\)$/ServerTokens Prod/' /etc/apache2/conf-enabled/security.conf || exit $?
 
+if [ -n "$MULCH_HTTP_BASIC_AUTH" ]; then
+    # create htpasswd file
+    htpasswd="/home/$_APP_USER/.htpasswd"
+    IFS=':' read -r user password <<< "$MULCH_HTTP_BASIC_AUTH"
+    echo "$password" | htpasswd -ci $htpasswd "$user"
+
+    auth="AuthType Basic
+    AuthName Authentication
+    AuthUserFile $htpasswd
+    Require valid-user
+    "
+else
+    auth="Require all granted"
+fi
+
 sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 # Allow mod_status even if we use RewriteEngine
 <Location /server-status>
@@ -54,7 +72,7 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
     # AuthConfig for Require
     # Indexes for expires
     AllowOverride Options=MultiViews,Indexes FileInfo Limit AuthConfig Indexes
-    Require all granted
+    $auth
 </Directory>
 
 <VirtualHost *:80>
