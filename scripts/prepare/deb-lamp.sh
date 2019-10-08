@@ -62,7 +62,9 @@ fi
 sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 # Allow mod_status even if we use RewriteEngine
 <Location /server-status>
-    RewriteEngine off
+    <IfModule mod_rewrite.c>
+        RewriteEngine off
+    </IfModule>
 </Location>
 
 <Directory $html_dir>
