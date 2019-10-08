@@ -63,8 +63,7 @@ if [ -n "$MULCH_HTTP_BASIC_AUTH" ]; then
     auth="AuthType Basic
     AuthName Authentication
     AuthUserFile $htpasswd
-    Require valid-user
-    "
+    Require valid-user"
 else
     auth="Require all granted"
 fi
