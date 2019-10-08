@@ -48,7 +48,7 @@ if [ -n "$MULCH_HTTP_BASIC_AUTH" ]; then
     # create htpasswd file
     htpasswd="/home/$_APP_USER/.htpasswd"
     IFS=':' read -r user password <<< "$MULCH_HTTP_BASIC_AUTH"
-    echo "$password" | htpasswd -ci $htpasswd "$user"
+    echo "$password" | sudo htpasswd -ci $htpasswd "$user" || exit $?
 
     auth="AuthType Basic
     AuthName Authentication
