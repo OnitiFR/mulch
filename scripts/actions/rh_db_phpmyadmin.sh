@@ -4,8 +4,12 @@
 
 # 'do action' script for phpMyAdmin auto-login on rh-lamp.sh based VM
 
+gentoken() {
+    strings /dev/urandom | grep -o '[[:alnum:]]' | head -n 32 | tr -d '\n'; echo
+}
+
 dest_dir="/usr/local/lib/phpMyAdmin/login"
-filename="$(pwgen 32).php" || exit $?
+filename="$(gentoken).php" || exit $?
 fullname="$dest_dir/$filename"
 
 eval $(sudo grep MYSQL_PASSWORD /home/app/env)
