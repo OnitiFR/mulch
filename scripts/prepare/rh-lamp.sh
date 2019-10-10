@@ -3,6 +3,9 @@
 # -- Run with sudo privileges
 # For: CentOS 7
 
+# You may define MULCH_HTTP_BASIC_AUTH env var for a simple basic
+# HTTP authentication (format user:password, avoid special shell chars)
+
 appenv="/home/$_APP_USER/env"
 html_dir="/home/$_APP_USER/public_html/"
 
@@ -51,6 +54,20 @@ sudo chown -R $_APP_USER:$_APP_USER $html_dir $appenv || exit $?
 sudo bash -c "echo > /etc/httpd/conf.d/welcome.conf" || exit $?
 sudo bash -c "echo > /etc/httpd/conf.d/userdir.conf" || exit $?
 
+if [ -n "$MULCH_HTTP_BASIC_AUTH" ]; then
+    # create htpasswd file
+    htpasswd="/home/$_APP_USER/.htpasswd"
+    IFS=':' read -r user password <<< "$MULCH_HTTP_BASIC_AUTH"
+    echo "$password" | sudo htpasswd -ci $htpasswd "$user" || exit $?
+
+    auth="AuthType Basic
+    AuthName Authentication
+    AuthUserFile $htpasswd
+    Require valid-user"
+else
+    auth="Require all granted"
+fi
+
 sudo bash -c "cat > /etc/httpd/conf.d/000-default.conf" <<- EOS
 User $_APP_USER
 Group $_APP_USER
@@ -58,7 +75,9 @@ ServerTokens Prod
 
 # Allow mod_status even if we use RewriteEngine
 <Location /server-status>
-    RewriteEngine off
+    <IfModule mod_rewrite.c>
+        RewriteEngine off
+    </IfModule>
 </Location>
 
 <Directory $html_dir>
@@ -68,7 +87,7 @@ ServerTokens Prod
     # AuthConfig for Require
     # Indexes for expires
     AllowOverride Options=MultiViews,Indexes FileInfo Limit AuthConfig Indexes
-    Require all granted
+    $auth
 </Directory>
 
 <VirtualHost *:80>

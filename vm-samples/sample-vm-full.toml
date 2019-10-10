@@ -23,6 +23,9 @@ cpu_count = 1
 env = [
     ["TEST1", "foo"],
     ["TEST2", "bar"],
+
+    # this one actually works with default apache prepare scripts
+    ["MULCH_HTTP_BASIC_AUTH", "mulch:secret"],
 ]
 
 backup_disk_size = "2G"
