@@ -5,7 +5,7 @@
 # 'do action' script for Adminer auto-login on deb-php-pgsql.sh based VM
 
 dest_dir="/usr/share/adminer/login"
-filename="$(pwgen 32).php"
+filename="$(pwgen 32).php" || exit $?
 fullname="$dest_dir/$filename"
 
 eval $(sudo grep PGSQL_PASSWORD /home/app/env)

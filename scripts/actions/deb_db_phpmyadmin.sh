@@ -5,7 +5,7 @@
 # 'do action' script for phpMyAdmin auto-login on deb-lamp.sh based VM
 
 dest_dir="/usr/share/phpmyadmin/login"
-filename="$(pwgen 32).php"
+filename="$(pwgen 32).php" || exit $?
 fullname="$dest_dir/$filename"
 
 eval $(sudo grep MYSQL_PASSWORD /home/$_APP_USER/env)
