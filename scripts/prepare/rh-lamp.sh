@@ -67,7 +67,7 @@ ServerTokens Prod
     # FileInfo is for rewrite
     # AuthConfig for Require
     # Indexes for expires
-    AllowOverride Options=MultiViews FileInfo Limit AuthConfig Indexes
+    AllowOverride Options=MultiViews,Indexes FileInfo Limit AuthConfig Indexes
     Require all granted
 </Directory>
 
