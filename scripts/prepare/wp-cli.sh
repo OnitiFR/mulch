@@ -12,3 +12,9 @@ echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/maste
 echo "_MULCH_ACTION_USER=$_APP_USER"
 echo "_MULCH_ACTION_DESCRIPTION=Update Wordpress (core, themes, plugins, languages)"
 echo "_MULCH_ACTION=commit"
+
+echo "_MULCH_ACTION_NAME=url-reset"
+echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/wp_url.sh"
+echo "_MULCH_ACTION_USER=$_APP_USER"
+echo "_MULCH_ACTION_DESCRIPTION=Reset siteurl and home settings using first VM domain name"
+echo "_MULCH_ACTION=commit"
