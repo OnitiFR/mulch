@@ -4,6 +4,8 @@
 # mulch-proxy on a Linux system. Have a look to main() function for
 # important stuff if you need to create a package.
 
+# See also install/ directory for basic/demo installations.
+
 # defaults (see --help)
 ETC="/etc/mulch"
 VAR_DATA="/var/lib/mulch"
