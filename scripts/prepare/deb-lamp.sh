@@ -87,9 +87,10 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 EOS
 [ $? -eq 0 ] || exit $?
 
-sudo -E apt-get -y -qq install phpmyadmin
+echo "installing phpMyAdmin…"
+sudo -E apt-get -y -qq install phpmyadmin 2> /dev/null
 if [ $? -ne 0 ]; then
-    # on Debian 10, phpMyAdmin is not available (yet?)
+    # on Debian 10 / Ubuntu 19.10, phpMyAdmin is not available (yet?)
     sudo -E apt-get -y -qq install jq || exit $?
     latest="$(curl -fsSL 'https://www.phpmyadmin.net/home_page/version.json' | jq -r '.version')"
 
