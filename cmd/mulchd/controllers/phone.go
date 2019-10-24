@@ -31,8 +31,7 @@ func PhoneController(req *server.Request) {
 		instanceAnon = instanceID[:4] + "…"
 	}
 
-	// We should lookup the machine and log over there, no?
-	req.App.Log.Infof("phoning: id=%s, ip=%s", instanceAnon, ip)
+	req.App.Log.Tracef("phoning: id=%s, ip=%s", instanceAnon, ip)
 	for key, val := range req.HTTP.Form {
 		if key == "instance_id" {
 			val[0] = instanceAnon
@@ -51,19 +50,20 @@ func PhoneController(req *server.Request) {
 			req.App.Log.Errorf("unable to find VM: %s", err)
 			return
 		}
-		req.App.Log.Infof("phoning VM is %s", entry.Name)
+		log := server.NewLog(vm.Config.Name, req.App.Hub)
+		log.Infof("phoning VM is %s - %s", entry.Name, ip)
 
 		if vm.AssignedIPv4 != "" && vm.AssignedIPv4 != ip {
-			req.App.Log.Errorf("vm %s does not use it's assigned IP! (is '%s', should be '%s')", entry.Name, ip, vm.AssignedIPv4)
+			log.Errorf("vm %s does not use it's assigned IP! (is '%s', should be '%s')", entry.Name, ip, vm.AssignedIPv4)
 		}
 
 		if vm.LastIP != ip {
-			req.App.Log.Warningf("vm IP changed since last call (from '%s' to '%s')", vm.LastIP, ip)
+			log.Warningf("vm IP changed since last call (from '%s' to '%s')", vm.LastIP, ip)
 
 			vm.LastIP = ip
 			err = req.App.VMDB.Update()
 			if err != nil {
-				req.App.Log.Errorf("unable to update VM DB: %s", err)
+				log.Errorf("unable to update VM DB: %s", err)
 			}
 		}
 		if req.HTTP.PostFormValue("dump_config") == common.TrueStr {
