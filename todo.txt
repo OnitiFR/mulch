@@ -1,4 +1,5 @@
 - check TLS cert renewal!
+    - reported issue: vm is deleted, recreated 3 months later, cert is invalid
 - client: remove multiple upgrade messages when muliple APICall (ex: ssh-config)
 - cut SSH connections when VM delete?
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
