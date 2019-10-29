@@ -20,10 +20,8 @@ const (
 	MessageWarning = "WARNING"
 	MessageInfo    = "INFO"
 	MessageTrace   = "TRACE"
+	MessageNoop    = "NOOP" // MessageNoop is used for keep-alive messages
 )
-
-// MessageNoop is used for keep-alive messages
-const MessageNoop = "NOOP"
 
 // Special message targets
 const (

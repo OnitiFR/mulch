@@ -14,6 +14,12 @@ func AddRoutes(app *server.App) {
 	}, server.RouteInternal)
 
 	app.AddRoute(&server.Route{
+		Route:   "GET /log/history",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.GetLogHistoryController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
 		Route:   "GET /log",
 		Type:    server.RouteTypeStream,
 		Handler: controllers.LogController,
@@ -108,11 +114,11 @@ func AddRoutes(app *server.App) {
 	// 	Handler: controllers.TestController,
 	// }, server.RouteAPI)
 
-	app.AddRoute(&server.Route{
-		Route:   "POST /test2",
-		Type:    server.RouteTypeStream,
-		Handler: controllers.Test2Controller,
-	}, server.RouteAPI)
+	// app.AddRoute(&server.Route{
+	// 	Route:   "POST /test2",
+	// 	Type:    server.RouteTypeStream,
+	// 	Handler: controllers.Test2Controller,
+	// }, server.RouteAPI)
 
 	app.AddRoute(&server.Route{
 		Route:   "GET /key",

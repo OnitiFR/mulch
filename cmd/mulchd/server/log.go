@@ -8,16 +8,18 @@ import (
 
 // Log provides error/warning/etc helpers for a Hub
 type Log struct {
-	target string
-	hub    *Hub
+	target  string
+	hub     *Hub
+	history *LogHistory
 }
 
 // NewLog creates a new log for the provided target and hub
 // note: common.MessageNoTarget is an acceptable target
-func NewLog(target string, hub *Hub) *Log {
+func NewLog(target string, hub *Hub, history *LogHistory) *Log {
 	return &Log{
-		target: target,
-		hub:    hub,
+		target:  target,
+		hub:     hub,
+		history: history,
 	}
 }
 
@@ -28,6 +30,11 @@ func (log *Log) Log(message *common.Message) {
 	if !(message.Type == common.MessageTrace && log.hub.trace == false) {
 		// TODO: use our own *log.Logger (see log.go in Nosee project)
 		fmt.Printf("%s(%s): %s\n", message.Type, message.Target, message.Message)
+	}
+
+	// we don't historize NOOP and TRACE messages
+	if message.Type != common.MessageNoop && message.Type != common.MessageTrace {
+		log.history.Push(message)
 	}
 
 	log.hub.Broadcast(message)

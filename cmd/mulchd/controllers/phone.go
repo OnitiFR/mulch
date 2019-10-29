@@ -50,7 +50,7 @@ func PhoneController(req *server.Request) {
 			req.App.Log.Errorf("unable to find VM: %s", err)
 			return
 		}
-		log := server.NewLog(vm.Config.Name, req.App.Hub)
+		log := server.NewLog(vm.Config.Name, req.App.Hub, req.App.LogHistory)
 		log.Infof("phoning VM is %s - %s", entry.Name, ip)
 
 		if vm.AssignedIPv4 != "" && vm.AssignedIPv4 != ip {

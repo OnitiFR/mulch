@@ -95,7 +95,7 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 	tmpTarget := fmt.Sprintf(".tmp-%d", request.App.Rand.Int31())
 	client := request.App.Hub.Register("me", tmpTarget, trace)
 
-	request.Stream = NewLog(tmpTarget, request.App.Hub)
+	request.Stream = NewLog(tmpTarget, request.App.Hub, request.App.LogHistory)
 	request.HubClient = client
 
 	closer := make(chan bool)

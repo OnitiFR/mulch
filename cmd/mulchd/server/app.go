@@ -32,6 +32,10 @@ const (
 // AppPhoneServerPost for "phone home" internal HTTP server
 const AppPhoneServerPost = 8585
 
+// LogHistorySize is the maximum number of messages in app log history
+// ~128kB / 1000 messages (very rough approx!)
+const LogHistorySize = 20000 // ~2.5mB
+
 // App describes an (the?) application
 type App struct {
 	Config         *AppConfig
@@ -39,6 +43,7 @@ type App struct {
 	Hub            *Hub
 	PhoneHome      *PhoneHomeHub
 	Log            *Log
+	LogHistory     *LogHistory
 	MuxInternal    *http.ServeMux
 	MuxAPI         *http.ServeMux
 	Rand           *rand.Rand
@@ -72,7 +77,8 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app.Hub = NewHub(trace)
 	go app.Hub.Run()
 
-	app.Log = NewLog("", app.Hub)
+	app.LogHistory = NewLogHistory(LogHistorySize)
+	app.Log = NewLog("", app.Hub, app.LogHistory)
 	app.Log.Trace("log system available")
 
 	lv, err := NewLibvirt(config.LibVirtURI)
