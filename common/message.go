@@ -1,6 +1,8 @@
 package common
 
-import "time"
+import (
+	"time"
+)
 
 // Messages are the glue between the client ('mulch' command) and the
 // server ('mulchd'), so this package is shared using a common package
@@ -45,4 +47,14 @@ func NewMessage(mtype string, target string, message string) *Message {
 		Target:  target,
 		Message: message,
 	}
+}
+
+// MessageMatchTarget returns true if the message matches the target
+func MessageMatchTarget(message *Message, target string) bool {
+	if target != message.Target &&
+		message.Target != MessageNoTarget &&
+		target != MessageAllTargets {
+		return false // not for this client
+	}
+	return true
 }

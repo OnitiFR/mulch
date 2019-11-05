@@ -15,7 +15,7 @@ func AddRoutes(app *server.App) {
 
 	app.AddRoute(&server.Route{
 		Route:   "GET /log/history",
-		Type:    server.RouteTypeStream,
+		Type:    server.RouteTypeCustom,
 		Handler: controllers.GetLogHistoryController,
 	}, server.RouteAPI)
 

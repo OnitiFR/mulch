@@ -1,7 +1,8 @@
 package controllers
 
 import (
-	"fmt"
+	"encoding/json"
+	"net/http"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
 	"github.com/OnitiFR/mulch/common"
@@ -17,6 +18,15 @@ func LogController(req *server.Request) {
 
 // GetLogHistoryController sends all "previous" log messages
 func GetLogHistoryController(req *server.Request) {
-	fmt.Println("hello from GetLogHistoryController")
-	req.App.LogHistory.Dump()
+	req.Response.Header().Set("Content-Type", "application/json")
+
+	// TODO: use req parameters for length & target
+	messages := req.App.LogHistory.Search(50, common.MessageAllTargets)
+
+	enc := json.NewEncoder(req.Response)
+	err := enc.Encode(messages)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+	}
 }

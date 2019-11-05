@@ -50,9 +50,7 @@ func (h *Hub) Run() {
 		case message := <-h.broadcast:
 			// fmt.Printf("broadcasting\n")
 			for client := range h.clients {
-				if client.target != message.Target &&
-					message.Target != common.MessageNoTarget &&
-					client.target != common.MessageAllTargets {
+				if common.MessageMatchTarget(message, client.target) == false {
 					continue // not for this client
 				}
 				if message.Type == common.MessageTrace && client.trace == false {

@@ -39,7 +39,7 @@ func logCmdHistoryCB(reader io.Reader, headers http.Header) {
 	fmt.Println("hello from logCmdHistoryCB")
 	dec := json.NewDecoder(reader)
 	for {
-		var m common.Message
+		var m []common.Message
 		err := dec.Decode(&m)
 		if err != nil {
 			if err == io.EOF {
@@ -47,6 +47,8 @@ func logCmdHistoryCB(reader io.Reader, headers http.Header) {
 			}
 			log.Fatal(err)
 		}
+		// split & use printJSONStream ?
+		// be sure to disable special messages, then
 		fmt.Println(m)
 	}
 }

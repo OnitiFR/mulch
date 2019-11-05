@@ -7,65 +7,107 @@ import (
 	"github.com/OnitiFR/mulch/common"
 )
 
-// LogHistory stores messages in a fixed size rotating buffer
+// maximum message length (message is truncated if too long)
+const logHistoryMaxMessageLen = 256
+
+type logHistorySlot struct {
+	payload *common.Message
+	older   *logHistorySlot
+	newer   *logHistorySlot
+}
+
+// LogHistory stores messages in a limited size double chain list
 type LogHistory struct {
-	size      int
-	rotations int
-	nextEntry int
-	messages  []*common.Message
-	mux       sync.Mutex
+	maxSize     int
+	currentSize int
+	oldest      *logHistorySlot
+	newest      *logHistorySlot
+	mux         sync.Mutex
 }
 
 // NewLogHistory will create and initialize a new log message history
 func NewLogHistory(elems int) *LogHistory {
 	return &LogHistory{
-		size:      elems,
-		rotations: 0,
-		nextEntry: 0,
-		messages:  make([]*common.Message, elems),
+		maxSize: elems,
 	}
 }
 
-// Push a new message in the buffer
-func (ml *LogHistory) Push(message *common.Message) {
-	ml.mux.Lock()
-	defer ml.mux.Unlock()
+// Push a new message in the list
+func (lh *LogHistory) Push(message *common.Message) {
+	lh.mux.Lock()
+	defer lh.mux.Unlock()
 
-	ml.messages[ml.nextEntry] = message
-	ml.nextEntry++
-	if ml.nextEntry >= ml.size {
-		ml.nextEntry = 0
-		ml.rotations++
+	localMsg := message
+
+	// truncate message if needed
+	if len(message.Message) > logHistoryMaxMessageLen {
+		dup := *message
+		dup.Message = dup.Message[:logHistoryMaxMessageLen] + "…"
+		localMsg = &dup
 	}
-}
 
-// Dump all logs in the buffer (temporary test)
-func (ml *LogHistory) Dump() {
-	ml.mux.Lock()
-	defer ml.mux.Unlock()
+	curr := &logHistorySlot{
+		payload: localMsg,
+	}
 
-	if ml.rotations == 0 {
-		for index := 0; index < ml.nextEntry; index++ {
-			fmt.Println(ml.messages[index])
-		}
+	if lh.currentSize == 0 {
+		lh.newest = curr
+		lh.oldest = curr
+		lh.currentSize++
 		return
 	}
 
-	// … at least one rotation:
+	// place "curr" in front
+	lh.newest.newer = curr
+	curr.older = lh.newest
+	lh.newest = curr
+	lh.currentSize++
 
-	if ml.nextEntry > 0 {
-		for index := ml.nextEntry; index < ml.size; index++ {
-			fmt.Println(ml.messages[index])
+	// remove the oldest slot
+	if lh.currentSize > lh.maxSize {
+		lh.oldest = lh.oldest.newer
+		lh.oldest.older = nil
+		lh.currentSize--
+	}
+
+}
+
+// Dump all logs in the buffer (temporary test)
+func (lh *LogHistory) Dump() {
+	lh.mux.Lock()
+	defer lh.mux.Unlock()
+
+	fmt.Println(lh.currentSize)
+	curr := lh.newest
+	for curr != nil {
+		fmt.Println(curr.payload)
+		curr = curr.older
+	}
+}
+
+// Search return an array of messages (latest messages, up to maxMessages, for a specific target)
+func (lh *LogHistory) Search(maxMessages int, target string) []*common.Message {
+	lh.mux.Lock()
+	defer lh.mux.Unlock()
+
+	reversedMessages := make([]*common.Message, maxMessages)
+
+	curr := lh.newest
+	count := 0
+	for curr != nil && count < maxMessages {
+		if common.MessageMatchTarget(curr.payload, target) == false {
+			curr = curr.older
+			continue
 		}
+		reversedMessages[count] = curr.payload
+		count++
+		curr = curr.older
 	}
 
-	end := ml.nextEntry - 1
-	if end == -1 {
-		end = ml.size - 1
+	// reverse the array
+	messages := make([]*common.Message, count)
+	for i := 0; i < count; i++ {
+		messages[i] = reversedMessages[count-i-1]
 	}
-
-	for index := 0; index <= end; index++ {
-		fmt.Println(ml.messages[index])
-	}
-
+	return messages
 }
