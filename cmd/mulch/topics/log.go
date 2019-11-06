@@ -2,57 +2,74 @@ package topics
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/OnitiFR/mulch/common"
 	"github.com/spf13/cobra"
 )
 
+const logCmdDefaultLines = 20
+
 var logCmd = &cobra.Command{
-	Use:   "log",
+	Use:   "log [target]",
 	Short: "Display server logs",
-	Long: `Display all logs from the server. It may be useful to monitor
+	Long: `Display logs from the server. It may be useful to monitor
 server activity, or if you need to resume VM creation after exiting
-the client. All logs from all targets ("vm") are displayed.
+the client. You can choose a specific target ("vm").
+
+Message timestamps are always displayed with this command.
+(--time is forced, in other words.)
 
 Examples:
-  mulch log
+  mulch log -f
+  mulch log my_vm
   mulch log --trace`,
-	Args:    cobra.NoArgs,
+	Args:    cobra.MaximumNArgs(1),
 	Aliases: []string{"logs"},
 	Run: func(cmd *cobra.Command, args []string) {
 
-		call := globalAPI.NewCall("GET", "/log/history", map[string]string{})
+		follow, _ := cmd.Flags().GetBool("follow")
+		lines, _ := cmd.Flags().GetInt("lines")
+		target := common.MessageAllTargets
+		if len(args) > 0 {
+			target = args[0]
+		}
+
+		call := globalAPI.NewCall("GET", "/log/history", map[string]string{
+			"target": target,
+			"lines":  strconv.Itoa(lines),
+		})
 		call.JSONCallback = logCmdHistoryCB
 		call.Do()
 
-		call2 := globalAPI.NewCall("GET", "/log", map[string]string{})
-		call2.DisableSpecialMessages = true
-		call2.Do()
+		if follow {
+			call2 := globalAPI.NewCall("GET", "/log", map[string]string{
+				"target": target,
+			})
+			call2.DisableSpecialMessages = true
+			call2.TimestampShow(true)
+			call2.Do()
+		}
 	},
 }
 
 func logCmdHistoryCB(reader io.Reader, headers http.Header) {
-	fmt.Println("hello from logCmdHistoryCB")
 	dec := json.NewDecoder(reader)
-	for {
-		var m []common.Message
-		err := dec.Decode(&m)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Fatal(err)
-		}
-		// split & use printJSONStream ?
-		// be sure to disable special messages, then
-		fmt.Println(m)
+	var messages []common.Message
+	err := dec.Decode(&messages)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, message := range messages {
+		message.Print(true)
 	}
 }
 
 func init() {
 	rootCmd.AddCommand(logCmd)
+	logCmd.Flags().IntP("lines", "n", logCmdDefaultLines, "display n lines")
+	logCmd.Flags().BoolP("follow", "f", false, "follow live log")
 }

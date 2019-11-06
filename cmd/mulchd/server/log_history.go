@@ -95,7 +95,7 @@ func (lh *LogHistory) Search(maxMessages int, target string) []*common.Message {
 	curr := lh.newest
 	count := 0
 	for curr != nil && count < maxMessages {
-		if common.MessageMatchTarget(curr.payload, target) == false {
+		if curr.payload.MatchTarget(target) == false {
 			curr = curr.older
 			continue
 		}

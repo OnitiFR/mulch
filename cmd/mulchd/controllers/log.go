@@ -2,16 +2,18 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
-	"github.com/OnitiFR/mulch/common"
 )
 
 // LogController sends logs to client
 func LogController(req *server.Request) {
-	req.Stream.Infof("Hi! You are receiving live logs.")
-	req.SetTarget(common.MessageAllTargets)
+	target := req.HTTP.FormValue("target")
+	req.SetTarget(target)
+
 	// nothing to do, just wait forever…
 	select {}
 }
@@ -20,11 +22,21 @@ func LogController(req *server.Request) {
 func GetLogHistoryController(req *server.Request) {
 	req.Response.Header().Set("Content-Type", "application/json")
 
-	// TODO: use req parameters for length & target
-	messages := req.App.LogHistory.Search(50, common.MessageAllTargets)
+	target := req.HTTP.FormValue("target")
+	linesStr := req.HTTP.FormValue("lines")
+
+	lines, err := strconv.Atoi(linesStr)
+	if err != nil || lines < 1 || lines > 1000 {
+		msg := fmt.Sprintf("invalid 'lines' value")
+		req.App.Log.Error(msg)
+		http.Error(req.Response, msg, 400)
+		return
+	}
+
+	messages := req.App.LogHistory.Search(lines, target)
 
 	enc := json.NewEncoder(req.Response)
-	err := enc.Encode(messages)
+	err = enc.Encode(messages)
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)

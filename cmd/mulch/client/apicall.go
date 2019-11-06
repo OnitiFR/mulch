@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -244,6 +243,11 @@ func (call *APICall) Do() {
 	}
 }
 
+// TimestampShow allow to override -d / --time flag
+func (call *APICall) TimestampShow(show bool) {
+	call.api.Time = show
+}
+
 func removeAPIKeyFromString(in string, key string) string {
 	if key == "" {
 		return in
@@ -253,7 +257,6 @@ func removeAPIKeyFromString(in string, key string) string {
 
 func printJSONStream(body io.ReadCloser, call *APICall) error {
 	var retError error
-	retError = nil
 
 	dec := json.NewDecoder(body)
 	for {
@@ -270,43 +273,11 @@ func printJSONStream(body io.ReadCloser, call *APICall) error {
 			continue
 		}
 
-		// the longest types are 7 chars wide
-		mtype := fmt.Sprintf("% -7s", m.Type)
-		content := m.Message
-
-		switch m.Type {
-		case common.MessageTrace:
-			c := color.New(color.FgWhite).SprintFunc()
-			content = c(content)
-			mtype = c(mtype)
-		case common.MessageInfo:
-		case common.MessageWarning:
-			c := color.New(color.FgYellow).SprintFunc()
-			content = c(content)
-			mtype = c(mtype)
-		case common.MessageError:
-			c := color.New(color.FgRed).SprintFunc()
-			content = c(content)
-			mtype = c(mtype)
-		case common.MessageFailure:
-			retError = errors.New("Exiting with failure status due to previous errors")
-			c := color.New(color.FgHiRed).SprintFunc()
-			content = c(content)
-			mtype = c(mtype)
-		case common.MessageSuccess:
-			c := color.New(color.FgHiGreen).SprintFunc()
-			content = c(content)
-			mtype = c(mtype)
-		}
-
-		time := ""
-		if call.api.Time {
-			time = m.Time.Format("15:04:05") + " "
-		}
-		fmt.Printf("%s%s: %s\n", time, mtype, content)
+		// we erase any previous error code :(
+		retError = m.Print(call.api.Time)
 
 		if !call.DisableSpecialMessages {
-			err = dealWithSpecialMessages(content)
+			err = dealWithSpecialMessages(m.Message)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Client error: %s", err.Error())
 			}

@@ -1,7 +1,11 @@
 package common
 
 import (
+	"errors"
+	"fmt"
 	"time"
+
+	"github.com/fatih/color"
 )
 
 // Messages are the glue between the client ('mulch' command) and the
@@ -49,12 +53,55 @@ func NewMessage(mtype string, target string, message string) *Message {
 	}
 }
 
-// MessageMatchTarget returns true if the message matches the target
-func MessageMatchTarget(message *Message, target string) bool {
+// MatchTarget returns true if the message matches the target
+func (message *Message) MatchTarget(target string) bool {
 	if target != message.Target &&
 		message.Target != MessageNoTarget &&
 		target != MessageAllTargets {
 		return false // not for this client
 	}
 	return true
+}
+
+// Print the formatted message
+func (message *Message) Print(showTime bool) error {
+	var retError error
+
+	// the longest types are 7 chars wide
+	mtype := fmt.Sprintf("% -7s", message.Type)
+	content := message.Message
+
+	switch message.Type {
+	case MessageTrace:
+		c := color.New(color.FgWhite).SprintFunc()
+		content = c(content)
+		mtype = c(mtype)
+	case MessageInfo:
+	case MessageWarning:
+		c := color.New(color.FgYellow).SprintFunc()
+		content = c(content)
+		mtype = c(mtype)
+	case MessageError:
+		c := color.New(color.FgRed).SprintFunc()
+		content = c(content)
+		mtype = c(mtype)
+	case MessageFailure:
+		retError = errors.New("Exiting with failure status due to previous errors")
+		c := color.New(color.FgHiRed).SprintFunc()
+		content = c(content)
+		mtype = c(mtype)
+	case MessageSuccess:
+		c := color.New(color.FgHiGreen).SprintFunc()
+		content = c(content)
+		mtype = c(mtype)
+	}
+
+	time := ""
+	if showTime {
+		time = message.Time.Format("15:04:05") + " "
+	}
+	fmt.Printf("%s%s: %s\n", time, mtype, content)
+
+	return retError
+
 }
