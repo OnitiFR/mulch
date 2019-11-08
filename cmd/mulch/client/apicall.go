@@ -39,6 +39,7 @@ type APICall struct {
 	DestFilePath           string
 	DestStream             *os.File
 	DisableSpecialMessages bool
+	PrintLogTarget         bool
 	files                  map[string]string
 }
 
@@ -274,7 +275,7 @@ func printJSONStream(body io.ReadCloser, call *APICall) error {
 		}
 
 		// we erase any previous error code :(
-		retError = m.Print(call.api.Time)
+		retError = m.Print(call.api.Time, call.PrintLogTarget)
 
 		if !call.DisableSpecialMessages {
 			err = dealWithSpecialMessages(m.Message)

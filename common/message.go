@@ -35,6 +35,20 @@ const (
 	MessageAllTargets = "*"
 )
 
+// Message.Print options
+const (
+	MessagePrintTime     = true
+	MessagePrintNoTime   = false
+	MessagePrintTarget   = true
+	MessagePrintNoTarget = false
+)
+
+// Message.MatchTarget options
+const (
+	MessageMatchDefault = false
+	MessageMatchExact   = true
+)
+
 // Message describe a message between mulch client and mulchd server
 type Message struct {
 	Time    time.Time `json:"time"`
@@ -54,17 +68,23 @@ func NewMessage(mtype string, target string, message string) *Message {
 }
 
 // MatchTarget returns true if the message matches the target
-func (message *Message) MatchTarget(target string) bool {
+// exact searches are usefull for specific target logs (excluding all "global" messages)
+func (message *Message) MatchTarget(target string, exact bool) bool {
+	if exact == true && target != message.Target {
+		return false
+	}
+
 	if target != message.Target &&
 		message.Target != MessageNoTarget &&
 		target != MessageAllTargets {
 		return false // not for this client
 	}
+
 	return true
 }
 
 // Print the formatted message
-func (message *Message) Print(showTime bool) error {
+func (message *Message) Print(showTime bool, showTarget bool) error {
 	var retError error
 
 	// the longest types are 7 chars wide
@@ -100,7 +120,13 @@ func (message *Message) Print(showTime bool) error {
 	if showTime {
 		time = message.Time.Format("15:04:05") + " "
 	}
-	fmt.Printf("%s%s: %s\n", time, mtype, content)
+
+	target := ""
+	if showTarget {
+		target = " [" + message.Target + "] "
+	}
+
+	fmt.Printf("%s%s%s: %s\n", time, target, mtype, content)
 
 	return retError
 

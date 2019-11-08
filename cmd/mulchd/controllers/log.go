@@ -9,6 +9,8 @@ import (
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
 )
 
+const logControllerHistoryMaxLines = 3000
+
 // LogController sends logs to client
 func LogController(req *server.Request) {
 	target := req.HTTP.FormValue("target")
@@ -26,7 +28,7 @@ func GetLogHistoryController(req *server.Request) {
 	linesStr := req.HTTP.FormValue("lines")
 
 	lines, err := strconv.Atoi(linesStr)
-	if err != nil || lines < 1 || lines > 1000 {
+	if err != nil || lines < 1 || lines > logControllerHistoryMaxLines {
 		msg := fmt.Sprintf("invalid 'lines' value")
 		req.App.Log.Error(msg)
 		http.Error(req.Response, msg, 400)

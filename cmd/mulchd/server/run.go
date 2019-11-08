@@ -50,7 +50,7 @@ func (run *Run) Go() error {
 	go func() {
 		// "a receive from a nil channel blocks forever"
 		<-run.CloseChannel
-		run.Log.Warning("Close request received, closing SSH session")
+		run.Log.Trace("Close request received, closing SSH session")
 		run.SSHConn.Session.Close()
 	}()
 
