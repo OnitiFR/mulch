@@ -76,7 +76,8 @@ func autoRebuildVM(vmName *VMName, app *App) error {
 		return nil
 	}
 
-	app.Log.Infof("auto-rebuilding %s", vmName)
+	log := NewLog(vm.Config.Name, app.Hub, app.LogHistory)
+	log.Infof("auto-rebuilding %s", vmName)
 
 	operation := app.Operations.Add(&Operation{
 		Origin:        "[auto-rebuilder]",
@@ -86,5 +87,14 @@ func autoRebuildVM(vmName *VMName, app *App) error {
 	})
 	defer app.Operations.Remove(operation)
 
-	return VMRebuild(vmName, false, vm.AuthorKey, app, app.Log)
+	errR := VMRebuild(vmName, false, vm.AuthorKey, app, log)
+
+	// log on VM target
+	if errR != nil {
+		log.Errorf("auto-rebuild failed for %s", vmName)
+	} else {
+		log.Infof("auto-rebuild successful for %s", vmName)
+	}
+
+	return errR
 }
