@@ -91,11 +91,15 @@ func (lh *LogHistory) Search(maxMessages int, target string) []*common.Message {
 	defer lh.mux.Unlock()
 
 	reversedMessages := make([]*common.Message, maxMessages)
+	exact := common.MessageMatchDefault
+	if target != common.MessageAllTargets {
+		exact = common.MessageMatchExact
+	}
 
 	curr := lh.newest
 	count := 0
 	for curr != nil && count < maxMessages {
-		if curr.payload.MatchTarget(target) == false {
+		if curr.payload.MatchTarget(target, exact) == false {
 			curr = curr.older
 			continue
 		}

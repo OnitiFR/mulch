@@ -13,6 +13,8 @@ import (
 
 const logCmdDefaultLines = 20
 
+var logCmdWithTarget = false
+
 var logCmd = &cobra.Command{
 	Use:   "log [target]",
 	Short: "Display server logs",
@@ -36,6 +38,7 @@ Examples:
 		target := common.MessageAllTargets
 		if len(args) > 0 {
 			target = args[0]
+			logCmdWithTarget = true
 		}
 
 		call := globalAPI.NewCall("GET", "/log/history", map[string]string{
@@ -51,6 +54,7 @@ Examples:
 			})
 			call2.DisableSpecialMessages = true
 			call2.TimestampShow(true)
+			call2.PrintLogTarget = !logCmdWithTarget
 			call2.Do()
 		}
 	},
@@ -64,7 +68,7 @@ func logCmdHistoryCB(reader io.Reader, headers http.Header) {
 		log.Fatal(err)
 	}
 	for _, message := range messages {
-		message.Print(true)
+		message.Print(common.MessagePrintTime, !logCmdWithTarget)
 	}
 }
 
