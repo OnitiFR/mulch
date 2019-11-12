@@ -11,7 +11,7 @@ import (
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/volumes"
 	"github.com/c2h5oh/datasize"
-	"gopkg.in/libvirt/libvirt-go-xml.v5"
+	libvirtxml "gopkg.in/libvirt/libvirt-go-xml.v5"
 	"gopkg.in/libvirt/libvirt-go.v5"
 )
 
@@ -19,11 +19,12 @@ import (
 
 // Libvirt is an interface to libvirt library
 type Libvirt struct {
-	connection *libvirt.Connect
-	uri        string
-	Pools      LibvirtPools
-	Network    *libvirt.Network
-	NetworkXML *libvirtxml.Network
+	connection          *libvirt.Connect
+	uri                 string
+	transientDHCPLeases map[*libvirtxml.NetworkDHCPHost]bool
+	Pools               LibvirtPools
+	Network             *libvirt.Network
+	NetworkXML          *libvirtxml.Network
 }
 
 // LibvirtPools stores needed libvirt Pools for mulchd
@@ -47,8 +48,9 @@ func NewLibvirt(uri string) (*Libvirt, error) {
 	}
 
 	return &Libvirt{
-		connection: conn,
-		uri:        uri,
+		connection:          conn,
+		uri:                 uri,
+		transientDHCPLeases: make(map[*libvirtxml.NetworkDHCPHost]bool),
 	}, nil
 }
 
@@ -585,9 +587,21 @@ func (lv *Libvirt) BackupCompress(volName string, template string, tmpPath strin
 	return nil
 }
 
-// AddDHCPStaticHost will add a new static DHCP lease and clean leases database
-// Set newHost to nil, and it will only do the cleaning part
-func (lv *Libvirt) AddDHCPStaticHost(newHost *libvirtxml.NetworkDHCPHost, app *App) error {
+// AddTransientDHCPHost will add a new transient DHCP static host
+// You'll then need to remove this transient host on VM creation success/failure
+func (lv *Libvirt) AddTransientDHCPHost(newHost *libvirtxml.NetworkDHCPHost, app *App) error {
+	lv.transientDHCPLeases[newHost] = true
+	return lv.RebuildDHCPStaticHost(app)
+}
+
+// RemoveTransientDHCPHost will remove a transient DHCP lease
+func (lv *Libvirt) RemoveTransientDHCPHost(newHost *libvirtxml.NetworkDHCPHost, app *App) error {
+	delete(lv.transientDHCPLeases, newHost)
+	return lv.RebuildDHCPStaticHost(app)
+}
+
+// RebuildDHCPStaticHost will clean static DHCP leases database
+func (lv *Libvirt) RebuildDHCPStaticHost(app *App) error {
 	_, err := lv.GetConnection()
 	if err != nil {
 		return err
@@ -604,15 +618,13 @@ func (lv *Libvirt) AddDHCPStaticHost(newHost *libvirtxml.NetworkDHCPHost, app *A
 		nameID := strings.TrimPrefix(host.Name, app.Config.VMPrefix)
 		vm, _ := app.VMDB.GetByNameID(nameID)
 		if vm == nil {
-			hostsToDelete = append(hostsToDelete, host)
+			if /*host.Name not exists in transient db*/ true {
+				hostsToDelete = append(hostsToDelete, host)
+			}
 		}
 	}
 
-	if newHost != nil {
-		hostsToAdd = append(hostsToAdd, *newHost)
-	}
-
-	// search for leases to add
+	// search for leases to add (from VM database)
 	vmNames := app.VMDB.GetNames()
 	for _, name := range vmNames {
 		found := false
@@ -635,6 +647,10 @@ func (lv *Libvirt) AddDHCPStaticHost(newHost *libvirtxml.NetworkDHCPHost, app *A
 			hostsToAdd = append(hostsToAdd, host)
 		}
 	}
+
+	// search for leases to add (from transient database)
+	//
+	// TODO
 
 	for _, host := range hostsToDelete {
 		app.Log.Tracef("remove DHCP lease for '%s/%s/%s'", host.Name, host.MAC, host.IP)
