@@ -1,9 +1,7 @@
-- completion is broken when a client update is available!
+- add completion for "log" command targets
 - check TLS cert renewal!
     - reported issue: vm is deleted, recreated 3 months later, cert is invalid
 - bug on multiple-VM rebuild/creation? (on phone-home)
-- client: remove multiple upgrade messages when muliple APICall (ex: ssh-config)
-- mulch log "history" + target filtering
 - cut SSH connections when VM delete?
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
   - (dhcp/dnsmasq? ebtables? mulch-netowrk restart?)

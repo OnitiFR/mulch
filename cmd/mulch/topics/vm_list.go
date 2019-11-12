@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
@@ -25,6 +26,9 @@ var vmListCmd = &cobra.Command{
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		vmListFlagBasic, _ = cmd.Flags().GetBool("basic")
+		if vmListFlagBasic == true {
+			client.GetExitMessage().Disable()
+		}
 
 		call := globalAPI.NewCall("GET", "/vm", map[string]string{
 			"basic": strconv.FormatBool(vmListFlagBasic),

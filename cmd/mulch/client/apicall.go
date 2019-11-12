@@ -237,9 +237,9 @@ func (call *APICall) Do() {
 		if err1 == nil && err2 == nil && verFromServer.GT(verSelf) {
 			green := color.New(color.FgHiGreen).SprintFunc()
 			yellow := color.New(color.FgHiYellow).SprintFunc()
-			fmt.Printf("\n")
-			fmt.Printf("According to the server, a client update is available: %s → %s\n", yellow(Version), green(latestClientVersionKnownByServer))
-			fmt.Printf("Update:\n    go get -u github.com/OnitiFR/mulch/cmd/mulch\n")
+			msg := fmt.Sprintf("According to the server, a client update is available: %s → %s\n", yellow(Version), green(latestClientVersionKnownByServer))
+			msg = msg + fmt.Sprintf("Update:\n    go get -u github.com/OnitiFR/mulch/cmd/mulch\n")
+			GetExitMessage().Message = msg
 		}
 	}
 }

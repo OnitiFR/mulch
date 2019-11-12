@@ -36,17 +36,18 @@ libvirt API. This is the client.`,
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute() error {
 	var err error
 	globalHome, err = homedir.Dir()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return err
 	}
 
 	if err = rootCmd.Execute(); err != nil {
-		os.Exit(1)
+		return err
 	}
+	return nil
 }
 
 func init() {

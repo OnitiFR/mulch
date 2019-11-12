@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -31,6 +32,10 @@ See [[do-actions]] in TOML description file.
 	Run: func(cmd *cobra.Command, args []string) {
 		doListFlagBasic, _ = cmd.Flags().GetBool("basic")
 		revision, _ := cmd.Flags().GetString("revision")
+
+		if doListFlagBasic == true {
+			client.GetExitMessage().Disable()
+		}
 
 		if len(args) == 1 {
 			call := globalAPI.NewCall("GET", "/vm/do-actions/"+args[0], map[string]string{

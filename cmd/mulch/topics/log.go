@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const logCmdDefaultLines = 20
+const logCmdDefaultLines = 40
 
 var logCmdWithTarget = false
 

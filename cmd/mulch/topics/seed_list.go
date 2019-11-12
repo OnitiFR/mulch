@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/c2h5oh/datasize"
 	"github.com/fatih/color"
@@ -26,6 +27,9 @@ var seedListCmd = &cobra.Command{
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		seedListFlagBasic, _ = cmd.Flags().GetBool("basic")
+		if seedListFlagBasic == true {
+			client.GetExitMessage().Disable()
+		}
 
 		call := globalAPI.NewCall("GET", "/seed", map[string]string{})
 		call.JSONCallback = seedsCB
