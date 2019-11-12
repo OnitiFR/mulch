@@ -1,7 +1,7 @@
 - add completion for "log" command targets
+- bug on multiple-VM rebuild/creation? (on phone-home)
 - check TLS cert renewal!
     - reported issue: vm is deleted, recreated 3 months later, cert is invalid
-- bug on multiple-VM rebuild/creation? (on phone-home)
 - cut SSH connections when VM delete?
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
   - (dhcp/dnsmasq? ebtables? mulch-netowrk restart?)
@@ -20,7 +20,7 @@
 - flag for compression / no compression on "vm backup"
 - check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
 - challenge based auth?
-- rights / limited access
+- rights / limited access (warning: logs may expose sensitive data)
 - mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
 - support passphrase for Mulch SSH key?
 - move SSH Keys and MulchSuperUser to VM level?
