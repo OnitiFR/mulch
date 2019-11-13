@@ -402,7 +402,7 @@ func (app *App) initLibvirtNetwork() error {
 	app.Libvirt.NetworkXML = netcfg
 
 	// clean DHCP leases
-	err = app.Libvirt.RebuildDHCPStaticHost(app)
+	err = app.Libvirt.RebuildDHCPStaticLeases(app)
 	if err != nil {
 		return fmt.Errorf("RebuildDHCPStaticHost: %s", err)
 	}

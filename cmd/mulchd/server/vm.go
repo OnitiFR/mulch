@@ -905,6 +905,11 @@ func VMDelete(vmName *VMName, app *App, log *Log) error {
 		return errD
 	}
 
+	errR := app.Libvirt.RebuildDHCPStaticLeases(app)
+	if errR != nil {
+		return errR
+	}
+
 	return nil
 }
 
