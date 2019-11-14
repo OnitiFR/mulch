@@ -1,3 +1,4 @@
+- add _MULCH_DOWNLOAD_FILE for auto SFTP client download?
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - add completion for "log" command targets
 - check TLS cert renewal!
