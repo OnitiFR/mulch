@@ -91,3 +91,6 @@ restore = [
 # _MULCH_ACTION_DESCRIPTION=Open VM first domain in the browser
 # _MULCH_ACTION=commit
 # Multiple actions per script are allowed, just repeat the previous "block".
+
+# Do actions may execute special commands on the client, ex:
+# echo "_MULCH_OPEN_URL=https://$_DOMAIN_FIRST/test"
