@@ -1,3 +1,4 @@
+- test "pre-allocated" backup disks on backup duration for "big VMs"?
 - add completion for "log" command targets
 - check TLS cert renewal!
     - reported issue: vm is deleted, recreated 3 months later, cert is invalid
@@ -5,10 +6,10 @@
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
   - (dhcp/dnsmasq? ebtables? mulch-netowrk restart?)
 - libvirtd watchdog + alert (ex: timeout in VMStateDatabase?)
-- clean VM XML template
-- have a look at ansible? (for sample scripts)
+- clean VM XML template (ex: no display device [serial console])
 - create a nice and shiny website for Mulch project
 - VM tags
+- have a look at ansible? (for sample scripts)
 - add --revision to rebuild command
 - remove the need to supply the VM name for redefine command?
   - keep: sanity check for a dangerous op, but looks confusing to the user
