@@ -803,7 +803,7 @@ func VMDelete(vmName *VMName, app *App, log *Log) error {
 	}
 
 	if vm.Locked == true {
-		return errors.New("VM is locked")
+		return errors.New("VM is locked (unlock before)")
 	}
 
 	libvirtName := vmName.LibvirtDomainName(app)
