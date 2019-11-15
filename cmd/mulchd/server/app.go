@@ -279,8 +279,9 @@ func (app *App) initVMDB() error {
 
 				}
 
-				// + "rebuild" parts of the VM in the DB? (ex : App)
+				// + "rebuild" parts of the VM in the DB
 				vm.App = app
+				vm.WIP = VMOperationNone
 			}()
 		}
 	}
