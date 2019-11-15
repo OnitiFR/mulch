@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -68,22 +67,7 @@ func sshCmdInfoCB(reader io.Reader, headers http.Header) {
 }
 
 func sshCmdPairCB(reader io.Reader, headers http.Header) {
-	var data common.APISSHPair
-	dec := json.NewDecoder(reader)
-	err := dec.Decode(&data)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-	// save files using current server name
-	privFilePath := GetSSHPath(mulchSubDir + sshKeyPrefix + globalConfig.Server.Name)
-	pubFilePath := privFilePath + ".pub"
-
-	err = ioutil.WriteFile(privFilePath, []byte(data.Private), 0600)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	err = ioutil.WriteFile(pubFilePath, []byte(data.Public), 0644)
+	_, privFilePath, err := WriteSSHPair(reader)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

@@ -1,9 +1,12 @@
 package topics
 
 import (
+	"encoding/json"
+	"io"
+	"io/ioutil"
+	"net/url"
 	"os"
 	"path"
-	"net/url"
 
 	"github.com/OnitiFR/mulch/common"
 )
@@ -49,4 +52,30 @@ func GetSSHHost() (string, error) {
 	}
 
 	return url.Hostname(), nil
+}
+
+// WriteSSHPair overwrites public and private API SSH files,
+// using an APISSHPair reader (see "GET /sshpair") as input.
+// Returns public key filepath, private filepath and error.
+func WriteSSHPair(reader io.Reader) (string, string, error) {
+	var data common.APISSHPair
+	dec := json.NewDecoder(reader)
+	err := dec.Decode(&data)
+	if err != nil {
+		return "", "", err
+	}
+	// save files using current server name
+	privFilePath := GetSSHPath(mulchSubDir + sshKeyPrefix + globalConfig.Server.Name)
+	pubFilePath := privFilePath + ".pub"
+
+	err = ioutil.WriteFile(privFilePath, []byte(data.Private), 0600)
+	if err != nil {
+		return "", "", err
+	}
+
+	err = ioutil.WriteFile(pubFilePath, []byte(data.Public), 0644)
+	if err != nil {
+		return "", "", err
+	}
+	return pubFilePath, privFilePath, err
 }
