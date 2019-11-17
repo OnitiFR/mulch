@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -20,7 +21,7 @@ var keyListCmd = &cobra.Command{
 	// Long: ``,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		call := globalAPI.NewCall("GET", "/key", map[string]string{})
+		call := client.GlobalAPI.NewCall("GET", "/key", map[string]string{})
 		call.JSONCallback = keyListCB
 		call.Do()
 	},

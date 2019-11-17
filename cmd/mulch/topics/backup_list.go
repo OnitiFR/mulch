@@ -33,7 +33,7 @@ var backupListCmd = &cobra.Command{
 		if len(args) > 0 {
 			vmFilter = args[0]
 		}
-		call := globalAPI.NewCall("GET", "/backup", map[string]string{
+		call := client.GlobalAPI.NewCall("GET", "/backup", map[string]string{
 			"vm": vmFilter,
 		})
 		call.JSONCallback = backupListCB

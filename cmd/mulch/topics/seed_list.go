@@ -31,7 +31,7 @@ var seedListCmd = &cobra.Command{
 			client.GetExitMessage().Disable()
 		}
 
-		call := globalAPI.NewCall("GET", "/seed", map[string]string{})
+		call := client.GlobalAPI.NewCall("GET", "/seed", map[string]string{})
 		call.JSONCallback = seedsCB
 		call.Do()
 	},

@@ -221,6 +221,8 @@ func ActionVMController(req *server.Request) {
 	}
 
 	vm := entry.VM
+	req.Response.Header().Set("Current-VM-Name", entry.Name.ID())
+
 	action := req.HTTP.FormValue("action")
 	operationAction := action
 

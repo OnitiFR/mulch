@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/spf13/cobra"
 )
@@ -19,7 +20,7 @@ var statusCmd = &cobra.Command{
 	Short: "Get informations about Mulchd host",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		call := globalAPI.NewCall("GET", "/status", map[string]string{})
+		call := client.GlobalAPI.NewCall("GET", "/status", map[string]string{})
 		call.JSONCallback = statusDisplay
 		call.Do()
 	},

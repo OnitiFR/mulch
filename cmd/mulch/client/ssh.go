@@ -1,4 +1,4 @@
-package topics
+package client
 
 import (
 	"encoding/json"
@@ -11,20 +11,25 @@ import (
 	"github.com/OnitiFR/mulch/common"
 )
 
-const mulchSubDir = "mulch/"
-const sshKeyPrefix = "id_rsa_"
-const sshPort = 8022
+// SSHPort defines the mulchd SSH proxy port (should be configurable!)
+const SSHPort = 8022
+
+// MulchSSHSubDir is the name of mulch dedicated .ssh sub-directory
+const MulchSSHSubDir = "mulch/"
+
+// SSHKeyPrefix is the prefix for SSH keys
+const SSHKeyPrefix = "id_rsa_"
 
 // GetSSHPath returns the path of a file in the user SSH config path
 func GetSSHPath(file string) string {
-	return path.Clean(globalHome + "/.ssh/" + file)
+	return path.Clean(GlobalHome + "/.ssh/" + file)
 }
 
 // CreateSSHMulchDir creates (if needed) user SSH config path and, inside,
 // mulch directory.
 func CreateSSHMulchDir() error {
 	sshPath := GetSSHPath("")
-	mulchPath := GetSSHPath(mulchSubDir)
+	mulchPath := GetSSHPath(MulchSSHSubDir)
 
 	if !common.PathExist(sshPath) {
 		err := os.Mkdir(sshPath, 0700)
@@ -46,7 +51,7 @@ func CreateSSHMulchDir() error {
 // GetSSHHost returns the SSH server hostname based on
 // mulchd API URL
 func GetSSHHost() (string, error) {
-	url, err := url.Parse(globalConfig.Server.URL)
+	url, err := url.Parse(GlobalConfig.Server.URL)
 	if err != nil {
 		return "", err
 	}
@@ -65,7 +70,7 @@ func WriteSSHPair(reader io.Reader) (string, string, error) {
 		return "", "", err
 	}
 	// save files using current server name
-	privFilePath := GetSSHPath(mulchSubDir + sshKeyPrefix + globalConfig.Server.Name)
+	privFilePath := GetSSHPath(MulchSSHSubDir + SSHKeyPrefix + GlobalConfig.Server.Name)
 	pubFilePath := privFilePath + ".pub"
 
 	err = ioutil.WriteFile(privFilePath, []byte(data.Private), 0600)

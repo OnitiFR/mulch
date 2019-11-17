@@ -3,6 +3,7 @@ package topics
 import (
 	"strconv"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +24,7 @@ See 'vm list' for VM Names.
 		lock, _ := cmd.Flags().GetBool("lock")
 		force, _ := cmd.Flags().GetBool("force")
 
-		call := globalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
+		call := client.GlobalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
 			"action": "rebuild",
 			"lock":   strconv.FormatBool(lock),
 			"force":  strconv.FormatBool(force),

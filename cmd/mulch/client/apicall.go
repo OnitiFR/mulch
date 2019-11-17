@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -20,6 +21,9 @@ import (
 	"github.com/c2h5oh/datasize"
 	"github.com/fatih/color"
 )
+
+// current API call VM name, if any
+var currentVMName string
 
 // API describes the basic elements to call the API
 type API struct {
@@ -194,6 +198,10 @@ func (call *APICall) Do() {
 	}
 
 	mime := resp.Header.Get("Content-Type")
+	cvnHeader := resp.Header.Get("Current-VM-Name")
+	if cvnHeader != "" {
+		currentVMName = cvnHeader
+	}
 
 	switch mime {
 	case "application/x-ndjson":
@@ -219,7 +227,10 @@ func (call *APICall) Do() {
 		}
 
 		if call.DestFilePath != "" {
-			downloadFile(call.DestFilePath, resp.Body)
+			err := downloadFile(call.DestFilePath, resp.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
 		} else if call.DestStream != nil {
 			_, err := io.Copy(call.DestStream, resp.Body)
 			if err != nil {
@@ -280,7 +291,7 @@ func printJSONStream(body io.ReadCloser, call *APICall) error {
 		if !call.DisableSpecialMessages {
 			err = dealWithSpecialMessages(m.Message)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Client error: %s", err.Error())
+				fmt.Fprintf(os.Stderr, "Client error: %s\n", err.Error())
 			}
 		}
 	}
@@ -293,23 +304,47 @@ func dealWithSpecialMessages(content string) error {
 		if err != nil {
 			return fmt.Errorf("Invalid URL: %s", value)
 		}
-		openbrowser(value)
+		openBrowser(value)
 	}
+
+	if isVar, value := common.StringIsVariable(content, "_MULCH_DOWNLOAD_FILE"); isVar {
+		if currentVMName == "" {
+			return errors.New("Current-VM-Name HTTP header is missing, it seems :(")
+		}
+
+		atPos := strings.Index(value, "@")
+		if atPos == -1 {
+			return fmt.Errorf("Invalid format: %s (need user@path/file)", value)
+		}
+		user := value[:atPos]
+		filepath := value[atPos+1:]
+
+		err := SFTPCopy(currentVMName, user, filepath)
+		if err != nil {
+			return fmt.Errorf("sftp copy error: %s", err)
+		}
+	}
+
 	return nil
 }
 
-func downloadFile(filename string, reader io.Reader) {
+func downloadFile(filename string, reader io.Reader) error {
+	if common.PathExist(filename) == true {
+		fmt.Printf("warning: overwriting '%s'\n", filename)
+	}
+
 	file, err := os.Create(filename)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	fmt.Printf("downloading %s…\n", filename)
 
 	bytesWritten, err := io.Copy(file, reader)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	fmt.Printf("finished, downloaded %s\n", (datasize.ByteSize(bytesWritten) * datasize.B).HR())
+	return nil
 }

@@ -7,7 +7,7 @@ import (
 	"runtime"
 )
 
-func openbrowser(url string) {
+func openBrowser(url string) {
 	var err error
 
 	switch runtime.GOOS {

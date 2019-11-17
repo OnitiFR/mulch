@@ -1,6 +1,7 @@
 package topics
 
 import (
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 )
 
@@ -15,7 +16,7 @@ See 'backup list' to get disk names.
 	Args:    cobra.ExactArgs(1),
 	Aliases: []string{"remove"},
 	Run: func(cmd *cobra.Command, args []string) {
-		call := globalAPI.NewCall("DELETE", "/backup/"+args[0], map[string]string{})
+		call := client.GlobalAPI.NewCall("DELETE", "/backup/"+args[0], map[string]string{})
 		call.Do()
 	},
 }

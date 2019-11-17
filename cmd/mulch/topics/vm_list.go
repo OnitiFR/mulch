@@ -30,7 +30,7 @@ var vmListCmd = &cobra.Command{
 			client.GetExitMessage().Disable()
 		}
 
-		call := globalAPI.NewCall("GET", "/vm", map[string]string{
+		call := client.GlobalAPI.NewCall("GET", "/vm", map[string]string{
 			"basic": strconv.FormatBool(vmListFlagBasic),
 		})
 		call.JSONCallback = vmListCB

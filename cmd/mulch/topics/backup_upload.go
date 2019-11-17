@@ -3,6 +3,7 @@ package topics
 import (
 	"log"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 )
 
@@ -13,7 +14,7 @@ var backupUploadCmd = &cobra.Command{
 	// Long: ``,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		call := globalAPI.NewCall("POST", "/backup", map[string]string{})
+		call := client.GlobalAPI.NewCall("POST", "/backup", map[string]string{})
 		err := call.AddFile("file", args[0])
 		if err != nil {
 			log.Fatal(err)

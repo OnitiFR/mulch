@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/spf13/cobra"
 )
@@ -41,7 +42,7 @@ Examples:
 			logCmdWithTarget = true
 		}
 
-		call := globalAPI.NewCall("GET", "/log/history", map[string]string{
+		call := client.GlobalAPI.NewCall("GET", "/log/history", map[string]string{
 			"target": target,
 			"lines":  strconv.Itoa(lines),
 		})
@@ -49,7 +50,7 @@ Examples:
 		call.Do()
 
 		if follow {
-			call2 := globalAPI.NewCall("GET", "/log", map[string]string{
+			call2 := client.GlobalAPI.NewCall("GET", "/log", map[string]string{
 				"target": target,
 			})
 			call2.DisableSpecialMessages = true

@@ -85,8 +85,6 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 	// Note: starting from here, request parameters are no more available
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.Header().Set("Content-Type", "application/x-ndjson")
-	w.WriteHeader(http.StatusOK)
-	flusher.Flush()
 
 	enc := json.NewEncoder(w)
 
@@ -105,6 +103,12 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 		time.Sleep(time.Duration(100) * time.Millisecond)
 		closer <- true
 	}()
+
+	// give a chance to the request.Route.Handler to update headers
+	// TODO: replace this ugly sleep with a chan!
+	time.Sleep(time.Duration(100) * time.Millisecond)
+	w.WriteHeader(http.StatusOK)
+	flusher.Flush()
 
 	for {
 		select {

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/spf13/cobra"
 )
@@ -29,7 +30,7 @@ See 'vm list' for VM Names.
 `,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		err := CreateSSHMulchDir()
+		err := client.CreateSSHMulchDir()
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -39,7 +40,7 @@ See 'vm list' for VM Names.
 		if revision != "" {
 			sshCmdWithRevision = true
 		}
-		call := globalAPI.NewCall("GET", "/vm/infos/"+args[0], map[string]string{
+		call := client.GlobalAPI.NewCall("GET", "/vm/infos/"+args[0], map[string]string{
 			"revision": revision,
 		})
 		call.JSONCallback = sshCmdInfoCB
@@ -60,19 +61,19 @@ func sshCmdInfoCB(reader io.Reader, headers http.Header) {
 	}
 
 	sshCmdVM = &data
-	call := globalAPI.NewCall("GET", "/sshpair", map[string]string{})
+	call := client.GlobalAPI.NewCall("GET", "/sshpair", map[string]string{})
 	call.JSONCallback = sshCmdPairCB
 	call.Do()
 
 }
 
 func sshCmdPairCB(reader io.Reader, headers http.Header) {
-	_, privFilePath, err := WriteSSHPair(reader)
+	_, privFilePath, err := client.WriteSSHPair(reader)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	hostname, err := GetSSHHost()
+	hostname, err := client.GetSSHHost()
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -92,7 +93,7 @@ func sshCmdPairCB(reader io.Reader, headers http.Header) {
 	args := []string{
 		"ssh",
 		"-i", privFilePath,
-		"-p", strconv.Itoa(sshPort),
+		"-p", strconv.Itoa(client.SSHPort),
 		destination,
 	}
 
