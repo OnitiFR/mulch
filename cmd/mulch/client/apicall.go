@@ -330,7 +330,7 @@ func dealWithSpecialMessages(content string) error {
 
 func downloadFile(filename string, reader io.Reader) error {
 	if common.PathExist(filename) == true {
-		fmt.Printf("warning: overwriting '%s'\n", filename)
+		return fmt.Errorf("error: file '%s' already exists", filename)
 	}
 
 	file, err := os.Create(filename)

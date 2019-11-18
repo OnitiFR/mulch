@@ -1,7 +1,9 @@
 package main
 
-import "github.com/OnitiFR/mulch/cmd/mulchd/server"
-import "github.com/OnitiFR/mulch/cmd/mulchd/controllers"
+import (
+	"github.com/OnitiFR/mulch/cmd/mulchd/controllers"
+	"github.com/OnitiFR/mulch/cmd/mulchd/server"
+)
 
 // AddRoutes defines all API routes for the application
 func AddRoutes(app *server.App) {
@@ -107,18 +109,6 @@ func AddRoutes(app *server.App) {
 		Type:    server.RouteTypeStream,
 		Handler: controllers.DeleteBackupController,
 	}, server.RouteAPI)
-
-	// app.AddRoute(&server.Route{
-	// 	Route:   "POST /test/*",
-	// 	Type:    server.RouteTypeStream,
-	// 	Handler: controllers.TestController,
-	// }, server.RouteAPI)
-
-	// app.AddRoute(&server.Route{
-	// 	Route:   "POST /test2",
-	// 	Type:    server.RouteTypeStream,
-	// 	Handler: controllers.Test2Controller,
-	// }, server.RouteAPI)
 
 	app.AddRoute(&server.Route{
 		Route:   "GET /key",

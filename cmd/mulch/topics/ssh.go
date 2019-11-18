@@ -86,7 +86,7 @@ func sshCmdPairCB(reader io.Reader, headers http.Header) {
 	// legacy (no revision) destination
 	destination := user + "@" + sshCmdVM.Name + "@" + hostname
 	if sshCmdWithRevision {
-		destination = user + "@" + sshCmdVM.Name + "-" + strconv.Itoa(sshCmdVM.Revision) + "@" + hostname
+		destination = user + "@" + sshCmdVM.Name + "-r" + strconv.Itoa(sshCmdVM.Revision) + "@" + hostname
 	}
 
 	// launch 'ssh' command
