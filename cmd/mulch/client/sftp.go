@@ -2,18 +2,16 @@ package client
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 var callCountForSFTPCopy = 0
@@ -42,32 +40,17 @@ func SFTPCopy(vmName string, user string, filename string) error {
 	}
 	port := strconv.Itoa(SSHPort)
 
+	hostKeyCallback, err := knownhosts.New(GetSSHPath("known_hosts"))
+	if err != nil {
+		return err
+	}
+
 	config := &ssh.ClientConfig{
 		User: sshUser,
 		Auth: []ssh.AuthMethod{
 			publicKeyAuthFromPubFile(privKeyFile),
 		},
-	}
-
-	// try to get remote host public key
-	// first try: with full [host]:port format
-	hostKey, err := getHostKey("[" + remote + "]:" + port)
-	if err != nil {
-		fmt.Printf("warning: %s\n", err)
-	}
-	if hostKey == nil {
-		// second try: with host:port format
-		hostKey, err = getHostKey(remote + ":" + port)
-		if err != nil {
-			fmt.Printf("warning: %s\n", err)
-		}
-	}
-
-	if hostKey == nil {
-		fmt.Printf("WARNING: unable to find remote host key, file transfer is insecure and subject to MITM attacks!\n")
-		config.HostKeyCallback = ssh.InsecureIgnoreHostKey()
-	} else {
-		config.HostKeyCallback = ssh.FixedHostKey(hostKey)
+		HostKeyCallback: hostKeyCallback,
 	}
 
 	// connect
@@ -120,33 +103,4 @@ func publicKeyAuthFromPubFile(file string) ssh.AuthMethod {
 		return nil
 	}
 	return ssh.PublicKeys(key)
-}
-
-func getHostKey(host string) (ssh.PublicKey, error) {
-	// parse OpenSSH known_hosts file
-	// ssh or use ssh-keyscan to get initial key
-	file, err := os.Open(GetSSHPath("known_hosts"))
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	var hostKey ssh.PublicKey
-	for scanner.Scan() {
-		fields := strings.Split(scanner.Text(), " ")
-		if len(fields) != 3 {
-			continue
-		}
-		if fields[0] == host {
-			var err error
-			hostKey, _, _, _, err = ssh.ParseAuthorizedKey(scanner.Bytes())
-			if err != nil {
-				return nil, fmt.Errorf("error parsing %q: %v", fields[2], err)
-			}
-			break
-		}
-	}
-
-	return hostKey, nil
 }
