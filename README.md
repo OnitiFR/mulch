@@ -62,7 +62,7 @@ In this example, the VM is up and ready 40 seconds later.
 
 Any more complete example?
 ---
-See the [complete sample VM configuration file](https://raw.github.com/OnitiFR/mulch/master/vm-samples/sample-vm-full.toml) to get a broader view of Mulch features. We use this as a template for our "Wordpress farm" Mulch server VMs.
+See the [complete sample VM configuration file](https://raw.github.com/OnitiFR/mulch/master/vm-samples/sample-vm-full.toml) to get a broader view of Mulch features.
 
 Let's see a few interesting samples:
 
