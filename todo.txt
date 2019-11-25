@@ -1,6 +1,4 @@
-- add _MULCH_DOWNLOAD_FILE for auto SFTP client download?
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
-- add completion for "log" command targets
 - check TLS cert renewal!
     - reported issue: vm is deleted, recreated 3 months later, cert is invalid
 - cut SSH connections when VM delete?
