@@ -1,6 +1,7 @@
 package topics
 
 import (
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +19,7 @@ after. The only option left will be to look at the daemon key database directly.
 `,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		call := globalAPI.NewCall("POST", "/key", map[string]string{
+		call := client.GlobalAPI.NewCall("POST", "/key", map[string]string{
 			"comment": args[0],
 		})
 		call.Do()

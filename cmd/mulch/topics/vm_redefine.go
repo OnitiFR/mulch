@@ -4,6 +4,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +28,7 @@ it's an easy way to modify config before VM redefinition.
 		force, _ := cmd.Flags().GetBool("force")
 		revision, _ := cmd.Flags().GetString("revision")
 
-		call := globalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
+		call := client.GlobalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
 			"action":   "redefine",
 			"force":    strconv.FormatBool(force),
 			"revision": revision,

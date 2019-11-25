@@ -11,7 +11,7 @@ import (
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/volumes"
 	"github.com/c2h5oh/datasize"
-	"gopkg.in/libvirt/libvirt-go-xml.v5"
+	libvirtxml "gopkg.in/libvirt/libvirt-go-xml.v5"
 	"gopkg.in/libvirt/libvirt-go.v5"
 )
 
@@ -21,6 +21,7 @@ import (
 type Libvirt struct {
 	connection *libvirt.Connect
 	uri        string
+	dhcpLeases *LibvirtDHCPLeases
 	Pools      LibvirtPools
 	Network    *libvirt.Network
 	NetworkXML *libvirtxml.Network
@@ -49,6 +50,7 @@ func NewLibvirt(uri string) (*Libvirt, error) {
 	return &Libvirt{
 		connection: conn,
 		uri:        uri,
+		dhcpLeases: NewLibvirtDHCPLeases(),
 	}, nil
 }
 
@@ -581,110 +583,6 @@ func (lv *Libvirt) BackupCompress(volName string, template string, tmpPath strin
 		(datasize.ByteSize(infos.Allocation) * datasize.B).HR(),
 		(datasize.ByteSize(infos2.Allocation) * datasize.B).HR(),
 	)
-
-	return nil
-}
-
-// AddDHCPStaticHost will add a new static DHCP lease and clean leases database
-// Set newHost to nil, and it will only do the cleaning part
-func (lv *Libvirt) AddDHCPStaticHost(newHost *libvirtxml.NetworkDHCPHost, app *App) error {
-	_, err := lv.GetConnection()
-	if err != nil {
-		return err
-	}
-	previousHosts := lv.NetworkXML.IPs[0].DHCP.Hosts
-	var hostsToDelete []libvirtxml.NetworkDHCPHost
-	var hostsToAdd []libvirtxml.NetworkDHCPHost // mostly for old VMs (previous "format") where no static IP was set
-
-	// search for leases to delete
-	for _, host := range previousHosts {
-		if !strings.HasPrefix(host.Name, app.Config.VMPrefix) {
-			continue
-		}
-		nameID := strings.TrimPrefix(host.Name, app.Config.VMPrefix)
-		vm, _ := app.VMDB.GetByNameID(nameID)
-		if vm == nil {
-			hostsToDelete = append(hostsToDelete, host)
-		}
-	}
-
-	if newHost != nil {
-		hostsToAdd = append(hostsToAdd, *newHost)
-	}
-
-	// search for leases to add
-	vmNames := app.VMDB.GetNames()
-	for _, name := range vmNames {
-		found := false
-		for _, host := range previousHosts {
-			if host.Name == name.LibvirtDomainName(app) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			vm, err := app.VMDB.GetByName(name)
-			if err != nil {
-				return err
-			}
-			host := libvirtxml.NetworkDHCPHost{
-				Name: name.LibvirtDomainName(app),
-				MAC:  vm.AssignedMAC,
-				IP:   vm.AssignedIPv4,
-			}
-			hostsToAdd = append(hostsToAdd, host)
-		}
-	}
-
-	for _, host := range hostsToDelete {
-		app.Log.Tracef("remove DHCP lease for '%s/%s/%s'", host.Name, host.MAC, host.IP)
-		xml, err := host.Marshal()
-		if err != nil {
-			return err
-		}
-		err = lv.Network.Update(
-			libvirt.NETWORK_UPDATE_COMMAND_DELETE,
-			libvirt.NETWORK_SECTION_IP_DHCP_HOST,
-			-1,
-			xml,
-			libvirt.NETWORK_UPDATE_AFFECT_LIVE|libvirt.NETWORK_UPDATE_AFFECT_CONFIG,
-		)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, host := range hostsToAdd {
-		app.Log.Tracef("add DHCP lease for '%s/%s/%s'", host.Name, host.MAC, host.IP)
-		xml, err := host.Marshal()
-		if err != nil {
-			return err
-		}
-		err = lv.Network.Update(
-			libvirt.NETWORK_UPDATE_COMMAND_ADD_LAST,
-			libvirt.NETWORK_SECTION_IP_DHCP_HOST,
-			-1,
-			xml,
-			libvirt.NETWORK_UPDATE_AFFECT_LIVE|libvirt.NETWORK_UPDATE_AFFECT_CONFIG,
-		)
-		if err != nil {
-			return err
-		}
-	}
-
-	// update lv.NetworkXML
-	xmldoc, err := lv.Network.GetXMLDesc(0)
-	if err != nil {
-		return fmt.Errorf("GetXMLDesc: %s", err)
-	}
-
-	netcfg := &libvirtxml.Network{}
-	err = netcfg.Unmarshal(xmldoc)
-	if err != nil {
-		return fmt.Errorf("Unmarshal: %s", err)
-	}
-
-	lv.NetworkXML = netcfg
 
 	return nil
 }

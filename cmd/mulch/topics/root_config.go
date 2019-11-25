@@ -6,17 +6,8 @@ import (
 	"strconv"
 
 	"github.com/BurntSushi/toml"
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 )
-
-// RootConfig describes client application config parameters
-type RootConfig struct {
-	ConfigFile string
-
-	Server  *tomlServerConfig
-	Aliases map[string]string
-	Trace   bool
-	Time    bool
-}
 
 type tomlServerConfig struct {
 	Name  string
@@ -35,8 +26,8 @@ type tomlRootConfig struct {
 // NewRootConfig reads configuration from filename and
 // environment.
 // Priority : CLI flag, config file, environment
-func NewRootConfig(filename string) (*RootConfig, error) {
-	rootConfig := &RootConfig{}
+func NewRootConfig(filename string) (*client.RootConfig, error) {
+	rootConfig := &client.RootConfig{}
 
 	envTrace, _ := strconv.ParseBool(os.Getenv("TRACE"))
 	envTime, _ := strconv.ParseBool(os.Getenv("TIME"))
@@ -97,7 +88,12 @@ func NewRootConfig(filename string) (*RootConfig, error) {
 			if rootConfig.Server != nil {
 				return nil, fmt.Errorf("multiple declaration of server '%s'", server.Name)
 			}
-			rootConfig.Server = server
+			rootConfig.Server = &client.ServerConfig{
+				Name:  server.Name,
+				URL:   server.URL,
+				Key:   server.Key,
+				Alias: server.Alias,
+			}
 		}
 	}
 

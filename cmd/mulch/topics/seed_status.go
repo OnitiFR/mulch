@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/spf13/cobra"
 )
@@ -19,7 +20,7 @@ var seedStatusCmd = &cobra.Command{
 	// Long: ``,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		call := globalAPI.NewCall("GET", "/seed/"+args[0], map[string]string{})
+		call := client.GlobalAPI.NewCall("GET", "/seed/"+args[0], map[string]string{})
 		call.JSONCallback = seedStatusCB
 		call.Do()
 	},

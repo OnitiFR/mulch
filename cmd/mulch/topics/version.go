@@ -24,7 +24,7 @@ Examples:
 
 		server, _ := cmd.Flags().GetBool("remote")
 		if server {
-			call := globalAPI.NewCall("GET", "/version", map[string]string{})
+			call := client.GlobalAPI.NewCall("GET", "/version", map[string]string{})
 			call.Do()
 		}
 

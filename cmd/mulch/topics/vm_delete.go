@@ -1,6 +1,7 @@
 package topics
 
 import (
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +20,7 @@ See 'vm list' for VM Names.
 	Aliases: []string{"remove"},
 	Run: func(cmd *cobra.Command, args []string) {
 		revision, _ := cmd.Flags().GetString("revision")
-		call := globalAPI.NewCall("DELETE", "/vm/"+args[0], map[string]string{
+		call := client.GlobalAPI.NewCall("DELETE", "/vm/"+args[0], map[string]string{
 			"revision": revision,
 		})
 		call.Do()

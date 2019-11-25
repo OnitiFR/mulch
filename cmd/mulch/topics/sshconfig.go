@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/spf13/cobra"
 )
@@ -41,18 +42,18 @@ For each VM, two aliases are available:
 `,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		err := CreateSSHMulchDir()
+		err := client.CreateSSHMulchDir()
 		if err != nil {
 			log.Fatal(err.Error())
 		}
 
-		hostname, err := GetSSHHost()
+		hostname, err := client.GetSSHHost()
 		if err != nil {
 			log.Fatal(err.Error())
 		}
 		sshConfigCmdData.hostname = hostname
 
-		call := globalAPI.NewCall("GET", "/sshpair", map[string]string{})
+		call := client.GlobalAPI.NewCall("GET", "/sshpair", map[string]string{})
 		call.JSONCallback = sshConfigCmdPairCB
 		call.Do()
 	},
@@ -66,7 +67,7 @@ func sshConfigCmdPairCB(reader io.Reader, headers http.Header) {
 		log.Fatal(err.Error())
 	}
 	// save files using current server name
-	privFilePath := GetSSHPath(mulchSubDir + sshKeyPrefix + globalConfig.Server.Name)
+	privFilePath := client.GetSSHPath(client.MulchSSHSubDir + client.SSHKeyPrefix + client.GlobalConfig.Server.Name)
 	pubFilePath := privFilePath + ".pub"
 	sshConfigCmdData.privKeyPath = privFilePath
 
@@ -80,7 +81,7 @@ func sshConfigCmdPairCB(reader io.Reader, headers http.Header) {
 		log.Fatal(err.Error())
 	}
 
-	call := globalAPI.NewCall("GET", "/vm", map[string]string{})
+	call := client.GlobalAPI.NewCall("GET", "/vm", map[string]string{})
 	call.JSONCallback = sshConfigCmdVMListCB
 	call.Do()
 }
@@ -108,7 +109,7 @@ func sshConfigCmdVMListCB(reader io.Reader, headers http.Header) {
 
 func sshConfigCmdGenerate(conf *sshConfigCmdDataStruct) error {
 	const includeString = "Include mulch/aliases_*.conf"
-	configPath := GetSSHPath("config")
+	configPath := client.GetSSHPath("config")
 	sampleContent := `# Generated once by mulch client, feel free to edit.
 
 Include mulch/aliases_*.conf
@@ -117,7 +118,7 @@ Include mulch/aliases_*.conf
 Host *
     IdentitiesOnly yes
 `
-	filename := GetSSHPath(mulchSubDir + "aliases_" + globalConfig.Server.Name + ".conf")
+	filename := client.GetSSHPath(client.MulchSSHSubDir + "aliases_" + client.GlobalConfig.Server.Name + ".conf")
 	file, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
@@ -132,21 +133,21 @@ Host *
 			continue
 		}
 
-		aliasName := vm.Name + "-" + globalConfig.Server.Name
+		aliasName := vm.Name + "-" + client.GlobalConfig.Server.Name
 		fmt.Printf("  %s\n", aliasName)
 		file.WriteString(fmt.Sprintf("Host %s\n", aliasName))
 		file.WriteString(fmt.Sprintf("    HostName %s\n", conf.hostname))
 		file.WriteString(fmt.Sprintf("    IdentityFile %s\n", conf.privKeyPath))
-		file.WriteString(fmt.Sprintf("    Port %d\n", sshPort))
+		file.WriteString(fmt.Sprintf("    Port %d\n", client.SSHPort))
 		file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.SuperUser, vm.Name))
 		file.WriteString(fmt.Sprintf("\n"))
 
-		appAliasName := vm.Name + "-app-" + globalConfig.Server.Name
+		appAliasName := vm.Name + "-app-" + client.GlobalConfig.Server.Name
 		fmt.Printf("  %s\n", appAliasName)
 		file.WriteString(fmt.Sprintf("Host %s\n", appAliasName))
 		file.WriteString(fmt.Sprintf("    HostName %s\n", conf.hostname))
 		file.WriteString(fmt.Sprintf("    IdentityFile %s\n", conf.privKeyPath))
-		file.WriteString(fmt.Sprintf("    Port %d\n", sshPort))
+		file.WriteString(fmt.Sprintf("    Port %d\n", client.SSHPort))
 		file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.AppUser, vm.Name))
 		file.WriteString(fmt.Sprintf("\n\n"))
 	}

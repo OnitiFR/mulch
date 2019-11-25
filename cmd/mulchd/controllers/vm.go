@@ -41,6 +41,7 @@ func getEntryFromRequest(vmName string, req *server.Request) (*server.VMDatabase
 
 // NewVMController creates a new VM
 func NewVMController(req *server.Request) {
+	req.StartStream <- true
 	configFile, header, err := req.HTTP.FormFile("config")
 	if err != nil {
 		req.Stream.Failuref("'config' file field: %s", err)
@@ -221,6 +222,9 @@ func ActionVMController(req *server.Request) {
 	}
 
 	vm := entry.VM
+	req.Response.Header().Set("Current-VM-Name", entry.Name.ID())
+	req.StartStream <- true
+
 	action := req.HTTP.FormValue("action")
 	operationAction := action
 
@@ -325,6 +329,7 @@ func ActionVMController(req *server.Request) {
 
 // DeleteVMController will delete a (unlocked) VM
 func DeleteVMController(req *server.Request) {
+	req.StartStream <- true
 	vmName := req.SubPath
 	req.SetTarget(vmName)
 

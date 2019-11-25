@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/ssh"
-	"gopkg.in/libvirt/libvirt-go-xml.v5"
+	libvirtxml "gopkg.in/libvirt/libvirt-go-xml.v5"
 	"gopkg.in/libvirt/libvirt-go.v5"
 )
 
@@ -194,11 +194,13 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		return nil, nil, err
 	}
 
-	app.Libvirt.AddDHCPStaticHost(&libvirtxml.NetworkDHCPHost{
+	transientLease := &libvirtxml.NetworkDHCPHost{
 		Name: vmName.LibvirtDomainName(app),
 		MAC:  vm.AssignedMAC,
 		IP:   vm.AssignedIPv4,
-	}, app)
+	}
+	app.Libvirt.AddTransientDHCPHost(transientLease, app)
+	defer app.Libvirt.RemoveTransientDHCPHost(transientLease, app)
 
 	// 1 - copy from reference image
 	log.Infof("creating VM disk '%s'", diskName)
@@ -801,7 +803,7 @@ func VMDelete(vmName *VMName, app *App, log *Log) error {
 	}
 
 	if vm.Locked == true {
-		return errors.New("VM is locked")
+		return errors.New("VM is locked (see 'unlock' command)")
 	}
 
 	libvirtName := vmName.LibvirtDomainName(app)
@@ -901,6 +903,11 @@ func VMDelete(vmName *VMName, app *App, log *Log) error {
 	errD := app.VMDB.Delete(vmName)
 	if errD != nil {
 		return errD
+	}
+
+	errR := app.Libvirt.RebuildDHCPStaticLeases(app)
+	if errR != nil {
+		return errR
 	}
 
 	return nil

@@ -3,6 +3,7 @@ package topics
 import (
 	"log"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +23,7 @@ var backupDownloadCmd = &cobra.Command{
 			log.Fatalf("file %s already exists (use -f for overwrite)", backupName)
 		}
 
-		call := globalAPI.NewCall("GET", "/backup/"+backupName, map[string]string{})
+		call := client.GlobalAPI.NewCall("GET", "/backup/"+backupName, map[string]string{})
 		call.DestFilePath = backupName
 		call.Do()
 	},

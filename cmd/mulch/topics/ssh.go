@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -12,6 +11,7 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/spf13/cobra"
 )
@@ -30,7 +30,7 @@ See 'vm list' for VM Names.
 `,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		err := CreateSSHMulchDir()
+		err := client.CreateSSHMulchDir()
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -40,7 +40,7 @@ See 'vm list' for VM Names.
 		if revision != "" {
 			sshCmdWithRevision = true
 		}
-		call := globalAPI.NewCall("GET", "/vm/infos/"+args[0], map[string]string{
+		call := client.GlobalAPI.NewCall("GET", "/vm/infos/"+args[0], map[string]string{
 			"revision": revision,
 		})
 		call.JSONCallback = sshCmdInfoCB
@@ -61,34 +61,19 @@ func sshCmdInfoCB(reader io.Reader, headers http.Header) {
 	}
 
 	sshCmdVM = &data
-	call := globalAPI.NewCall("GET", "/sshpair", map[string]string{})
+	call := client.GlobalAPI.NewCall("GET", "/sshpair", map[string]string{})
 	call.JSONCallback = sshCmdPairCB
 	call.Do()
 
 }
 
 func sshCmdPairCB(reader io.Reader, headers http.Header) {
-	var data common.APISSHPair
-	dec := json.NewDecoder(reader)
-	err := dec.Decode(&data)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-	// save files using current server name
-	privFilePath := GetSSHPath(mulchSubDir + sshKeyPrefix + globalConfig.Server.Name)
-	pubFilePath := privFilePath + ".pub"
-
-	err = ioutil.WriteFile(privFilePath, []byte(data.Private), 0600)
+	_, privFilePath, err := client.WriteSSHPair(reader)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	err = ioutil.WriteFile(pubFilePath, []byte(data.Public), 0644)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	hostname, err := GetSSHHost()
+	hostname, err := client.GetSSHHost()
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -101,14 +86,14 @@ func sshCmdPairCB(reader io.Reader, headers http.Header) {
 	// legacy (no revision) destination
 	destination := user + "@" + sshCmdVM.Name + "@" + hostname
 	if sshCmdWithRevision {
-		destination = user + "@" + sshCmdVM.Name + "-" + strconv.Itoa(sshCmdVM.Revision) + "@" + hostname
+		destination = user + "@" + sshCmdVM.Name + "-r" + strconv.Itoa(sshCmdVM.Revision) + "@" + hostname
 	}
 
 	// launch 'ssh' command
 	args := []string{
 		"ssh",
 		"-i", privFilePath,
-		"-p", strconv.Itoa(sshPort),
+		"-p", strconv.Itoa(client.SSHPort),
 		destination,
 	}
 

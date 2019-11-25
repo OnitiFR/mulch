@@ -1,6 +1,7 @@
 package topics
 
 import (
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 )
 
@@ -16,7 +17,7 @@ and all VM commands (ex: lock, backup, ...) will defaults to this revision.
 `,
 	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		call := globalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
+		call := client.GlobalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
 			"action":   "activate",
 			"revision": args[1],
 		})

@@ -13,6 +13,7 @@ const logControllerHistoryMaxLines = 3000
 
 // LogController sends logs to client
 func LogController(req *server.Request) {
+	req.StartStream <- true
 	target := req.HTTP.FormValue("target")
 	req.SetTarget(target)
 

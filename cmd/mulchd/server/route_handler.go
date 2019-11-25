@@ -42,14 +42,15 @@ type Route struct {
 
 // Request describes a request and allows to build a response
 type Request struct {
-	Route     *Route
-	SubPath   string
-	HTTP      *http.Request
-	Response  http.ResponseWriter
-	App       *App
-	Stream    *Log
-	HubClient *HubClient
-	APIKey    *APIKey
+	Route       *Route
+	SubPath     string
+	HTTP        *http.Request
+	Response    http.ResponseWriter
+	App         *App
+	Stream      *Log
+	HubClient   *HubClient
+	APIKey      *APIKey
+	StartStream chan bool
 }
 
 func isRouteMethodAllowed(method string, methods []string) bool {
@@ -85,8 +86,6 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 	// Note: starting from here, request parameters are no more available
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.Header().Set("Content-Type", "application/x-ndjson")
-	w.WriteHeader(http.StatusOK)
-	flusher.Flush()
 
 	enc := json.NewEncoder(w)
 
@@ -105,6 +104,11 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 		time.Sleep(time.Duration(100) * time.Millisecond)
 		closer <- true
 	}()
+
+	// give a chance to the request.Route.Handler to update headers
+	_ = <-request.StartStream
+	w.WriteHeader(http.StatusOK)
+	flusher.Flush()
 
 	for {
 		select {
@@ -238,11 +242,12 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 	subPath := r.URL.Path[len(route.path):]
 
 	request := &Request{
-		Route:    route,
-		SubPath:  subPath,
-		HTTP:     r,
-		Response: w,
-		App:      app,
+		Route:       route,
+		SubPath:     subPath,
+		HTTP:        r,
+		Response:    w,
+		App:         app,
+		StartStream: make(chan bool),
 	}
 
 	if route.Public == false {

@@ -3,6 +3,7 @@ package topics
 import (
 	"log"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +21,7 @@ Example:
 `,
 	Args: cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
-		call := globalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
+		call := client.GlobalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
 			"action": "exec",
 			"as":     args[1],
 		})

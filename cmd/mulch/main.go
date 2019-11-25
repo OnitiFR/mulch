@@ -1,7 +1,22 @@
 package main
 
-import "github.com/OnitiFR/mulch/cmd/mulch/topics"
+import (
+	"os"
+
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
+	"github.com/OnitiFR/mulch/cmd/mulch/topics"
+)
 
 func main() {
-	topics.Execute()
+
+	client.InitExitMessage()
+
+	err := topics.Execute()
+
+	msg := client.GetExitMessage()
+	msg.Display()
+
+	if err != nil {
+		os.Exit(1)
+	}
 }

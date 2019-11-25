@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -32,8 +33,12 @@ See [[do-actions]] in TOML description file.
 		doListFlagBasic, _ = cmd.Flags().GetBool("basic")
 		revision, _ := cmd.Flags().GetString("revision")
 
+		if doListFlagBasic == true {
+			client.GetExitMessage().Disable()
+		}
+
 		if len(args) == 1 {
-			call := globalAPI.NewCall("GET", "/vm/do-actions/"+args[0], map[string]string{
+			call := client.GlobalAPI.NewCall("GET", "/vm/do-actions/"+args[0], map[string]string{
 				"revision": revision,
 			})
 			call.JSONCallback = doListCB
@@ -48,7 +53,7 @@ See [[do-actions]] in TOML description file.
 				"revision":  revision,
 			}
 
-			call := globalAPI.NewCall("POST", "/vm/"+args[0], params)
+			call := client.GlobalAPI.NewCall("POST", "/vm/"+args[0], params)
 			call.Do()
 		}
 	},

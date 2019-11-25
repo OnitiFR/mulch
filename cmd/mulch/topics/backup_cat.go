@@ -3,6 +3,7 @@ package topics
 import (
 	"os"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +19,7 @@ Errors are still sent to stderr.
 	Run: func(cmd *cobra.Command, args []string) {
 		backupName := args[0]
 
-		call := globalAPI.NewCall("GET", "/backup/"+backupName, map[string]string{})
+		call := client.GlobalAPI.NewCall("GET", "/backup/"+backupName, map[string]string{})
 		call.DestStream = os.Stdout
 		call.Do()
 	},

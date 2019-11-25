@@ -1,15 +1,16 @@
+- add _MULCH_DOWNLOAD_FILE for auto SFTP client download?
+- test "pre-allocated" backup disks on backup duration for "big VMs"?
+- add completion for "log" command targets
 - check TLS cert renewal!
     - reported issue: vm is deleted, recreated 3 months later, cert is invalid
-- bug on multiple-VM rebuild/creation? (on phone-home)
-- client: remove multiple upgrade messages when muliple APICall (ex: ssh-config)
 - cut SSH connections when VM delete?
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
   - (dhcp/dnsmasq? ebtables? mulch-netowrk restart?)
 - libvirtd watchdog + alert (ex: timeout in VMStateDatabase?)
-- clean VM XML template
-- have a look at ansible? (for sample scripts)
+- clean VM XML template (ex: no display device [serial console])
 - create a nice and shiny website for Mulch project
 - VM tags
+- have a look at ansible? (for sample scripts)
 - add --revision to rebuild command
 - remove the need to supply the VM name for redefine command?
   - keep: sanity check for a dangerous op, but looks confusing to the user
@@ -20,7 +21,7 @@
 - flag for compression / no compression on "vm backup"
 - check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
 - challenge based auth?
-- rights / limited access
+- rights / limited access (warning: logs may expose sensitive data)
 - mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
 - support passphrase for Mulch SSH key?
 - move SSH Keys and MulchSuperUser to VM level?

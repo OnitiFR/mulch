@@ -102,7 +102,13 @@ func NewSSHProxyServer(app *App) error {
 				}
 
 				name := parts[0]
-				revision, errA := strconv.Atoi(parts[1])
+				revStr := parts[1]
+
+				// we accept vm-123 (old) and vm-r123 (new) formats
+				if revStr[0] == 'r' {
+					revStr = revStr[1:]
+				}
+				revision, errA := strconv.Atoi(revStr)
 				if errA != nil {
 					return nil, errA
 				}

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/spf13/cobra"
 )
@@ -24,7 +25,7 @@ See 'vm list' for VM Names.
 	Aliases: []string{"info"},
 	Run: func(cmd *cobra.Command, args []string) {
 		revision, _ := cmd.Flags().GetString("revision")
-		call := globalAPI.NewCall("GET", "/vm/infos/"+args[0], map[string]string{
+		call := client.GlobalAPI.NewCall("GET", "/vm/infos/"+args[0], map[string]string{
 			"revision": revision,
 		})
 		call.JSONCallback = vmInfosDisplay

@@ -11,12 +11,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var globalHome string
-var globalCfgFile string
-
-var globalAPI *client.API
-var globalConfig *RootConfig
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "mulch",
@@ -28,31 +22,32 @@ libvirt API. This is the client.`,
 		fmt.Printf("%s\n\n", cmd.Long)
 		fmt.Printf("Use --help to list commands and options.\n\n")
 		fmt.Printf("configuration file '%s', server '%s'\n",
-			globalConfig.ConfigFile,
-			globalConfig.Server.Name,
+			client.GlobalConfig.ConfigFile,
+			client.GlobalConfig.Server.Name,
 		)
 	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute() error {
 	var err error
-	globalHome, err = homedir.Dir()
+	client.GlobalHome, err = homedir.Dir()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return err
 	}
 
 	if err = rootCmd.Execute(); err != nil {
-		os.Exit(1)
+		return err
 	}
+	return nil
 }
 
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVarP(&globalCfgFile, "config", "c", "", "config file (default is $HOME/.mulch.toml)")
+	rootCmd.PersistentFlags().StringVarP(&client.GlobalCfgFile, "config", "c", "", "config file (default is $HOME/.mulch.toml)")
 
 	rootCmd.PersistentFlags().BoolP("trace", "t", false, "also show server TRACE messages (debug)")
 	rootCmd.PersistentFlags().BoolP("time", "d", false, "show server timestamps on messages")
@@ -70,7 +65,7 @@ func init() {
 
 func setCompletion() {
 	aliases := ""
-	for alias, server := range globalConfig.Aliases {
+	for alias, server := range client.GlobalConfig.Aliases {
 		aliases += fmt.Sprintf("%s() { mulch -s %s \"$@\"; }\n", alias, server)
 		aliases += fmt.Sprintf("complete -o default -F __start_mulch %s\n", alias)
 	}
@@ -80,18 +75,18 @@ func setCompletion() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 
-	cfgFile := globalCfgFile
+	cfgFile := client.GlobalCfgFile
 	if cfgFile == "" {
-		cfgFile = path.Clean(globalHome + "/.mulch.toml")
+		cfgFile = path.Clean(client.GlobalHome + "/.mulch.toml")
 	}
 
 	var err error
-	globalConfig, err = NewRootConfig(cfgFile)
+	client.GlobalConfig, err = NewRootConfig(cfgFile)
 	if err != nil {
 		log.Fatalf("Error: %s", err)
 	}
 
-	if globalConfig == nil {
+	if client.GlobalConfig == nil {
 		fmt.Printf(`ERROR: Configuration file not found: %s
 
 Example:
@@ -114,17 +109,17 @@ Note: you can also use environment variables (TRACE, TIME, SERVER).
 		os.Exit(1)
 	}
 
-	globalAPI = client.NewAPI(
-		globalConfig.Server.URL,
-		globalConfig.Server.Key,
-		globalConfig.Trace,
-		globalConfig.Time,
+	client.GlobalAPI = client.NewAPI(
+		client.GlobalConfig.Server.URL,
+		client.GlobalConfig.Server.Key,
+		client.GlobalConfig.Trace,
+		client.GlobalConfig.Time,
 	)
 
 	setCompletion()
 
 	if rootCmd.PersistentFlags().Lookup("dump-server").Changed {
-		fmt.Println(globalConfig.Server.Name)
+		fmt.Println(client.GlobalConfig.Server.Name)
 		os.Exit(0)
 	}
 

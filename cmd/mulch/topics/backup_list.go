@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/c2h5oh/datasize"
 	"github.com/olekukonko/tablewriter"
@@ -24,12 +25,15 @@ var backupListCmd = &cobra.Command{
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		backupListFlagBasic, _ = cmd.Flags().GetBool("basic")
+		if backupListFlagBasic == true {
+			client.GetExitMessage().Disable()
+		}
 
 		vmFilter := ""
 		if len(args) > 0 {
 			vmFilter = args[0]
 		}
-		call := globalAPI.NewCall("GET", "/backup", map[string]string{
+		call := client.GlobalAPI.NewCall("GET", "/backup", map[string]string{
 			"vm": vmFilter,
 		})
 		call.JSONCallback = backupListCB

@@ -4,6 +4,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +24,7 @@ from an existing VM using [unimplemented yet]
 		inactive, _ := cmd.Flags().GetBool("inactive")
 		keepOnFailure, _ := cmd.Flags().GetBool("keep-on-failure")
 
-		call := globalAPI.NewCall("POST", "/vm", map[string]string{
+		call := client.GlobalAPI.NewCall("POST", "/vm", map[string]string{
 			"restore":            restore,
 			"allow_new_revision": strconv.FormatBool(newRevision),
 			"inactive":           strconv.FormatBool(inactive),
