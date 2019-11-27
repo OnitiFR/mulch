@@ -1678,8 +1678,18 @@ func VMSnapshot(vmName *VMName, authorKey string, app *App, log *Log) error {
 	}
 	defer domain.Free()
 
-	// libvirt.DomainSnapshot
-	snapcfg := &libvirtxml.DomainSnapshot{}
+	disks := &libvirtxml.DomainSnapshotDisks{}
+	disks.Disks = append(disks.Disks, libvirtxml.DomainSnapshotDisk{
+		Name:     "hda",
+		Snapshot: "internal",
+	})
+	disks.Disks = append(disks.Disks, libvirtxml.DomainSnapshotDisk{
+		Name:     "vda",
+		Snapshot: "internal",
+	})
+	snapcfg := &libvirtxml.DomainSnapshot{
+		Disks: disks,
+	}
 
 	xml, err := snapcfg.Marshal()
 	if err != nil {
