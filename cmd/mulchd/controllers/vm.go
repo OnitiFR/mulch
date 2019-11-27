@@ -321,6 +321,14 @@ func ActionVMController(req *server.Request) {
 		} else {
 			req.Stream.Successf("VM %s is now active", entry.Name)
 		}
+	case "snapshot":
+		err := SnapshotVM(req, entry)
+		if err != nil {
+			req.Stream.Failuref("error: %s", err)
+		} else {
+			req.Stream.Successf("VM %s snapshot created", entry.Name)
+		}
+
 	default:
 		req.Stream.Failuref("missing or invalid action ('%s') for '%s'", action, vmName)
 		return
@@ -687,4 +695,18 @@ func RedefineVM(req *server.Request, vm *server.VM) error {
 	}
 
 	return nil
+}
+
+// SnapshotVM capture a new VM snapshot
+func SnapshotVM(req *server.Request, entry *server.VMDatabaseEntry) error {
+	vm := entry.VM
+
+	if vm.Locked == true && req.HTTP.FormValue("force") != common.TrueStr {
+		return errors.New("VM is locked (see --force)")
+	}
+
+	if vm.WIP != server.VMOperationNone {
+		return fmt.Errorf("VM have a work in progress (%s)", string(vm.WIP))
+	}
+	return server.VMSnapshot(entry.Name, req.APIKey.Comment, req.App, req.Stream)
 }

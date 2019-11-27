@@ -1661,3 +1661,49 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 
 	return nil
 }
+
+// VMSnapshot xxx
+func VMSnapshot(vmName *VMName, authorKey string, app *App, log *Log) error {
+	running, _ := VMIsRunning(vmName, app)
+	if running == false {
+		return errors.New("VM should be up and running to capture a (live) snapshot")
+	}
+
+	domain, err := app.Libvirt.GetDomainByName(vmName.LibvirtDomainName(app))
+	if err != nil {
+		return err
+	}
+	if domain == nil {
+		return fmt.Errorf("VM %s: does not exists in libvirt", vmName)
+	}
+	defer domain.Free()
+
+	// libvirt.DomainSnapshot
+	snapcfg := &libvirtxml.DomainSnapshot{}
+
+	xml, err := snapcfg.Marshal()
+	if err != nil {
+		return err
+	}
+
+	// flags: what is DOMAIN_SNAPSHOT_CREATE_LIVE vs 0?
+	snapshot, err := domain.CreateSnapshotXML(xml, 0)
+	if err != nil {
+		return err
+	}
+	defer snapshot.Free()
+
+	out, err := snapshot.GetXMLDesc(0)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(out)
+	// vm, err := app.VMDB.GetByName(vmName)
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// fmt.Println(vm)
+	return nil
+}
