@@ -8,11 +8,19 @@
   <!-- currentMemory is optional, defaults to 'memory' -->
   <currentMemory unit='KiB'>0</currentMemory>
   <vcpu placement='static'>0</vcpu>
-  <os>
+  <os mode='sysinfo'>
     <!-- pc is an alias for the latest pc-i440fx -->
     <type arch='x86_64' machine='pc'>hvm</type>
     <boot dev='hd'/>
+    <smbios mode='sysinfo'/>
   </os>
+  <sysinfo type='smbios'>
+    <system>
+      <entry name='product'>Mulch</entry>
+      <entry name='version'>0.0.0</entry>
+      <entry name='serial'>ds=nocloud-net</entry>
+    </system>
+  </sysinfo>
   <features>
     <acpi/>
     <apic/>
@@ -55,15 +63,6 @@
       <source file='undefined-disk'/>
       <target dev='vda' bus='virtio'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
-    </disk>
-
-    <disk type='file' device='disk'>
-      <!-- the alias 'ua-mulch-cloudinit' is required by Mulch-->
-      <alias name="ua-mulch-cloudinit"/>
-      <driver name='qemu' type='raw'/>
-      <source file='undefined-cloudinit'/>
-      <target dev='hda' bus='ide'/>
-      <address type='drive' controller='0' bus='0' target='0' unit='0'/>
     </disk>
 
     <controller type='usb' index='0' model='ich9-ehci1'>

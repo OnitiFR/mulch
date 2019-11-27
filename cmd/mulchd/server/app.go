@@ -20,17 +20,16 @@ import (
 // - App.initLibvirtStorage()
 // - Libvirt.GetConnection()
 const (
-	AppStorageCloudInit = "mulch-cloud-init"
-	AppStorageSeeds     = "mulch-seeds"
-	AppStorageDisks     = "mulch-disks"
-	AppStorageBackups   = "mulch-backups"
+	AppStorageSeeds   = "mulch-seeds"
+	AppStorageDisks   = "mulch-disks"
+	AppStorageBackups = "mulch-backups"
 
 	AppNetwork  = "mulch"
 	AppNWFilter = "mulch-filter"
 )
 
-// AppPhoneServerPost for "phone home" internal HTTP server
-const AppPhoneServerPost = 8585
+// AppInternalServerPost for "phone home" internal HTTP server
+const AppInternalServerPost = 8585
 
 // LogHistorySize is the maximum number of messages in app log history
 // ~128kB / 1000 messages (very rough approx!)
@@ -344,16 +343,6 @@ func (app *App) initLibvirtStorage() error {
 	var err error
 	var pools = &app.Libvirt.Pools
 
-	pools.CloudInit, pools.CloudInitXML, err = app.Libvirt.GetOrCreateStoragePool(
-		AppStorageCloudInit,
-		app.Config.StoragePath+"/cloud-init",
-		app.Config.GetTemplateFilepath("storage.xml"),
-		"0711",
-		app.Log)
-	if err != nil {
-		return fmt.Errorf("initLibvirtStorage (cloud-init/): %s", err)
-	}
-
 	pools.Seeds, pools.SeedsXML, err = app.Libvirt.GetOrCreateStoragePool(
 		AppStorageSeeds,
 		app.Config.StoragePath+"/seeds",
@@ -467,7 +456,7 @@ func (app *App) Run() {
 	}()
 
 	go func() {
-		listen := app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(AppPhoneServerPost)
+		listen := app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(AppInternalServerPost)
 		app.Log.Infof("Internal server listening on %s", listen)
 		err := http.ListenAndServe(listen, app.MuxInternal)
 		errChan <- fmt.Errorf("ListenAndServe internal server: %s", err)

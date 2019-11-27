@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,10 +19,9 @@ import (
 
 // Aliases for vm.xml file
 const (
-	VMStorageAliasDisk      = "ua-mulch-disk"
-	VMStorageAliasCloudInit = "ua-mulch-cloudinit"
-	VMStorageAliasBackup    = "ua-mulch-backup"
-	VMNetworkAliasBridge    = "ua-mulch-bridge"
+	VMStorageAliasDisk   = "ua-mulch-disk"
+	VMStorageAliasBackup = "ua-mulch-backup"
+	VMNetworkAliasBridge = "ua-mulch-bridge"
 )
 
 // VMOperation defines heavy operations in the VM
@@ -101,11 +101,10 @@ func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM s
 	return nil
 }
 
-// small helper to generate CloudImage name and main disk name
-func vmGenVolumesNames(vmName *VMName) (string, string) {
-	ciName := "ci-" + vmName.ID() + ".img"
+// small helper to generate main disk name
+func vmGenDiskName(vmName *VMName) string {
 	diskName := vmName.ID() + ".qcow2"
-	return ciName, diskName
+	return diskName
 }
 
 // NewVM builds a new virtual machine from config
@@ -155,7 +154,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		return nil, nil, fmt.Errorf("Unexpected error: %s", err)
 	}
 
-	ciName, diskName := vmGenVolumesNames(vmName)
+	diskName := vmGenDiskName(vmName)
 
 	seed, err := app.Seeder.GetByName(vmConfig.Seed)
 	if err != nil {
@@ -238,29 +237,12 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		return nil, nil, err
 	}
 
-	// 3 - Cloud-Init files
+	// 3 - was "Cloud-Init files"
 	log.Infof("creating Cloud-Init image for %s", vmName)
-	err = CloudInitCreate(ciName, vmName, vm, app, log)
-	if err != nil {
-		return nil, nil, err
-	}
-	// delete the created volume in case of failure of the rest of the VM creation
-	defer func() {
-		if !commit {
-			log.Infof("rollback, deleting cloud-init image '%s'", ciName)
-			vol, errDef := app.Libvirt.Pools.CloudInit.LookupStorageVolByName(ciName)
-			if errDef != nil {
-				log.Errorf("failed LookupStorageVolByName: %s (%s)", errDef, ciName)
-				return
-			}
-			defer vol.Free()
-			errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
-			if errDef != nil {
-				log.Errorf("failed Delete: %s (%s)", errDef, ciName)
-				return
-			}
-		}
-	}()
+	// err = CloudInitCreate(ciName, vmName, vm, app, log)
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
 
 	// 4 - define domain
 	log.Infof("defining vm domain (%s)", domainName)
@@ -284,20 +266,31 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 
 	domcfg.VCPU.Value = vm.Config.CPUCount
 
+	serial := "ds=nocloud-net;s=http://" + app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(AppInternalServerPost) + "/cloud-init/" + vm.SecretUUID + "/" + strconv.Itoa(vmName.Revision) + "/"
+	// serial := "ds=nocloud-net;s=http://10.104.0.1/cloud-init/;i=" + vm.SecretUUID + ";h=" + vm.Config.Hostname
+	serialFound := false
+	for i, entry := range domcfg.SysInfo.System.Entry {
+		if entry.Name == "version" {
+			domcfg.SysInfo.System.Entry[i].Value = Version
+		}
+		if entry.Name == "serial" {
+			serialFound = true
+			domcfg.SysInfo.System.Entry[i].Value = serial
+		}
+	}
+	if serialFound == false {
+		return nil, nil, errors.New("vm xml file: <sysinfo type='smbios'><system><entry name='serial'> entry not found")
+	}
+
 	foundDisks := 0
 	for _, disk := range domcfg.Devices.Disks {
 		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasDisk {
 			disk.Source.File.File = app.Libvirt.Pools.DisksXML.Target.Path + "/" + diskName
 			foundDisks++
 		}
-		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasCloudInit {
-			disk.Source.File.File = app.Libvirt.Pools.CloudInitXML.Target.Path + "/" + ciName
-			foundDisks++
-		}
 	}
-
-	if foundDisks != 2 {
-		return nil, nil, errors.New("vm xml file: disks with 'ua-mulch-disk' and 'ua-mulch-cloudinit' aliases are required, see sample file")
+	if foundDisks != 1 {
+		return nil, nil, errors.New("vm xml file: a single disk with 'ua-mulch-disk' alias is required, see sample file")
 	}
 
 	foundInterfaces := 0
@@ -635,59 +628,6 @@ func VMGetDiskName(name *VMName, app *App) (string, error) {
 	return diskName, nil
 }
 
-func vmDeleteCloudInitDisk(dom *libvirt.Domain, pool *libvirt.StoragePool, conn *libvirt.Connect) (*libvirt.Domain, error) {
-	// 1 - remove filesystem from domain
-	xmldoc, err := dom.GetXMLDesc(0)
-	if err != nil {
-		return nil, err
-	}
-
-	domcfg := &libvirtxml.Domain{}
-	err = domcfg.Unmarshal(xmldoc)
-	if err != nil {
-		return nil, err
-	}
-
-	ciName := ""
-	tmp := domcfg.Devices.Disks[:0]
-	for _, disk := range domcfg.Devices.Disks {
-		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasCloudInit {
-			ciName = path.Base(disk.Source.File.File)
-		} else {
-			tmp = append(tmp, disk)
-		}
-	}
-	if ciName == "" {
-		return nil, fmt.Errorf("clound-init clean: disk with '%s' alias not found", VMStorageAliasCloudInit)
-	}
-
-	domcfg.Devices.Disks = tmp
-
-	out, err := domcfg.Marshal()
-	if err != nil {
-		return nil, err
-	}
-
-	// update the domain
-	dom2, err := conn.DomainDefineXML(string(out))
-	if err != nil {
-		return nil, err
-	}
-
-	// 2 - delete volume
-	vol, err := pool.LookupStorageVolByName(ciName)
-	if err != nil {
-		return nil, err
-	}
-	defer vol.Free()
-	err = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
-	if err != nil {
-		return nil, err
-	}
-
-	return dom2, nil
-}
-
 // VMStopByName stops a VM using its name and waits until the VM is down. (or timeouts)
 func VMStopByName(name *VMName, app *App, log *Log) error {
 	domain, err := app.Libvirt.GetDomainByName(name.LibvirtDomainName(app))
@@ -848,12 +788,8 @@ func VMDelete(vmName *VMName, app *App, log *Log) error {
 		return err
 	}
 
-	ciName := ""
 	diskName := ""
 	for _, disk := range domcfg.Devices.Disks {
-		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasCloudInit {
-			ciName = path.Base(disk.Source.File.File)
-		}
 		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasDisk {
 			diskName = path.Base(disk.Source.File.File)
 		}
@@ -861,7 +797,6 @@ func VMDelete(vmName *VMName, app *App, log *Log) error {
 
 	// Casual refresh, without any error checking. Alacool.
 	app.Libvirt.Pools.Disks.Refresh(0)
-	app.Libvirt.Pools.CloudInit.Refresh(0)
 
 	// 2 - delete Disk volume
 	if diskName != "" {
@@ -872,20 +807,6 @@ func VMDelete(vmName *VMName, app *App, log *Log) error {
 		}
 		defer diskVol.Free()
 		err = diskVol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
-		if err != nil {
-			return err
-		}
-	}
-
-	// 3 - delete CloudInit volume
-	if ciName != "" {
-		log.Infof("removing cloud-init volume '%s'", ciName)
-		ciVol, err := app.Libvirt.Pools.CloudInit.LookupStorageVolByName(ciName)
-		if err != nil {
-			return err
-		}
-		defer ciVol.Free()
-		err = ciVol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
 		if err != nil {
 			return err
 		}
@@ -1399,16 +1320,10 @@ func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 		return err
 	}
 
-	newCiName, newDiskName := vmGenVolumesNames(newVMName)
+	newDiskName := vmGenDiskName(newVMName)
 
-	ciName := ""
 	diskName := ""
 	for _, disk := range domcfg.Devices.Disks {
-		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasCloudInit {
-			ciName = path.Base(disk.Source.File.File)
-			dir := path.Dir(disk.Source.File.File)
-			disk.Source.File.File = path.Clean(dir + "/" + newCiName)
-		}
 		if disk.Alias != nil && disk.Alias.Name == VMStorageAliasDisk {
 			diskName = path.Base(disk.Source.File.File)
 			dir := path.Dir(disk.Source.File.File)
@@ -1418,19 +1333,8 @@ func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 
 	diskTemplate := app.Config.GetTemplateFilepath("volume.xml")
 
-	ciPool := app.Libvirt.Pools.CloudInit
-	ciPoolXML := app.Libvirt.Pools.CloudInitXML
-
 	diskPool := app.Libvirt.Pools.Disks
 	diskPoolXML := app.Libvirt.Pools.DisksXML
-
-	if ciName != "" {
-		log.Infof("cloning volume '%s'", ciName)
-		errC := app.Libvirt.CloneVolume(ciName, ciPool, newCiName, ciPool, ciPoolXML, diskTemplate, log)
-		if errC != nil {
-			return errC
-		}
-	}
 
 	if diskName != "" {
 		log.Infof("cloning volume '%s'", diskName)
@@ -1438,11 +1342,6 @@ func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 		if errC != nil {
 			return errC
 		}
-	}
-
-	err = app.Libvirt.DeleteVolume(ciName, ciPool)
-	if err != nil {
-		return err
 	}
 
 	err = app.Libvirt.DeleteVolume(diskName, diskPool)

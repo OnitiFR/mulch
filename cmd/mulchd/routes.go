@@ -7,6 +7,7 @@ import (
 
 // AddRoutes defines all API routes for the application
 func AddRoutes(app *server.App) {
+	// Internal routes
 	app.AddRoute(&server.Route{
 		Route:        "POST /phone",
 		Type:         server.RouteTypeCustom,
@@ -15,6 +16,15 @@ func AddRoutes(app *server.App) {
 		Handler:      controllers.PhoneController,
 	}, server.RouteInternal)
 
+	app.AddRoute(&server.Route{
+		Route:        "GET /cloud-init/*",
+		Type:         server.RouteTypeCustom,
+		Public:       true,
+		NoProtoCheck: true,
+		Handler:      controllers.CloudInitController,
+	}, server.RouteInternal)
+
+	// API routes
 	app.AddRoute(&server.Route{
 		Route:   "GET /log/history",
 		Type:    server.RouteTypeCustom,

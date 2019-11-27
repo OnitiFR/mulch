@@ -118,7 +118,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		return nil, fmt.Errorf("listen: '%s': wrong port number", tConfig.Listen)
 	}
 
-	if listenPort == AppPhoneServerPost {
+	if listenPort == AppInternalServerPost {
 		return nil, fmt.Errorf("listen address '%s' is reserved for internal use", tConfig.Listen)
 	}
 	appConfig.Listen = tConfig.Listen
