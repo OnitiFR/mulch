@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
@@ -14,7 +13,7 @@ func CloudInitController(req *server.Request) {
 	req.Response.Header().Set("Content-Type", "text/plain")
 
 	parts := strings.Split(req.SubPath, "/")
-	if len(parts) != 3 {
+	if len(parts) != 2 {
 		errMsg := "request path is invalid"
 		req.App.Log.Error(errMsg)
 		http.Error(req.Response, errMsg, 400)
@@ -22,20 +21,16 @@ func CloudInitController(req *server.Request) {
 	}
 
 	uuid := parts[0]
-	revisionStr := parts[1]
-	filename := parts[2]
+	filename := parts[1]
 
-	revision, _ := strconv.Atoi(revisionStr)
-
-	// impossible, VM is not yet in DB :(
-	vm, err := req.App.VMDB.GetBySecretUUID(uuid)
+	entry, err := req.App.VMDB.GetEntryBySecretUUID(uuid)
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)
 		return
 	}
 
-	metaData, userData, err := server.CloudInitDataGen(vm, revision, req.App)
+	metaData, userData, err := server.CloudInitDataGen(entry.VM, entry.Name, req.App)
 
 	switch filename {
 	case "meta-data":

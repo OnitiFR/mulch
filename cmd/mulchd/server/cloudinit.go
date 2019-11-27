@@ -38,7 +38,7 @@ func cloudInitExtraEnv(envMap map[string]string) string {
 }
 
 // CloudInitDataGen will return CloudInit meta-data and user-data
-func CloudInitDataGen(vm *VM, revision int, app *App) (string, string, error) {
+func CloudInitDataGen(vm *VM, vmName *VMName, app *App) (string, string, error) {
 	userDataTemplate := app.Config.GetTemplateFilepath("ci-user-data.yml")
 
 	phURL := "http://" + app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(AppInternalServerPost) + "/phone"
@@ -68,8 +68,8 @@ func CloudInitDataGen(vm *VM, revision int, app *App) (string, string, error) {
 	userDataVariables["_MULCH_SUPER_USER"] = app.Config.MulchSuperUser
 	userDataVariables["_TIMEZONE"] = vm.Config.Timezone
 	userDataVariables["_APP_USER"] = vm.Config.AppUser
-	userDataVariables["_VM_NAME"] = vm.Config.Name
-	userDataVariables["_VM_REVISION"] = strconv.Itoa(revision)
+	userDataVariables["_VM_NAME"] = vmName.Name
+	userDataVariables["_VM_REVISION"] = vmName.Revision
 	userDataVariables["_KEY_DESC"] = vm.AuthorKey
 	userDataVariables["_MULCH_VERSION"] = Version
 	userDataVariables["_VM_INIT_DATE"] = vm.InitDate.Format(time.RFC3339)

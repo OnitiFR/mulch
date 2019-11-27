@@ -154,6 +154,9 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		return nil, nil, fmt.Errorf("Unexpected error: %s", err)
 	}
 
+	app.VMDB.AddToMaternity(vm, vmName)
+	defer app.VMDB.DeleteFromMaternity(vmName)
+
 	diskName := vmGenDiskName(vmName)
 
 	seed, err := app.Seeder.GetByName(vmConfig.Seed)
@@ -266,8 +269,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 
 	domcfg.VCPU.Value = vm.Config.CPUCount
 
-	serial := "ds=nocloud-net;s=http://" + app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(AppInternalServerPost) + "/cloud-init/" + vm.SecretUUID + "/" + strconv.Itoa(vmName.Revision) + "/"
-	// serial := "ds=nocloud-net;s=http://10.104.0.1/cloud-init/;i=" + vm.SecretUUID + ";h=" + vm.Config.Hostname
+	serial := "ds=nocloud-net;s=http://" + app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(AppInternalServerPost) + "/cloud-init/" + vm.SecretUUID + "/"
 	serialFound := false
 	for i, entry := range domcfg.SysInfo.System.Entry {
 		if entry.Name == "version" {
