@@ -45,7 +45,7 @@ Here's a minimal VM description file: (TOML format)
 ```toml
 # This is a (working) minimalist sample VM definition
 name = "mini"
-seed = "debian_9"
+seed = "debian_10"
 
 disk_size = "20G"
 ram_size = "1G"
