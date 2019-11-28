@@ -1549,6 +1549,8 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 }
 
 // VMSnapshot xxx
+// TODO: add snapshot as an WIP? (already listed as operation, no ?)
+// TODO: check VM status during snapshot
 func VMSnapshot(vmName *VMName, authorKey string, app *App, log *Log) error {
 	running, _ := VMIsRunning(vmName, app)
 	if running == false {
@@ -1564,25 +1566,15 @@ func VMSnapshot(vmName *VMName, authorKey string, app *App, log *Log) error {
 	}
 	defer domain.Free()
 
-	disks := &libvirtxml.DomainSnapshotDisks{}
-	disks.Disks = append(disks.Disks, libvirtxml.DomainSnapshotDisk{
-		Name:     "hda",
-		Snapshot: "internal",
-	})
-	disks.Disks = append(disks.Disks, libvirtxml.DomainSnapshotDisk{
-		Name:     "vda",
-		Snapshot: "internal",
-	})
-	snapcfg := &libvirtxml.DomainSnapshot{
-		Disks: disks,
-	}
+	// defaults = full system snapshot (with flag 0, see below)
+	// add a name based on VM name & date ? (for debug)
+	snapcfg := &libvirtxml.DomainSnapshot{}
 
 	xml, err := snapcfg.Marshal()
 	if err != nil {
 		return err
 	}
 
-	// flags: what is DOMAIN_SNAPSHOT_CREATE_LIVE vs 0?
 	snapshot, err := domain.CreateSnapshotXML(xml, 0)
 	if err != nil {
 		return err

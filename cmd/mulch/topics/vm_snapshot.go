@@ -23,4 +23,5 @@ var vmSnapshotCmd = &cobra.Command{
 
 func init() {
 	vmCmd.AddCommand(vmSnapshotCmd)
+	// -m to add a comment ? ("description")
 }
