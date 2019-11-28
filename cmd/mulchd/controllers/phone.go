@@ -46,7 +46,7 @@ func PhoneController(req *server.Request) {
 	} else {
 		_, err := req.App.VMDB.GetMaternityEntryByName(entry.Name)
 		if err == nil {
-			// found in maternity, it's still a baby, we do nothing
+			// found in maternity, it's still a baby, we do nothing yet
 			req.App.Log.Trace("this is still a baby VM")
 		} else {
 			vm := entry.VM

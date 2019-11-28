@@ -30,6 +30,9 @@ func CloudInitController(req *server.Request) {
 		return
 	}
 
+	log := server.NewLog(entry.VM.Config.Name, req.App.Hub, req.App.LogHistory)
+	log.Infof("requesting cloud-init/%s", filename)
+
 	metaData, userData, err := server.CloudInitDataGen(entry.VM, entry.Name, req.App)
 
 	switch filename {
@@ -39,7 +42,7 @@ func CloudInitController(req *server.Request) {
 		req.Println(userData)
 	default:
 		errMsg := "invalid requested filename"
-		req.App.Log.Error(errMsg)
+		log.Error(errMsg)
 		http.Error(req.Response, errMsg, 400)
 		return
 	}

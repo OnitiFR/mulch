@@ -240,14 +240,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		return nil, nil, err
 	}
 
-	// 3 - was "Cloud-Init files"
-	log.Infof("creating Cloud-Init image for %s", vmName)
-	// err = CloudInitCreate(ciName, vmName, vm, app, log)
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
-
-	// 4 - define domain
+	// 3 - define domain
 	log.Infof("defining vm domain (%s)", domainName)
 	xml, err := ioutil.ReadFile(app.Config.GetTemplateFilepath("vm.xml"))
 	if err != nil {
@@ -398,15 +391,6 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		return nil, nil, errors.New("vm is down but didn't phoned home, something went wrong during cloud-init")
 	}
 
-	// if all is OK, remove and delete cloud-init image
-	// EDIT: no! Cloud-init service is screwed on next boot (at least on debian)
-	// log.Infof("removing cloud-init filesystem and volume")
-	// dom2, err := vmDeleteCloudInitDisk(dom, app.Libvirt.Pools.CloudInit, conn)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// defer dom2.Free()
-
 	// start the VM again
 	log.Infof("starting vm")
 	err = dom.Create()
@@ -430,7 +414,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		}
 	}
 
-	// 5 - run prepare scripts
+	// 4 - run prepare scripts
 	log.Infof("running 'prepare' scripts")
 	tasks := []*RunTask{}
 	for _, confTask := range vm.Config.Prepare {
@@ -532,13 +516,14 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 
 	if vm.Config.RestoreBackup != "" {
 		if vm.Config.RestoreBackup != BackupBlankRestore {
+			// 5a - restore backup
 			err = VMRestoreNoChecks(vm, vmName, backup, app, log)
 			if err != nil {
 				return nil, nil, err
 			}
 		}
 	} else {
-		// 6b - run install scripts
+		// 5b - run install scripts
 		log.Infof("running 'install' scripts")
 		tasks := []*RunTask{}
 		for _, confTask := range vm.Config.Install {

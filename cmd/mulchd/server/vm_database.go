@@ -25,8 +25,10 @@ type VMDatabaseEntry struct {
 }
 
 // VMDatabase describes a persistent DataBase of VMs structures
+// ---
 // It include a maternity, where all the baby VM (= currently building)
 // are stored. This transient database is not stored on disk.
+// (this DB is used by GetBySecretUUID, for instance)
 type VMDatabase struct {
 	filename       string
 	domainFilename string
@@ -389,6 +391,7 @@ func (vmdb *VMDatabase) GetEntryBySecretUUID(uuid string) (*VMDatabaseEntry, err
 }
 
 // GetBySecretUUID lookups a VM by its secretUUID
+// Note: this function also search in maternityDB
 func (vmdb *VMDatabase) GetBySecretUUID(uuid string) (*VM, error) {
 	entry, err := vmdb.GetEntryBySecretUUID(uuid)
 	if err != nil {
