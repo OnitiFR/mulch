@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -38,16 +37,15 @@ func cloudInitExtraEnv(envMap map[string]string) string {
 	return res
 }
 
-// CloudInitCreate will create (and upload) the CloudInit image
-func CloudInitCreate(volumeName string, vmName *VMName, vm *VM, app *App, log *Log) error {
-	volTemplate := app.Config.GetTemplateFilepath("volume.xml")
+// CloudInitDataGen will return CloudInit meta-data and user-data
+func CloudInitDataGen(vm *VM, vmName *VMName, app *App) (string, string, error) {
 	userDataTemplate := app.Config.GetTemplateFilepath("ci-user-data.yml")
 
-	phURL := "http://" + app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(AppPhoneServerPost) + "/phone"
+	phURL := "http://" + app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(AppInternalServerPost) + "/phone"
 
 	sshKeyPair := app.SSHPairDB.GetByName(SSHSuperUserPair)
 	if sshKeyPair == nil {
-		return errors.New("can't find SSH super user key pair")
+		return "", "", errors.New("can't find SSH super user key pair")
 	}
 
 	var domains []string
@@ -71,7 +69,7 @@ func CloudInitCreate(volumeName string, vmName *VMName, vm *VM, app *App, log *L
 	userDataVariables["_TIMEZONE"] = vm.Config.Timezone
 	userDataVariables["_APP_USER"] = vm.Config.AppUser
 	userDataVariables["_VM_NAME"] = vmName.Name
-	userDataVariables["_VM_REVISION"] = strconv.Itoa(vmName.Revision)
+	userDataVariables["_VM_REVISION"] = vmName.Revision
 	userDataVariables["_KEY_DESC"] = vm.AuthorKey
 	userDataVariables["_MULCH_VERSION"] = Version
 	userDataVariables["_VM_INIT_DATE"] = vm.InitDate.Format(time.RFC3339)
@@ -81,38 +79,8 @@ func CloudInitCreate(volumeName string, vmName *VMName, vm *VM, app *App, log *L
 
 	userData, err := cloudInitUserData(userDataTemplate, userDataVariables)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 
-	// 2 - build image
-	contents := []CIFFile{
-		CIFFile{Filename: "meta-data", Content: metaData},
-		CIFFile{Filename: "user-data", Content: userData},
-	}
-	tmpfile, err := ioutil.TempFile(app.Config.TempPath, "mulch-ci-image")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmpfile.Name())
-
-	// tmpfile will be closed by CloudInitFatCreateImage, no matter what
-	err = CloudInitFatCreateImage(tmpfile, 256*1024, contents)
-	if err != nil {
-		return err
-	}
-
-	// 3 - upload imaage to storage pool
-	err = app.Libvirt.UploadFileToLibvirt(
-		app.Libvirt.Pools.CloudInit,
-		app.Libvirt.Pools.CloudInitXML,
-		volTemplate,
-		tmpfile.Name(),
-		volumeName,
-		log)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return string(metaData), string(userData), nil
 }

@@ -31,7 +31,7 @@ func PhoneController(req *server.Request) {
 		instanceAnon = instanceID[:4] + "…"
 	}
 
-	req.App.Log.Tracef("phoning: id=%s, ip=%s", instanceAnon, ip)
+	req.App.Log.Tracef("phoning: id=%s, ip=%s, cloud-init=%t", instanceAnon, ip, cloudInit)
 	for key, val := range req.HTTP.Form {
 		if key == "instance_id" {
 			val[0] = instanceAnon
@@ -39,35 +39,37 @@ func PhoneController(req *server.Request) {
 		req.App.Log.Tracef(" - %s = '%s'", key, val[0])
 	}
 
-	vm, err := req.App.VMDB.GetBySecretUUID(instanceID)
+	entry, err := req.App.VMDB.GetEntryBySecretUUID(instanceID)
+
 	if err != nil {
-		if cloudInit == false {
-			req.App.Log.Warningf("no VM found (yet?) in database with this instance_id (%s)", instanceAnon)
-		}
+		req.App.Log.Errorf("no VM found (yet?) in database with this instance_id (%s)", instanceAnon)
 	} else {
-		entry, err := req.App.VMDB.GetEntryByVM(vm)
-		if err != nil {
-			req.App.Log.Errorf("unable to find VM: %s", err)
-			return
-		}
-		log := server.NewLog(vm.Config.Name, req.App.Hub, req.App.LogHistory)
-		log.Infof("phoning VM is %s - %s", entry.Name, ip)
+		_, err := req.App.VMDB.GetMaternityEntryByName(entry.Name)
+		if err == nil {
+			// found in maternity, it's still a baby, we do nothing yet
+			req.App.Log.Trace("this is still a baby VM")
+		} else {
+			vm := entry.VM
 
-		if vm.AssignedIPv4 != "" && vm.AssignedIPv4 != ip {
-			log.Errorf("vm %s does not use it's assigned IP! (is '%s', should be '%s')", entry.Name, ip, vm.AssignedIPv4)
-		}
+			log := server.NewLog(vm.Config.Name, req.App.Hub, req.App.LogHistory)
+			log.Infof("phoning VM is %s - %s", entry.Name, ip)
 
-		if vm.LastIP != ip {
-			log.Warningf("vm IP changed since last call (from '%s' to '%s')", vm.LastIP, ip)
+			if vm.AssignedIPv4 != "" && vm.AssignedIPv4 != ip {
+				log.Errorf("vm %s does not use it's assigned IP! (is '%s', should be '%s')", entry.Name, ip, vm.AssignedIPv4)
+			}
 
-			vm.LastIP = ip
-			err = req.App.VMDB.Update()
-			if err != nil {
-				log.Errorf("unable to update VM DB: %s", err)
+			if vm.LastIP != ip {
+				log.Warningf("vm IP changed since last call (from '%s' to '%s')", vm.LastIP, ip)
+
+				vm.LastIP = ip
+				err = req.App.VMDB.Update()
+				if err != nil {
+					log.Errorf("unable to update VM DB: %s", err)
+				}
 			}
 		}
 		if req.HTTP.PostFormValue("dump_config") == common.TrueStr {
-			req.Println(vm.Config.FileContent)
+			req.Println(entry.VM.Config.FileContent)
 		}
 	}
 
