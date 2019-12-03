@@ -25,10 +25,15 @@ type VMDatabaseEntry struct {
 }
 
 // VMDatabase describes a persistent DataBase of VMs structures
+// ---
+// It include a maternity, where all the baby VM (= currently building)
+// are stored. This transient database is not stored on disk.
+// (this DB is used by GetBySecretUUID, for instance)
 type VMDatabase struct {
 	filename       string
 	domainFilename string
 	db             map[string]*VMDatabaseEntry
+	maternityDB    map[string]*VMDatabaseEntry
 	mutex          sync.Mutex
 	onUpdate       updateCallback
 }
@@ -39,6 +44,7 @@ func NewVMDatabase(filename string, domainFilename string, onUpdate updateCallba
 		filename:       filename,
 		domainFilename: domainFilename,
 		db:             make(map[string]*VMDatabaseEntry),
+		maternityDB:    make(map[string]*VMDatabaseEntry),
 		onUpdate:       onUpdate,
 	}
 
@@ -233,6 +239,44 @@ func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 	return nil
 }
 
+// DeleteFromMaternity the VM from the maternity database using its name
+func (vmdb *VMDatabase) DeleteFromMaternity(name *VMName) error {
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
+	_, exists := vmdb.maternityDB[name.ID()]
+	if exists == false {
+		return fmt.Errorf("VM '%s' was not found in maternity database", name.ID())
+	}
+
+	delete(vmdb.maternityDB, name.ID())
+
+	return nil
+}
+
+// AddToMaternity a new VM in the maternity database
+func (vmdb *VMDatabase) AddToMaternity(vm *VM, name *VMName) error {
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
+	if _, exists := vmdb.maternityDB[name.ID()]; exists == true {
+		return fmt.Errorf("VM %s already exists in maternity database", name)
+	}
+
+	entry := &VMDatabaseEntry{
+		Name:   name,
+		VM:     vm,
+		Active: false,
+	}
+
+	vmdb.maternityDB[name.ID()] = entry
+	err := vmdb.save()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // GetNames of all VMs in the database
 func (vmdb *VMDatabase) GetNames() []*VMName {
 	vmdb.mutex.Lock()
@@ -308,8 +352,21 @@ func (vmdb *VMDatabase) GetActiveByName(name string) (*VM, error) {
 	return entry.VM, nil
 }
 
-// GetBySecretUUID lookups a VM by its secretUUID
-func (vmdb *VMDatabase) GetBySecretUUID(uuid string) (*VM, error) {
+// GetMaternityEntryByName lookups a VMDatabaseEntry in maternityDB entry by its name
+func (vmdb *VMDatabase) GetMaternityEntryByName(name *VMName) (*VMDatabaseEntry, error) {
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
+	entry, exists := vmdb.maternityDB[name.ID()]
+	if !exists {
+		return nil, fmt.Errorf("VM %s not found in maternity database", name)
+	}
+	return entry, nil
+}
+
+// GetEntryBySecretUUID lookups a VMName by its secretUUID
+// Note: this function also search in maternityDB
+func (vmdb *VMDatabase) GetEntryBySecretUUID(uuid string) (*VMDatabaseEntry, error) {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
@@ -320,10 +377,27 @@ func (vmdb *VMDatabase) GetBySecretUUID(uuid string) (*VM, error) {
 
 	for _, entry := range vmdb.db {
 		if entry.VM.SecretUUID == uuid {
-			return entry.VM, nil
+			return entry, nil
 		}
 	}
+
+	for _, entry := range vmdb.maternityDB {
+		if entry.VM.SecretUUID == uuid {
+			return entry, nil
+		}
+	}
+
 	return nil, fmt.Errorf("UUID '%s' was not found in database", anon)
+}
+
+// GetBySecretUUID lookups a VM by its secretUUID
+// Note: this function also search in maternityDB
+func (vmdb *VMDatabase) GetBySecretUUID(uuid string) (*VM, error) {
+	entry, err := vmdb.GetEntryBySecretUUID(uuid)
+	if err != nil {
+		return nil, err
+	}
+	return entry.VM, nil
 }
 
 // Count returns the number of VMs in the database

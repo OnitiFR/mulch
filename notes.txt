@@ -4,7 +4,7 @@
 # https://docs.openstack.org/image-guide/obtain-images.html
 
 # Inject cloud-init params through SMBIOS
-# minimum req: cloud-init 17.1 (0.7.9: debian9, centos7, ...)
+# minimum req: cloud-init 17.1 (0.7.9: debian9)
   <os mode='sysinfo'>
     <smbios mode='sysinfo'/>
     ...

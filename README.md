@@ -45,7 +45,7 @@ Here's a minimal VM description file: (TOML format)
 ```toml
 # This is a (working) minimalist sample VM definition
 name = "mini"
-seed = "debian_9"
+seed = "debian_10"
 
 disk_size = "20G"
 ram_size = "1G"
@@ -184,9 +184,11 @@ current_url = "http://cloud-images.ubuntu.com/cosmic/current/cosmic-server-cloud
 as = "ubuntu-1810-amd64.qcow2"
 ```
 
- Mulchd will download images on first boot and each time the image is updated by the vendor.
+Mulchd will download images on first boot and each time the image is updated by the vendor.
 
- ![mulch seed](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-seed.png)
+Mulch requires OpenStack compliant images, and Cloud-Init 0.X is no more supported (see Debian 9 and less are out).
+
+![mulch seed](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-seed.png)
 
 #### Backups
 Mulch provides a flexible backup / restore system for your applications and data:

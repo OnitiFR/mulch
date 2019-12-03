@@ -29,15 +29,13 @@ type Libvirt struct {
 
 // LibvirtPools stores needed libvirt Pools for mulchd
 type LibvirtPools struct {
-	CloudInit *libvirt.StoragePool
-	Seeds     *libvirt.StoragePool
-	Disks     *libvirt.StoragePool
-	Backups   *libvirt.StoragePool
+	Seeds   *libvirt.StoragePool
+	Disks   *libvirt.StoragePool
+	Backups *libvirt.StoragePool
 
-	CloudInitXML *libvirtxml.StoragePool
-	SeedsXML     *libvirtxml.StoragePool
-	DisksXML     *libvirtxml.StoragePool
-	BackupsXML   *libvirtxml.StoragePool
+	SeedsXML   *libvirtxml.StoragePool
+	DisksXML   *libvirtxml.StoragePool
+	BackupsXML *libvirtxml.StoragePool
 }
 
 // NewLibvirt create a new Libvirt instance
@@ -74,11 +72,6 @@ func (lv *Libvirt) GetConnection() (*libvirt.Connect, error) {
 
 		// replace connection
 		lv.connection = conn
-
-		lv.Pools.CloudInit, err = conn.LookupStoragePoolByName(AppStorageCloudInit)
-		if err != nil {
-			return nil, err
-		}
 
 		lv.Pools.Seeds, err = conn.LookupStoragePoolByName(AppStorageSeeds)
 		if err != nil {
