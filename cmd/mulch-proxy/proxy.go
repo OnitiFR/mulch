@@ -198,7 +198,23 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	// redirect to another URL?
 	if domain.RedirectTo != "" {
 		newURI := proto + "://" + domain.RedirectTo + req.URL.String()
-		http.Redirect(res, req, newURI, http.StatusFound)
+
+		// see also server/vm_config.go
+		// default redirect code
+		status := http.StatusFound
+		switch domain.RedirectCode {
+		case http.StatusMovedPermanently: // 301
+			status = http.StatusMovedPermanently
+		case http.StatusFound: // 302
+			status = http.StatusFound
+
+		case http.StatusTemporaryRedirect: // 307
+			status = http.StatusTemporaryRedirect
+		case http.StatusPermanentRedirect: // 308
+			status = http.StatusPermanentRedirect
+		}
+
+		http.Redirect(res, req, newURI, status)
 		return
 	}
 

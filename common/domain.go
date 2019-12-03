@@ -7,6 +7,7 @@ type Domain struct {
 	Name            string
 	VMName          string
 	RedirectTo      string
+	RedirectCode    int
 	DestinationHost string
 	DestinationPort int
 	RedirectToHTTPS bool

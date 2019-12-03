@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -270,11 +271,34 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 	}
 
 	for _, redirectParts := range tConfig.Redirects {
-		if len(redirectParts) != 2 {
-			return nil, fmt.Errorf("values for 'redirects' setting must be two string arrays (['a', 'b'] will redirect a to b)")
+		if len(redirectParts) != 2 && len(redirectParts) != 3 {
+			return nil, fmt.Errorf("values for 'redirects' setting must be two string arrays, plus additional HTTP code (['a', 'b', '301'] will redirect a to b permanently)")
 		}
 		from := strings.TrimSpace(strings.ToLower(redirectParts[0]))
 		dest := strings.TrimSpace(strings.ToLower(redirectParts[1]))
+
+		// default redirect code
+		status := http.StatusFound
+		if len(redirectParts) == 3 {
+			status, err = strconv.Atoi(redirectParts[2])
+			if err != nil {
+				return nil, fmt.Errorf("can't parse '%s' as an integer (%s)", redirectParts[2], err)
+			}
+			switch status {
+			case http.StatusMovedPermanently: // 301
+				status = http.StatusMovedPermanently
+			case http.StatusFound: // 302
+				status = http.StatusFound
+
+			case http.StatusTemporaryRedirect: // 307
+				status = http.StatusTemporaryRedirect
+			case http.StatusPermanentRedirect: // 308
+				status = http.StatusPermanentRedirect
+
+			default:
+				return nil, fmt.Errorf("unsupported HTTP redirect code '%d'", status)
+			}
+		}
 
 		// check if dest is one of our domains
 		found := false
@@ -289,8 +313,9 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 		}
 
 		domain := common.Domain{
-			Name:       from,
-			RedirectTo: dest,
+			Name:         from,
+			RedirectTo:   dest,
+			RedirectCode: status,
 		}
 		vmConfig.Domains = append(vmConfig.Domains, &domain)
 	}
