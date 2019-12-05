@@ -75,7 +75,7 @@ func ListBackupsController(req *server.Request) {
 
 // DeleteBackupController will delete a backup
 func DeleteBackupController(req *server.Request) {
-	req.StartStream <- true
+	req.StartStream()
 	backupName := req.SubPath
 	req.Stream.Infof("deleting backup '%s'", backupName)
 
@@ -170,7 +170,7 @@ func DownloadBackupController(req *server.Request) {
 
 // UploadBackupController will upload a backup image to storage
 func UploadBackupController(req *server.Request) {
-	req.StartStream <- true
+	req.StartStream()
 	file, header, err := req.HTTP.FormFile("file")
 	if err != nil {
 		req.Stream.Failuref("error with 'file' field: %s", err)
