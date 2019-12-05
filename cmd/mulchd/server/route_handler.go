@@ -40,19 +40,6 @@ type Route struct {
 	path   string
 }
 
-// Request describes a request and allows to build a response
-type Request struct {
-	Route       *Route
-	SubPath     string
-	HTTP        *http.Request
-	Response    http.ResponseWriter
-	App         *App
-	Stream      *Log
-	HubClient   *HubClient
-	APIKey      *APIKey
-	StartStream chan bool
-}
-
 func isRouteMethodAllowed(method string, methods []string) bool {
 	for _, m := range methods {
 		if strings.ToUpper(m) == strings.ToUpper(method) {
@@ -105,8 +92,8 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 		closer <- true
 	}()
 
-	// give a chance to the request.Route.Handler to update headers
-	_ = <-request.StartStream
+	// allow request.Route.Handler to update headers
+	request.WaitStream()
 	w.WriteHeader(http.StatusOK)
 	flusher.Flush()
 
@@ -242,12 +229,13 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 	subPath := r.URL.Path[len(route.path):]
 
 	request := &Request{
-		Route:       route,
-		SubPath:     subPath,
-		HTTP:        r,
-		Response:    w,
-		App:         app,
-		StartStream: make(chan bool),
+		Route:           route,
+		SubPath:         subPath,
+		HTTP:            r,
+		Response:        w,
+		App:             app,
+		startStreamChan: make(chan bool),
+		streamStarted:   false,
 	}
 
 	if route.Public == false {
@@ -270,21 +258,4 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 	case RouteTypeCustom:
 		route.Handler(request)
 	}
-}
-
-// SetTarget define or change the default target for the request, for both
-// sending (Stream) and receiving (HubClient)
-func (req *Request) SetTarget(target string) {
-	req.Stream.SetTarget(target)
-	req.HubClient.SetTarget(target)
-}
-
-// Printf like helper for req.Response.Write
-func (req *Request) Printf(format string, args ...interface{}) {
-	req.Response.Write([]byte(fmt.Sprintf(format, args...)))
-}
-
-// Println like helper for req.Response.Write
-func (req *Request) Println(message string) {
-	req.Response.Write([]byte(fmt.Sprintf("%s\n", message)))
 }

@@ -37,7 +37,7 @@ func ListKeysController(req *server.Request) {
 
 // NewKeyController creates and add a new API key to the DB
 func NewKeyController(req *server.Request) {
-	req.StartStream <- true
+	req.StartStream()
 	keyComment := req.HTTP.FormValue("comment")
 	keyComment = strings.TrimSpace(keyComment)
 
