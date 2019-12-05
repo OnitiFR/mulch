@@ -1548,9 +1548,9 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 	return nil
 }
 
-// VMSnapshot xxx
+// VMSnapshot generate a live full system snapshot of the VM
 // TODO: add snapshot as an WIP? (already listed as operation, no ?)
-// TODO: check VM status during snapshot
+// TODO: check VM status during snapshot (seems paused)
 func VMSnapshot(vmName *VMName, authorKey string, app *App, log *Log) error {
 	running, _ := VMIsRunning(vmName, app)
 	if running == false {
