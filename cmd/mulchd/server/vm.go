@@ -40,6 +40,12 @@ const (
 	BackupCompressDisable = false
 )
 
+// New VM : active or inactive
+const (
+	VMInactive = false
+	VMActive   = true
+)
+
 // New VM : allow script failures?
 const (
 	VMStopOnScriptFailure = false // default, safe behavior
@@ -418,7 +424,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	log.Infof("running 'prepare' scripts")
 	tasks := []*RunTask{}
 	for _, confTask := range vm.Config.Prepare {
-		stream, errG := GetScriptFromURL(confTask.ScriptURL)
+		stream, errG := GetContentFromURL(confTask.ScriptURL)
 		if errG != nil {
 			return nil, nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 		}
@@ -461,7 +467,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 				vmDoAction.Name = value
 			}
 			if isVar, value = common.StringIsVariable(line, "_MULCH_ACTION_SCRIPT"); isVar {
-				stream, errG := GetScriptFromURL(value)
+				stream, errG := GetContentFromURL(value)
 				if errG != nil {
 					errDoAction = fmt.Errorf("unable to get script '%s': %s", value, errG)
 					return
@@ -527,7 +533,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		log.Infof("running 'install' scripts")
 		tasks := []*RunTask{}
 		for _, confTask := range vm.Config.Install {
-			stream, errG := GetScriptFromURL(confTask.ScriptURL)
+			stream, errG := GetContentFromURL(confTask.ScriptURL)
 			if errG != nil {
 				return nil, nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 			}
@@ -1084,7 +1090,7 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 	})
 
 	for _, confTask := range vm.Config.Backup {
-		stream, errG := GetScriptFromURL(confTask.ScriptURL)
+		stream, errG := GetContentFromURL(confTask.ScriptURL)
 		if errG != nil {
 			return "", fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 		}
@@ -1214,7 +1220,7 @@ func VMRestoreNoChecks(vm *VM, vmName *VMName, backup *Backup, app *App, log *Lo
 	})
 
 	for _, confTask := range vm.Config.Restore {
-		stream, errG := GetScriptFromURL(confTask.ScriptURL)
+		stream, errG := GetContentFromURL(confTask.ScriptURL)
 		if errG != nil {
 			return fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 		}

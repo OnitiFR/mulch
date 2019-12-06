@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -182,13 +183,62 @@ func (db *SeedDatabase) runStep() {
 			msg := fmt.Sprintf("seeder '%s': %s", name, err)
 			db.app.Log.Error(msg)
 			seed.UpdateStatus(msg)
-			seedSendErrorAlert(db.app, msg)
+			seedSendErrorAlert(db.app, name)
 		}
 	}
 }
 
 func (db *SeedDatabase) refreshSeeder(seed *Seed) error {
-	fmt.Println("Hello seeder", seed)
+
+	// TODO: check if a rebuild is necessary
+
+	db.app.Log.Infof("rebuilding seed '%s'", seed.Name)
+	log := NewLog(seed.Name, db.app.Hub, db.app.LogHistory)
+
+	_, err := url.ParseRequestURI(seed.Seeder)
+	if err != nil {
+		return err
+	}
+
+	stream, err := GetContentFromURL(seed.Seeder)
+	if err != nil {
+		return err
+	}
+	defer stream.Close()
+
+	conf, err := NewVMConfigFromTomlReader(stream, log)
+	if err != nil {
+		return fmt.Errorf("decoding config: %s", err)
+	}
+
+	operation := db.app.Operations.Add(&Operation{
+		Origin:        "[seeder]",
+		Action:        "rebuild",
+		Ressource:     "seed",
+		RessourceName: seed.Name,
+	})
+	defer db.app.Operations.Remove(operation)
+
+	before := time.Now()
+	_, vmName, err := NewVM(conf, VMInactive, VMStopOnScriptFailure, "[seeder]", db.app, log)
+	if err != nil {
+		log.Failuref("Cannot create VM: %s", err)
+		return err
+	}
+	defer VMDelete(vmName, db.app, log)
+
+	after := time.Now()
+	log.Successf("VM %s created successfully (%s)", vmName, after.Sub(before))
+
+	err = VMStopByName(vmName, db.app, log)
+	if err != nil {
+		return err
+	}
+
+	// copy disk to seed storage
+	// update seed status
+	// update rebuild date? (see at the top of this function)
+
 	return nil
 }
 

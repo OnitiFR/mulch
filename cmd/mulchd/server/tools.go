@@ -25,9 +25,9 @@ func RandString(n int, rand *rand.Rand) string {
 	return string(b)
 }
 
-// GetScriptFromURL returns a ReadCloser to the script at the given URL
+// GetContentFromURL returns a ReadCloser to the file at the given URL
 // Caller must Close() the returned value.
-func GetScriptFromURL(url string) (io.ReadCloser, error) {
+func GetContentFromURL(url string) (io.ReadCloser, error) {
 	if len(url) > 7 && url[:7] == "file://" {
 		filename := url[7:]
 		file, err := os.Open(filename)

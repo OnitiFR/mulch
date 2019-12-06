@@ -104,7 +104,7 @@ type tomlVMDoAction struct {
 
 func vmCheckScriptURL(scriptURL string) error {
 	// test readability
-	stream, errG := GetScriptFromURL(scriptURL)
+	stream, errG := GetContentFromURL(scriptURL)
 	if errG != nil {
 		return fmt.Errorf("unable to get script '%s': %s", scriptURL, errG)
 	}

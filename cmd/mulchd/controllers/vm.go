@@ -430,7 +430,7 @@ func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error
 		return errors.New("VM should be up and running")
 	}
 
-	stream, errG := server.GetScriptFromURL(action.ScriptURL)
+	stream, errG := server.GetContentFromURL(action.ScriptURL)
 	if errG != nil {
 		return fmt.Errorf("unable to get script '%s': %s", action.ScriptURL, errG)
 	}
