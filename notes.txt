@@ -3,16 +3,5 @@
 # List of openstack supported distributions with URL to images:
 # https://docs.openstack.org/image-guide/obtain-images.html
 
-# Inject cloud-init params through SMBIOS
-# minimum req: cloud-init 17.1 (0.7.9: debian9)
-  <os mode='sysinfo'>
-    <smbios mode='sysinfo'/>
-    ...
-  </os>
-  <sysinfo type='smbios'>
-    <system>
-      <entry name='product'>Mulch</entry>
-      <entry name='version'>0.0.1</entry>
-      <entry name='serial'>ds=nocloud-net;s=http://192.168.122.1:80/cidata/</entry>
-    </system>
-  </sysinfo>
+# "reset" cloud-init
+sudo cloud-init clean

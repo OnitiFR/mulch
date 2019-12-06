@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,6 +27,7 @@ type SeedDatabase struct {
 type Seed struct {
 	Name         string
 	URL          string
+	Seeder       string
 	Ready        bool
 	LastModified time.Time
 	Size         uint64
@@ -61,7 +63,14 @@ func NewSeeder(filename string, app *App) (*SeedDatabase, error) {
 	for name, configEntry := range app.Config.Seeds {
 		seed, exists := db.db[name]
 		if exists {
+			if seed.URL != "" && configEntry.URL == "" {
+				return nil, fmt.Errorf("seed '%s': converting URL seeds to Seeders is not supported", name)
+			}
+			if seed.Seeder != "" && configEntry.Seeder == "" {
+				return nil, fmt.Errorf("seed '%s': converting Seeders to URL seeds is not supported", name)
+			}
 			seed.URL = configEntry.URL
+			seed.Seeder = configEntry.Seeder
 		} else {
 			app.Log.Infof("adding a new seed '%s'", name)
 			db.db[name] = &Seed{
@@ -160,95 +169,91 @@ func seedSendErrorAlert(app *App, seed string) {
 
 func (db *SeedDatabase) runStep() {
 	for name, seed := range db.db {
-		res, err := http.Head(seed.URL)
+		var err error
+
+		if seed.URL != "" {
+			err = db.refreshSeed(seed)
+		}
+		if seed.Seeder != "" {
+			err = db.refreshSeeder(seed)
+		}
+
 		if err != nil {
 			msg := fmt.Sprintf("seeder '%s': %s", name, err)
 			db.app.Log.Error(msg)
 			seed.UpdateStatus(msg)
-			seedSendErrorAlert(db.app, name)
-			continue
-		}
-		defer res.Body.Close()
-
-		if res.StatusCode != http.StatusOK {
-			msg := fmt.Sprintf("response was %s (%v)", res.Status, res.StatusCode)
-			db.app.Log.Error(msg)
-			seed.UpdateStatus(msg)
-			seedSendErrorAlert(db.app, name)
-			continue
-		}
-
-		lm := res.Header.Get("Last-Modified")
-		if lm == "" {
-			msg := fmt.Sprintf("seeder '%s': undefined Last-Modified header", name)
-			db.app.Log.Error(msg)
-			seed.UpdateStatus(msg)
-			seedSendErrorAlert(db.app, name)
-			continue
-		}
-		t, err := http.ParseTime(lm)
-		if err != nil {
-			msg := fmt.Sprintf("seeder '%s': can't parse Last-Modified header: %s", name, err)
-			db.app.Log.Error(msg)
-			seed.UpdateStatus(msg)
-			seedSendErrorAlert(db.app, name)
-			continue
-		}
-		if seed.LastModified != t {
-			db.app.Log.Infof("downloading seed '%s'", name)
-			seed.Ready = false
-			db.save()
-
-			before := time.Now()
-			tmpFile, err := db.seedDownload(seed, db.app.Config.TempPath)
-			if err != nil {
-				msg := fmt.Sprintf("seeder '%s': unable to download image: %s", name, err)
-				db.app.Log.Error(msg)
-				seed.UpdateStatus(msg)
-				seedSendErrorAlert(db.app, name)
-				continue
-			}
-			defer os.Remove(tmpFile)
-
-			// upload to libvirt seed storage
-			db.app.Log.Infof("moving seed '%s' to storage", name)
-
-			errR := db.app.Libvirt.DeleteVolume(seed.GetVolumeName(), db.app.Libvirt.Pools.Seeds)
-			if err != nil {
-				virtErr := errR.(libvirt.Error)
-				if !(virtErr.Domain == libvirt.FROM_STORAGE && virtErr.Code == libvirt.ERR_NO_STORAGE_VOL) {
-					msg := fmt.Sprintf("seeder '%s': unable to delete old image: %s", name, errR)
-					db.app.Log.Error(msg)
-					seed.UpdateStatus(msg)
-					seedSendErrorAlert(db.app, name)
-					continue
-				}
-			}
-
-			err = db.app.Libvirt.UploadFileToLibvirt(
-				db.app.Libvirt.Pools.Seeds,
-				db.app.Libvirt.Pools.SeedsXML,
-				db.app.Config.GetTemplateFilepath("volume.xml"),
-				tmpFile,
-				seed.GetVolumeName(),
-				db.app.Log)
-			if err != nil {
-				msg := fmt.Sprintf("seeder '%s': unable to move image to storage: %s", name, err)
-				db.app.Log.Error(msg)
-				seed.UpdateStatus(msg)
-				seedSendErrorAlert(db.app, name)
-				continue
-			}
-			after := time.Now()
-
-			seed.Ready = true
-			seed.LastModified = t
-			seed.UpdateStatus(fmt.Sprintf("downloaded and stored in %s", after.Sub(before)))
-			db.save()
-			db.app.Log.Infof("seed '%s' is now ready", name)
-			os.Remove(tmpFile) // remove now (already deferred, but let's free disk space)
+			seedSendErrorAlert(db.app, msg)
 		}
 	}
+}
+
+func (db *SeedDatabase) refreshSeeder(seed *Seed) error {
+	fmt.Println("Hello seeder", seed)
+	return nil
+}
+
+func (db *SeedDatabase) refreshSeed(seed *Seed) error {
+	name := seed.Name
+	res, err := http.Head(seed.URL)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("response was %s (%v)", res.Status, res.StatusCode)
+	}
+
+	lm := res.Header.Get("Last-Modified")
+	if lm == "" {
+		return errors.New("undefined Last-Modified header")
+	}
+	t, err := http.ParseTime(lm)
+	if err != nil {
+		return fmt.Errorf("can't parse Last-Modified header: %s", err)
+	}
+	if seed.LastModified != t {
+		db.app.Log.Infof("downloading seed '%s'", name)
+		seed.Ready = false
+		db.save()
+
+		before := time.Now()
+		tmpFile, err := db.seedDownload(seed, db.app.Config.TempPath)
+		if err != nil {
+			return fmt.Errorf("unable to download image: %s", err)
+		}
+		defer os.Remove(tmpFile)
+
+		// upload to libvirt seed storage
+		db.app.Log.Infof("moving seed '%s' to storage", name)
+
+		errR := db.app.Libvirt.DeleteVolume(seed.GetVolumeName(), db.app.Libvirt.Pools.Seeds)
+		if err != nil {
+			virtErr := errR.(libvirt.Error)
+			if !(virtErr.Domain == libvirt.FROM_STORAGE && virtErr.Code == libvirt.ERR_NO_STORAGE_VOL) {
+				return fmt.Errorf("unable to delete old image: %s", errR)
+			}
+		}
+
+		err = db.app.Libvirt.UploadFileToLibvirt(
+			db.app.Libvirt.Pools.Seeds,
+			db.app.Libvirt.Pools.SeedsXML,
+			db.app.Config.GetTemplateFilepath("volume.xml"),
+			tmpFile,
+			seed.GetVolumeName(),
+			db.app.Log)
+		if err != nil {
+			return fmt.Errorf("unable to move image to storage: %s", err)
+		}
+		after := time.Now()
+
+		seed.Ready = true
+		seed.LastModified = t
+		seed.UpdateStatus(fmt.Sprintf("downloaded and stored in %s", after.Sub(before)))
+		db.save()
+		db.app.Log.Infof("seed '%s' is now ready", name)
+	}
+	return nil
 }
 
 func (db *SeedDatabase) seedDownload(seed *Seed, tmpPath string) (string, error) {

@@ -54,7 +54,8 @@ type AppConfig struct {
 
 // ConfigSeed describes a OS seed
 type ConfigSeed struct {
-	URL string
+	URL    string
+	Seeder string
 }
 
 type tomlAppConfig struct {
@@ -73,8 +74,9 @@ type tomlAppConfig struct {
 }
 
 type tomlConfigSeed struct {
-	Name string
-	URL  string `toml:"url"`
+	Name   string
+	URL    string
+	Seeder string
 }
 
 // NewAppConfigFromTomlFile return a AppConfig using
@@ -161,12 +163,14 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 			return nil, fmt.Errorf("seed name '%s' already defined", seed.Name)
 		}
 
-		if seed.URL == "" {
-			return nil, fmt.Errorf("seed '%s': 'url' not defined", seed.Name)
+		if (seed.URL == "" && seed.Seeder == "") ||
+			(seed.URL != "" && seed.Seeder != "") {
+			return nil, fmt.Errorf("seed '%s': must have either 'url' or 'seeder' parameter", seed.Name)
 		}
 
 		appConfig.Seeds[seed.Name] = ConfigSeed{
-			URL: seed.URL,
+			URL:    seed.URL,
+			Seeder: seed.Seeder,
 		}
 
 	}
