@@ -207,7 +207,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	// 1 - copy from reference image
 	log.Infof("creating VM disk '%s'", diskName)
 	err = app.Libvirt.CreateDiskFromSeed(
-		seed.As,
+		seed.GetVolumeName(),
 		diskName,
 		app.Config.GetTemplateFilepath("volume.xml"),
 		log)

@@ -66,20 +66,16 @@ auto_rebuild_time = "23:30"
 # Sample seeds
 [[seed]]
 name = "debian_10"
-current_url = "http://cdimage.debian.org/cdimage/openstack/current-10/debian-10-openstack-amd64.qcow2"
-as = "debian-10-amd64.qcow2"
+url = "http://cdimage.debian.org/cdimage/openstack/current-10/debian-10-openstack-amd64.qcow2"
 
 [[seed]]
 name = "centos_7"
-current_url = "http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
-as = "centos-7-x86_64.qcow2"
+url = "http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
 
 [[seed]]
 name = "ubuntu_1804"
-current_url = "http://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img"
-as = "ubuntu-1804-amd64.qcow2"
+url = "http://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img"
 
 [[seed]]
 name = "ubuntu_1910"
-current_url = "http://cloud-images.ubuntu.com/eoan/current/eoan-server-cloudimg-amd64.img"
-as = "ubuntu-1910-amd64.qcow2"
+url = "http://cloud-images.ubuntu.com/eoan/current/eoan-server-cloudimg-amd64.img"

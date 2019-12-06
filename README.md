@@ -180,8 +180,7 @@ file:
 ```toml
 [[seed]]
 name = "ubuntu_1810"
-current_url = "http://cloud-images.ubuntu.com/cosmic/current/cosmic-server-cloudimg-amd64.img"
-as = "ubuntu-1810-amd64.qcow2"
+url = "http://cloud-images.ubuntu.com/cosmic/current/cosmic-server-cloudimg-amd64.img"
 ```
 
 Mulchd will download images on first boot and each time the image is updated by the vendor.

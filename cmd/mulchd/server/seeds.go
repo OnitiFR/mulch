@@ -24,8 +24,8 @@ type SeedDatabase struct {
 
 // Seed entry in the DB
 type Seed struct {
-	CurrentURL   string
-	As           string
+	Name         string
+	URL          string
 	Ready        bool
 	LastModified time.Time
 	Size         uint64
@@ -61,16 +61,13 @@ func NewSeeder(filename string, app *App) (*SeedDatabase, error) {
 	for name, configEntry := range app.Config.Seeds {
 		seed, exists := db.db[name]
 		if exists {
-			if seed.As != configEntry.As {
-				app.Log.Warningf("changing seed 'as' setting is not supported yet! (remove seed %s, launch mulchd, re-create seed)", name)
-			}
-			seed.CurrentURL = configEntry.CurrentURL
+			seed.URL = configEntry.URL
 		} else {
 			app.Log.Infof("adding a new seed '%s'", name)
 			db.db[name] = &Seed{
-				As:         configEntry.As,
-				CurrentURL: configEntry.CurrentURL,
-				Ready:      false,
+				Name:  name,
+				URL:   configEntry.URL,
+				Ready: false,
 			}
 		}
 	}
@@ -81,7 +78,7 @@ func NewSeeder(filename string, app *App) (*SeedDatabase, error) {
 		if exists == false {
 			app.Log.Infof("removing old seed '%s'", name)
 			delete(db.db, name)
-			app.Libvirt.DeleteVolume(oldSeed.As, app.Libvirt.Pools.Seeds)
+			app.Libvirt.DeleteVolume(oldSeed.GetVolumeName(), app.Libvirt.Pools.Seeds)
 		}
 	}
 
@@ -163,7 +160,7 @@ func seedSendErrorAlert(app *App, seed string) {
 
 func (db *SeedDatabase) runStep() {
 	for name, seed := range db.db {
-		res, err := http.Head(seed.CurrentURL)
+		res, err := http.Head(seed.URL)
 		if err != nil {
 			msg := fmt.Sprintf("seeder '%s': %s", name, err)
 			db.app.Log.Error(msg)
@@ -216,7 +213,7 @@ func (db *SeedDatabase) runStep() {
 			// upload to libvirt seed storage
 			db.app.Log.Infof("moving seed '%s' to storage", name)
 
-			errR := db.app.Libvirt.DeleteVolume(seed.As, db.app.Libvirt.Pools.Seeds)
+			errR := db.app.Libvirt.DeleteVolume(seed.GetVolumeName(), db.app.Libvirt.Pools.Seeds)
 			if err != nil {
 				virtErr := errR.(libvirt.Error)
 				if !(virtErr.Domain == libvirt.FROM_STORAGE && virtErr.Code == libvirt.ERR_NO_STORAGE_VOL) {
@@ -233,7 +230,7 @@ func (db *SeedDatabase) runStep() {
 				db.app.Libvirt.Pools.SeedsXML,
 				db.app.Config.GetTemplateFilepath("volume.xml"),
 				tmpFile,
-				seed.As,
+				seed.GetVolumeName(),
 				db.app.Log)
 			if err != nil {
 				msg := fmt.Sprintf("seeder '%s': unable to move image to storage: %s", name, err)
@@ -265,11 +262,11 @@ func (db *SeedDatabase) seedDownload(seed *Seed, tmpPath string) (string, error)
 		Origin:        "[seeder]",
 		Action:        "download",
 		Ressource:     "seed",
-		RessourceName: seed.As,
+		RessourceName: seed.GetVolumeName(),
 	})
 	defer db.app.Operations.Remove(operation)
 
-	resp, err := http.Get(seed.CurrentURL)
+	resp, err := http.Get(seed.URL)
 	if err != nil {
 		return "", err
 	}
@@ -306,4 +303,9 @@ func (db *SeedDatabase) seedDownload(seed *Seed, tmpPath string) (string, error)
 func (seed *Seed) UpdateStatus(status string) {
 	seed.Status = status
 	seed.StatusTime = time.Now()
+}
+
+// GetVolumeName return the seed volume file name
+func (seed *Seed) GetVolumeName() string {
+	return seed.Name + ".qcow2"
 }

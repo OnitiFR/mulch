@@ -54,8 +54,7 @@ type AppConfig struct {
 
 // ConfigSeed describes a OS seed
 type ConfigSeed struct {
-	CurrentURL string
-	As         string
+	URL string
 }
 
 type tomlAppConfig struct {
@@ -74,9 +73,8 @@ type tomlAppConfig struct {
 }
 
 type tomlConfigSeed struct {
-	Name       string
-	CurrentURL string `toml:"current_url"`
-	As         string
+	Name string
+	URL  string `toml:"url"`
 }
 
 // NewAppConfigFromTomlFile return a AppConfig using
@@ -163,18 +161,12 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 			return nil, fmt.Errorf("seed name '%s' already defined", seed.Name)
 		}
 
-		if seed.CurrentURL == "" {
-			return nil, fmt.Errorf("seed '%s': 'current_url' not defined", seed.Name)
-
-		}
-
-		if seed.As == "" {
-			return nil, fmt.Errorf("seed '%s': 'as' not defined", seed.Name)
+		if seed.URL == "" {
+			return nil, fmt.Errorf("seed '%s': 'url' not defined", seed.Name)
 		}
 
 		appConfig.Seeds[seed.Name] = ConfigSeed{
-			CurrentURL: seed.CurrentURL,
-			As:         seed.As,
+			URL: seed.URL,
 		}
 
 	}

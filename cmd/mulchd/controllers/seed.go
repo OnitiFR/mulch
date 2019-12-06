@@ -66,9 +66,9 @@ func GetSeedStatusController(req *server.Request) {
 
 	data := &common.APISeedStatus{
 		Name:       seedName,
-		As:         seed.As,
+		File:       seed.GetVolumeName(),
 		Ready:      seed.Ready,
-		CurrentURL: seed.CurrentURL,
+		URL:        seed.URL,
 		Size:       seed.Size,
 		Status:     seed.Status,
 		StatusTime: seed.StatusTime,
