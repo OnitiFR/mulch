@@ -79,3 +79,7 @@ url = "http://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd6
 [[seed]]
 name = "ubuntu_1910"
 url = "http://cloud-images.ubuntu.com/eoan/current/eoan-server-cloudimg-amd64.img"
+
+#[[seed]]
+#name = "ubuntu_1910_lamp"
+#seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/ubuntu_1910_lamp.toml"

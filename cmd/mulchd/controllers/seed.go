@@ -69,6 +69,7 @@ func GetSeedStatusController(req *server.Request) {
 		File:       seed.GetVolumeName(),
 		Ready:      seed.Ready,
 		URL:        seed.URL,
+		Seeder:     seed.Seeder,
 		Size:       seed.Size,
 		Status:     seed.Status,
 		StatusTime: seed.StatusTime,

@@ -14,6 +14,7 @@ import (
 
 	"github.com/OnitiFR/mulch/common"
 	"github.com/c2h5oh/datasize"
+	"golang.org/x/crypto/ssh"
 	"gopkg.in/libvirt/libvirt-go.v5"
 )
 
@@ -188,6 +189,7 @@ func (db *SeedDatabase) runStep() {
 	}
 }
 
+// TODO: why no first build on seed creation?
 func (db *SeedDatabase) refreshSeeder(seed *Seed) error {
 
 	// TODO: check if a rebuild is necessary
@@ -227,17 +229,85 @@ func (db *SeedDatabase) refreshSeeder(seed *Seed) error {
 	}
 	defer VMDelete(vmName, db.app, log)
 
+	vm, err := db.app.VMDB.GetByName(vmName)
+	if err != nil {
+		return err
+	}
+
 	after := time.Now()
 	log.Successf("VM %s created successfully (%s)", vmName, after.Sub(before))
+
+	// run post-seeder
+	SSHSuperUserAuth, err := db.app.SSHPairDB.GetPublicKeyAuth(SSHSuperUserPair)
+	if err != nil {
+		return err
+	}
+
+	post, err := os.Open(db.app.Config.GetTemplateFilepath("post-seeder.sh"))
+	if err != nil {
+		return err
+	}
+	defer post.Close()
+
+	run := &Run{
+		SSHConn: &SSHConnection{
+			User: db.app.Config.MulchSuperUser,
+			Host: vm.LastIP,
+			Port: 22,
+			Auths: []ssh.AuthMethod{
+				SSHSuperUserAuth,
+			},
+			Log: log,
+		},
+		Tasks: []*RunTask{
+			&RunTask{
+				ScriptName:   "post-seeder.sh",
+				ScriptReader: post,
+				As:           db.app.Config.MulchSuperUser,
+			},
+		},
+		Log: log,
+	}
+	err = run.Go()
+	if err != nil {
+		return err
+	}
 
 	err = VMStopByName(vmName, db.app, log)
 	if err != nil {
 		return err
 	}
 
-	// copy disk to seed storage
-	// update seed status
-	// update rebuild date? (see at the top of this function)
+	diskNameVM, err := VMGetDiskName(vmName, db.app)
+	if err != nil {
+		return err
+	}
+
+	// Delete previous seed volume.
+	// no error check, since volume may not already exists and
+	// a real failure will be detected by following CloneVolume
+	db.app.Libvirt.DeleteVolume(seed.GetVolumeName(), db.app.Libvirt.Pools.Seeds)
+
+	err = db.app.Libvirt.CloneVolume(
+		diskNameVM,
+		db.app.Libvirt.Pools.Disks,
+		seed.GetVolumeName(),
+		db.app.Libvirt.Pools.Seeds,
+		db.app.Libvirt.Pools.SeedsXML,
+		db.app.Config.GetTemplateFilepath("volume.xml"),
+		log,
+	)
+	if err != nil {
+		return err
+	}
+
+	//  - extract auto_rebuild from VM config?
+	// define seed.Size ?
+	seed.Ready = true
+	seed.LastModified = time.Now()
+	seed.UpdateStatus(fmt.Sprintf("seeder was built in %s", after.Sub(before)))
+	db.save()
+	db.app.Log.Infof("seed '%s' is now ready", seed.Name)
 
 	return nil
 }
