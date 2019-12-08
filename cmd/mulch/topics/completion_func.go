@@ -95,7 +95,7 @@ __custom_func() {
             __internal_doaction
             return
             ;;
-        mulch_seed_status)
+        mulch_seed_status | mulch_seed_refresh)
             __internal_list_seeds
             return
             ;;
