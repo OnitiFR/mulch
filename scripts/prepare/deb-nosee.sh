@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # -- Run with sudo privileges
-# For: Debian 9 / Ubuntu 18.10
+# For: Debian 9+ / Ubuntu 18.10+
 
 # add user
 sudo useradd -m -s /bin/bash nosee || exit $?

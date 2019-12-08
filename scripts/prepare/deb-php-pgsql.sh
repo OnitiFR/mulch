@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # -- Run with sudo privileges
-# For: Debian 9 / Ubuntu 18.10
+# For: Debian 9+ / Ubuntu 18.10+
 
 # You may define MULCH_HTTP_BASIC_AUTH env var for a simple basic
 # HTTP authentication (format user:password, avoid special shell chars)

@@ -2,6 +2,11 @@
 
 # -- Run as app user
 
+if [ -x bin/wp ]; then
+  echo "wp-cli is already here"
+  exit 0
+fi
+
 echo "downloading and installing wp-cli"
 mkdir -p bin || exit $?
 curl -so bin/wp -fSL "https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar" || exit $?
