@@ -8,6 +8,7 @@
 #ssh_pwauth: True
 
 package_upgrade: $_PACKAGE_UPGRADE
+package_reboot_if_required: $_PACKAGE_UPGRADE
 
 # we use this call to confirm Cloud-Init success
 phone_home:
@@ -93,6 +94,6 @@ timezone: $_TIMEZONE
 ntp:
   enabled: true
 
-power_state:
-  mode: poweroff
-  message: Cloud-init first boot finished, rebooting.
+#power_state:
+#  mode: poweroff
+#  message: Cloud-init first boot finished, rebooting.
