@@ -374,10 +374,12 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		case <-time.After(10 * time.Minute):
 			return nil, nil, errors.New("vm init is too long, something probably went wrong")
 		case call := <-phone.PhoneCalls:
-			// phoned = true
-			done = true
-			log.Info("vm phoned home, cloud-init was successful")
-			vm.LastIP = call.RemoteIP
+			// seeders already have phone call service, let's filter it out
+			if call.CloutInit == true {
+				done = true
+				log.Info("vm phoned home, cloud-init was successful")
+				vm.LastIP = call.RemoteIP
+			}
 		case <-time.After(5 * time.Second):
 			log.Trace("checking vm state")
 			state, _, errG := dom.GetState()
