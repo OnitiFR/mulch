@@ -368,7 +368,6 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	phone := app.PhoneHome.Register(secretUUID.String())
 	defer phone.Unregister()
 
-	// phoned := false
 	for done := false; done == false; {
 		select {
 		case <-time.After(10 * time.Minute):
@@ -390,39 +389,10 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 				return nil, nil, errors.New("vm crashed! (said libvirt)")
 			}
 			if state == libvirt.DOMAIN_SHUTOFF {
-				// log.Info("vm is now down")
-				// done = true
 				return nil, nil, errors.New("vm unexpectedly stopped")
 			}
 		}
 	}
-
-	// if phoned == false {
-	// 	return nil, nil, errors.New("vm is down but didn't phoned home, something went wrong during cloud-init")
-	// }
-
-	// start the VM again
-	// log.Infof("starting vm")
-	// err = dom.Create()
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
-
-	// wait the vm's phone call
-	// for done := false; done == false; {
-	// 	select {
-	// 	case <-time.After(5 * time.Minute):
-	// 		dom.Destroy()
-	// 		return nil, nil, errors.New("vm start is too long, something probably went wrong")
-	// 	case call := <-phone.PhoneCalls:
-	// 		done = true
-	// 		log.Info("vm phoned home, boot successful")
-	// 		if call.RemoteIP != vm.LastIP {
-	// 			log.Warningf("vm IP changed since cloud-init call (from '%s' to '%s')", vm.LastIP, call.RemoteIP)
-	// 			vm.LastIP = call.RemoteIP
-	// 		}
-	// 	}
-	// }
 
 	// 4 - run prepare scripts
 	log.Infof("running 'prepare' scripts")
