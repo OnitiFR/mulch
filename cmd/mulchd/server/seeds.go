@@ -191,10 +191,6 @@ func (db *SeedDatabase) runStep() {
 
 // TODO: why no first build on seed creation?
 func (db *SeedDatabase) refreshSeeder(seed *Seed) error {
-
-	// TODO: check if a rebuild is necessary
-
-	db.app.Log.Infof("rebuilding seed '%s'", seed.Name)
 	log := NewLog(seed.Name, db.app.Hub, db.app.LogHistory)
 
 	_, err := url.ParseRequestURI(seed.Seeder)
@@ -212,6 +208,17 @@ func (db *SeedDatabase) refreshSeeder(seed *Seed) error {
 	if err != nil {
 		return fmt.Errorf("decoding config: %s", err)
 	}
+
+	if conf.AutoRebuild == "" {
+		return fmt.Errorf("seeder is missing 'auto_rebuild' setting (it's the whole point :)")
+	}
+
+	if !IsRebuildNeeded(conf.AutoRebuild, seed.LastModified) {
+		log.Tracef("no rebuild needed yet for seeder '%s'", seed.Name)
+		return nil
+	}
+
+	db.app.Log.Infof("rebuilding seed '%s'", seed.Name)
 
 	operation := db.app.Operations.Add(&Operation{
 		Origin:        "[seeder]",
@@ -283,6 +290,8 @@ func (db *SeedDatabase) refreshSeeder(seed *Seed) error {
 		return err
 	}
 
+	seed.Ready = false
+
 	// Delete previous seed volume.
 	// no error check, since volume may not already exists and
 	// a real failure will be detected by following CloneVolume
@@ -301,10 +310,14 @@ func (db *SeedDatabase) refreshSeeder(seed *Seed) error {
 		return err
 	}
 
-	//  - extract auto_rebuild from VM config?
-	// define seed.Size ?
+	infos, err := db.app.Libvirt.VolumeInfos(seed.GetVolumeName(), db.app.Libvirt.Pools.Seeds)
+	if err != nil {
+		return err
+	}
+
 	seed.Ready = true
 	seed.LastModified = time.Now()
+	seed.Size = infos.Allocation
 	seed.UpdateStatus(fmt.Sprintf("seeder was built in %s", after.Sub(before)))
 	db.save()
 	db.app.Log.Infof("seed '%s' is now ready", seed.Name)
