@@ -1,4 +1,3 @@
-- skip the restart after cloud-init?
 - detect unknown settings in TOML files with https://godoc.org/github.com/BurntSushi/toml#MetaData.Undecoded
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - check TLS cert renewal!
