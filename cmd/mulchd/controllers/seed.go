@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"time"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
 	"github.com/OnitiFR/mulch/common"
@@ -82,4 +83,51 @@ func GetSeedStatusController(req *server.Request) {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)
 	}
+}
+
+// ActionSeedController redirect to the correct action for the seed
+func ActionSeedController(req *server.Request) {
+	req.StartStream()
+
+	action := req.HTTP.FormValue("action")
+	seedName := req.SubPath
+	seed, err := req.App.Seeder.GetByName(seedName)
+
+	if err != nil {
+		req.Stream.Failuref("invalid seed '%s'", seedName)
+		return
+	}
+
+	req.SetTarget(seed.Name)
+
+	switch action {
+	case "refresh":
+		before := time.Now()
+		err := seedRefresh(req, seed)
+		after := time.Now()
+		if err != nil {
+			req.Stream.Failuref("refresh failed: %s", err)
+		} else {
+			req.Stream.Successf("refresh completed (%s)", after.Sub(before))
+		}
+	default:
+		req.Stream.Failuref("missing or invalid action ('%s')", action)
+		return
+	}
+}
+
+// TODO: should check for conflitcs with any existing automatic seed operation
+func seedRefresh(req *server.Request, seed *server.Seed) error {
+	var err error
+	if seed.URL != "" {
+		err = req.App.Seeder.RefreshSeed(seed, server.SeedRefreshForce)
+	}
+	if seed.Seeder != "" {
+		err = req.App.Seeder.RefreshSeeder(seed, server.SeedRefreshForce)
+	}
+
+	if err != nil {
+		return err
+	}
+	return nil
 }

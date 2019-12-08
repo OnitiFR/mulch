@@ -243,9 +243,10 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 	}
 	vmConfig.CPUCount = tConfig.CPUCount
 
-	if len(tConfig.Domains) == 0 {
-		log.Warningf("no domain defined for this VM")
-	}
+	// seeders, compute VMs, etc
+	// if len(tConfig.Domains) == 0 {
+	// 	log.Warningf("no domain defined for this VM")
+	// }
 
 	var domainList []string
 	for _, domainName := range tConfig.Domains {

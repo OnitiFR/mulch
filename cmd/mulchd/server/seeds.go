@@ -37,6 +37,12 @@ type Seed struct {
 	StatusTime   time.Time
 }
 
+// SeedRefresh force flag
+const (
+	SeedRefreshForce    = true
+	SeedRefreshIfNeeded = false
+)
+
 // NewSeeder instanciates a new VMDatabase
 func NewSeeder(filename string, app *App) (*SeedDatabase, error) {
 	db := &SeedDatabase{
@@ -76,9 +82,10 @@ func NewSeeder(filename string, app *App) (*SeedDatabase, error) {
 		} else {
 			app.Log.Infof("adding a new seed '%s'", name)
 			db.db[name] = &Seed{
-				Name:  name,
-				URL:   configEntry.URL,
-				Ready: false,
+				Name:   name,
+				URL:    configEntry.URL,
+				Seeder: configEntry.Seeder,
+				Ready:  false,
 			}
 		}
 	}
@@ -150,10 +157,9 @@ func (db *SeedDatabase) GetNames() []string {
 	return keys
 }
 
-// Run the seeder (check Last-Modified dates, download new releases)
+// Run the seeder (check Last-Modified dates, download new releases, rebuilds seeders)
 func (db *SeedDatabase) Run() {
-	// small cooldown (app init)
-	time.Sleep(1 * time.Second)
+	db.app.VMStateDB.WaitRestore()
 
 	for {
 		db.runStep()
@@ -174,10 +180,10 @@ func (db *SeedDatabase) runStep() {
 		var err error
 
 		if seed.URL != "" {
-			err = db.refreshSeed(seed)
+			err = db.RefreshSeed(seed, SeedRefreshIfNeeded)
 		}
 		if seed.Seeder != "" {
-			err = db.refreshSeeder(seed)
+			err = db.RefreshSeeder(seed, SeedRefreshIfNeeded)
 		}
 
 		if err != nil {
@@ -189,8 +195,8 @@ func (db *SeedDatabase) runStep() {
 	}
 }
 
-// TODO: why no first build on seed creation?
-func (db *SeedDatabase) refreshSeeder(seed *Seed) error {
+// RefreshSeeder will rebuild seeder using a VM
+func (db *SeedDatabase) RefreshSeeder(seed *Seed, force bool) error {
 	log := NewLog(seed.Name, db.app.Hub, db.app.LogHistory)
 
 	_, err := url.ParseRequestURI(seed.Seeder)
@@ -213,7 +219,7 @@ func (db *SeedDatabase) refreshSeeder(seed *Seed) error {
 		return fmt.Errorf("seeder is missing 'auto_rebuild' setting (it's the whole point :)")
 	}
 
-	if !IsRebuildNeeded(conf.AutoRebuild, seed.LastModified) {
+	if !IsRebuildNeeded(conf.AutoRebuild, seed.LastModified) && force != SeedRefreshForce {
 		log.Tracef("no rebuild needed yet for seeder '%s'", seed.Name)
 		return nil
 	}
@@ -325,7 +331,10 @@ func (db *SeedDatabase) refreshSeeder(seed *Seed) error {
 	return nil
 }
 
-func (db *SeedDatabase) refreshSeed(seed *Seed) error {
+// RefreshSeed will download a seed image using its URL
+func (db *SeedDatabase) RefreshSeed(seed *Seed, force bool) error {
+	log := NewLog(seed.Name, db.app.Hub, db.app.LogHistory)
+
 	name := seed.Name
 	res, err := http.Head(seed.URL)
 	if err != nil {
@@ -345,8 +354,8 @@ func (db *SeedDatabase) refreshSeed(seed *Seed) error {
 	if err != nil {
 		return fmt.Errorf("can't parse Last-Modified header: %s", err)
 	}
-	if seed.LastModified != t {
-		db.app.Log.Infof("downloading seed '%s'", name)
+	if seed.LastModified != t || force == SeedRefreshForce {
+		log.Infof("downloading seed '%s'", name)
 		seed.Ready = false
 		db.save()
 
@@ -358,7 +367,7 @@ func (db *SeedDatabase) refreshSeed(seed *Seed) error {
 		defer os.Remove(tmpFile)
 
 		// upload to libvirt seed storage
-		db.app.Log.Infof("moving seed '%s' to storage", name)
+		log.Infof("moving seed '%s' to storage", name)
 
 		errR := db.app.Libvirt.DeleteVolume(seed.GetVolumeName(), db.app.Libvirt.Pools.Seeds)
 		if err != nil {
@@ -374,7 +383,7 @@ func (db *SeedDatabase) refreshSeed(seed *Seed) error {
 			db.app.Config.GetTemplateFilepath("volume.xml"),
 			tmpFile,
 			seed.GetVolumeName(),
-			db.app.Log)
+			log)
 		if err != nil {
 			return fmt.Errorf("unable to move image to storage: %s", err)
 		}
@@ -384,7 +393,7 @@ func (db *SeedDatabase) refreshSeed(seed *Seed) error {
 		seed.LastModified = t
 		seed.UpdateStatus(fmt.Sprintf("downloaded and stored in %s", after.Sub(before)))
 		db.save()
-		db.app.Log.Infof("seed '%s' is now ready", name)
+		log.Infof("seed '%s' is now ready", name)
 	}
 	return nil
 }

@@ -20,6 +20,7 @@ type VMStateDatabase struct {
 	db       map[string]string
 	mutex    sync.Mutex
 	app      *App
+	restored bool
 }
 
 // NewVMStateDatabase instanciates a new VMStateDatabase
@@ -28,6 +29,7 @@ func NewVMStateDatabase(filename string, app *App) (*VMStateDatabase, error) {
 		filename: filename,
 		db:       make(map[string]string),
 		app:      app,
+		restored: false,
 	}
 
 	// if the file exists, load it
@@ -118,6 +120,7 @@ func (vmsdb *VMStateDatabase) Run() error {
 	time.Sleep(1 * time.Second)
 
 	vmsdb.restoreStates()
+	vmsdb.restored = true
 
 	for {
 		vmsdb.Update()
@@ -176,4 +179,16 @@ func (vmsdb *VMStateDatabase) restoreStates() {
 
 	wg.Wait()
 	vmsdb.app.Log.Infof("VM states restored")
+}
+
+// WaitRestore blocks until VM states are not restored, so
+// non-crucial tasks can kindly wait for a "quiter" system load.
+// NOTE: very crude timeout-baed implementation, should use sync.Cond
+func (vmsdb *VMStateDatabase) WaitRestore() {
+	for {
+		if vmsdb.restored == true {
+			return
+		}
+		time.Sleep(2 * time.Second)
+	}
 }
