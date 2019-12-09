@@ -1,0 +1,16 @@
+name = "ubuntu_1910_php_pgql"
+hostname = "phppg"
+
+seed = "ubuntu_1910"
+
+disk_size = "8G"
+ram_size = "2G"
+cpu_count = 1
+
+auto_rebuild = "daily"
+
+prepare_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/prepare/"
+prepare = [
+    "admin@seeders/deb-comfort.sh",
+    "admin@seeders/deb-php-pgsql.sh",
+]
