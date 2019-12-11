@@ -195,7 +195,7 @@ file (based on another seed), prepare the VM, stop it and will then store its di
 a seed (the VM is then deleted).
 
 One usage of this feature is VM creation speedup, since you can pre-install packages.
-See the following example : [ubuntu_1910_lamp.toml]https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/ubuntu_1910_lamp.toml)
+See the following example : [ubuntu_1910_lamp.toml]https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/ubuntu_1910_lamp.toml
 
 This seeder is declared like this:
 ```toml
