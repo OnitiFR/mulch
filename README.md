@@ -189,6 +189,22 @@ Mulch requires OpenStack compliant images, and Cloud-Init 0.X is no more support
 
 ![mulch seed](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-seed.png)
 
+#### Seeders
+You can create and maintain your own seeds. Mulch will create a ("seeder") VM using a TOML
+file (based on another seed), prepare the VM, stop it and will then store its disk as
+a seed (the VM is then deleted).
+
+One usage of this feature is VM creation speedup, since you can pre-install packages in
+your seeds. See the following example
+([ubuntu_1910_lamp.toml]https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/ubuntu_1910_lamp.toml) :
+
+```toml
+[[seed]]
+name = "ubuntu_1910_lamp"
+seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/ubuntu_1910_lamp.toml"
+```
+Seeds are automatically rebuild, so everything is kept up to date (base seed, packages, …).
+
 #### Backups
 Mulch provides a flexible backup / restore system for your applications and data:
 archive, duplicate, iterate, CI/CD, …
