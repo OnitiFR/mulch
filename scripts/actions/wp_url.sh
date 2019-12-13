@@ -9,6 +9,11 @@ cd $HTML_DIR || exit $?
 url="https://$_DOMAIN_FIRST"
 old=$(wp option get home)
 
+if [ "$old" = "$url" ]; then
+    echo "Wordpress URL unchanged: $url"
+    exit 0
+fi
+
 wp option update home "$url" || exit $?
 wp option update siteurl "$url" || exit $?
 
