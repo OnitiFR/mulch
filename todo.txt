@@ -1,8 +1,8 @@
-- detect unknown settings in TOML files with https://godoc.org/github.com/BurntSushi/toml#MetaData.Undecoded
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - check TLS cert renewal!
     - reported issue: vm is deleted, recreated 3 months later, cert is invalid
-- cut SSH connections when VM delete?
+- cut SSH connections on VM delete?
+- continue tests on snapshots (see branch "snapshots")
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
   - (dhcp/dnsmasq? ebtables? mulch-netowrk restart?)
 - libvirtd watchdog + alert (ex: timeout in VMStateDatabase?)
