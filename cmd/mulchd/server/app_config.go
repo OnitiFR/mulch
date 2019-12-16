@@ -104,8 +104,20 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		AutoRebuildTime:       "23:30",
 	}
 
-	if _, err := toml.DecodeFile(filename, tConfig); err != nil {
+	meta, err := toml.DecodeFile(filename, tConfig)
+
+	if err != nil {
 		return nil, err
+	}
+
+	undecoded := meta.Undecoded()
+	for _, param := range undecoded {
+		// this check is far from perfect, since we (mulchd) use
+		// settings like proxy_listen_ssh and proxy_ssh_extra_keys_file…
+		if strings.HasPrefix(param.String(), "proxy_") {
+			continue
+		}
+		return nil, fmt.Errorf("unknown setting '%s'", param)
 	}
 
 	partsL := strings.Split(tConfig.Listen, ":")

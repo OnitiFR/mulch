@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"path"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
@@ -59,8 +61,24 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		HTTPSAddress: ":443",
 	}
 
-	if _, err := toml.DecodeFile(filename, tConfig); err != nil {
+	meta, err := toml.DecodeFile(filename, tConfig)
+
+	if err != nil {
 		return nil, err
+	}
+
+	undecoded := meta.Undecoded()
+	for _, param := range undecoded {
+		if !strings.HasPrefix(param.String(), "proxy_") {
+			continue
+		}
+		if param.String() == "proxy_listen_ssh" {
+			continue
+		}
+		if param.String() == "proxy_ssh_extra_keys_file" {
+			continue
+		}
+		return nil, fmt.Errorf("unknown setting '%s'", param)
 	}
 
 	appConfig.DataPath = tConfig.DataPath
