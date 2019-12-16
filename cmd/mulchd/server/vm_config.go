@@ -204,8 +204,15 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 		BackupCompress:  true,
 	}
 
-	if _, err = toml.Decode(vmConfig.FileContent, tConfig); err != nil {
+	meta, err := toml.Decode(vmConfig.FileContent, tConfig)
+
+	if err != nil {
 		return nil, err
+	}
+
+	undecoded := meta.Undecoded()
+	for _, param := range undecoded {
+		return nil, fmt.Errorf("unknown setting '%s'", param)
 	}
 
 	if tConfig.Name == "" || !IsValidName(tConfig.Name) {
