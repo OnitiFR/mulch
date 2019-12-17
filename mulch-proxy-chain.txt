@@ -1,0 +1,47 @@
+   |
+   v
+  [X]
+ /   \
+ |   |
+[A] [B]
+||| |||
+
+------------
+
+ |
+ v
+[A]\
+||| \
+   [B]
+   |||
+
+-----------
+
+   |
+   v
+  [X]
+ /   \
+ |   |
+[A] [B]\
+||| ||| \
+       [C]
+       |||
+
+proxy_master_url =
+proxy_master_psk = "…"
+
+how to securely preserve X-Real-Ip?
+
+same port?
+    + server, routing, HTTPS for "free"
+    - must have "my_hostname" for HTTPS (true for different port too!)
+
+/register ["xxx", "yyy", "zzz"], transaction bool
+returns conflicts […]
+
+Registrer domains to master:
+- on start
+- on our own /register
+- on local db change (diff system)
+
+beware of loops
