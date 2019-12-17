@@ -1,4 +1,4 @@
-- check domains validity on VM create
+- check domains validity on VM create, PS: domain name validation is HARD :(
 - mulch-proxy chains / master_proxy / …
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - check TLS cert renewal!
