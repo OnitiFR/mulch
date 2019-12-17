@@ -1,3 +1,5 @@
+- check domains validity on VM create
+- mulch-proxy chains / master_proxy / …
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - check TLS cert renewal!
     - reported issue: vm is deleted, recreated 3 months later, cert is invalid
