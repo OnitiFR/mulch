@@ -11,6 +11,7 @@
 - clean VM XML template (ex: no display device [serial console])
 - create a nice and shiny website for Mulch project
 - VM tags
+- VM deactivate / activate none? (need a bit of tweaking of the VM controller)
 - have a look at ansible? (for sample scripts)
 - add --revision to rebuild command
 - remove the need to supply the VM name for redefine command?
