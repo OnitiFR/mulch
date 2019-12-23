@@ -7,5 +7,4 @@ if [ ! -f "$HOME/.bash_history"]; then
     exit 0
 fi
 
-mkdir -p "$_BACKUP/home/$USER" || exit $?
-cp -p "$HOME/.bash_history" "$_BACKUP/home/$USER/" || exit $?
+cp -p "$HOME/.bash_history" "$_BACKUP/.bash_history-$USER" || exit $?
