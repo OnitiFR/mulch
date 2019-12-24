@@ -53,6 +53,7 @@ func NewVMController(req *server.Request) {
 	allowNewRevision := req.HTTP.FormValue("allow_new_revision")
 	inactive := req.HTTP.FormValue("inactive")
 	keepOnFailure := req.HTTP.FormValue("keep_on_failure")
+	lock := req.HTTP.FormValue("lock")
 
 	active := true
 	if inactive == common.TrueStr {
@@ -95,6 +96,14 @@ func NewVMController(req *server.Request) {
 	if err != nil {
 		req.Stream.Failuref("Cannot create VM: %s", err)
 		return
+	}
+
+	if lock == common.TrueStr {
+		err = server.VMLockUnlock(vmName, true, req.App.VMDB)
+		if err != nil {
+			// non-fatal
+			req.Stream.Errorf("Cannot lock the VM: %s", err)
+		}
 	}
 
 	after := time.Now()

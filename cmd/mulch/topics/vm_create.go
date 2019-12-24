@@ -23,12 +23,14 @@ from an existing VM using [unimplemented yet]
 		newRevision, _ := cmd.Flags().GetBool("new-revision")
 		inactive, _ := cmd.Flags().GetBool("inactive")
 		keepOnFailure, _ := cmd.Flags().GetBool("keep-on-failure")
+		lock, _ := cmd.Flags().GetBool("lock")
 
 		call := client.GlobalAPI.NewCall("POST", "/vm", map[string]string{
 			"restore":            restore,
 			"allow_new_revision": strconv.FormatBool(newRevision),
 			"inactive":           strconv.FormatBool(inactive),
 			"keep_on_failure":    strconv.FormatBool(keepOnFailure),
+			"lock":               strconv.FormatBool(lock),
 		})
 		err := call.AddFile("config", args[0])
 		if err != nil {
@@ -45,4 +47,5 @@ func init() {
 	vmCreateCmd.Flags().BoolP("new-revision", "n", false, "allow a new revision with the same name")
 	vmCreateCmd.Flags().BoolP("inactive", "i", false, "do not set this instance as active")
 	vmCreateCmd.Flags().BoolP("keep-on-failure", "k", false, "keep VM on script failure (useful for debug)")
+	vmCreateCmd.Flags().BoolP("lock", "l", false, "lock VM after creation")
 }
