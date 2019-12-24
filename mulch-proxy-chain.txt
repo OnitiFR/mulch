@@ -27,8 +27,8 @@
        [C]
        |||
 
-proxy_master_url =
-proxy_master_psk = "…"
+proxy_parent_url =
+proxy_parent_psk = "…"
 
 how to securely preserve X-Real-Ip?
 
@@ -39,9 +39,20 @@ same port?
 /register ["xxx", "yyy", "zzz"], transaction bool
 returns conflicts […]
 
-Registrer domains to master:
+Registrer domains to parent:
 - on start
+- on local db change (diff system?)
 - on our own /register
-- on local db change (diff system)
 
 beware of loops
+
+--- v0.5
+proxy_mode = defaut | standalone
+proxy_my_url = xxx (needed for standalone mode)
+
+POST /domains (register/refresh list of domains) : VMDB
+    return conflicts (so VMDB can send alerts)
+
+GET /domains?q[]= ("check conflicts") : VM creation
+    OK if same mulchd? ("internal conflict"?)
+    watch out propagation latency, too (because of VMDB cooldown)
