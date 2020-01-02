@@ -4,7 +4,7 @@
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - check TLS cert renewal!
     - reported issue: vm is deleted, recreated 3 months later, cert is invalid
-- cut SSH connections on VM delete?
+- cut SSH connections on VM delete? Or add a keepalive for "internal" SSH? (we have the same issue with Run.SSHConn)
 - continue tests on snapshots (see branch "snapshots")
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
   - (dhcp/dnsmasq? ebtables? mulch-netowrk restart?)
