@@ -47,8 +47,15 @@ Registrer domains to parent:
 beware of loops
 
 --- v0.5
-proxy_mode = defaut | standalone
-proxy_my_url = xxx (needed for standalone mode)
+proxy_mode = (default) | standalone
+proxy_my_url = xxx (needed for standalone and "child" )
+    allow to gen HTTPS certs for this
+    default mode: protect this domain so VMs won't use it
+proxy_my_psk = yyy (needed for standalone)
+
+# for a child proxy:
+proxy_parent_url = http[s]://xxx:443
+proxy_parent_psk = zzzz
 
 POST /domains (register/refresh list of domains) : VMDB
     return conflicts (so VMDB can send alerts)
