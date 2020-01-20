@@ -1,9 +1,11 @@
+- (needed for proxy-chain , i guess) VM deactivate / activate none? (need a bit of tweaking of the VM controller)
+- mulch-proxy chains / master_proxy / … (see proxy-chain branch)
+- add timeout on VM creation scripts
 - check domains validity on VM create, PS: domain name validation is HARD :(
-- mulch-proxy chains / master_proxy / …
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - check TLS cert renewal!
     - reported issue: vm is deleted, recreated 3 months later, cert is invalid
-- cut SSH connections on VM delete?
+- cut SSH connections on VM delete? Or add a keepalive for "internal" SSH? (we have the same issue with Run.SSHConn)
 - continue tests on snapshots (see branch "snapshots")
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
   - (dhcp/dnsmasq? ebtables? mulch-netowrk restart?)
@@ -11,7 +13,6 @@
 - clean VM XML template (ex: no display device [serial console])
 - create a nice and shiny website for Mulch project
 - VM tags
-- VM deactivate / activate none? (need a bit of tweaking of the VM controller)
 - have a look at ansible? (for sample scripts)
 - add --revision to rebuild command
 - remove the need to supply the VM name for redefine command?
