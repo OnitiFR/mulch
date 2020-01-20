@@ -1,3 +1,4 @@
+- (needed for proxy-chain , i guess) VM deactivate / activate none? (need a bit of tweaking of the VM controller)
 - mulch-proxy chains / master_proxy / … (see proxy-chain branch)
 - add timeout on VM creation scripts
 - check domains validity on VM create, PS: domain name validation is HARD :(
@@ -12,7 +13,6 @@
 - clean VM XML template (ex: no display device [serial console])
 - create a nice and shiny website for Mulch project
 - VM tags
-- VM deactivate / activate none? (need a bit of tweaking of the VM controller)
 - have a look at ansible? (for sample scripts)
 - add --revision to rebuild command
 - remove the need to supply the VM name for redefine command?
