@@ -51,13 +51,27 @@ proxy_ssh_extra_keys_file = ""
 # Warning: you may have to clear ./data/certs/ directory if you change this setting
 proxy_acme_url = "https://acme-staging.api.letsencrypt.org/directory"
 
-# Email will be used by CAs, such as Let's Encrypt, to notify about
-# problems with issued certificates.
+# Email will be used by CAs for notifications about issued certificates.
 proxy_acme_email = "root@localhost.localdomain"
 
-# Listen addresses (HTTP/HTTPS) for the Resverse Proxy
+# Listen addresses (HTTP/HTTPS) for the Reverse Proxy
 proxy_listen_http = ":80"
 proxy_listen_https = ":443"
+
+# Reverse Proxy Chaining (modes: "child" or "parent", empty = disabled)
+proxy_chain_mode = ""
+
+# Needed for proxy chaining, both child & parent
+# (can be the same as listen_https_domain)
+proxy_chain_my_domain = ""
+
+# Pre-Shared Key between children and the parent proxy
+proxy_chain_psk = ""
+
+# Proxy chain parent URL, only for childen.
+# It must match parent's proxy_chain_my_domain setting.
+# You can use HTTP or HTTPS if you want to secure inter-proxies requests.
+proxy_chain_parent_url = ""
 
 # Auto-rebuild will check everyday, at specified time, if any VM need
 # an automatic rebuild (according its settings). Format: HH:MM

@@ -1,5 +1,6 @@
 - (needed for proxy-chain , i guess) VM deactivate / activate none? (need a bit of tweaking of the VM controller)
 - mulch-proxy chains / master_proxy / … (see proxy-chain branch)
+- on startup: rebuild seeds -after- seed download
 - add timeout on VM creation scripts
 - check domains validity on VM create, PS: domain name validation is HARD :(
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
