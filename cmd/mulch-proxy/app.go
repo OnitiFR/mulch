@@ -17,6 +17,7 @@ type App struct {
 	Config      *AppConfig
 	Log         *Log
 	ProxyServer *ProxyServer
+	APIServer   *APIServer
 }
 
 // NewApp creates a new application
@@ -58,6 +59,13 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app.ProxyServer.RefreshReverseProxies()
 
 	app.initSigHUPHandler()
+
+	if app.Config.ChainMode == ChainModeParent {
+		app.APIServer, err = NewAPIServer(app.Config, cacheDir, app.Log)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return app, nil
 }

@@ -44,16 +44,15 @@ type AppConfig struct {
 	// Reverse Proxy Chaining mode
 	ChainMode int
 
-	// domain that children will use to contact us (as a parent)
-	// or
-	// domain that parent will use to forward requests to us (as a child)
-	ChainMyDomain string
+	// if parent: addres API
+	// if child: parent API URL
+	ChainParentURL *url.URL
+
+	// child only: URL we will register to parent
+	ChainChildURL *url.URL
 
 	// Pre-Shared key for the chain
 	ChainPSK string
-
-	// URL of our chain parent
-	ChainParentURL string
 
 	// global mulchd configuration path
 	configPath string
@@ -68,9 +67,9 @@ type tomlAppConfig struct {
 	ListenHTTPSDomain string `toml:"listen_https_domain"`
 
 	ChainMode      string `toml:"proxy_chain_mode"`
-	ChainMyDomain  string `toml:"proxy_chain_my_domain"`
-	ChainPSK       string `toml:"proxy_chain_psk"`
 	ChainParentURL string `toml:"proxy_chain_parent_url"`
+	ChainChildURL  string `toml:"proxy_chain_child_url"`
+	ChainPSK       string `toml:"proxy_chain_psk"`
 }
 
 // NewAppConfigFromTomlFile return a AppConfig using
@@ -135,16 +134,19 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		return nil, fmt.Errorf("unknown proxy_chain_mode value '%s'", tConfig.ChainMode)
 	}
 
-	appConfig.ChainMyDomain = tConfig.ChainMyDomain
 	appConfig.ChainPSK = tConfig.ChainPSK
-	appConfig.ChainParentURL = tConfig.ChainParentURL
 
 	if appConfig.ChainMode != ChainModeNone {
-		if appConfig.ChainMyDomain == "" {
-			return nil, errors.New("proxy_chain_my_domain is needed for proxy chaining")
+		if tConfig.ChainParentURL == "" {
+			return nil, errors.New("proxy_chain_parent_url is required for proxy chaining")
 		}
+		appConfig.ChainParentURL, err = url.ParseRequestURI(tConfig.ChainParentURL)
+		if err != nil {
+			return nil, errors.New("proxy_chain_parent_url is invalid")
+		}
+
 		if appConfig.ChainPSK == "" {
-			return nil, errors.New("proxy_chain_psk is needed for proxy chaining")
+			return nil, errors.New("proxy_chain_psk is required for proxy chaining")
 		}
 		if len(appConfig.ChainPSK) < ChainPSKMinLength {
 			return nil, fmt.Errorf("proxy_chain_psk is too short (min length = %d)", ChainPSKMinLength)
@@ -152,15 +154,18 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	}
 
 	if appConfig.ChainMode == ChainModeChild {
-		if appConfig.ChainParentURL == "" {
-			return nil, errors.New("proxy_chain_parent_url must be defined for proxy chain children")
+		if tConfig.ChainChildURL == "" {
+			return nil, errors.New("proxy_chain_child_url is required for proxy chain children")
 		}
-		url, err := url.ParseRequestURI(appConfig.ChainParentURL)
+		appConfig.ChainChildURL, err = url.ParseRequestURI(tConfig.ChainChildURL)
 		if err != nil {
-			return nil, errors.New("proxy_chain_parent_url is invalid")
+			return nil, errors.New("proxy_chain_child_url is invalid")
 		}
-		if url.Hostname() == appConfig.ChainMyDomain {
-			return nil, errors.New("i can't be my own parent! (see proxy_chain_parent_url and proxy_chain_my_domain)")
+	}
+
+	if appConfig.ChainMode == ChainModeParent {
+		if tConfig.ChainChildURL != "" {
+			return nil, errors.New("proxy_chain_child_url is reserved for proxy chain children")
 		}
 	}
 

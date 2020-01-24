@@ -61,17 +61,19 @@ proxy_listen_https = ":443"
 # Reverse Proxy Chaining (modes: "child" or "parent", empty = disabled)
 proxy_chain_mode = ""
 
-# Needed for proxy chaining, both child & parent
-# (can be the same as listen_https_domain)
-proxy_chain_my_domain = ""
+# if parent: listening address for the API
+# if child: URL of the parent API to contact
+# Supports HTTP or HTTPS
+# Recommanded port: 8787 (ex: https://api.mydomain.tld:8787)
+proxy_chain_parent_url = ""
+
+# only for children: parent proxy will forward requests to this URL
+# It must be a dedicated domain, HTTPS is available if you want to
+# secured forwared traffic (ex: https://forward.mymulchd.tld)
+proxy_chain_child_url = ""
 
 # Pre-Shared Key between children and the parent proxy
 proxy_chain_psk = ""
-
-# Proxy chain parent URL, only for childen.
-# It must match parent's proxy_chain_my_domain setting.
-# You can use HTTP or HTTPS if you want to secure inter-proxies requests.
-proxy_chain_parent_url = ""
 
 # Auto-rebuild will check everyday, at specified time, if any VM need
 # an automatic rebuild (according its settings). Format: HH:MM
