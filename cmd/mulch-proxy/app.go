@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/signal"
 	"path"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/OnitiFR/mulch/common"
 )
@@ -19,6 +23,9 @@ type App struct {
 	ProxyServer *ProxyServer
 	APIServer   *APIServer
 }
+
+// PSKHeaderName is the name of HTTP header for the PSK
+const PSKHeaderName = "Mulch-PSK"
 
 // NewApp creates a new application
 func NewApp(config *AppConfig, trace bool) (*App, error) {
@@ -67,6 +74,14 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		}
 	}
 
+	if app.Config.ChainMode == ChainModeChild {
+		// if this first refresh fails, we fail.
+		err = app.refreshParentDomains()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return app, nil
 }
 
@@ -102,9 +117,67 @@ func (app *App) initSigHUPHandler() {
 			if sig == syscall.SIGHUP {
 				app.Log.Infof("HUP Signal, reloading domains")
 				app.ProxyServer.ReloadDomains()
+				app.refreshDomains()
 			}
 		}
 	}()
+}
+
+func (app *App) refreshDomains() {
+	if app.Config.ChainMode == ChainModeChild {
+		err := app.refreshParentDomains()
+		if err != nil {
+			app.Log.Errorf("refreshing parent domains: %s", err)
+			// TODO: use alerts like mulchd?
+		}
+	}
+}
+
+// contact our parent proxy and send all our routes so he can forward requests
+func (app *App) refreshParentDomains() error {
+	var data common.ProxyChainDomainList
+	domains := app.ProxyServer.DomainDB.GetDomainsNames()
+
+	for _, domainName := range domains {
+		data = append(data, common.ProxyChainDomain{
+			Domain:    domainName,
+			ForwardTo: app.Config.ChainChildURL.String(), // us!
+		})
+	}
+
+	dataJSON, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	client := http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
+
+	req, err := http.NewRequest(
+		"POST",
+		app.Config.ChainParentURL.String()+"/domains",
+		bytes.NewBuffer(dataJSON),
+	)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(PSKHeaderName, app.Config.ChainPSK)
+
+	res, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(res.Body)
+	s := buf.String()
+	fmt.Printf("received: %s (%d)\n", s, res.StatusCode)
+
+	return nil
 }
 
 // Run will start the app (in the foreground)

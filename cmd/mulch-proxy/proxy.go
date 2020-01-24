@@ -232,7 +232,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 // RefreshReverseProxies create new (internal) ReverseProxy instances
 // This function should be called when DomainDB is updated
 func (proxy *ProxyServer) RefreshReverseProxies() {
-	domains := proxy.DomainDB.GetDomains()
+	domains := proxy.DomainDB.GetDomainsNames()
 	count := 0
 
 	for _, domainName := range domains {

@@ -56,8 +56,8 @@ func (ddb *DomainDatabase) Reload() error {
 	return ddb.load()
 }
 
-// GetDomains return all domain names in the database
-func (ddb *DomainDatabase) GetDomains() []string {
+// GetDomainsNames return all domain names in the database
+func (ddb *DomainDatabase) GetDomainsNames() []string {
 	ddb.mutex.Lock()
 	defer ddb.mutex.Unlock()
 

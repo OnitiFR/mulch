@@ -13,8 +13,8 @@ import (
 // Reverse Proxy Chaining modes
 const (
 	ChainModeNone   = 0
-	ChainModeChild  = 10
-	ChainModeParent = 20
+	ChainModeChild  = 1
+	ChainModeParent = 2
 )
 
 // ChainPSKMinLength is the minimum length for PSK

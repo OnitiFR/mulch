@@ -2,10 +2,12 @@ package main
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 
+	"github.com/OnitiFR/mulch/common"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -15,11 +17,18 @@ type APIServer struct {
 	Log    *Log
 	Server *http.Server
 	Muxer  *http.ServeMux
+	Config *AppConfig
 }
 
 func (srv *APIServer) registerRoutes() {
 	// very crude router, because we have very few routes
 	srv.Muxer.HandleFunc("/domains", func(w http.ResponseWriter, r *http.Request) {
+
+		if srv.checkPSK(r) == false {
+			http.Error(w, "Forbidden", 403)
+			return
+		}
+
 		if r.Method == "POST" {
 			srv.registerDomainsController(w, r)
 			return
@@ -31,11 +40,19 @@ func (srv *APIServer) registerRoutes() {
 	})
 }
 
+func (srv *APIServer) checkPSK(request *http.Request) bool {
+	if request.Header.Get(PSKHeaderName) == srv.Config.ChainPSK {
+		return true
+	}
+	return false
+}
+
 // NewAPIServer creates and runs the API server
 func NewAPIServer(config *AppConfig, cacheDir string, log *Log) (*APIServer, error) {
 	srv := APIServer{
-		Log:   log,
-		Muxer: http.NewServeMux(),
+		Log:    log,
+		Muxer:  http.NewServeMux(),
+		Config: config,
 	}
 	srv.registerRoutes()
 	listen := ":" + config.ChainParentURL.Port()
@@ -85,5 +102,15 @@ func NewAPIServer(config *AppConfig, cacheDir string, log *Log) (*APIServer, err
 }
 
 func (srv *APIServer) registerDomainsController(response http.ResponseWriter, request *http.Request) {
+	var data common.ProxyChainDomainList
+
+	err := json.NewDecoder(request.Body).Decode(&data)
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	fmt.Println(data)
+
 	response.Write([]byte("Hi!"))
 }
