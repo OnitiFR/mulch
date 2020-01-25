@@ -13,7 +13,7 @@ type Domain struct {
 	RedirectToHTTPS bool
 
 	// used internaly by Mulch reverse proxy server
-	ReverseProxy *httputil.ReverseProxy
+	ReverseProxy *httputil.ReverseProxy `json:"-"`
 	TargetURL    string
 	Chained      bool
 }

@@ -68,7 +68,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app.initSigHUPHandler()
 
 	if app.Config.ChainMode == ChainModeParent {
-		app.APIServer, err = NewAPIServer(app.Config, cacheDir, ddb, app.Log)
+		app.APIServer, err = NewAPIServer(app.Config, cacheDir, app.ProxyServer, app.Log)
 		if err != nil {
 			return nil, err
 		}
@@ -78,6 +78,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		// if this first refresh fails, we fail.
 		err = app.refreshParentDomains()
 		if err != nil {
+			app.Log.Error("Unable to contact parent proxy. This is a startup safety check.")
 			return nil, err
 		}
 	}
@@ -172,10 +173,11 @@ func (app *App) refreshParentDomains() error {
 	}
 	defer res.Body.Close()
 
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(res.Body)
-	s := buf.String()
-	fmt.Printf("received: %s (%d)\n", s, res.StatusCode)
+	if res.StatusCode == 200 {
+		app.Log.Info("domains successfully registered on our parent")
+	} else {
+		app.Log.Errorf("domains registration failed, parent returned error %d", res.StatusCode)
+	}
 
 	return nil
 }

@@ -14,11 +14,11 @@ import (
 
 // APIServer is used by children to contact us, the parent
 type APIServer struct {
-	Log      *Log
-	Server   *http.Server
-	Muxer    *http.ServeMux
-	Config   *AppConfig
-	DomainDB *DomainDatabase
+	Log         *Log
+	Server      *http.Server
+	Muxer       *http.ServeMux
+	Config      *AppConfig
+	ProxyServer *ProxyServer
 }
 
 func (srv *APIServer) registerRoutes() {
@@ -31,7 +31,10 @@ func (srv *APIServer) registerRoutes() {
 		}
 
 		if r.Method == "POST" {
-			srv.registerDomainsController(w, r)
+			err := srv.registerDomainsController(w, r)
+			if err == nil {
+				srv.ProxyServer.RefreshReverseProxies()
+			}
 			return
 		}
 
@@ -49,12 +52,12 @@ func (srv *APIServer) checkPSK(request *http.Request) bool {
 }
 
 // NewAPIServer creates and runs the API server
-func NewAPIServer(config *AppConfig, cacheDir string, domainDB *DomainDatabase, log *Log) (*APIServer, error) {
+func NewAPIServer(config *AppConfig, cacheDir string, proxyServer *ProxyServer, log *Log) (*APIServer, error) {
 	srv := APIServer{
-		Config:   config,
-		DomainDB: domainDB,
-		Log:      log,
-		Muxer:    http.NewServeMux(),
+		Config:      config,
+		ProxyServer: proxyServer,
+		Log:         log,
+		Muxer:       http.NewServeMux(),
 	}
 	srv.registerRoutes()
 	listen := ":" + config.ChainParentURL.Port()
@@ -103,24 +106,32 @@ func NewAPIServer(config *AppConfig, cacheDir string, domainDB *DomainDatabase, 
 	return &srv, nil
 }
 
-func (srv *APIServer) registerDomainsController(response http.ResponseWriter, request *http.Request) {
+func (srv *APIServer) registerDomainsController(response http.ResponseWriter, request *http.Request) error {
 	var data common.ProxyChainDomains
+
+	srv.Log.Infof("child '%s' wants to register domains", request.RemoteAddr)
 
 	err := json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
+		srv.Log.Error(err.Error())
 		http.Error(response, err.Error(), http.StatusBadRequest)
-		return
+		return err
 	}
 
-	err = srv.DomainDB.ReplaceChainedDomains(data.Domains, data.ForwardTo)
+	err = srv.ProxyServer.DomainDB.ReplaceChainedDomains(data.Domains, data.ForwardTo)
 	if err != nil {
+		srv.Log.Error(err.Error())
 		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return err
 	}
 
 	response.Header().Set("Content-Type", "application/json")
 	dataJSON, err := json.Marshal("OK")
 	if err != nil {
+		srv.Log.Error(err.Error())
 		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return err
 	}
 	response.Write([]byte(dataJSON))
+	return nil
 }

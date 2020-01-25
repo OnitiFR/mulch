@@ -181,7 +181,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	}
 
 	// User-Agent? Datetime?
-	proxy.Log.Tracef("%s %s %s %s", req.RemoteAddr, proto, req.Host, req.RequestURI)
+	proxy.Log.Tracef("> %s %s %s %s", req.RemoteAddr, proto, req.Host, req.RequestURI)
 
 	domain, err := proxy.DomainDB.GetByName(host)
 	if err != nil {
