@@ -51,7 +51,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		return nil, err
 	}
 
-	app.ProxyServer = NewProxyServer(&ProxyServerConfig{
+	app.ProxyServer = NewProxyServer(&ProxyServerParams{
 		DirCache:              cacheDir,
 		Email:                 app.Config.AcmeEmail,
 		ListenHTTP:            app.Config.HTTPAddress,
@@ -68,7 +68,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app.initSigHUPHandler()
 
 	if app.Config.ChainMode == ChainModeParent {
-		app.APIServer, err = NewAPIServer(app.Config, cacheDir, app.Log)
+		app.APIServer, err = NewAPIServer(app.Config, cacheDir, ddb, app.Log)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +98,12 @@ func (app *App) checkDataPath() error {
 func (app *App) createDomainDB() (*DomainDatabase, error) {
 	dbPath := path.Clean(app.Config.DataPath + "/mulch-proxy-domains.db")
 
-	ddb, err := NewDomainDatabase(dbPath)
+	autoCreate := false
+	if app.Config.ChainMode == ChainModeParent {
+		autoCreate = true
+	}
+
+	ddb, err := NewDomainDatabase(dbPath, autoCreate)
 	if err != nil {
 		return nil, err
 	}
@@ -135,14 +140,9 @@ func (app *App) refreshDomains() {
 
 // contact our parent proxy and send all our routes so he can forward requests
 func (app *App) refreshParentDomains() error {
-	var data common.ProxyChainDomainList
-	domains := app.ProxyServer.DomainDB.GetDomainsNames()
-
-	for _, domainName := range domains {
-		data = append(data, common.ProxyChainDomain{
-			Domain:    domainName,
-			ForwardTo: app.Config.ChainChildURL.String(), // us!
-		})
+	data := common.ProxyChainDomains{
+		Domains:   app.ProxyServer.DomainDB.GetDomainsNames(),
+		ForwardTo: app.Config.ChainChildURL.String(),
 	}
 
 	dataJSON, err := json.Marshal(data)

@@ -15,4 +15,5 @@ type Domain struct {
 	// used internaly by Mulch reverse proxy server
 	ReverseProxy *httputil.ReverseProxy
 	TargetURL    string
+	Chained      bool
 }

@@ -14,10 +14,11 @@ import (
 
 // APIServer is used by children to contact us, the parent
 type APIServer struct {
-	Log    *Log
-	Server *http.Server
-	Muxer  *http.ServeMux
-	Config *AppConfig
+	Log      *Log
+	Server   *http.Server
+	Muxer    *http.ServeMux
+	Config   *AppConfig
+	DomainDB *DomainDatabase
 }
 
 func (srv *APIServer) registerRoutes() {
@@ -48,11 +49,12 @@ func (srv *APIServer) checkPSK(request *http.Request) bool {
 }
 
 // NewAPIServer creates and runs the API server
-func NewAPIServer(config *AppConfig, cacheDir string, log *Log) (*APIServer, error) {
+func NewAPIServer(config *AppConfig, cacheDir string, domainDB *DomainDatabase, log *Log) (*APIServer, error) {
 	srv := APIServer{
-		Log:    log,
-		Muxer:  http.NewServeMux(),
-		Config: config,
+		Config:   config,
+		DomainDB: domainDB,
+		Log:      log,
+		Muxer:    http.NewServeMux(),
 	}
 	srv.registerRoutes()
 	listen := ":" + config.ChainParentURL.Port()
@@ -102,7 +104,7 @@ func NewAPIServer(config *AppConfig, cacheDir string, log *Log) (*APIServer, err
 }
 
 func (srv *APIServer) registerDomainsController(response http.ResponseWriter, request *http.Request) {
-	var data common.ProxyChainDomainList
+	var data common.ProxyChainDomains
 
 	err := json.NewDecoder(request.Body).Decode(&data)
 	if err != nil {
@@ -110,7 +112,15 @@ func (srv *APIServer) registerDomainsController(response http.ResponseWriter, re
 		return
 	}
 
-	fmt.Println(data)
+	err = srv.DomainDB.ReplaceChainedDomains(data.Domains, data.ForwardTo)
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+	}
 
-	response.Write([]byte("Hi!"))
+	response.Header().Set("Content-Type", "application/json")
+	dataJSON, err := json.Marshal("OK")
+	if err != nil {
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+	}
+	response.Write([]byte(dataJSON))
 }

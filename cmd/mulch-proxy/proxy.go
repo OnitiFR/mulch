@@ -25,11 +25,11 @@ type ProxyServer struct {
 	Log      *Log
 	HTTP     *http.Server
 	HTTPS    *http.Server
-	config   *ProxyServerConfig
+	config   *ProxyServerParams
 }
 
-// ProxyServerConfig is needed to create a ProxyServer
-type ProxyServerConfig struct {
+// ProxyServerParams is needed to create a ProxyServer
+type ProxyServerParams struct {
 	DirCache              string
 	Email                 string
 	ListenHTTP            string
@@ -70,7 +70,7 @@ func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 }
 
 // NewProxyServer instanciates a new ProxyServer
-func NewProxyServer(config *ProxyServerConfig) *ProxyServer {
+func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 	proxy := ProxyServer{
 		DomainDB: config.DomainDB,
 		Log:      config.Log,
@@ -242,7 +242,9 @@ func (proxy *ProxyServer) RefreshReverseProxies() {
 			continue
 		}
 
-		domain.TargetURL = fmt.Sprintf("http://%s:%d", domain.DestinationHost, domain.DestinationPort)
+		if domain.Chained == false {
+			domain.TargetURL = fmt.Sprintf("http://%s:%d", domain.DestinationHost, domain.DestinationPort)
+		}
 
 		pURL, _ := url.Parse(domain.TargetURL)
 		domain.ReverseProxy = httputil.NewSingleHostReverseProxy(pURL)

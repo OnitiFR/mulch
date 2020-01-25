@@ -17,9 +17,20 @@ type DomainDatabase struct {
 }
 
 // NewDomainDatabase instanciates a new DomainDatabase
-func NewDomainDatabase(filename string) (*DomainDatabase, error) {
+// Set autoCreate to true if you want to create an empty db when
+// no existing file is found. needed for proxy parents, they have
+// no nearby mulchd to create the file for them)
+func NewDomainDatabase(filename string, autoCreate bool) (*DomainDatabase, error) {
 	ddb := &DomainDatabase{
 		filename: filename,
+	}
+
+	if autoCreate == true && common.PathExist(filename) == false {
+		ddb.db = make(map[string]*common.Domain)
+		err := ddb.save()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err := ddb.load()
@@ -42,6 +53,22 @@ func (ddb *DomainDatabase) load() error {
 
 	dec := json.NewDecoder(f)
 	err = dec.Decode(&ddb.db)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// only needed for proxy chain parents
+func (ddb *DomainDatabase) save() error {
+	f, err := os.OpenFile(ddb.filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	enc := json.NewEncoder(f)
+	err = enc.Encode(&ddb.db)
 	if err != nil {
 		return err
 	}
@@ -86,4 +113,33 @@ func (ddb *DomainDatabase) Count() int {
 	defer ddb.mutex.Unlock()
 
 	return len(ddb.db)
+}
+
+// ReplaceChainedDomains remove all domains chain-forwared to "forwardTo"
+// and replace it with "domains"
+func (ddb *DomainDatabase) ReplaceChainedDomains(domains []string, forwardTo string) error {
+	ddb.mutex.Lock()
+	defer ddb.mutex.Unlock()
+
+	// 1 - delete all previous domains for this child
+	for key, domain := range ddb.db {
+		if domain.Chained && domain.TargetURL == forwardTo {
+			delete(ddb.db, key)
+		}
+	}
+
+	// 2 - add new domains, erasing any conflicting domain
+	for _, domain := range domains {
+		ddb.db[domain] = &common.Domain{
+			Name:      domain,
+			TargetURL: forwardTo,
+			Chained:   true,
+		}
+	}
+
+	err := ddb.save()
+	if err != nil {
+		return err
+	}
+	return nil
 }

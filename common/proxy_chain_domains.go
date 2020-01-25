@@ -1,11 +1,7 @@
 package common
 
-// ProxyChainDomainList is a list of ProxyChainDomain, used by parent and
-// children proxies for proxy chaining
-type ProxyChainDomainList []ProxyChainDomain
-
-// ProxyChainDomain maps a domain to a target proxy
-type ProxyChainDomain struct {
-	Domain    string
+// ProxyChainDomains list domains to forward to a target proxy
+type ProxyChainDomains struct {
+	Domains   []string
 	ForwardTo string
 }
