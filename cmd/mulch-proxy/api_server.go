@@ -77,7 +77,7 @@ func NewAPIServer(config *AppConfig, cacheDir string, proxyServer *ProxyServer, 
 	case "https":
 		manager := &autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(config.ChainParentURL.Host),
+			HostPolicy: autocert.HostWhitelist(config.ChainParentURL.Hostname()),
 			Cache:      autocert.DirCache(cacheDir),
 			Email:      config.AcmeEmail,
 		}

@@ -51,6 +51,14 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		return nil, err
 	}
 
+	chainDomain := ""
+	switch app.Config.ChainMode {
+	case ChainModeParent:
+		chainDomain = app.Config.ChainParentURL.Hostname()
+	case ChainModeChild:
+		chainDomain = app.Config.ChainChildURL.Hostname()
+	}
+
 	app.ProxyServer = NewProxyServer(&ProxyServerParams{
 		DirCache:              cacheDir,
 		Email:                 app.Config.AcmeEmail,
@@ -60,6 +68,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		DomainDB:              ddb,
 		ErrorHTMLTemplateFile: path.Clean(app.Config.configPath + "/templates/error_page.html"),
 		MulchdHTTPSDomain:     app.Config.ListenHTTPSDomain,
+		ChainDomain:           chainDomain,
 		Log:                   app.Log,
 	})
 
