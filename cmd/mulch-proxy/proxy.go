@@ -155,16 +155,11 @@ func (proxy *ProxyServer) hostPolicy(ctx context.Context, host string) error {
 // 	rw.WriteHeader(http.StatusBadGateway)
 // }
 
-func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string, res http.ResponseWriter, req *http.Request) {
+func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string, res http.ResponseWriter, req *http.Request, fromParent bool) {
 	url, _ := url.Parse(domain.TargetURL)
 
 	req.URL.Host = url.Host
 	req.URL.Scheme = url.Scheme
-
-	fromParent := false
-	if proxy.config.ChainMode == ChainModeChild && proxy.config.ChainPSK == req.Header.Get(PSKHeaderName) {
-		fromParent = true
-	}
 
 	// TODO: have a look at https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded
 	req.Header.Set("X-Forwarded-Proto", proto)
@@ -200,9 +195,20 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	// remove any port info from req.Host for the lookup
 	parts := strings.Split(req.Host, ":")
 	host := strings.ToLower(parts[0])
+
+	fromParent := false
+	if proxy.config.ChainMode == ChainModeChild && proxy.config.ChainPSK == req.Header.Get(PSKHeaderName) {
+		fromParent = true
+	}
+
 	proto := "http"
 	if req.TLS != nil {
 		proto = "https"
+	}
+
+	// trust our parent, whatever protocol was user inter-proxy
+	if fromParent {
+		proto = req.Header.Get("X-Forwarded-Proto")
 	}
 
 	// User-Agent? Datetime?
@@ -251,7 +257,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	}
 
 	// now, do our proxy job
-	proxy.serveReverseProxy(domain, proto, res, req)
+	proxy.serveReverseProxy(domain, proto, res, req, fromParent)
 }
 
 // RefreshReverseProxies create new (internal) ReverseProxy instances
