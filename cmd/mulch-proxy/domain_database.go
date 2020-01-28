@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"sync"
 
@@ -146,14 +147,18 @@ func (ddb *DomainDatabase) ReplaceChainedDomains(domains []string, forwardTo str
 
 // GetConflictingDomains returns a list of conflicting domains in the provided
 // list, excluding those from a specific child
-func (ddb *DomainDatabase) GetConflictingDomains(reqDomains []string, excludingChild string) common.ProxyChainConflictingDomains {
+func (ddb *DomainDatabase) GetConflictingDomains(reqDomains []string, childForwardDomain string) common.ProxyChainConflictingDomains {
 	var conflicts common.ProxyChainConflictingDomains
 	for _, reqDomain := range reqDomains {
 		domain, _ := ddb.GetByName(reqDomain)
-		if domain != nil && domain.TargetURL != excludingChild {
+		targetURL, err := url.ParseRequestURI(domain.TargetURL)
+		if err != nil {
+			continue
+		}
+		if domain != nil && targetURL.Hostname() != childForwardDomain {
 			conflicts = append(conflicts, common.ProxyChainConflictingDomain{
 				Domain: domain.Name,
-				Owner:  domain.TargetURL,
+				Owner:  targetURL.Hostname(),
 			})
 		}
 	}
