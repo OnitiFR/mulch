@@ -188,7 +188,6 @@ func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string,
 
 	if fromParent {
 		// delete PSK, since our next destination is the VM itself
-		proxy.Log.Trace("debug: remove PSK")
 		req.Header.Del(PSKHeaderName)
 	} else {
 		// we erase this header, so it's a bit more… believable.
