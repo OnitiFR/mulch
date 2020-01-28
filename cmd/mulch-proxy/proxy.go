@@ -38,6 +38,8 @@ type ProxyServerParams struct {
 	DomainDB              *DomainDatabase
 	ErrorHTMLTemplateFile string
 	MulchdHTTPSDomain     string // (for mulchd)
+	ChainMode             int
+	ChainPSK              string
 	ChainDomain           string
 	Log                   *Log
 }
@@ -158,6 +160,12 @@ func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string,
 
 	req.URL.Host = url.Host
 	req.URL.Scheme = url.Scheme
+
+	fromParent := false
+	if proxy.config.ChainMode == ChainModeChild && proxy.config.ChainPSK == req.Header.Get(PSKHeaderName) {
+		fromParent = true
+	}
+
 	// TODO: have a look at https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded
 	req.Header.Set("X-Forwarded-Proto", proto)
 
@@ -172,6 +180,18 @@ func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string,
 	}
 	// We erase this header, so it's a bit more… believable.
 	req.Header.Set("X-Real-Ip", ip)
+
+	// we are a parent and this request is forwarded to a child, add PSK to
+	// authenticate ourself
+	if proxy.config.ChainMode == ChainModeParent && domain.Chained == true {
+		req.Header.Set(PSKHeaderName, proxy.config.ChainPSK)
+	}
+
+	// delete PSK, since our next destination is the VM itself
+	if fromParent {
+		proxy.Log.Trace("debug: remove PSK")
+		req.Header.Del(PSKHeaderName)
+	}
 
 	domain.ReverseProxy.ServeHTTP(res, req)
 }

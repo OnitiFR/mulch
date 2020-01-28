@@ -68,6 +68,8 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		DomainDB:              ddb,
 		ErrorHTMLTemplateFile: path.Clean(app.Config.configPath + "/templates/error_page.html"),
 		MulchdHTTPSDomain:     app.Config.ListenHTTPSDomain,
+		ChainMode:             app.Config.ChainMode,
+		ChainPSK:              app.Config.ChainPSK,
 		ChainDomain:           chainDomain,
 		Log:                   app.Log,
 	})
