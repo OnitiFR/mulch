@@ -147,7 +147,12 @@ func (ddb *DomainDatabase) ReplaceChainedDomains(domains []string, forwardTo str
 
 // GetConflictingDomains returns a list of conflicting domains in the provided
 // list, excluding those from a specific child
-func (ddb *DomainDatabase) GetConflictingDomains(reqDomains []string, childForwardDomain string) common.ProxyChainConflictingDomains {
+func (ddb *DomainDatabase) GetConflictingDomains(reqDomains []string, childForwardURL string) common.ProxyChainConflictingDomains {
+	childURL, err := url.ParseRequestURI(childForwardURL)
+	if err != nil {
+		return nil
+	}
+
 	var conflicts common.ProxyChainConflictingDomains
 	for _, reqDomain := range reqDomains {
 		domain, _ := ddb.GetByName(reqDomain)
@@ -155,7 +160,7 @@ func (ddb *DomainDatabase) GetConflictingDomains(reqDomains []string, childForwa
 		if err != nil {
 			continue
 		}
-		if domain != nil && targetURL.Hostname() != childForwardDomain {
+		if domain != nil && targetURL.Hostname() != childURL.Hostname() {
 			conflicts = append(conflicts, common.ProxyChainConflictingDomain{
 				Domain: domain.Name,
 				Owner:  targetURL.Hostname(),
