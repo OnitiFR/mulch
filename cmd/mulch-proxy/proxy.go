@@ -19,6 +19,12 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
+// request protocols
+const (
+	ProtoHTTP  = "http"
+	ProtoHTTPS = "https"
+)
+
 // ProxyServer describe a Mulch proxy server
 type ProxyServer struct {
 	DomainDB *DomainDatabase
@@ -173,8 +179,6 @@ func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string,
 	if err != nil {
 		ip = "invalid-" + req.RemoteAddr
 	}
-	// We erase this header, so it's a bit more… believable.
-	req.Header.Set("X-Real-Ip", ip)
 
 	// we are a parent and this request is forwarded to a child, add PSK to
 	// authenticate ourself
@@ -182,10 +186,13 @@ func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string,
 		req.Header.Set(PSKHeaderName, proxy.config.ChainPSK)
 	}
 
-	// delete PSK, since our next destination is the VM itself
 	if fromParent {
+		// delete PSK, since our next destination is the VM itself
 		proxy.Log.Trace("debug: remove PSK")
 		req.Header.Del(PSKHeaderName)
+	} else {
+		// we erase this header, so it's a bit more… believable.
+		req.Header.Set("X-Real-Ip", ip)
 	}
 
 	domain.ReverseProxy.ServeHTTP(res, req)
@@ -201,9 +208,9 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 		fromParent = true
 	}
 
-	proto := "http"
+	proto := ProtoHTTP
 	if req.TLS != nil {
-		proto = "https"
+		proto = ProtoHTTPS
 	}
 
 	// User-Agent? Datetime?
@@ -211,9 +218,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 
 	// trust our parent, whatever protocol was user inter-proxy
 	if fromParent {
-		org := proto
 		proto = req.Header.Get("X-Forwarded-Proto")
-		proxy.Log.Tracef("replacing %s proto with %s", org, proto)
 	}
 
 	domain, err := proxy.DomainDB.GetByName(host)
@@ -252,7 +257,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	}
 
 	// redirect to https?
-	if req.TLS == nil && domain.RedirectToHTTPS == true {
+	if proto == ProtoHTTP && domain.RedirectToHTTPS == true {
 		newURI := "https://" + req.Host + req.URL.String()
 		http.Redirect(res, req, newURI, http.StatusFound)
 		return
