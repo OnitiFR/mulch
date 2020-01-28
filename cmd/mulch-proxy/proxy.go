@@ -206,13 +206,15 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 		proto = "https"
 	}
 
-	// trust our parent, whatever protocol was user inter-proxy
-	if fromParent {
-		proto = req.Header.Get("X-Forwarded-Proto")
-	}
-
 	// User-Agent? Datetime?
 	proxy.Log.Tracef("> %s %s %s %s", req.RemoteAddr, proto, req.Host, req.RequestURI)
+
+	// trust our parent, whatever protocol was user inter-proxy
+	if fromParent {
+		org := proto
+		proto = req.Header.Get("X-Forwarded-Proto")
+		proxy.Log.Tracef("replacing %s proto with %s", org, proto)
+	}
 
 	domain, err := proxy.DomainDB.GetByName(host)
 	if err != nil {
