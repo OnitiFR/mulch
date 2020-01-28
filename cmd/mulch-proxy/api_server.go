@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/OnitiFR/mulch/common"
 	"golang.org/x/crypto/acme"
@@ -99,6 +100,8 @@ func NewAPIServer(config *AppConfig, cacheDir string, proxyServer *ProxyServer, 
 			log.Errorf("ListenAndServeTLS: %s", err)
 			os.Exit(99)
 		}()
+
+		srv.ScheduleSelfCalls()
 	}
 
 	log.Infof("API server at %s", config.ChainParentURL.String())
@@ -134,4 +137,32 @@ func (srv *APIServer) registerDomainsController(response http.ResponseWriter, re
 	}
 	response.Write([]byte(dataJSON))
 	return nil
+}
+
+func (srv *APIServer) selfCall() error {
+	srv.Log.Trace("self HTTPS URL call to generate/renew certificate")
+
+	timeout := time.Duration(10 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
+	}
+	res, err := client.Get(srv.Config.ChainParentURL.String())
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	return nil
+}
+
+// ScheduleSelfCalls call our own API HTTPS URL every 24 hour, refreshing
+// the TLS certificate.
+func (srv *APIServer) ScheduleSelfCalls() {
+	time.Sleep(1 * time.Second)
+	go func() {
+		err := srv.selfCall()
+		if err != nil {
+			srv.Log.Warningf("unable to call our own HTTPS domain: %s", err)
+		}
+		time.Sleep(24 * time.Hour)
+	}()
 }
