@@ -78,35 +78,6 @@ func (vm *VM) SetOperation(op VMOperation) {
 	vm.WIP = op
 }
 
-// CheckDomainsConflicts will detect if incoming domains conflicts with existing VMs
-// You can exclude a specific VM (every revisions) using its name (use empty string otherwise)
-func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM string) error {
-	domainMap := make(map[string]*VM)
-	vmNames := db.GetNames()
-	for _, vmName := range vmNames {
-		if excludeVM != "" && vmName.Name == excludeVM {
-			continue
-		}
-
-		vm, err := db.GetByName(vmName)
-		if err != nil {
-			return err
-		}
-		for _, domain := range vm.Config.Domains {
-			domainMap[domain.Name] = vm
-		}
-	}
-
-	for _, domain := range domains {
-		vm, exist := domainMap[domain.Name]
-		if exist == true {
-			return fmt.Errorf("vm '%s' already registered domain '%s'", vm.Config.Name, domain.Name)
-		}
-	}
-
-	return nil
-}
-
 // small helper to generate main disk name
 func vmGenDiskName(vmName *VMName) string {
 	diskName := vmName.ID() + ".qcow2"
@@ -175,7 +146,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	}
 
 	// check for conclicting domains (will also be done later while saving vm database)
-	err = CheckDomainsConflicts(app.VMDB, vmConfig.Domains, vmName.Name)
+	err = CheckDomainsConflicts(app.VMDB, vmConfig.Domains, vmName.Name, app.Config)
 	if err != nil {
 		return nil, nil, err
 	}

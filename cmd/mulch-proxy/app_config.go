@@ -44,7 +44,7 @@ type AppConfig struct {
 	// Reverse Proxy Chaining mode
 	ChainMode int
 
-	// if parent: addres API
+	// if parent: listing API URL
 	// if child: parent API URL
 	ChainParentURL *url.URL
 

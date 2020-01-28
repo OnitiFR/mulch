@@ -9,6 +9,13 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+// Reverse Proxy Chaining modes
+const (
+	ProxyChainModeNone   = 0
+	ProxyChainModeChild  = 1
+	ProxyChainModeParent = 2
+)
+
 // AppConfig describes the general configuration of an App
 type AppConfig struct {
 	// address where the API server will listen
@@ -39,6 +46,19 @@ type AppConfig struct {
 	// Extra (limited) SSH keys
 	ProxySSHExtraKeysFile string
 
+	// Reverse Proxy Chaining mode
+	ProxyChainMode int
+
+	// if parent: listing API URL
+	// if child: parent API URL
+	ProxyChainParentURL string
+
+	// child only: URL we will register to parent
+	ProxyChainChildURL string
+
+	// Pre-Shared key for the chain
+	ProxyChainPSK string
+
 	// User (sudoer) created by Mulch in VMs
 	MulchSuperUser string
 
@@ -68,6 +88,10 @@ type tomlAppConfig struct {
 	VMPrefix              string `toml:"vm_prefix"`
 	ProxyListenSSH        string `toml:"proxy_listen_ssh"`
 	ProxySSHExtraKeysFile string `toml:"proxy_ssh_extra_keys_file"`
+	ProxyChainMode        string `toml:"proxy_chain_mode"`
+	ProxyChainParentURL   string `toml:"proxy_chain_parent_url"`
+	ProxyChainChildURL    string `toml:"proxy_chain_child_url"`
+	ProxyChainPSK         string `toml:"proxy_chain_psk"`
 	MulchSuperUser        string `toml:"mulch_super_user"`
 	AutoRebuildTime       string `toml:"auto_rebuild_time"`
 	Seed                  []tomlConfigSeed
@@ -146,6 +170,21 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 
 	appConfig.ProxyListenSSH = tConfig.ProxyListenSSH
 	appConfig.ProxySSHExtraKeysFile = tConfig.ProxySSHExtraKeysFile
+
+	switch tConfig.ProxyChainMode {
+	case "":
+		appConfig.ProxyChainMode = ProxyChainModeNone
+	case "child":
+		appConfig.ProxyChainMode = ProxyChainModeChild
+	case "parent":
+		appConfig.ProxyChainMode = ProxyChainModeParent
+	default:
+		return nil, fmt.Errorf("unknown proxy_chain_mode value '%s'", tConfig.ProxyChainMode)
+	}
+	// no validation here, it's done by mulch-proxy, we're just an API client
+	appConfig.ProxyChainParentURL = tConfig.ProxyChainParentURL
+	appConfig.ProxyChainChildURL = tConfig.ProxyChainChildURL
+	appConfig.ProxyChainPSK = tConfig.ProxyChainPSK
 
 	partsAr := strings.Split(tConfig.AutoRebuildTime, ":")
 	if len(partsAr) != 2 {

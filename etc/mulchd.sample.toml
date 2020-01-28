@@ -67,7 +67,7 @@ proxy_chain_mode = ""
 # Recommanded port: 8787 (ex: https://api.mydomain.tld:8787)
 proxy_chain_parent_url = ""
 
-# only for children: parent proxy will forward requests to this URL
+# only for children: parent proxy will forward requests to this URL (us!)
 # It must be a dedicated domain, HTTPS is available if you want to
 # secured forwared traffic (ex: https://forward.mymulchd.tld)
 proxy_chain_child_url = ""

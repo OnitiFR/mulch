@@ -666,7 +666,7 @@ func RedefineVM(req *server.Request, vm *server.VM) error {
 	}
 
 	// check for conclicting domains
-	err = server.CheckDomainsConflicts(req.App.VMDB, conf.Domains, conf.Name)
+	err = server.CheckDomainsConflicts(req.App.VMDB, conf.Domains, conf.Name, req.App.Config)
 	if err != nil {
 		return err
 	}

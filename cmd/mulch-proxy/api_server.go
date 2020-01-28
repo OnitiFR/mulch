@@ -25,7 +25,6 @@ type APIServer struct {
 func (srv *APIServer) registerRoutes() {
 	// very crude router, because we have very few routes
 	srv.Muxer.HandleFunc("/domains", func(w http.ResponseWriter, r *http.Request) {
-
 		if srv.checkPSK(r) == false {
 			http.Error(w, "Forbidden", 403)
 			return
@@ -40,6 +39,22 @@ func (srv *APIServer) registerRoutes() {
 		}
 
 		errMsg := fmt.Sprintf("Method %s not allowed for route /domains", r.Method)
+		srv.Log.Errorf("%d: %s", 405, errMsg)
+		http.Error(w, errMsg, 405)
+	})
+
+	srv.Muxer.HandleFunc("/domains/conflicts", func(w http.ResponseWriter, r *http.Request) {
+		if srv.checkPSK(r) == false {
+			http.Error(w, "Forbidden", 403)
+			return
+		}
+
+		if r.Method == "POST" {
+			_ = srv.checkDomainsController(w, r)
+			return
+		}
+
+		errMsg := fmt.Sprintf("Method %s not allowed for route /domains/conflicts", r.Method)
 		srv.Log.Errorf("%d: %s", 405, errMsg)
 		http.Error(w, errMsg, 405)
 	})
@@ -130,6 +145,30 @@ func (srv *APIServer) registerDomainsController(response http.ResponseWriter, re
 
 	response.Header().Set("Content-Type", "application/json")
 	dataJSON, err := json.Marshal("OK")
+	if err != nil {
+		srv.Log.Error(err.Error())
+		http.Error(response, err.Error(), http.StatusInternalServerError)
+		return err
+	}
+	response.Write([]byte(dataJSON))
+	return nil
+}
+
+func (srv *APIServer) checkDomainsController(response http.ResponseWriter, request *http.Request) error {
+	var data common.ProxyChainDomains
+
+	srv.Log.Infof("child '%s' wants to check domain conflicts", request.RemoteAddr)
+
+	err := json.NewDecoder(request.Body).Decode(&data)
+	if err != nil {
+		srv.Log.Error(err.Error())
+		http.Error(response, err.Error(), http.StatusBadRequest)
+		return err
+	}
+	conflicts := srv.ProxyServer.DomainDB.GetConflictingDomains(data.Domains, data.ForwardTo)
+
+	response.Header().Set("Content-Type", "application/json")
+	dataJSON, err := json.Marshal(conflicts)
 	if err != nil {
 		srv.Log.Error(err.Error())
 		http.Error(response, err.Error(), http.StatusInternalServerError)

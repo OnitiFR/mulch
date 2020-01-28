@@ -1,3 +1,4 @@
+- proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
 - (needed for proxy-chain , i guess) VM deactivate / activate none? (need a bit of tweaking of the VM controller)
 - on startup: rebuild seeds -after- seed download
 - add timeout on VM creation scripts
