@@ -146,7 +146,7 @@ func (srv *APIServer) selfCall() error {
 	client := http.Client{
 		Timeout: timeout,
 	}
-	res, err := client.Get(srv.Config.ChainParentURL.String())
+	res, err := client.Get("https://" + srv.Config.ChainParentURL.Hostname() + "/")
 	if err != nil {
 		return err
 	}
