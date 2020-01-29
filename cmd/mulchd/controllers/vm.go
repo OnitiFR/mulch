@@ -346,7 +346,7 @@ func ActionVMController(req *server.Request) {
 			if entry.Name.Revision != server.RevisionNone {
 				req.Stream.Successf("VM %s is now active", entry.Name)
 			} else {
-				req.Stream.Successf("VM %s is now inactive", entry.Name)
+				req.Stream.Successf("VM %s is now inactive", entry.Name.Name)
 			}
 		}
 	default:
