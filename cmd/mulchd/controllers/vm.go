@@ -19,8 +19,21 @@ func getEntryFromRequest(vmName string, req *server.Request) (*server.VMDatabase
 	var entry *server.VMDatabaseEntry
 	var err error
 
+	action := req.HTTP.FormValue("action")
 	revisionParams := req.HTTP.FormValue("revision")
-	if revisionParams != "" {
+
+	if action == "deactivate" && (revisionParams == "none" || revisionParams == "-1") {
+		count := req.App.VMDB.GetCountForName(vmName)
+		if count == 0 {
+			return nil, fmt.Errorf("no %s VM found in database", vmName)
+		}
+		// create a fake entry
+		entry = &server.VMDatabaseEntry{
+			Name:   server.NewVMName(vmName, server.RevisionNone),
+			VM:     nil,
+			Active: false,
+		}
+	} else if revisionParams != "" {
 		revision, err := strconv.Atoi(revisionParams)
 		if err != nil {
 			return nil, err
