@@ -22,7 +22,7 @@ func getEntryFromRequest(vmName string, req *server.Request) (*server.VMDatabase
 	action := req.HTTP.FormValue("action")
 	revisionParams := req.HTTP.FormValue("revision")
 
-	if action == "deactivate" && (revisionParams == "none" || revisionParams == "-1") {
+	if action == "activate" && (revisionParams == "none" || revisionParams == "-1") {
 		count := req.App.VMDB.GetCountForName(vmName)
 		if count == 0 {
 			return nil, fmt.Errorf("no %s VM found in database", vmName)
