@@ -70,6 +70,8 @@ proxy_chain_parent_url = ""
 # only for children: parent proxy will forward requests to this URL (us!)
 # It must be a dedicated domain, HTTPS is available if you want to
 # secured forwared traffic (ex: https://forward.mymulchd.tld)
+# warning: you may have to clear parent domain database if you change
+# this value afterward
 proxy_chain_child_url = ""
 
 # Pre-Shared Key between children and the parent proxy

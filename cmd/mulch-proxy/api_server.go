@@ -196,12 +196,14 @@ func (srv *APIServer) selfCall() error {
 // ScheduleSelfCalls call our own API HTTPS URL every 24 hour, refreshing
 // the TLS certificate.
 func (srv *APIServer) ScheduleSelfCalls() {
-	time.Sleep(1 * time.Second)
 	go func() {
-		err := srv.selfCall()
-		if err != nil {
-			srv.Log.Warningf("unable to call our own HTTPS domain: %s", err)
+		time.Sleep(1 * time.Second)
+		for {
+			err := srv.selfCall()
+			if err != nil {
+				srv.Log.Warningf("unable to call our own HTTPS domain: %s", err)
+			}
+			time.Sleep(24 * time.Hour)
 		}
-		time.Sleep(24 * time.Hour)
 	}()
 }
