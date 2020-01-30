@@ -288,7 +288,9 @@ func (proxy *ProxyServer) RefreshReverseProxies() {
 
 		// domain.reverseProxy.ErrorHandler = reverseProxyErrorHandler
 		domain.ReverseProxy.ModifyResponse = func(resp *http.Response) (err error) {
-			resp.Header.Add("X-Mulch", domain.VMName)
+			if proxy.config.ChainMode != ChainModeParent {
+				resp.Header.Set("X-Mulch", domain.VMName)
+			}
 			return nil
 		}
 		domain.ReverseProxy.Transport = &errorHandlingRoundTripper{
