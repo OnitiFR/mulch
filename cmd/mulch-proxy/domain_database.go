@@ -155,9 +155,14 @@ func (ddb *DomainDatabase) GetConflictingDomains(reqDomains []string, childForwa
 
 	var conflicts common.ProxyChainConflictingDomains
 	for _, reqDomain := range reqDomains {
-		domain, _ := ddb.GetByName(reqDomain)
+		domain, err := ddb.GetByName(reqDomain)
+		if err != nil {
+			// no conflict for this domain
+			continue
+		}
 		targetURL, err := url.ParseRequestURI(domain.TargetURL)
 		if err != nil {
+			// not a child route? inconsistency?
 			continue
 		}
 		if domain != nil && targetURL.Hostname() != childURL.Hostname() {
