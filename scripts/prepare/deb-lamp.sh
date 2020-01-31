@@ -106,15 +106,17 @@ if [ $? -ne 0 ]; then
     sudo mkdir /usr/share/phpmyadmin/tmp || exit $?
     sudo chown $_APP_USER:$_APP_USER /usr/share/phpmyadmin/tmp || exit $?
 
-    sudo bash -c "echo 'Auth failure' > /usr/share/phpmyadmin/auth.html" || exit $?
+    if [ "$PHPMYADMIN_SSO" != "disable" ]; then
+        sudo bash -c "echo 'Auth failure' > /usr/share/phpmyadmin/auth.html" || exit $?
 
-    sudo bash -c "cat > /usr/share/phpmyadmin/config.inc.php" <<- 'EOS'
+        sudo bash -c "cat > /usr/share/phpmyadmin/config.inc.php" <<- 'EOS'
 <?php
 $cfg['Servers'][1]['auth_type'] = 'signon';
 $cfg['Servers'][1]['SignonSession'] = 'SignonSession';
 $cfg['Servers'][1]['SignonURL'] = '/_sql/auth.html';
 EOS
-    [ $? -eq 0 ] || exit $?
+        [ $? -eq 0 ] || exit $?
+    fi
 
     sudo bash -c "cat > /etc/apache2/conf-available/phpmyadmin.conf" <<- EOS
 # phpMyAdmin default Apache configuration
