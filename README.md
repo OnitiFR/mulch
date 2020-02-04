@@ -235,6 +235,8 @@ backup of itself.
 Again, the general idea behind Mulch is to secure Ops by industrializing and simplify such
 processes ("service reconstructability").
 
+You can configure auto-rebuild for each VM with `auto_rebuild` setting (daily, weekly, monthly).
+
 #### Reverse Proxy chaining
 When using multiple Mulch instances, a frontal mulch-proxy can be configured to forward traffic
 to children instances. It makes DNS configuration and VM migration between mulch servers way
@@ -259,6 +261,7 @@ proxy_chain_child_url = "https://forward.mymulchd.tld"
 proxy_chain_psk = "MySecretPreShareKey123"
 ```
 
+And that's it.
 
 #### More…
 You can lock a VM, so no "big" operation, like delete or rebuild can be done until the VM
