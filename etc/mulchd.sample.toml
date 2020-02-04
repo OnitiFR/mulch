@@ -100,4 +100,4 @@ url = "http://cloud-images.ubuntu.com/eoan/current/eoan-server-cloudimg-amd64.im
 
 #[[seed]]
 #name = "ubuntu_1910_lamp"
-#seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/ubuntu_1910_lamp.toml"
+#seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_1910_lamp.toml"
