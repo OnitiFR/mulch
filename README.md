@@ -159,7 +159,7 @@ Show me more features!
 #### HTTPS / Let's Encrypt
 Here's the result of the previously linked `sample-vm-full.toml` configuration, showing automatic HTTPS certificates:
 
-![mulch VMs lifecycle](https://raw.github.com/OnitiFR/mulch/master/doc/images/https_le.png)
+![mulch-proxy HTTPS Let's Encrypt certificates](https://raw.github.com/OnitiFR/mulch/master/doc/images/https_le.png)
 
 #### SSH
 Mulch allow easy SSH connection from mulch client with `mulch ssh` command. No configuration
@@ -234,6 +234,31 @@ backup of itself.
 
 Again, the general idea behind Mulch is to secure Ops by industrializing and simplify such
 processes ("service reconstructability").
+
+#### Reverse Proxy chaining
+When using multiple Mulch instances, a frontal mulch-proxy can be configured to forward traffic
+to children instances. It makes DNS configuration and VM migration between mulch servers way
+easier. Thanks to an internal inter-proxy API, everything is managed automatically:
+create your VM as usual and the parent mulch-proxy will instantly forward requests. And domain
+name conflicts between instances are automatically checked too.
+
+![mulch-proxy chaining](https://raw.github.com/OnitiFR/mulch/master/doc/images/img_chaining.png)
+
+Here's what the parent mulch-proxy configuration will look like:
+```toml
+proxy_chain_mode = "parent"
+proxy_chain_parent_url = "https://api.mydomain.tld:8787"
+proxy_chain_psk = "MySecretPreShareKey123"
+```
+
+And here's the corresponding configuration for children:
+```toml
+proxy_chain_mode = "child"
+proxy_chain_parent_url = "https://api.mydomain.tld:8787"
+proxy_chain_child_url = "https://forward.mymulchd.tld"
+proxy_chain_psk = "MySecretPreShareKey123"
+```
+
 
 #### More…
 You can lock a VM, so no "big" operation, like delete or rebuild can be done until the VM
