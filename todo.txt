@@ -1,4 +1,3 @@
-- server status: add uptime
 - add -B <vm-name> on vm create? (creating a temp backup on the go)
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
 - add timeout on VM creation scripts

@@ -37,6 +37,7 @@ const LogHistorySize = 20000 // ~2.5mB
 
 // App describes an (the?) application
 type App struct {
+	StartTime      time.Time
 	Config         *AppConfig
 	Libvirt        *Libvirt
 	Hub            *Hub
@@ -63,6 +64,7 @@ type App struct {
 // NewApp creates a new application
 func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app := &App{
+		StartTime:      time.Now(),
 		Config:         config,
 		Rand:           rand.New(rand.NewSource(time.Now().UnixNano())),
 		routesInternal: make(map[string][]*Route),
@@ -581,6 +583,7 @@ func (app *App) Status() (*common.APIStatus, error) {
 		})
 	}
 
+	ret.StartTime = app.StartTime
 	ret.VMs = vmTotal
 	ret.ActiveVMs = vmActiveTotal
 	ret.HostCPUs = int(infos.Cpus)
