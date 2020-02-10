@@ -73,6 +73,29 @@ func ListBackupsController(req *server.Request) {
 	}
 }
 
+func deleteBackup(backupName string, req *server.Request) error {
+	backup := req.App.BackupsDB.GetByName(backupName)
+	if backup == nil {
+		return fmt.Errorf("backup '%s' not found in database", backupName)
+	}
+
+	vol, errDef := req.App.Libvirt.Pools.Backups.LookupStorageVolByName(backupName)
+	if errDef != nil {
+		return fmt.Errorf("failed LookupStorageVolByName: %s (%s)", errDef, backupName)
+	}
+	defer vol.Free()
+	errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
+	if errDef != nil {
+		return fmt.Errorf("failed Delete: %s (%s)", errDef, backupName)
+	}
+
+	err := req.App.BackupsDB.Delete(backupName)
+	if err != nil {
+		return fmt.Errorf("unable remove '%s' backup from DB: %s", backupName, err)
+	}
+	return nil
+}
+
 // DeleteBackupController will delete a backup
 func DeleteBackupController(req *server.Request) {
 	req.StartStream()
@@ -87,27 +110,9 @@ func DeleteBackupController(req *server.Request) {
 	})
 	defer req.App.Operations.Remove(operation)
 
-	backup := req.App.BackupsDB.GetByName(backupName)
-	if backup == nil {
-		req.Stream.Failuref("backup '%s' not found in database", backupName)
-		return
-	}
-
-	vol, errDef := req.App.Libvirt.Pools.Backups.LookupStorageVolByName(backupName)
-	if errDef != nil {
-		req.Stream.Failuref("failed LookupStorageVolByName: %s (%s)", errDef, backupName)
-		return
-	}
-	defer vol.Free()
-	errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
-	if errDef != nil {
-		req.Stream.Failuref("failed Delete: %s (%s)", errDef, backupName)
-		return
-	}
-
-	err := req.App.BackupsDB.Delete(backupName)
+	err := deleteBackup(backupName, req)
 	if err != nil {
-		req.Stream.Failuref("unable remove '%s' backup from DB: %s", backupName, err)
+		req.Stream.Failure(err.Error())
 		return
 	}
 

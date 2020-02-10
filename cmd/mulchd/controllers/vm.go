@@ -63,6 +63,7 @@ func NewVMController(req *server.Request) {
 	req.Stream.Tracef("reading '%s' config file", header.Filename)
 
 	restore := req.HTTP.FormValue("restore")
+	restoreVM := req.HTTP.FormValue("restore-vm")
 	allowNewRevision := req.HTTP.FormValue("allow_new_revision")
 	inactive := req.HTTP.FormValue("inactive")
 	keepOnFailure := req.HTTP.FormValue("keep_on_failure")
@@ -76,6 +77,11 @@ func NewVMController(req *server.Request) {
 	allowScriptFailure := server.VMStopOnScriptFailure
 	if keepOnFailure == common.TrueStr {
 		allowScriptFailure = server.VMAllowScriptFailure
+	}
+
+	if restore != "" && restoreVM != "" {
+		req.Stream.Failure("restore and restore-vm flags are mutually exclusive")
+		return
 	}
 
 	conf, err := server.NewVMConfigFromTomlReader(configFile, req.Stream)
@@ -99,9 +105,31 @@ func NewVMController(req *server.Request) {
 
 	req.SetTarget(conf.Name)
 
+	// restore from an existing backup
 	if restore != "" {
 		conf.RestoreBackup = restore
 		req.Stream.Infof("will restore VM from '%s'", restore)
+	}
+
+	// restore from a new backup
+	if restoreVM != "" {
+		entry, err := req.App.VMDB.GetActiveEntryByName(restoreVM)
+		if err != nil {
+			req.Stream.Failuref("Cannot find VM to backup: %s", err)
+			return
+		}
+		backup, err := server.VMBackup(entry.Name, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressAllow)
+		if err != nil {
+			req.Stream.Failuref("Cannot backup: %s", err)
+			return
+		}
+		defer func() {
+			err := deleteBackup(backup, req)
+			if err != nil {
+				req.App.Log.Errorf("cannot delete transient backup: %s", err)
+			}
+		}()
+		conf.RestoreBackup = backup
 	}
 
 	before := time.Now()

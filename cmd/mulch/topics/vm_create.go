@@ -14,12 +14,16 @@ var vmCreateCmd = &cobra.Command{
 	Short: "Create a new VM",
 	Long: `Create a new VM from a description file.
 
-See sample-vm.toml for an example, or get config
-from an existing VM using [unimplemented yet]
+See sample-vm.toml for an example, or get config from an existing
+VM using 'vm config'.
+
+You can restore data in this new VM from an existing backup (-r) or
+from another VM (-R).
 `,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		restore, _ := cmd.Flags().GetString("restore")
+		restoreVM, _ := cmd.Flags().GetString("restore-vm")
 		newRevision, _ := cmd.Flags().GetBool("new-revision")
 		inactive, _ := cmd.Flags().GetBool("inactive")
 		keepOnFailure, _ := cmd.Flags().GetBool("keep-on-failure")
@@ -27,6 +31,7 @@ from an existing VM using [unimplemented yet]
 
 		call := client.GlobalAPI.NewCall("POST", "/vm", map[string]string{
 			"restore":            restore,
+			"restore-vm":         restoreVM,
 			"allow_new_revision": strconv.FormatBool(newRevision),
 			"inactive":           strconv.FormatBool(inactive),
 			"keep_on_failure":    strconv.FormatBool(keepOnFailure),
@@ -42,7 +47,8 @@ from an existing VM using [unimplemented yet]
 
 func init() {
 	vmCmd.AddCommand(vmCreateCmd)
-	vmCreateCmd.Flags().StringP("restore", "r", "", "backup to restore")
+	vmCreateCmd.Flags().StringP("restore", "r", "", "restore from a backup")
+	vmCreateCmd.Flags().StringP("restore-vm", "R", "", "restore from a running VM")
 	vmCreateCmd.MarkFlagCustom("restore", "__internal_list_backups")
 	vmCreateCmd.Flags().BoolP("new-revision", "n", false, "allow a new revision with the same name")
 	vmCreateCmd.Flags().BoolP("inactive", "i", false, "do not set this instance as active")
