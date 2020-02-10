@@ -47,10 +47,13 @@ from another VM (-R).
 
 func init() {
 	vmCmd.AddCommand(vmCreateCmd)
+
 	vmCreateCmd.Flags().StringP("restore", "r", "", "restore from a backup")
 	vmCreateCmd.MarkFlagCustom("restore", "__internal_list_backups")
+
 	vmCreateCmd.Flags().StringP("restore-vm", "R", "", "restore from a running VM")
 	vmCreateCmd.MarkFlagCustom("restore-vm", "__internal_list_vms")
+
 	vmCreateCmd.Flags().BoolP("new-revision", "n", false, "allow a new revision with the same name")
 	vmCreateCmd.Flags().BoolP("inactive", "i", false, "do not set this instance as active")
 	vmCreateCmd.Flags().BoolP("keep-on-failure", "k", false, "keep VM on script failure (useful for debug)")
