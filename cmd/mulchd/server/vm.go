@@ -1340,10 +1340,11 @@ func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) error {
 	rebuildStart := time.Now()
 
-	vm, err := app.VMDB.GetByName(vmName)
+	entry, err := app.VMDB.GetEntryByName(vmName)
 	if err != nil {
 		return err
 	}
+	vm := entry.VM
 
 	if vm.WIP != VMOperationNone {
 		return fmt.Errorf("VM already have a work in progress (%s)", string(vm.WIP))
@@ -1402,21 +1403,26 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 		}
 	}()
 
-	downtimeStart := time.Now()
-	// set rev+0 as inactive ("default" behavior, add a --no-downtime flag?)
-	err = app.VMDB.SetActiveRevision(vmName.Name, RevisionNone)
-	if err != nil {
-		return fmt.Errorf("can't disable all revisions: %s", err)
-	}
+	sourceIsActive := entry.Active
 
-	defer func() {
-		if success == false {
-			err = app.VMDB.SetActiveRevision(vmName.Name, vmName.Revision)
-			if err != nil {
-				log.Error(err.Error())
-			}
+	downtimeStart := time.Now()
+
+	if sourceIsActive {
+		// set rev+0 as inactive ("default" behavior, add a --no-downtime flag?)
+		err = app.VMDB.SetActiveRevision(vmName.Name, RevisionNone)
+		if err != nil {
+			return fmt.Errorf("can't disable all revisions: %s", err)
 		}
-	}()
+
+		defer func() {
+			if success == false {
+				err = app.VMDB.SetActiveRevision(vmName.Name, vmName.Revision)
+				if err != nil {
+					log.Error(err.Error())
+				}
+			}
+		}()
+	}
 
 	if backupAndRestore {
 		// backup rev+0
@@ -1452,13 +1458,15 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 		}
 	}
 
-	// activate rev+1
-	err = app.VMDB.SetActiveRevision(newVMName.Name, newVMName.Revision)
-	if err != nil {
-		return fmt.Errorf("can't enable new revision: %s", err)
+	if sourceIsActive {
+		// activate rev+1
+		err = app.VMDB.SetActiveRevision(newVMName.Name, newVMName.Revision)
+		if err != nil {
+			return fmt.Errorf("can't enable new revision: %s", err)
+		}
+		log.Infof("VM %s is now active", newVMName)
 	}
 	downtimeEnd := time.Now()
-	log.Infof("VM %s is now active", newVMName)
 
 	// get lock status of original VM
 	originalLocked := vm.Locked
@@ -1494,7 +1502,11 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 	newVM.LastRebuildDuration = rebuildtime
 	app.VMDB.Update()
 
-	log.Infof("downtime: %s", downtime)
+	if sourceIsActive {
+		log.Infof("downtime: %s", downtime)
+	} else {
+		log.Infof("downtime: none (was not active)")
+	}
 
 	return nil
 }
