@@ -162,7 +162,8 @@ func (db *SeedDatabase) Run() {
 	db.app.VMStateDB.WaitRestore()
 
 	for {
-		db.runStep()
+		db.runStepSeeds()
+		db.runStepSeeders()
 		time.Sleep(1 * time.Hour)
 	}
 }
@@ -175,23 +176,46 @@ func seedSendErrorAlert(app *App, seed string) {
 	})
 }
 
-func (db *SeedDatabase) runStep() {
-	for name, seed := range db.db {
+func (db *SeedDatabase) reportError(seed *Seed, err error) {
+	msg := fmt.Sprintf("seeder '%s': %s", seed.Name, err)
+	db.app.Log.Error(msg)
+	seed.UpdateStatus(msg)
+	db.save()
+	seedSendErrorAlert(db.app, seed.Name)
+}
+
+func (db *SeedDatabase) runStepSeeds() {
+	for _, seed := range db.db {
 		var err error
+
+		if seed.Seeder != "" {
+			continue
+		}
 
 		if seed.URL != "" {
 			err = db.RefreshSeed(seed, SeedRefreshIfNeeded)
 		}
+
+		if err != nil {
+			db.reportError(seed, err)
+		}
+	}
+}
+
+func (db *SeedDatabase) runStepSeeders() {
+	for _, seed := range db.db {
+		var err error
+
+		if seed.URL != "" {
+			continue
+		}
+
 		if seed.Seeder != "" {
 			err = db.RefreshSeeder(seed, SeedRefreshIfNeeded)
 		}
 
 		if err != nil {
-			msg := fmt.Sprintf("seeder '%s': %s", name, err)
-			db.app.Log.Error(msg)
-			seed.UpdateStatus(msg)
-			db.save()
-			seedSendErrorAlert(db.app, name)
+			db.reportError(seed, err)
 		}
 	}
 }
