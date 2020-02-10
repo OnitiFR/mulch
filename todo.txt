@@ -1,13 +1,15 @@
-- proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
-- auto value for 'hostname' setting?
-- add timeout on VM creation scripts
+- add --revision to rebuild command
+- server status: add uptime
 - add -B <vm-name> on vm create? (creating a temp backup on the go)
+- proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
+- add timeout on VM creation scripts
 - check domains validity on VM create, PS: domain name validation is HARD :(
 - double operation on "vm do" command?
   - can't reproduce
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - check TLS cert renewal!
     - reported issue: vm is deleted, recreated 3 months later, cert is invalid
+    - Go changed the way cert are stored? 
 - cut SSH connections on VM delete? Or add a keepalive for "internal" SSH? (we have the same issue with Run.SSHConn)
 - continue tests on snapshots (see branch "snapshots")
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
@@ -17,13 +19,11 @@
 - create a nice and shiny website for Mulch project
 - VM tags
 - have a look at ansible? (for sample scripts)
-- add --revision to rebuild command
 - remove the need to supply the VM name for redefine command?
   - keep: sanity check for a dangerous op, but looks confusing to the user
   - remove: change controller logic
 - shortcut for "do action" (ex: mulch open xyz) with completion ?
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
-- server status: add uptime
 - flag for compression / no compression on "vm backup"
 - check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
 - challenge based auth?
