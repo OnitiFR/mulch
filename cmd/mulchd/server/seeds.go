@@ -190,6 +190,7 @@ func (db *SeedDatabase) runStep() {
 			msg := fmt.Sprintf("seeder '%s': %s", name, err)
 			db.app.Log.Error(msg)
 			seed.UpdateStatus(msg)
+			db.save()
 			seedSendErrorAlert(db.app, name)
 		}
 	}
@@ -356,8 +357,6 @@ func (db *SeedDatabase) RefreshSeed(seed *Seed, force bool) error {
 	}
 	if seed.LastModified != t || force == SeedRefreshForce {
 		log.Infof("downloading seed '%s'", name)
-		seed.Ready = false
-		db.save()
 
 		before := time.Now()
 		tmpFile, err := db.seedDownload(seed, db.app.Config.TempPath)
@@ -365,6 +364,9 @@ func (db *SeedDatabase) RefreshSeed(seed *Seed, force bool) error {
 			return fmt.Errorf("unable to download image: %s", err)
 		}
 		defer os.Remove(tmpFile)
+
+		seed.Ready = false
+		db.save()
 
 		// upload to libvirt seed storage
 		log.Infof("moving seed '%s' to storage", name)
