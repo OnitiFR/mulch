@@ -10,7 +10,7 @@
 - cut SSH connections on VM delete? Or add a keepalive for "internal" SSH? (we have the same issue with Run.SSHConn)
 - continue tests on snapshots (see branch "snapshots")
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
-  - (dhcp/dnsmasq? ebtables? mulch-netowrk restart?)
+  - (dhcp/dnsmasq? ebtables? mulch-network restart?)
 - libvirtd watchdog + alert (ex: timeout in VMStateDatabase?)
 - clean VM XML template (ex: no display device [serial console])
 - create a nice and shiny website for Mulch project
@@ -22,12 +22,7 @@
 - shortcut for "do action" (ex: mulch open xyz) with completion ?
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
 - flag for compression / no compression on "vm backup"
-- check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
-- challenge based auth?
 - rights / limited access (warning: logs may expose sensitive data)
-- mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
-- support passphrase for Mulch SSH key?
-- move SSH Keys and MulchSuperUser to VM level?
 - check for missing response.Body.Close() (or things like that)
 - check for io.Reader bad usages ("they must record the number of bytes read into the buffer, reslice the buffer, process that data, and only then, consult the error." https://dave.cheney.net/2019/09/05/dont-force-allocations-on-the-callers-of-your-api)
 
@@ -36,3 +31,9 @@
 
 - check connection and access rights
 - differentiate "rights issues" from "libvirtd not running" issues
+- check 'nwfilter-dumpxml clean-traffic' / libvirt-daemon-config-nwfilter during install?
+
+- mulchd should be able to run with a remote libvirtd (StoragePath disallow this, currently)
+- support passphrase for Mulch SSH key?
+- move SSH Keys and MulchSuperUser to VM level?
+- challenge based auth?
