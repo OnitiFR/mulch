@@ -1,8 +1,10 @@
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
+- auto value for 'hostname' setting?
 - add timeout on VM creation scripts
 - add -B <vm-name> on vm create? (creating a temp backup on the go)
 - check domains validity on VM create, PS: domain name validation is HARD :(
 - double operation on "vm do" command?
+  - can't reproduce
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - check TLS cert renewal!
     - reported issue: vm is deleted, recreated 3 months later, cert is invalid
