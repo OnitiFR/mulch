@@ -6,8 +6,8 @@
   - can't reproduce
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - check TLS cert renewal!
-    - reported issue: vm is deleted, recreated 3 months later, cert is invalid
-    - Go changed the way cert are stored?
+  - reported issue: vm is deleted, recreated 3 months later, cert is invalid
+  - Go changed the way cert are stored?
 - cut SSH connections on VM delete? Or add a keepalive for "internal" SSH? (we have the same issue with Run.SSHConn)
 - continue tests on snapshots (see branch "snapshots")
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
@@ -33,7 +33,7 @@
 - check for io.Reader bad usages ("they must record the number of bytes read into the buffer, reslice the buffer, process that data, and only then, consult the error." https://dave.cheney.net/2019/09/05/dont-force-allocations-on-the-callers-of-your-api)
 
 - change HTTP code from 200 to 4XX in controllers when things fails (ex: req.Stream.Failure)
-    - in client, make the non-200 error message silent in stream mode?
+  - in client, make the non-200 error message silent in stream mode?
 
 - check connection and access rights
 - differentiate "rights issues" from "libvirtd not running" issues
