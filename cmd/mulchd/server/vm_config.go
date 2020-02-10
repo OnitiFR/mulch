@@ -194,7 +194,6 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 
 	// defaults (if not in the file)
 	tConfig := &tomlVMConfig{
-		Hostname:        "localhost.localdomain",
 		Timezone:        "Europe/Paris",
 		AppUser:         "app",
 		InitUpgrade:     true,
@@ -336,6 +335,14 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 			return nil, fmt.Errorf("domain '%s' is duplicated in this VM", domain.Name)
 		}
 		domainMap[domain.Name] = true
+	}
+
+	if vmConfig.Hostname == "" {
+		if len(vmConfig.Domains) > 0 {
+			vmConfig.Hostname = vmConfig.Domains[0].Name
+		} else {
+			vmConfig.Hostname = "localhost.localdomain"
+		}
 	}
 
 	for _, line := range tConfig.Env {
