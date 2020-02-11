@@ -1,4 +1,5 @@
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
+- proxy / proxy-chain request stats?
 - add timeout on VM creation scripts
 - check domains validity on VM create, PS: domain name validation is HARD :(
 - double operation on "vm do" command?
