@@ -104,7 +104,7 @@ type tomlVMDoAction struct {
 
 func vmCheckScriptURL(scriptURL string) error {
 	// test readability
-	stream, errG := GetScriptFromURL(scriptURL)
+	stream, errG := GetContentFromURL(scriptURL)
 	if errG != nil {
 		return fmt.Errorf("unable to get script '%s': %s", scriptURL, errG)
 	}
@@ -194,7 +194,6 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 
 	// defaults (if not in the file)
 	tConfig := &tomlVMConfig{
-		Hostname:        "localhost.localdomain",
 		Timezone:        "Europe/Paris",
 		AppUser:         "app",
 		InitUpgrade:     true,
@@ -204,8 +203,15 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 		BackupCompress:  true,
 	}
 
-	if _, err = toml.Decode(vmConfig.FileContent, tConfig); err != nil {
+	meta, err := toml.Decode(vmConfig.FileContent, tConfig)
+
+	if err != nil {
 		return nil, err
+	}
+
+	undecoded := meta.Undecoded()
+	for _, param := range undecoded {
+		return nil, fmt.Errorf("unknown setting '%s'", param)
 	}
 
 	if tConfig.Name == "" || !IsValidName(tConfig.Name) {
@@ -243,9 +249,10 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 	}
 	vmConfig.CPUCount = tConfig.CPUCount
 
-	if len(tConfig.Domains) == 0 {
-		log.Warningf("no domain defined for this VM")
-	}
+	// seeders, compute VMs, etc
+	// if len(tConfig.Domains) == 0 {
+	// 	log.Warningf("no domain defined for this VM")
+	// }
 
 	var domainList []string
 	for _, domainName := range tConfig.Domains {
@@ -328,6 +335,14 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 			return nil, fmt.Errorf("domain '%s' is duplicated in this VM", domain.Name)
 		}
 		domainMap[domain.Name] = true
+	}
+
+	if vmConfig.Hostname == "" {
+		if len(vmConfig.Domains) > 0 {
+			vmConfig.Hostname = vmConfig.Domains[0].Name
+		} else {
+			vmConfig.Hostname = "localhost.localdomain"
+		}
 	}
 
 	for _, line := range tConfig.Env {

@@ -19,17 +19,23 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
+// request protocols
+const (
+	ProtoHTTP  = "http"
+	ProtoHTTPS = "https"
+)
+
 // ProxyServer describe a Mulch proxy server
 type ProxyServer struct {
 	DomainDB *DomainDatabase
 	Log      *Log
 	HTTP     *http.Server
 	HTTPS    *http.Server
-	config   *ProxyServerConfig
+	config   *ProxyServerParams
 }
 
-// ProxyServerConfig is needed to create a ProxyServer
-type ProxyServerConfig struct {
+// ProxyServerParams is needed to create a ProxyServer
+type ProxyServerParams struct {
 	DirCache              string
 	Email                 string
 	ListenHTTP            string
@@ -38,6 +44,9 @@ type ProxyServerConfig struct {
 	DomainDB              *DomainDatabase
 	ErrorHTMLTemplateFile string
 	MulchdHTTPSDomain     string // (for mulchd)
+	ChainMode             int
+	ChainPSK              string
+	ChainDomain           string
 	Log                   *Log
 }
 
@@ -70,7 +79,7 @@ func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 }
 
 // NewProxyServer instanciates a new ProxyServer
-func NewProxyServer(config *ProxyServerConfig) *ProxyServer {
+func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 	proxy := ProxyServer{
 		DomainDB: config.DomainDB,
 		Log:      config.Log,
@@ -136,6 +145,10 @@ func (proxy *ProxyServer) hostPolicy(ctx context.Context, host string) error {
 		return nil
 	}
 
+	if host == proxy.config.ChainDomain && proxy.config.ChainDomain != "" {
+		return nil
+	}
+
 	_, err := proxy.DomainDB.GetByName(host)
 	if err == nil {
 		return nil
@@ -148,11 +161,12 @@ func (proxy *ProxyServer) hostPolicy(ctx context.Context, host string) error {
 // 	rw.WriteHeader(http.StatusBadGateway)
 // }
 
-func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string, res http.ResponseWriter, req *http.Request) {
+func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string, res http.ResponseWriter, req *http.Request, fromParent bool) {
 	url, _ := url.Parse(domain.TargetURL)
 
 	req.URL.Host = url.Host
 	req.URL.Scheme = url.Scheme
+
 	// TODO: have a look at https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded
 	req.Header.Set("X-Forwarded-Proto", proto)
 
@@ -165,8 +179,20 @@ func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string,
 	if err != nil {
 		ip = "invalid-" + req.RemoteAddr
 	}
-	// We erase this header, so it's a bit more… believable.
-	req.Header.Set("X-Real-Ip", ip)
+
+	// we are a parent and this request is forwarded to a child, add PSK to
+	// authenticate ourself
+	if proxy.config.ChainMode == ChainModeParent && domain.Chained == true {
+		req.Header.Set(PSKHeaderName, proxy.config.ChainPSK)
+	}
+
+	if fromParent {
+		// delete PSK, since our next destination is the VM itself
+		req.Header.Del(PSKHeaderName)
+	} else {
+		// we erase this header, so it's a bit more… believable.
+		req.Header.Set("X-Real-Ip", ip)
+	}
 
 	domain.ReverseProxy.ServeHTTP(res, req)
 }
@@ -175,13 +201,24 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	// remove any port info from req.Host for the lookup
 	parts := strings.Split(req.Host, ":")
 	host := strings.ToLower(parts[0])
-	proto := "http"
+
+	fromParent := false
+	if proxy.config.ChainMode == ChainModeChild && proxy.config.ChainPSK == req.Header.Get(PSKHeaderName) {
+		fromParent = true
+	}
+
+	proto := ProtoHTTP
 	if req.TLS != nil {
-		proto = "https"
+		proto = ProtoHTTPS
 	}
 
 	// User-Agent? Datetime?
-	proxy.Log.Tracef("%s %s %s %s", req.RemoteAddr, proto, req.Host, req.RequestURI)
+	proxy.Log.Tracef("> %s %s %s %s", req.RemoteAddr, proto, req.Host, req.RequestURI)
+
+	// trust our parent, whatever protocol was user inter-proxy
+	if fromParent {
+		proto = req.Header.Get("X-Forwarded-Proto")
+	}
 
 	domain, err := proxy.DomainDB.GetByName(host)
 	if err != nil {
@@ -219,20 +256,20 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	}
 
 	// redirect to https?
-	if req.TLS == nil && domain.RedirectToHTTPS == true {
+	if proto == ProtoHTTP && domain.RedirectToHTTPS == true {
 		newURI := "https://" + req.Host + req.URL.String()
 		http.Redirect(res, req, newURI, http.StatusFound)
 		return
 	}
 
 	// now, do our proxy job
-	proxy.serveReverseProxy(domain, proto, res, req)
+	proxy.serveReverseProxy(domain, proto, res, req, fromParent)
 }
 
 // RefreshReverseProxies create new (internal) ReverseProxy instances
 // This function should be called when DomainDB is updated
 func (proxy *ProxyServer) RefreshReverseProxies() {
-	domains := proxy.DomainDB.GetDomains()
+	domains := proxy.DomainDB.GetDomainsNames()
 	count := 0
 
 	for _, domainName := range domains {
@@ -242,14 +279,18 @@ func (proxy *ProxyServer) RefreshReverseProxies() {
 			continue
 		}
 
-		domain.TargetURL = fmt.Sprintf("http://%s:%d", domain.DestinationHost, domain.DestinationPort)
+		if domain.Chained == false {
+			domain.TargetURL = fmt.Sprintf("http://%s:%d", domain.DestinationHost, domain.DestinationPort)
+		}
 
 		pURL, _ := url.Parse(domain.TargetURL)
 		domain.ReverseProxy = httputil.NewSingleHostReverseProxy(pURL)
 
 		// domain.reverseProxy.ErrorHandler = reverseProxyErrorHandler
 		domain.ReverseProxy.ModifyResponse = func(resp *http.Response) (err error) {
-			resp.Header.Add("X-Mulch", domain.VMName)
+			if proxy.config.ChainMode != ChainModeParent {
+				resp.Header.Set("X-Mulch", domain.VMName)
+			}
 			return nil
 		}
 		domain.ReverseProxy.Transport = &errorHandlingRoundTripper{

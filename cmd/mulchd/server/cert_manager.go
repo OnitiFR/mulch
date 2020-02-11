@@ -146,12 +146,14 @@ func (cm *CertManager) selfCall() error {
 // ScheduleSelfCalls call our own API HTTPS URL every 24 hour, refreshing
 // the TLS certificate.
 func (cm *CertManager) ScheduleSelfCalls() {
-	time.Sleep(1 * time.Second)
 	go func() {
-		err := cm.selfCall()
-		if err != nil {
-			cm.Log.Warningf("unable to call our own HTTPS domain: %s", err)
+		time.Sleep(1 * time.Second)
+		for {
+			err := cm.selfCall()
+			if err != nil {
+				cm.Log.Warningf("unable to call our own HTTPS domain: %s", err)
+			}
+			time.Sleep(24 * time.Hour)
 		}
-		time.Sleep(24 * time.Hour)
 	}()
 }

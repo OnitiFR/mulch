@@ -22,6 +22,7 @@ type APIOperation struct {
 
 // APIStatus describes host status
 type APIStatus struct {
+	StartTime          time.Time
 	VMs                int
 	ActiveVMs          int
 	HostCPUs           int

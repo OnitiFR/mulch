@@ -1,0 +1,16 @@
+          incoming traffic
+                 |
+                 v
+          +-------------+
+          | mulch-proxy | Frontal Reverse Proxy
+          +------+------+
+                 |
+        +--------+--------+
+        |                 |
+        v                 v
++-------------+    +-------------+
+| mulch-proxy |    | mulch-proxy |
++-------------+    +-------------+
+|   mulchd    |    |   mulchd    |
++-------------+    +-------------+
+   Server 1           Server 2

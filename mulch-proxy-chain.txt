@@ -1,0 +1,74 @@
+   |
+   v
+  [X]
+ /   \
+ |   |
+[A] [B]
+||| |||
+
+------------
+
+ |
+ v
+[A]\
+||| \
+   [B]
+   |||
+
+-----------
+
+   |
+   v
+  [X]
+ /   \
+ |   |
+[A] [B]\
+||| ||| \
+       [C]
+       |||
+
+proxy_parent_url =
+proxy_parent_psk = "…"
+
+how to securely preserve X-Real-Ip?
+
+same port?
+    + server, routing, HTTPS for "free"
+    - must have "my_hostname" for HTTPS (true for different port too!)
+
+/register ["xxx", "yyy", "zzz"], transaction bool
+returns conflicts […]
+
+Registrer domains to parent:
+- on start
+- on local db change (diff system?)
+- on our own /register
+
+beware of loops
+
+--- v0.5
+proxy_mode = (default) | standalone
+    (or proxy_source_db? mulchd/api)
+proxy_my_url = xxx (needed for standalone and "child" )
+    allow to gen HTTPS certs for this
+    default mode: protect this domain so VMs won't use it
+proxy_my_psk = yyy (needed for standalone)
+
+# for a child proxy:
+proxy_parent_url = http[s]://xxx:443
+proxy_parent_psk = zzzz
+
+POST /domains (register/refresh list of domains) : VMDB
+    return conflicts (so VMDB can send alerts)
+
+GET /domains?q[]= ("check conflicts") : VM creation
+    OK if same mulchd? ("internal conflict"?)
+    watch out propagation latency, too (because of VMDB cooldown)
+
+
+-- v0.6
+
+proxy_chain_mode (child / parent)
+proxy_chain_my_domain
+proxy_chain_psk
+proxy_chain_parent_url

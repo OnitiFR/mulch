@@ -159,7 +159,7 @@ Show me more features!
 #### HTTPS / Let's Encrypt
 Here's the result of the previously linked `sample-vm-full.toml` configuration, showing automatic HTTPS certificates:
 
-![mulch VMs lifecycle](https://raw.github.com/OnitiFR/mulch/master/doc/images/https_le.png)
+![mulch-proxy HTTPS Let's Encrypt certificates](https://raw.github.com/OnitiFR/mulch/master/doc/images/https_le.png)
 
 #### SSH
 Mulch allow easy SSH connection from mulch client with `mulch ssh` command. No configuration
@@ -180,8 +180,7 @@ file:
 ```toml
 [[seed]]
 name = "ubuntu_1810"
-current_url = "http://cloud-images.ubuntu.com/cosmic/current/cosmic-server-cloudimg-amd64.img"
-as = "ubuntu-1810-amd64.qcow2"
+url = "http://cloud-images.ubuntu.com/cosmic/current/cosmic-server-cloudimg-amd64.img"
 ```
 
 Mulchd will download images on first boot and each time the image is updated by the vendor.
@@ -189,6 +188,21 @@ Mulchd will download images on first boot and each time the image is updated by 
 Mulch requires OpenStack compliant images, and Cloud-Init 0.X is no more supported (see Debian 9 and less are out).
 
 ![mulch seed](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-seed.png)
+
+#### Seeders
+You can create and maintain your own seeds. Mulch will create a ("seeder") VM using a TOML
+file (based on another seed), prepare the VM, stop it and will then store its disk as
+a seed (the VM is then deleted).
+
+One usage of this feature is VM creation speedup, since you can pre-install packages.
+See the following example ([ubuntu_1910_lamp.toml](https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/ubuntu_1910_lamp.toml)) :
+
+```toml
+[[seed]]
+name = "ubuntu_1910_lamp"
+seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/ubuntu_1910_lamp.toml"
+```
+Seeds are automatically rebuild, so everything is kept up to date (base seed, packages, …).
 
 #### Backups
 Mulch provides a flexible backup / restore system for your applications and data:
@@ -220,6 +234,34 @@ backup of itself.
 
 Again, the general idea behind Mulch is to secure Ops by industrializing and simplify such
 processes ("service reconstructability").
+
+You can configure auto-rebuild for each VM with `auto_rebuild` setting (daily, weekly, monthly).
+
+#### Reverse Proxy chaining
+When using multiple Mulch instances, a frontal mulch-proxy can be configured to forward traffic
+to children instances. It makes DNS configuration and VM migration between mulch servers way
+easier. Thanks to an internal inter-proxy API, everything is managed automatically:
+create your VM as usual and the parent mulch-proxy will instantly forward requests. And domain
+name conflicts between instances are automatically checked too.
+
+![mulch-proxy chaining](https://raw.github.com/OnitiFR/mulch/master/doc/images/img_chaining.png)
+
+Here's what the parent mulch-proxy configuration will look like:
+```toml
+proxy_chain_mode = "parent"
+proxy_chain_parent_url = "https://api.mydomain.tld:8787"
+proxy_chain_psk = "MySecretPreShareKey123"
+```
+
+And here's the corresponding configuration for children:
+```toml
+proxy_chain_mode = "child"
+proxy_chain_parent_url = "https://api.mydomain.tld:8787"
+proxy_chain_child_url = "https://forward.mymulchd.tld"
+proxy_chain_psk = "MySecretPreShareKey123"
+```
+
+And that's it.
 
 #### More…
 You can lock a VM, so no "big" operation, like delete or rebuild can be done until the VM

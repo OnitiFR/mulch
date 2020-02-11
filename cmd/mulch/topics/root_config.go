@@ -50,9 +50,17 @@ func NewRootConfig(filename string) (*client.RootConfig, error) {
 			return nil, fmt.Errorf("%s: only the owner should be able to read/write this file (chmod 0600 %s)", filename, filename)
 		}
 
-		if _, err := toml.DecodeFile(filename, tConfig); err != nil {
+		meta, err := toml.DecodeFile(filename, tConfig)
+
+		if err != nil {
 			return nil, err
 		}
+
+		undecoded := meta.Undecoded()
+		for _, param := range undecoded {
+			return nil, fmt.Errorf("unknown setting '%s'", param)
+		}
+
 		rootConfig.ConfigFile = filename
 	} else {
 		return nil, nil

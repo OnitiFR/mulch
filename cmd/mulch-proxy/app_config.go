@@ -1,10 +1,24 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+	"net/url"
 	"path"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
+
+// Reverse Proxy Chaining modes
+const (
+	ChainModeNone   = 0
+	ChainModeChild  = 1
+	ChainModeParent = 2
+)
+
+// ChainPSKMinLength is the minimum length for PSK
+const ChainPSKMinLength = 16
 
 // AppConfig describes the general configuration of an App
 type AppConfig struct {
@@ -27,6 +41,19 @@ type AppConfig struct {
 	// since port 80/443 is needed for that.
 	ListenHTTPSDomain string
 
+	// Reverse Proxy Chaining mode
+	ChainMode int
+
+	// if parent: listing API URL
+	// if child: parent API URL
+	ChainParentURL *url.URL
+
+	// child only: URL we will register to parent
+	ChainChildURL *url.URL
+
+	// Pre-Shared key for the chain
+	ChainPSK string
+
 	// global mulchd configuration path
 	configPath string
 }
@@ -38,6 +65,11 @@ type tomlAppConfig struct {
 	HTTPAddress       string `toml:"proxy_listen_http"`
 	HTTPSAddress      string `toml:"proxy_listen_https"`
 	ListenHTTPSDomain string `toml:"listen_https_domain"`
+
+	ChainMode      string `toml:"proxy_chain_mode"`
+	ChainParentURL string `toml:"proxy_chain_parent_url"`
+	ChainChildURL  string `toml:"proxy_chain_child_url"`
+	ChainPSK       string `toml:"proxy_chain_psk"`
 }
 
 // NewAppConfigFromTomlFile return a AppConfig using
@@ -59,8 +91,24 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		HTTPSAddress: ":443",
 	}
 
-	if _, err := toml.DecodeFile(filename, tConfig); err != nil {
+	meta, err := toml.DecodeFile(filename, tConfig)
+
+	if err != nil {
 		return nil, err
+	}
+
+	undecoded := meta.Undecoded()
+	for _, param := range undecoded {
+		if !strings.HasPrefix(param.String(), "proxy_") {
+			continue
+		}
+		if param.String() == "proxy_listen_ssh" {
+			continue
+		}
+		if param.String() == "proxy_ssh_extra_keys_file" {
+			continue
+		}
+		return nil, fmt.Errorf("unknown setting '%s'", param)
 	}
 
 	appConfig.DataPath = tConfig.DataPath
@@ -74,6 +122,52 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	appConfig.HTTPSAddress = tConfig.HTTPSAddress
 
 	appConfig.ListenHTTPSDomain = tConfig.ListenHTTPSDomain
+
+	switch tConfig.ChainMode {
+	case "":
+		appConfig.ChainMode = ChainModeNone
+	case "child":
+		appConfig.ChainMode = ChainModeChild
+	case "parent":
+		appConfig.ChainMode = ChainModeParent
+	default:
+		return nil, fmt.Errorf("unknown proxy_chain_mode value '%s'", tConfig.ChainMode)
+	}
+
+	appConfig.ChainPSK = tConfig.ChainPSK
+
+	if appConfig.ChainMode != ChainModeNone {
+		if tConfig.ChainParentURL == "" {
+			return nil, errors.New("proxy_chain_parent_url is required for proxy chaining")
+		}
+		appConfig.ChainParentURL, err = url.ParseRequestURI(tConfig.ChainParentURL)
+		if err != nil {
+			return nil, errors.New("proxy_chain_parent_url is invalid")
+		}
+
+		if appConfig.ChainPSK == "" {
+			return nil, errors.New("proxy_chain_psk is required for proxy chaining")
+		}
+		if len(appConfig.ChainPSK) < ChainPSKMinLength {
+			return nil, fmt.Errorf("proxy_chain_psk is too short (min length = %d)", ChainPSKMinLength)
+		}
+	}
+
+	if appConfig.ChainMode == ChainModeChild {
+		if tConfig.ChainChildURL == "" {
+			return nil, errors.New("proxy_chain_child_url is required for proxy chain children")
+		}
+		appConfig.ChainChildURL, err = url.ParseRequestURI(tConfig.ChainChildURL)
+		if err != nil {
+			return nil, errors.New("proxy_chain_child_url is invalid")
+		}
+	}
+
+	if appConfig.ChainMode == ChainModeParent {
+		if tConfig.ChainChildURL != "" {
+			return nil, errors.New("proxy_chain_child_url is reserved for proxy chain children")
+		}
+	}
 
 	return appConfig, nil
 }

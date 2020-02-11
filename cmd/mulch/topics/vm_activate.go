@@ -14,6 +14,8 @@ available.
 
 The reverse proxy will instantly send requests to the new active revision,
 and all VM commands (ex: lock, backup, ...) will defaults to this revision.
+
+Revision "none" is equivalent to deactivate command.
 `,
 	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {

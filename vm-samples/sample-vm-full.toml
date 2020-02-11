@@ -5,7 +5,7 @@
 #  mulch vm create sample-vm-full.toml
 
 name = "testvm"
-hostname = "testvm.localdomain"
+hostname = "testvm.localdomain" # default: localhost or first provided domain if provided
 timezone = "Europe/Paris" # default
 app_user = "app" # default
 
@@ -32,7 +32,7 @@ backup_disk_size = "2G"
 backup_compress = true
 
 # DNS domains
-# 'test1.localhost->1234' means that 'test1.localhost' HTTP(S) requests
+# 'test1.localhost->1234' means that 'test1.localhost' HTTP requests
 # are going to be proxied to VM's 1234 port. Default is 80.
 domains = ['test1.localhost->1234', 'dev.localhost->8080']
 redirect_to_https = false # (false = proxy also from tcp/80)

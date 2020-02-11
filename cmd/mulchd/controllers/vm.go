@@ -19,8 +19,21 @@ func getEntryFromRequest(vmName string, req *server.Request) (*server.VMDatabase
 	var entry *server.VMDatabaseEntry
 	var err error
 
+	action := req.HTTP.FormValue("action")
 	revisionParams := req.HTTP.FormValue("revision")
-	if revisionParams != "" {
+
+	if action == "activate" && (revisionParams == "none" || revisionParams == "-1") {
+		count := req.App.VMDB.GetCountForName(vmName)
+		if count == 0 {
+			return nil, fmt.Errorf("no %s VM found in database", vmName)
+		}
+		// create a fake entry
+		entry = &server.VMDatabaseEntry{
+			Name:   server.NewVMName(vmName, server.RevisionNone),
+			VM:     nil,
+			Active: false,
+		}
+	} else if revisionParams != "" {
 		revision, err := strconv.Atoi(revisionParams)
 		if err != nil {
 			return nil, err
@@ -50,9 +63,11 @@ func NewVMController(req *server.Request) {
 	req.Stream.Tracef("reading '%s' config file", header.Filename)
 
 	restore := req.HTTP.FormValue("restore")
+	restoreVM := req.HTTP.FormValue("restore-vm")
 	allowNewRevision := req.HTTP.FormValue("allow_new_revision")
 	inactive := req.HTTP.FormValue("inactive")
 	keepOnFailure := req.HTTP.FormValue("keep_on_failure")
+	lock := req.HTTP.FormValue("lock")
 
 	active := true
 	if inactive == common.TrueStr {
@@ -62,6 +77,11 @@ func NewVMController(req *server.Request) {
 	allowScriptFailure := server.VMStopOnScriptFailure
 	if keepOnFailure == common.TrueStr {
 		allowScriptFailure = server.VMAllowScriptFailure
+	}
+
+	if restore != "" && restoreVM != "" {
+		req.Stream.Failure("restore and restore-vm flags are mutually exclusive")
+		return
 	}
 
 	conf, err := server.NewVMConfigFromTomlReader(configFile, req.Stream)
@@ -85,9 +105,31 @@ func NewVMController(req *server.Request) {
 
 	req.SetTarget(conf.Name)
 
+	// restore from an existing backup
 	if restore != "" {
 		conf.RestoreBackup = restore
 		req.Stream.Infof("will restore VM from '%s'", restore)
+	}
+
+	// restore from a new backup
+	if restoreVM != "" {
+		entry, err := req.App.VMDB.GetActiveEntryByName(restoreVM)
+		if err != nil {
+			req.Stream.Failuref("Cannot find VM to backup: %s", err)
+			return
+		}
+		backup, err := server.VMBackup(entry.Name, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressDisable)
+		if err != nil {
+			req.Stream.Failuref("Cannot backup: %s", err)
+			return
+		}
+		defer func() {
+			err := deleteBackup(backup, req)
+			if err != nil {
+				req.App.Log.Errorf("cannot delete transient backup: %s", err)
+			}
+		}()
+		conf.RestoreBackup = backup
 	}
 
 	before := time.Now()
@@ -95,6 +137,14 @@ func NewVMController(req *server.Request) {
 	if err != nil {
 		req.Stream.Failuref("Cannot create VM: %s", err)
 		return
+	}
+
+	if lock == common.TrueStr {
+		err = server.VMLockUnlock(vmName, true, req.App.VMDB)
+		if err != nil {
+			// non-fatal
+			req.Stream.Errorf("Cannot lock the VM: %s", err)
+		}
 	}
 
 	after := time.Now()
@@ -321,7 +371,11 @@ func ActionVMController(req *server.Request) {
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
 		} else {
-			req.Stream.Successf("VM %s is now active", entry.Name)
+			if entry.Name.Revision != server.RevisionNone {
+				req.Stream.Successf("VM %s is now active", entry.Name)
+			} else {
+				req.Stream.Successf("VM %s is now inactive", entry.Name.Name)
+			}
 		}
 	case "snapshot":
 		err := SnapshotVM(req, entry)
@@ -438,7 +492,7 @@ func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error
 		return errors.New("VM should be up and running")
 	}
 
-	stream, errG := server.GetScriptFromURL(action.ScriptURL)
+	stream, errG := server.GetContentFromURL(action.ScriptURL)
 	if errG != nil {
 		return fmt.Errorf("unable to get script '%s': %s", action.ScriptURL, errG)
 	}
@@ -665,7 +719,7 @@ func RedefineVM(req *server.Request, vm *server.VM) error {
 	}
 
 	// check for conclicting domains
-	err = server.CheckDomainsConflicts(req.App.VMDB, conf.Domains, conf.Name)
+	err = server.CheckDomainsConflicts(req.App.VMDB, conf.Domains, conf.Name, req.App.Config)
 	if err != nil {
 		return err
 	}

@@ -3,13 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"sync"
 
 	"github.com/OnitiFR/mulch/common"
 )
-
-// TODO: watch the file, re-create proxies on refresh
 
 // DomainDatabase describes a persistent DataBase of Domain structures
 type DomainDatabase struct {
@@ -19,9 +18,20 @@ type DomainDatabase struct {
 }
 
 // NewDomainDatabase instanciates a new DomainDatabase
-func NewDomainDatabase(filename string) (*DomainDatabase, error) {
+// Set autoCreate to true if you want to create an empty db when
+// no existing file is found. needed for proxy parents, they have
+// no nearby mulchd to create the file for them)
+func NewDomainDatabase(filename string, autoCreate bool) (*DomainDatabase, error) {
 	ddb := &DomainDatabase{
 		filename: filename,
+	}
+
+	if autoCreate == true && common.PathExist(filename) == false {
+		ddb.db = make(map[string]*common.Domain)
+		err := ddb.save()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err := ddb.load()
@@ -50,6 +60,22 @@ func (ddb *DomainDatabase) load() error {
 	return nil
 }
 
+// only needed for proxy chain parents
+func (ddb *DomainDatabase) save() error {
+	f, err := os.OpenFile(ddb.filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	enc := json.NewEncoder(f)
+	err = enc.Encode(&ddb.db)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Reload is the mutex-protected variant of load()
 func (ddb *DomainDatabase) Reload() error {
 	ddb.mutex.Lock()
@@ -58,8 +84,8 @@ func (ddb *DomainDatabase) Reload() error {
 	return ddb.load()
 }
 
-// GetDomains return all domain names in the database
-func (ddb *DomainDatabase) GetDomains() []string {
+// GetDomainsNames return all domain names in the database
+func (ddb *DomainDatabase) GetDomainsNames() []string {
 	ddb.mutex.Lock()
 	defer ddb.mutex.Unlock()
 
@@ -88,4 +114,63 @@ func (ddb *DomainDatabase) Count() int {
 	defer ddb.mutex.Unlock()
 
 	return len(ddb.db)
+}
+
+// ReplaceChainedDomains remove all domains chain-forwared to "forwardTo"
+// and replace it with "domains"
+func (ddb *DomainDatabase) ReplaceChainedDomains(domains []string, forwardTo string) error {
+	ddb.mutex.Lock()
+	defer ddb.mutex.Unlock()
+
+	// 1 - delete all previous domains for this child
+	for key, domain := range ddb.db {
+		if domain.Chained && domain.TargetURL == forwardTo {
+			delete(ddb.db, key)
+		}
+	}
+
+	// 2 - add new domains, erasing any conflicting domain
+	for _, domain := range domains {
+		ddb.db[domain] = &common.Domain{
+			Name:      domain,
+			TargetURL: forwardTo,
+			Chained:   true,
+		}
+	}
+
+	err := ddb.save()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetConflictingDomains returns a list of conflicting domains in the provided
+// list, excluding those from a specific child
+func (ddb *DomainDatabase) GetConflictingDomains(reqDomains []string, childForwardURL string) common.ProxyChainConflictingDomains {
+	childURL, err := url.ParseRequestURI(childForwardURL)
+	if err != nil {
+		return nil
+	}
+
+	var conflicts common.ProxyChainConflictingDomains
+	for _, reqDomain := range reqDomains {
+		domain, err := ddb.GetByName(reqDomain)
+		if err != nil {
+			// no conflict for this domain
+			continue
+		}
+		targetURL, err := url.ParseRequestURI(domain.TargetURL)
+		if err != nil {
+			// not a child route? inconsistency?
+			continue
+		}
+		if domain != nil && targetURL.Hostname() != childURL.Hostname() {
+			conflicts = append(conflicts, common.ProxyChainConflictingDomain{
+				Domain: domain.Name,
+				Owner:  targetURL.Hostname(),
+			})
+		}
+	}
+	return conflicts
 }

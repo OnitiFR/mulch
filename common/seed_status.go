@@ -5,9 +5,10 @@ import "time"
 // APISeedStatus expose seed informations
 type APISeedStatus struct {
 	Name       string
-	As         string
+	File       string
 	Ready      bool
-	CurrentURL string
+	URL        string
+	Seeder     string
 	Size       uint64
 	StatusTime time.Time
 	Status     string

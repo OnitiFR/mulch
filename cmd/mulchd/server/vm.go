@@ -40,6 +40,12 @@ const (
 	BackupCompressDisable = false
 )
 
+// New VM : active or inactive
+const (
+	VMInactive = false
+	VMActive   = true
+)
+
 // New VM : allow script failures?
 const (
 	VMStopOnScriptFailure = false // default, safe behavior
@@ -70,35 +76,6 @@ type VM struct {
 // SetOperation change VM WIP
 func (vm *VM) SetOperation(op VMOperation) {
 	vm.WIP = op
-}
-
-// CheckDomainsConflicts will detect if incoming domains conflicts with existing VMs
-// You can exclude a specific VM (every revisions) using its name (use empty string otherwise)
-func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM string) error {
-	domainMap := make(map[string]*VM)
-	vmNames := db.GetNames()
-	for _, vmName := range vmNames {
-		if excludeVM != "" && vmName.Name == excludeVM {
-			continue
-		}
-
-		vm, err := db.GetByName(vmName)
-		if err != nil {
-			return err
-		}
-		for _, domain := range vm.Config.Domains {
-			domainMap[domain.Name] = vm
-		}
-	}
-
-	for _, domain := range domains {
-		vm, exist := domainMap[domain.Name]
-		if exist == true {
-			return fmt.Errorf("vm '%s' already registered domain '%s'", vm.Config.Name, domain.Name)
-		}
-	}
-
-	return nil
 }
 
 // small helper to generate main disk name
@@ -169,7 +146,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	}
 
 	// check for conclicting domains (will also be done later while saving vm database)
-	err = CheckDomainsConflicts(app.VMDB, vmConfig.Domains, vmName.Name)
+	err = CheckDomainsConflicts(app.VMDB, vmConfig.Domains, vmName.Name, app.Config)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -207,7 +184,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	// 1 - copy from reference image
 	log.Infof("creating VM disk '%s'", diskName)
 	err = app.Libvirt.CreateDiskFromSeed(
-		seed.As,
+		seed.GetVolumeName(),
 		diskName,
 		app.Config.GetTemplateFilepath("volume.xml"),
 		log)
@@ -362,16 +339,18 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	phone := app.PhoneHome.Register(secretUUID.String())
 	defer phone.Unregister()
 
-	phoned := false
 	for done := false; done == false; {
 		select {
 		case <-time.After(10 * time.Minute):
 			return nil, nil, errors.New("vm init is too long, something probably went wrong")
 		case call := <-phone.PhoneCalls:
-			phoned = true
-			log.Info("vm phoned home, cloud-init was successful")
-			vm.LastIP = call.RemoteIP
-		case <-time.After(1 * time.Second):
+			// seeders already have phone call service, let's filter it out
+			if call.CloutInit == true {
+				done = true
+				log.Info("vm phoned home, cloud-init was successful")
+				vm.LastIP = call.RemoteIP
+			}
+		case <-time.After(5 * time.Second):
 			log.Trace("checking vm state")
 			state, _, errG := dom.GetState()
 			if errG != nil {
@@ -381,35 +360,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 				return nil, nil, errors.New("vm crashed! (said libvirt)")
 			}
 			if state == libvirt.DOMAIN_SHUTOFF {
-				log.Info("vm is now down")
-				done = true
-			}
-		}
-	}
-
-	if phoned == false {
-		return nil, nil, errors.New("vm is down but didn't phoned home, something went wrong during cloud-init")
-	}
-
-	// start the VM again
-	log.Infof("starting vm")
-	err = dom.Create()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// wait the vm's phone call
-	for done := false; done == false; {
-		select {
-		case <-time.After(5 * time.Minute):
-			dom.Destroy()
-			return nil, nil, errors.New("vm start is too long, something probably went wrong")
-		case call := <-phone.PhoneCalls:
-			done = true
-			log.Info("vm phoned home, boot successful")
-			if call.RemoteIP != vm.LastIP {
-				log.Warningf("vm IP changed since cloud-init call (from '%s' to '%s')", vm.LastIP, call.RemoteIP)
-				vm.LastIP = call.RemoteIP
+				return nil, nil, errors.New("vm unexpectedly stopped")
 			}
 		}
 	}
@@ -418,7 +369,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	log.Infof("running 'prepare' scripts")
 	tasks := []*RunTask{}
 	for _, confTask := range vm.Config.Prepare {
-		stream, errG := GetScriptFromURL(confTask.ScriptURL)
+		stream, errG := GetContentFromURL(confTask.ScriptURL)
 		if errG != nil {
 			return nil, nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 		}
@@ -461,7 +412,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 				vmDoAction.Name = value
 			}
 			if isVar, value = common.StringIsVariable(line, "_MULCH_ACTION_SCRIPT"); isVar {
-				stream, errG := GetScriptFromURL(value)
+				stream, errG := GetContentFromURL(value)
 				if errG != nil {
 					errDoAction = fmt.Errorf("unable to get script '%s': %s", value, errG)
 					return
@@ -527,7 +478,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		log.Infof("running 'install' scripts")
 		tasks := []*RunTask{}
 		for _, confTask := range vm.Config.Install {
-			stream, errG := GetScriptFromURL(confTask.ScriptURL)
+			stream, errG := GetContentFromURL(confTask.ScriptURL)
 			if errG != nil {
 				return nil, nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 			}
@@ -1084,7 +1035,7 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 	})
 
 	for _, confTask := range vm.Config.Backup {
-		stream, errG := GetScriptFromURL(confTask.ScriptURL)
+		stream, errG := GetContentFromURL(confTask.ScriptURL)
 		if errG != nil {
 			return "", fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 		}
@@ -1214,7 +1165,7 @@ func VMRestoreNoChecks(vm *VM, vmName *VMName, backup *Backup, app *App, log *Lo
 	})
 
 	for _, confTask := range vm.Config.Restore {
-		stream, errG := GetScriptFromURL(confTask.ScriptURL)
+		stream, errG := GetContentFromURL(confTask.ScriptURL)
 		if errG != nil {
 			return fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 		}
@@ -1389,10 +1340,11 @@ func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) error {
 	rebuildStart := time.Now()
 
-	vm, err := app.VMDB.GetByName(vmName)
+	entry, err := app.VMDB.GetEntryByName(vmName)
 	if err != nil {
 		return err
 	}
+	vm := entry.VM
 
 	if vm.WIP != VMOperationNone {
 		return fmt.Errorf("VM already have a work in progress (%s)", string(vm.WIP))
@@ -1407,6 +1359,7 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 
 	backupAndRestore := true
 	if len(vm.Config.Restore) == 0 && len(vm.Config.Backup) == 0 {
+		// simple rebuild, without any data
 		backupAndRestore = false
 	}
 
@@ -1451,21 +1404,26 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 		}
 	}()
 
-	downtimeStart := time.Now()
-	// set rev+0 as inactive ("default" behavior, add a --no-downtime flag?)
-	err = app.VMDB.SetActiveRevision(vmName.Name, RevisionNone)
-	if err != nil {
-		return fmt.Errorf("can't disable all revisions: %s", err)
-	}
+	sourceIsActive := entry.Active
 
-	defer func() {
-		if success == false {
-			err = app.VMDB.SetActiveRevision(vmName.Name, vmName.Revision)
-			if err != nil {
-				log.Error(err.Error())
-			}
+	downtimeStart := time.Now()
+
+	if sourceIsActive {
+		// set rev+0 as inactive ("default" behavior, add a --no-downtime flag?)
+		err = app.VMDB.SetActiveRevision(vmName.Name, RevisionNone)
+		if err != nil {
+			return fmt.Errorf("can't disable all revisions: %s", err)
 		}
-	}()
+
+		defer func() {
+			if success == false {
+				err = app.VMDB.SetActiveRevision(vmName.Name, vmName.Revision)
+				if err != nil {
+					log.Error(err.Error())
+				}
+			}
+		}()
+	}
 
 	if backupAndRestore {
 		// backup rev+0
@@ -1501,13 +1459,15 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 		}
 	}
 
-	// activate rev+1
-	err = app.VMDB.SetActiveRevision(newVMName.Name, newVMName.Revision)
-	if err != nil {
-		return fmt.Errorf("can't enable new revision: %s", err)
+	if sourceIsActive {
+		// activate rev+1
+		err = app.VMDB.SetActiveRevision(newVMName.Name, newVMName.Revision)
+		if err != nil {
+			return fmt.Errorf("can't enable new revision: %s", err)
+		}
+		log.Infof("VM %s is now active", newVMName)
 	}
 	downtimeEnd := time.Now()
-	log.Infof("VM %s is now active", newVMName)
 
 	// get lock status of original VM
 	originalLocked := vm.Locked
@@ -1543,7 +1503,11 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 	newVM.LastRebuildDuration = rebuildtime
 	app.VMDB.Update()
 
-	log.Infof("downtime: %s", downtime)
+	if sourceIsActive {
+		log.Infof("downtime: %s", downtime)
+	} else {
+		log.Infof("downtime: none (was not active)")
+	}
 
 	return nil
 }

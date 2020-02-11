@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/signal"
 	"path"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/OnitiFR/mulch/common"
 )
@@ -17,7 +21,11 @@ type App struct {
 	Config      *AppConfig
 	Log         *Log
 	ProxyServer *ProxyServer
+	APIServer   *APIServer
 }
+
+// PSKHeaderName is the name of HTTP header for the PSK
+const PSKHeaderName = "Mulch-PSK"
 
 // NewApp creates a new application
 func NewApp(config *AppConfig, trace bool) (*App, error) {
@@ -43,7 +51,15 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		return nil, err
 	}
 
-	app.ProxyServer = NewProxyServer(&ProxyServerConfig{
+	chainDomain := ""
+	switch app.Config.ChainMode {
+	case ChainModeParent:
+		chainDomain = app.Config.ChainParentURL.Hostname()
+	case ChainModeChild:
+		chainDomain = app.Config.ChainChildURL.Hostname()
+	}
+
+	app.ProxyServer = NewProxyServer(&ProxyServerParams{
 		DirCache:              cacheDir,
 		Email:                 app.Config.AcmeEmail,
 		ListenHTTP:            app.Config.HTTPAddress,
@@ -52,12 +68,31 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		DomainDB:              ddb,
 		ErrorHTMLTemplateFile: path.Clean(app.Config.configPath + "/templates/error_page.html"),
 		MulchdHTTPSDomain:     app.Config.ListenHTTPSDomain,
+		ChainMode:             app.Config.ChainMode,
+		ChainPSK:              app.Config.ChainPSK,
+		ChainDomain:           chainDomain,
 		Log:                   app.Log,
 	})
 
 	app.ProxyServer.RefreshReverseProxies()
 
 	app.initSigHUPHandler()
+
+	if app.Config.ChainMode == ChainModeParent {
+		app.APIServer, err = NewAPIServer(app.Config, cacheDir, app.ProxyServer, app.Log)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if app.Config.ChainMode == ChainModeChild {
+		// if this first refresh fails, we fail.
+		err = app.refreshParentDomains()
+		if err != nil {
+			app.Log.Error("Unable to contact parent proxy. This is a startup safety check.")
+			return nil, err
+		}
+	}
 
 	return app, nil
 }
@@ -75,7 +110,12 @@ func (app *App) checkDataPath() error {
 func (app *App) createDomainDB() (*DomainDatabase, error) {
 	dbPath := path.Clean(app.Config.DataPath + "/mulch-proxy-domains.db")
 
-	ddb, err := NewDomainDatabase(dbPath)
+	autoCreate := false
+	if app.Config.ChainMode == ChainModeParent {
+		autoCreate = true
+	}
+
+	ddb, err := NewDomainDatabase(dbPath, autoCreate)
 	if err != nil {
 		return nil, err
 	}
@@ -94,9 +134,63 @@ func (app *App) initSigHUPHandler() {
 			if sig == syscall.SIGHUP {
 				app.Log.Infof("HUP Signal, reloading domains")
 				app.ProxyServer.ReloadDomains()
+				app.refreshDomains()
 			}
 		}
 	}()
+}
+
+func (app *App) refreshDomains() {
+	if app.Config.ChainMode == ChainModeChild {
+		err := app.refreshParentDomains()
+		if err != nil {
+			app.Log.Errorf("refreshing parent domains: %s", err)
+			// TODO: use alerts like mulchd?
+		}
+	}
+}
+
+// contact our parent proxy and send all our routes so he can forward requests
+func (app *App) refreshParentDomains() error {
+	data := common.ProxyChainDomains{
+		Domains:   app.ProxyServer.DomainDB.GetDomainsNames(),
+		ForwardTo: app.Config.ChainChildURL.String(),
+	}
+
+	dataJSON, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	client := http.Client{
+		Timeout: time.Duration(10 * time.Second),
+	}
+
+	req, err := http.NewRequest(
+		"POST",
+		app.Config.ChainParentURL.String()+"/domains",
+		bytes.NewBuffer(dataJSON),
+	)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(PSKHeaderName, app.Config.ChainPSK)
+
+	res, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode == 200 {
+		app.Log.Info("domains successfully registered on our parent")
+	} else {
+		app.Log.Errorf("domains registration failed, parent returned error %d", res.StatusCode)
+	}
+
+	return nil
 }
 
 // Run will start the app (in the foreground)

@@ -7,9 +7,10 @@ import (
 
 // AutoRebuildSchedule will schedule auto-rebuilds
 func AutoRebuildSchedule(app *App) {
-	// big relaxing, so we don't compete too much with VM state restore,
-	// seed updating and other mulchd startup stuff.
-	time.Sleep(5 * time.Minute)
+	app.VMStateDB.WaitRestore()
+	// big relaxing, so we don't compete too much with other things like
+	// seeder rebuilds and other mulchd startup stuff.
+	time.Sleep(15 * time.Minute)
 
 	for {
 		now := time.Now().Format("15:04")
@@ -57,22 +58,7 @@ func autoRebuildVM(vmName *VMName, app *App) error {
 		return err
 	}
 
-	lastRebuild := time.Now().Sub(vm.InitDate)
-	rebuild := false
-
-	if vm.Config.AutoRebuild == VMAutoRebuildDaily && lastRebuild > 24*time.Hour {
-		rebuild = true
-	}
-
-	if vm.Config.AutoRebuild == VMAutoRebuildWeekly && lastRebuild > 7*24*time.Hour {
-		rebuild = true
-	}
-
-	if vm.Config.AutoRebuild == VMAutoRebuildMonthly && lastRebuild > 30*24*time.Hour {
-		rebuild = true
-	}
-
-	if !rebuild {
+	if !IsRebuildNeeded(vm.Config.AutoRebuild, vm.InitDate) {
 		return nil
 	}
 
@@ -97,4 +83,24 @@ func autoRebuildVM(vmName *VMName, app *App) error {
 	}
 
 	return errR
+}
+
+// IsRebuildNeeded return true if lastRebuild is older than rebuildSetting
+func IsRebuildNeeded(rebuildSetting string, lastRebuild time.Time) bool {
+	lastRebuildAgo := time.Now().Sub(lastRebuild)
+
+	rebuild := false
+
+	if rebuildSetting == VMAutoRebuildDaily && lastRebuildAgo > 24*time.Hour {
+		rebuild = true
+	}
+
+	if rebuildSetting == VMAutoRebuildWeekly && lastRebuildAgo > 7*24*time.Hour {
+		rebuild = true
+	}
+
+	if rebuildSetting == VMAutoRebuildMonthly && lastRebuildAgo > 30*24*time.Hour {
+		rebuild = true
+	}
+	return rebuild
 }
