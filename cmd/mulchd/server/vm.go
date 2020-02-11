@@ -1359,6 +1359,7 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 
 	backupAndRestore := true
 	if len(vm.Config.Restore) == 0 && len(vm.Config.Backup) == 0 {
+		// simple rebuild, without any data
 		backupAndRestore = false
 	}
 

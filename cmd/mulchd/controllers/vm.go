@@ -118,7 +118,7 @@ func NewVMController(req *server.Request) {
 			req.Stream.Failuref("Cannot find VM to backup: %s", err)
 			return
 		}
-		backup, err := server.VMBackup(entry.Name, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressAllow)
+		backup, err := server.VMBackup(entry.Name, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressDisable)
 		if err != nil {
 			req.Stream.Failuref("Cannot backup: %s", err)
 			return
