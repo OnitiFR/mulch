@@ -58,7 +58,14 @@ func autoRebuildVM(vmName *VMName, app *App) error {
 		return err
 	}
 
-	if !IsRebuildNeeded(vm.Config.AutoRebuild, vm.InitDate) {
+	// Depending on the rebuild order and rebuild duration,
+	// we may miss a rebuild for a few minutes (and it's quite important
+	// for VMAutoRebuildDaily). So we use a time margin of half a day. This
+	// is a simple and cheap way to fix this (until rebuilds take half a
+	// day, but we're not there).
+	timeMargin := 12 * time.Hour
+
+	if !IsRebuildNeeded(vm.Config.AutoRebuild, vm.InitDate.Add(-timeMargin)) {
 		return nil
 	}
 
@@ -89,24 +96,17 @@ func autoRebuildVM(vmName *VMName, app *App) error {
 func IsRebuildNeeded(rebuildSetting string, lastRebuild time.Time) bool {
 	lastRebuildAgo := time.Now().Sub(lastRebuild)
 
-	// Depending on the rebuild order and rebuild duration,
-	// we may miss a rebuild for a few minutes (and it's quite important
-	// for VMAutoRebuildDaily). So we use a time margin of half a day. This
-	// is a simple and cheap way to fix this (until rebuilds take half a
-	// day, but we're not there).
-	timeMargin := 12 * time.Hour
-
 	rebuild := false
 
-	if rebuildSetting == VMAutoRebuildDaily && lastRebuildAgo > (24*time.Hour-timeMargin) {
+	if rebuildSetting == VMAutoRebuildDaily && lastRebuildAgo > 24*time.Hour {
 		rebuild = true
 	}
 
-	if rebuildSetting == VMAutoRebuildWeekly && lastRebuildAgo > (7*24*time.Hour-timeMargin) {
+	if rebuildSetting == VMAutoRebuildWeekly && lastRebuildAgo > 7*24*time.Hour {
 		rebuild = true
 	}
 
-	if rebuildSetting == VMAutoRebuildMonthly && lastRebuildAgo > (30*24*time.Hour-timeMargin) {
+	if rebuildSetting == VMAutoRebuildMonthly && lastRebuildAgo > 30*24*time.Hour {
 		rebuild = true
 	}
 	return rebuild
