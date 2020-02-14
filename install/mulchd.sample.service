@@ -1,6 +1,6 @@
 [Unit]
 Description=Mulch VM Management Service
-After=network-online.target
+After=network-online.target libvirtd.service
 
 [Service]
 User={USER}
