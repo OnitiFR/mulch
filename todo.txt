@@ -1,4 +1,3 @@
-- add libvirtd dependance to sample mulchd systemd unit
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
 - proxy / proxy-chain request stats?
 - add timeout on VM creation scripts
