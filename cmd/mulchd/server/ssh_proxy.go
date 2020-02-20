@@ -91,23 +91,22 @@ func sendSSHKeepAlive(sshConn ssh.Conn, timeout time.Duration) error {
 	}()
 
 	err := <-errChannel
-	if err != nil {
-		sshConn.Close()
-	}
-
 	return err
 }
 
 // Send sparses keepalives to detect dead connections, a failed SendRequest
 // will set channels to nil, closing the connections (and we use a timeout as well)
-func (proxy *SSHProxy) scheduleSSHKeepAlives(sshConn ssh.Conn, name string) {
+// In case of failure, we close both connections (up & down)
+func (proxy *SSHProxy) scheduleSSHKeepAlives(sshConn ssh.Conn, name string, otherConn ssh.Conn) {
 	t := time.NewTicker(1 * time.Minute)
 	defer t.Stop()
 	for range t.C {
 		proxy.log.Tracef("send SSH keepalive (%s)", name)
 		err := sendSSHKeepAlive(sshConn, 10*time.Second)
 		if err != nil {
-			proxy.log.Tracef("ssh (%s) keepalive error: %s", name, err)
+			proxy.log.Tracef("ssh (%s) keepalive error: %s, closing", name, err)
+			sshConn.Close()
+			otherConn.Close()
 			return
 		}
 	}
@@ -209,8 +208,8 @@ func (proxy *SSHProxy) serveProxy() error {
 	// send keepalives on both sides
 	// TODO: defer-kill theses (currently, we have "send keepalive failed
 	// disconnected by user" errors a few minutes after disconnection)
-	go proxy.scheduleSSHKeepAlives(serverConn.Conn, "outside")
-	go proxy.scheduleSSHKeepAlives(clientConn.Conn, "inside")
+	go proxy.scheduleSSHKeepAlives(serverConn, "outside", serverConn)
+	go proxy.scheduleSSHKeepAlives(clientConn, "inside", clientConn)
 
 	// global requests (from outside to the VM)
 	go proxy.ForwardRequestsToClient(reqs, clientConn)
