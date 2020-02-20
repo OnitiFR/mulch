@@ -1,3 +1,9 @@
+- BUGFIX: investigate the very annoying and rare mulch-proxy children-parent lockup /!\
+    - add more log (on the "return line")
+    - test with newer Go releases
+    - check for system limits
+    - run DoS-like benchmarks
+- check if "ssh -R" tunnels can be supported trough our ssh-proxy
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
 - proxy / proxy-chain request stats?
 - add timeout on VM creation scripts
