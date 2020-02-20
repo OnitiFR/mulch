@@ -1,7 +1,0 @@
-# Some ideas and tips found here and there.
-
-# List of openstack supported distributions with URL to images:
-# https://docs.openstack.org/image-guide/obtain-images.html
-
-# "reset" cloud-init
-sudo cloud-init clean
