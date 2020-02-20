@@ -19,6 +19,35 @@ type SSHProxy struct {
 	log       *Log
 }
 
+// ClientHandleChannelOpen is called when the client (= the VM) asks
+// for a new channel (ex: forwarded-tcpip)
+func (proxy *SSHProxy) ClientHandleChannelOpen(chanType string, client *ssh.Client, destConn ssh.Conn) {
+	channels := client.HandleChannelOpen(chanType)
+	if channels == nil {
+		proxy.log.Warningf("HandleChannelOpen failed for '%s' channels", chanType)
+		return
+	}
+	go proxy.runChannels(channels, destConn)
+}
+
+// ForwardRequestsToClient forwards server ("outside") global requests to the client ("VM")
+func (proxy *SSHProxy) ForwardRequestsToClient(in <-chan *ssh.Request, client *ssh.Client) {
+	for req := range in {
+		proxy.log.Tracef("ForwardRequests: %s %t", req.Type, req.WantReply)
+		respStatus, respPayload, err := client.SendRequest(req.Type, req.WantReply, req.Payload)
+		if err != nil {
+			proxy.log.Tracef("ForwardRequests failed: %s", err)
+			if req.WantReply {
+				req.Reply(false, nil)
+			}
+		} else {
+			if req.WantReply {
+				req.Reply(respStatus, respPayload)
+			}
+		}
+	}
+}
+
 func sshProxyCopyChan(dst ssh.Channel, src ssh.Channel, way string, wgChannels *sync.WaitGroup, log *Log) {
 	_, err := io.Copy(dst, src)
 	if err != nil {
@@ -44,47 +73,17 @@ func sshProxyCopyChan(dst ssh.Channel, src ssh.Channel, way string, wgChannels *
 	wgChannels.Done()
 }
 
-func (proxy *SSHProxy) serveProxy() error {
-	serverConn, chans, reqs, err := ssh.NewServerConn(proxy, proxy.config)
-	if err != nil {
-		return err
-	}
-	defer serverConn.Close()
-
-	clientConn, err := proxy.connectCB(serverConn)
-	if err != nil {
-		return err
-	}
-	defer clientConn.Close()
-
-	// send sparses keepalives to detect dead connections to our SSH proxy,
-	// a failed SendRequest will set channels to nil, closing the connections
-	// (should do the same with clientConn for dead guests?)
-	// TODO: defer-kill this goroutine (currently, we have "send keepalive failed
-	// disconnected by user" errors a few minutes after disconnection)
-	go func() {
-		t := time.NewTicker(5 * time.Minute)
-		defer t.Stop()
-		for range t.C {
-			_, _, err := serverConn.Conn.SendRequest("keepalive@golang.org", true, nil)
-			if err != nil {
-				proxy.log.Tracef("SSH: send keepalive failed: %s", err)
-				return
-			}
-		}
-	}()
-
-	// discard global requests, we won't manage it anyway
-	go ssh.DiscardRequests(reqs)
-
+// runChannels is the the core of the ssh-proxy, where we manage channels and requests
+// the usual destination is the VM, but see ClientHandleChannelOpen() for special cases
+func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Conn) error {
 	var wgChannels sync.WaitGroup
 
 	for newChannel := range chans {
 
 		proxy.log.Tracef("SSH: newChannel.ChannelType() = %s", newChannel.ChannelType())
 
-		// up = internal VM
-		upChannel, upRequests, err := clientConn.OpenChannel(newChannel.ChannelType(), newChannel.ExtraData())
+		// up = proxy to internal VM (for usual channels)
+		upChannel, upRequests, err := destConn.OpenChannel(newChannel.ChannelType(), newChannel.ExtraData())
 		if err != nil {
 			if newChannel.ChannelType() == "session" {
 				// no session is fatal
@@ -96,7 +95,7 @@ func (proxy *SSHProxy) serveProxy() error {
 			continue
 		}
 
-		// down = external client to mulch ssh proxy
+		// down = external client to mulch ssh proxy (for usual channels)
 		downChannel, downRequests, err := newChannel.Accept()
 		if err != nil {
 			return fmt.Errorf("Accept: %s", err)
@@ -151,6 +150,50 @@ func (proxy *SSHProxy) serveProxy() error {
 
 	// Wait io.Copies (we have defered Closes in this function)
 	wgChannels.Wait()
+	return nil
+}
+
+func (proxy *SSHProxy) serveProxy() error {
+	serverConn, chans, reqs, err := ssh.NewServerConn(proxy, proxy.config)
+	if err != nil {
+		return err
+	}
+	defer serverConn.Close()
+
+	clientConn, err := proxy.connectCB(serverConn)
+	if err != nil {
+		return err
+	}
+	defer clientConn.Close()
+
+	// send sparses keepalives to detect dead connections to our SSH proxy,
+	// a failed SendRequest will set channels to nil, closing the connections
+	// (should do the same with clientConn for dead guests?)
+	// TODO: defer-kill this goroutine (currently, we have "send keepalive failed
+	// disconnected by user" errors a few minutes after disconnection)
+	go func() {
+		t := time.NewTicker(5 * time.Minute)
+		defer t.Stop()
+		for range t.C {
+			_, _, err := serverConn.Conn.SendRequest("keepalive@golang.org", true, nil)
+			if err != nil {
+				proxy.log.Tracef("SSH: send keepalive failed: %s", err)
+				return
+			}
+		}
+	}()
+
+	// global requests (from outside to the VM)
+	go proxy.ForwardRequestsToClient(reqs, clientConn)
+
+	// ssh -R tunnels from the outside to the VM:
+	// the client (VM) will request new channels
+	proxy.ClientHandleChannelOpen("forwarded-tcpip", clientConn, serverConn)
+
+	err = proxy.runChannels(chans, clientConn)
+	if err != nil {
+		return err
+	}
 
 	if proxy.closeCB != nil {
 		proxy.closeCB(serverConn)
