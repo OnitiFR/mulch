@@ -3,7 +3,6 @@
     - test with newer Go releases
     - check for system limits
     - run DoS-like benchmarks
-- check if "ssh -R" tunnels can be supported trough our ssh-proxy
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
 - proxy / proxy-chain request stats?
 - add timeout on VM creation scripts
@@ -14,7 +13,7 @@
 - check TLS cert renewal!
   - reported issue: vm is deleted, recreated 3 months later, cert is invalid
   - Go changed the way cert are stored?
-- cut SSH connections on VM delete? Or add a keepalive for "internal" SSH? (we have the same issue with Run.SSHConn)
+- add a SSH keepalive for Run.SSHConn?
 - continue tests on snapshots (see branch "snapshots")
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
   - (dhcp/dnsmasq? ebtables? mulch-network restart?)

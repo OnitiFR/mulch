@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -71,6 +72,45 @@ func sshProxyCopyChan(dst ssh.Channel, src ssh.Channel, way string, wgChannels *
 	log.Tracef("SSH: %s finished", way)
 
 	wgChannels.Done()
+}
+
+// sendSshKeepAlive sends a keepalive request using a timeout
+func sendSSHKeepAlive(sshConn ssh.Conn, timeout time.Duration) error {
+	errChannel := make(chan error, 2)
+	if timeout > 0 {
+		time.AfterFunc(timeout, func() {
+			// we will always timeout, but if we had a response, this new
+			// error will go nowhere, so… no error.
+			errChannel <- errors.New("[timeout]")
+		})
+	}
+
+	go func() {
+		_, _, err := sshConn.SendRequest("keepalive@golang.org", true, nil)
+		errChannel <- err
+	}()
+
+	err := <-errChannel
+	if err != nil {
+		sshConn.Close()
+	}
+
+	return err
+}
+
+// Send sparses keepalives to detect dead connections, a failed SendRequest
+// will set channels to nil, closing the connections (and we use a timeout as well)
+func (proxy *SSHProxy) scheduleSSHKeepAlives(sshConn ssh.Conn, name string) {
+	t := time.NewTicker(1 * time.Minute)
+	defer t.Stop()
+	for range t.C {
+		proxy.log.Tracef("send SSH keepalive (%s)", name)
+		err := sendSSHKeepAlive(sshConn, 10*time.Second)
+		if err != nil {
+			proxy.log.Tracef("ssh (%s) keepalive error: %s", name, err)
+			return
+		}
+	}
 }
 
 // runChannels is the the core of the ssh-proxy, where we manage channels and requests
@@ -166,28 +206,17 @@ func (proxy *SSHProxy) serveProxy() error {
 	}
 	defer clientConn.Close()
 
-	// send sparses keepalives to detect dead connections to our SSH proxy,
-	// a failed SendRequest will set channels to nil, closing the connections
-	// (should do the same with clientConn for dead guests?)
-	// TODO: defer-kill this goroutine (currently, we have "send keepalive failed
+	// send keepalives on both sides
+	// TODO: defer-kill theses (currently, we have "send keepalive failed
 	// disconnected by user" errors a few minutes after disconnection)
-	go func() {
-		t := time.NewTicker(5 * time.Minute)
-		defer t.Stop()
-		for range t.C {
-			_, _, err := serverConn.Conn.SendRequest("keepalive@golang.org", true, nil)
-			if err != nil {
-				proxy.log.Tracef("SSH: send keepalive failed: %s", err)
-				return
-			}
-		}
-	}()
+	go proxy.scheduleSSHKeepAlives(serverConn.Conn, "outside")
+	go proxy.scheduleSSHKeepAlives(clientConn.Conn, "inside")
 
 	// global requests (from outside to the VM)
 	go proxy.ForwardRequestsToClient(reqs, clientConn)
 
-	// ssh -R tunnels from the outside to the VM:
-	// the client (VM) will request new channels
+	// with "ssh -R" tunnels from the outside to the VM, the client (VM)
+	// will request new channels
 	proxy.ClientHandleChannelOpen("forwarded-tcpip", clientConn, serverConn)
 
 	err = proxy.runChannels(chans, clientConn)
