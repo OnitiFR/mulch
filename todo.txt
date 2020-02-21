@@ -3,6 +3,8 @@
     - test with newer Go releases
     - check for system limits
     - run DoS-like benchmarks
+    - test direct child proxy access during outage
+    - test other child proxy access during outage
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
 - proxy / proxy-chain request stats?
 - add timeout on VM creation scripts
