@@ -77,6 +77,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app.ProxyServer.RefreshReverseProxies()
 
 	app.initSigHUPHandler()
+	app.initSigQUITHandler()
 
 	if app.Config.ChainMode == ChainModeParent {
 		app.APIServer, err = NewAPIServer(app.Config, cacheDir, app.ProxyServer, app.Log)
@@ -136,6 +137,18 @@ func (app *App) initSigHUPHandler() {
 				app.ProxyServer.ReloadDomains()
 				app.refreshDomains()
 			}
+		}
+	}()
+}
+
+func (app *App) initSigQUITHandler() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGQUIT)
+
+	go func() {
+		for _ = range c {
+			app.Log.Infof("QUIT Signal, dumping goroutines to stderr")
+			writeGoroutineStacks(os.Stderr)
 		}
 	}()
 }

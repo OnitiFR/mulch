@@ -28,5 +28,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Fatal error: %s", err)
 	}
+
 	app.Run()
 }
