@@ -19,7 +19,7 @@ backup_dir=$2
 # $2: reason message
 function check() {
 if [ $1 -ne 0 ]; then
-    (>&2 echo "ERROR: $2")
+    (>&2 echo "ERROR: $vm_name: $2")
     exit 1
 fi
 }
