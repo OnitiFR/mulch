@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
@@ -51,6 +52,7 @@ type ProxyServerParams struct {
 }
 
 var contextKeyID interface{} = 1
+var requestCouner int64
 
 // Until Go 1.11 and his reverseProxy.ErrorHandler is mainstream, let's
 // have our own error generator
@@ -214,7 +216,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 		proto = ProtoHTTPS
 	}
 
-	id := 12
+	id := atomic.AddInt64(&requestCouner, 1)
 	ctx := req.Context()
 	ctx = context.WithValue(ctx, contextKeyID, id)
 	req = req.WithContext(ctx)
@@ -299,7 +301,7 @@ func (proxy *ProxyServer) RefreshReverseProxies() {
 			if proxy.config.ChainMode != ChainModeParent {
 				resp.Header.Set("X-Mulch", domain.VMName)
 			}
-			proxy.Log.Tracef("< {%s} %d", ctx.Value(contextKeyID), resp.StatusCode)
+			proxy.Log.Tracef("< {%d} %d", ctx.Value(contextKeyID), resp.StatusCode)
 			return nil
 		}
 		domain.ReverseProxy.Transport = &errorHandlingRoundTripper{
