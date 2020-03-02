@@ -50,6 +50,8 @@ type ProxyServerParams struct {
 	Log                   *Log
 }
 
+var contextKeyID interface{} = 1
+
 // Until Go 1.11 and his reverseProxy.ErrorHandler is mainstream, let's
 // have our own error generator
 type errorHandlingRoundTripper struct {
@@ -212,8 +214,13 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 		proto = ProtoHTTPS
 	}
 
+	id := 12
+	ctx := req.Context()
+	ctx = context.WithValue(ctx, contextKeyID, id)
+	req = req.WithContext(ctx)
+
 	// User-Agent? Datetime?
-	proxy.Log.Tracef("> %s %s %t %s %s", req.RemoteAddr, proto, fromParent, req.Host, req.RequestURI)
+	proxy.Log.Tracef("> {%d} %s %s %t %s %s", id, req.RemoteAddr, proto, fromParent, req.Host, req.RequestURI)
 
 	// trust our parent, whatever protocol was user inter-proxy
 	if fromParent {
@@ -288,9 +295,11 @@ func (proxy *ProxyServer) RefreshReverseProxies() {
 
 		// domain.reverseProxy.ErrorHandler = reverseProxyErrorHandler
 		domain.ReverseProxy.ModifyResponse = func(resp *http.Response) (err error) {
+			ctx := resp.Request.Context()
 			if proxy.config.ChainMode != ChainModeParent {
 				resp.Header.Set("X-Mulch", domain.VMName)
 			}
+			proxy.Log.Tracef("< {%s} %d", ctx.Value(contextKeyID), resp.StatusCode)
 			return nil
 		}
 		domain.ReverseProxy.Transport = &errorHandlingRoundTripper{

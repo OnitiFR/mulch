@@ -1,6 +1,6 @@
 - BUGFIX: investigate the very annoying and rare mulch-proxy children-parent lockup /!\
+    - add a "current requests list"
     - add more log (on the "return line")
-    - add a signal to dump all goroutines?
     - test direct child proxy access during outage
     - test other child proxy access during outage
     - lower IdleTimeout to see if it's of any effect
