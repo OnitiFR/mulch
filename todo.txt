@@ -1,21 +1,22 @@
 - BUGFIX: investigate the very annoying and rare mulch-proxy children-parent lockup /!\
-    - test direct child proxy access during outage
-    - test other child proxy access during outage
-    - get newly implemented SIGQUIT dump during outage
-    - test with newer Go releases (current: 1.10.4)
-    - lower IdleTimeout to see if it's of any effect
-    - check for system limits (grep Threads /proc/$(pidof mulch-proxy)/status, done: far from limits)
-    - run DoS-like benchmarks (done: OK with up to 8k simultaneous requests)
+  - test direct child proxy access during outage
+  - test other child proxy access during outage
+  - get newly implemented SIGQUIT dump during outage
+  - test with newer Go releases (current: 1.10.4)
+  - lower IdleTimeout to see if it's of any effect
+  - check for system limits (grep Threads /proc/$(pidof mulch-proxy)/status, done: far from limits)
+  - run DoS-like benchmarks (done: OK with up to 8k simultaneous requests)
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
 - proxy / proxy-chain request stats?
 - add timeout on VM creation scripts
 - check domains validity on VM create, PS: domain name validation is HARD :(
 - double operation on "vm do" command?
-  - can't reproduce
+- can't reproduce
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - check TLS cert renewal!
   - reported issue: vm is deleted, recreated 3 months later, cert is invalid
   - Go changed the way cert are stored?
+  - can't reproduce
 - add a SSH keepalive for Run.SSHConn?
 - continue tests on snapshots (see branch "snapshots")
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
