@@ -1,12 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"runtime"
 )
 
 // from https://golang.org/src/runtime/pprof/pprof.go
 func writeGoroutineStacks(w io.Writer) error {
+	fmt.Fprintf(w, "-- Goroutines:\n")
+
 	// We don't know how big the buffer needs to be to collect
 	// all the goroutines. Start with 1 MB and try a few times, doubling each time.
 	// Give up and use a truncated trace if 64 MB is not enough.

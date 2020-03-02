@@ -28,11 +28,12 @@ const (
 
 // ProxyServer describe a Mulch proxy server
 type ProxyServer struct {
-	DomainDB *DomainDatabase
-	Log      *Log
-	HTTP     *http.Server
-	HTTPS    *http.Server
-	config   *ProxyServerParams
+	DomainDB    *DomainDatabase
+	Log         *Log
+	RequestList *RequestList
+	HTTP        *http.Server
+	HTTPS       *http.Server
+	config      *ProxyServerParams
 }
 
 // ProxyServerParams is needed to create a ProxyServer
@@ -49,10 +50,11 @@ type ProxyServerParams struct {
 	ChainPSK              string
 	ChainDomain           string
 	Log                   *Log
+	RequestList           *RequestList
 }
 
 var contextKeyID interface{} = 1
-var requestCouner int64
+var requestCouner uint64
 
 // Until Go 1.11 and his reverseProxy.ErrorHandler is mainstream, let's
 // have our own error generator
@@ -85,9 +87,10 @@ func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 // NewProxyServer instanciates a new ProxyServer
 func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 	proxy := ProxyServer{
-		DomainDB: config.DomainDB,
-		Log:      config.Log,
-		config:   config,
+		DomainDB:    config.DomainDB,
+		Log:         config.Log,
+		RequestList: config.RequestList,
+		config:      config,
 	}
 
 	manager := &autocert.Manager{
@@ -216,13 +219,16 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 		proto = ProtoHTTPS
 	}
 
-	id := atomic.AddInt64(&requestCouner, 1)
+	id := atomic.AddUint64(&requestCouner, 1)
 	ctx := req.Context()
 	ctx = context.WithValue(ctx, contextKeyID, id)
 	req = req.WithContext(ctx)
 
+	proxy.RequestList.AddRequest(id, req)
+	defer proxy.RequestList.DeleteRequest(id)
+
 	// User-Agent? Datetime?
-	proxy.Log.Tracef("> {%d} %s %s %t %s %s", id, req.RemoteAddr, proto, fromParent, req.Host, req.RequestURI)
+	proxy.Log.Tracef("> {%d} %s %s %t %s %s %s", id, req.RemoteAddr, proto, fromParent, req.Host, req.Method, req.RequestURI)
 
 	// trust our parent, whatever protocol was user inter-proxy
 	if fromParent {

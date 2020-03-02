@@ -1,11 +1,10 @@
 - BUGFIX: investigate the very annoying and rare mulch-proxy children-parent lockup /!\
-    - add a "current requests list"
-    - add more log (on the "return line")
     - test direct child proxy access during outage
     - test other child proxy access during outage
+    - get newly implemented SIGQUIT dump during outage
+    - test with newer Go releases (current: 1.10.4)
     - lower IdleTimeout to see if it's of any effect
-    - test with newer Go releases
-    - check for system limits (grep Threads /proc/$(pidof mulch-proxy)/status)
+    - check for system limits (grep Threads /proc/$(pidof mulch-proxy)/status, done: far from limits)
     - run DoS-like benchmarks (done: OK with up to 8k simultaneous requests)
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
 - proxy / proxy-chain request stats?

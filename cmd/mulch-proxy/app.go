@@ -72,6 +72,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		ChainPSK:              app.Config.ChainPSK,
 		ChainDomain:           chainDomain,
 		Log:                   app.Log,
+		RequestList:           NewRequestList(trace),
 	})
 
 	app.ProxyServer.RefreshReverseProxies()
@@ -147,8 +148,9 @@ func (app *App) initSigQUITHandler() {
 
 	go func() {
 		for _ = range c {
-			app.Log.Infof("QUIT Signal, dumping goroutines to stderr")
+			app.Log.Infof("QUIT Signal, dumping data to stderr")
 			writeGoroutineStacks(os.Stderr)
+			app.ProxyServer.RequestList.Dump(os.Stderr)
 		}
 	}()
 }
