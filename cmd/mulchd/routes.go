@@ -64,7 +64,13 @@ func AddRoutes(app *server.App) {
 	app.AddRoute(&server.Route{
 		Route:   "POST /vm",
 		Type:    server.RouteTypeStream,
-		Handler: controllers.NewVMController,
+		Handler: controllers.NewVMSyncController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "POST /vm-async",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.NewVMAsyncController,
 	}, server.RouteAPI)
 
 	app.AddRoute(&server.Route{

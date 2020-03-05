@@ -44,7 +44,10 @@ func (req *Request) WaitStream() {
 // sending (Stream) and receiving (HubClient)
 func (req *Request) SetTarget(target string) {
 	req.Stream.SetTarget(target)
-	req.HubClient.SetTarget(target)
+	// there's no HubClient for RouteTypeCustom routes
+	if req.HubClient != nil {
+		req.HubClient.SetTarget(target)
+	}
 }
 
 // Printf like helper for req.Response.Write

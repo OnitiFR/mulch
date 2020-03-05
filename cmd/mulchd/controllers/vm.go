@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path"
 	"sort"
 	"strconv"
@@ -52,19 +53,105 @@ func getEntryFromRequest(vmName string, req *server.Request) (*server.VMDatabase
 	return entry, nil
 }
 
-// NewVMController creates a new VM
-func NewVMController(req *server.Request) {
-	req.StartStream()
+// VMControllerConfigCheck will validate TOML sent in the 'config' request field
+// and check if VM is a duplicate
+func VMControllerConfigCheck(req *server.Request) (*server.VMConfig, string, error) {
 	configFile, header, err := req.HTTP.FormFile("config")
 	if err != nil {
-		req.Stream.Failuref("'config' file field: %s", err)
+		return nil, "", fmt.Errorf("'config' file field: %s", err)
+	}
+	filename := header.Filename
+
+	conf, err := server.NewVMConfigFromTomlReader(configFile, req.Stream)
+	if err != nil {
+		return nil, "", fmt.Errorf("decoding config: %s", err)
+	}
+
+	allowNewRevision := req.HTTP.FormValue("allow_new_revision")
+
+	if req.App.VMDB.GetCountForName(conf.Name) > 0 && allowNewRevision != common.TrueStr {
+		return nil, "", fmt.Errorf("VM '%s' already exists (see --new-revision CLI option?)", conf.Name)
+	}
+
+	return conf, filename, nil
+}
+
+// NewVMAsyncController creates asynchronously a new VM and
+// use a callback URL when finished (success or failure)
+func NewVMAsyncController(req *server.Request) {
+	req.Response.Header().Set("Content-Type", "application/json")
+	enc := json.NewEncoder(req.Response)
+
+	callbackURL := req.HTTP.FormValue("callback_url")
+
+	_, err := url.ParseRequestURI(callbackURL)
+	if err != nil {
+		req.Response.WriteHeader(http.StatusBadRequest)
+		enc.Encode("Invalid or empty callback_url parameter")
 		return
 	}
-	req.Stream.Tracef("reading '%s' config file", header.Filename)
+
+	_, _, err = VMControllerConfigCheck(req)
+	if err != nil {
+		req.Response.WriteHeader(http.StatusBadRequest)
+		enc.Encode(err.Error())
+		return
+	}
+
+	go func() {
+		before := time.Now()
+		vm, err := NewVMController(req)
+		after := time.Now()
+
+		name := "unknown"
+		if vm != nil {
+			name = vm.Config.Name
+		}
+
+		data := common.AsyncCallback{
+			Action:   "create",
+			Target:   name,
+			Success:  true,
+			Duration: after.Sub(before),
+		}
+		if err != nil {
+			data.Success = false
+			data.Error = err.Error()
+		}
+
+		client := http.Client{
+			Timeout: time.Duration(30 * time.Second),
+		}
+		_, err = client.PostForm(callbackURL, data.AsURLValue())
+		if err != nil {
+			req.App.Log.Errorf("unable to contact callback URL '%s' for VM %s: %s", callbackURL, name, err.Error())
+		}
+	}()
+
+	str := fmt.Sprintf("OK. VM creation started, will contact %s", callbackURL)
+	enc.Encode(str)
+}
+
+// NewVMSyncController creates synchronously a new VM
+// (we just remove error from NewVMController, since we use the stream
+// to report errors)
+func NewVMSyncController(req *server.Request) {
+	NewVMController(req)
+}
+
+// NewVMController creates a new VM
+func NewVMController(req *server.Request) (*server.VM, error) {
+	req.StartStream()
+
+	conf, filename, err := VMControllerConfigCheck(req)
+	if err != nil {
+		req.Stream.Failure(err.Error())
+		return nil, err
+	}
+	req.Stream.Tracef("reading '%s' config file", filename)
 
 	restore := req.HTTP.FormValue("restore")
 	restoreVM := req.HTTP.FormValue("restore-vm")
-	allowNewRevision := req.HTTP.FormValue("allow_new_revision")
 	inactive := req.HTTP.FormValue("inactive")
 	keepOnFailure := req.HTTP.FormValue("keep_on_failure")
 	lock := req.HTTP.FormValue("lock")
@@ -80,19 +167,9 @@ func NewVMController(req *server.Request) {
 	}
 
 	if restore != "" && restoreVM != "" {
-		req.Stream.Failure("restore and restore-vm flags are mutually exclusive")
-		return
-	}
-
-	conf, err := server.NewVMConfigFromTomlReader(configFile, req.Stream)
-	if err != nil {
-		req.Stream.Failuref("decoding config: %s", err)
-		return
-	}
-
-	if req.App.VMDB.GetCountForName(conf.Name) > 0 && allowNewRevision != common.TrueStr {
-		req.Stream.Failuref("VM '%s' already exists (see --new-revision CLI option?)", conf.Name)
-		return
+		msg := "restore and restore-vm flags are mutually exclusive"
+		req.Stream.Failure(msg)
+		return nil, errors.New(msg)
 	}
 
 	operation := req.App.Operations.Add(&server.Operation{
@@ -115,13 +192,15 @@ func NewVMController(req *server.Request) {
 	if restoreVM != "" {
 		entry, err := req.App.VMDB.GetActiveEntryByName(restoreVM)
 		if err != nil {
-			req.Stream.Failuref("Cannot find VM to backup: %s", err)
-			return
+			msg := fmt.Sprintf("Cannot find VM to backup: %s", err)
+			req.Stream.Failuref(msg)
+			return nil, errors.New(msg)
 		}
 		backup, err := server.VMBackup(entry.Name, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressDisable)
 		if err != nil {
-			req.Stream.Failuref("Cannot backup: %s", err)
-			return
+			msg := fmt.Sprintf("Cannot backup: %s", err)
+			req.Stream.Failuref(msg)
+			return nil, errors.New(msg)
 		}
 		defer func() {
 			err := deleteBackup(backup, req)
@@ -133,10 +212,11 @@ func NewVMController(req *server.Request) {
 	}
 
 	before := time.Now()
-	_, vmName, err := server.NewVM(conf, active, allowScriptFailure, req.APIKey.Comment, req.App, req.Stream)
+	vm, vmName, err := server.NewVM(conf, active, allowScriptFailure, req.APIKey.Comment, req.App, req.Stream)
 	if err != nil {
-		req.Stream.Failuref("Cannot create VM: %s", err)
-		return
+		msg := fmt.Sprintf("Cannot create VM: %s", err)
+		req.Stream.Failuref(msg)
+		return nil, errors.New(msg)
 	}
 
 	if lock == common.TrueStr {
@@ -150,6 +230,7 @@ func NewVMController(req *server.Request) {
 	after := time.Now()
 
 	req.Stream.Successf("VM %s created successfully (%s)", vmName, after.Sub(before))
+	return vm, nil
 }
 
 // ListVMsController list VMs

@@ -256,6 +256,8 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 	case RouteTypeStream:
 		routeStreamHandler(w, r, request)
 	case RouteTypeCustom:
+		request.Stream = NewLog("", app.Hub, app.LogHistory)
+		request.streamStarted = true
 		route.Handler(request)
 	}
 }

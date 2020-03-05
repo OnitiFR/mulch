@@ -11,13 +11,14 @@
 - add timeout on VM creation scripts
 - check domains validity on VM create, PS: domain name validation is HARD :(
 - double operation on "vm do" command?
-- can't reproduce
+  - can't reproduce
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - check TLS cert renewal!
   - reported issue: vm is deleted, recreated 3 months later, cert is invalid
   - Go changed the way cert are stored?
   - can't reproduce
 - add a SSH keepalive for Run.SSHConn?
+- write API public documentation
 - continue tests on snapshots (see branch "snapshots")
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
   - (dhcp/dnsmasq? ebtables? mulch-network restart?)
