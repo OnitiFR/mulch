@@ -106,9 +106,6 @@ func (call *APICall) Do() {
 	if call.api.Trace == true {
 		data.Add("trace", "true")
 	}
-	data.Add("key", call.api.APIKey)
-	data.Add("version", Version)
-	data.Add("protocol", strconv.Itoa(ProtocolVersion))
 
 	var req *http.Request
 
@@ -178,6 +175,10 @@ func (call *APICall) Do() {
 	default:
 		log.Fatalf("apicall does not support '%s' yet", method)
 	}
+
+	req.Header.Set("Mulch-Key", call.api.APIKey)
+	req.Header.Set("Mulch-Version", Version)
+	req.Header.Set("Mulch-Protocol", strconv.Itoa(ProtocolVersion))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

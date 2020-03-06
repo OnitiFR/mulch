@@ -49,6 +49,18 @@ func isRouteMethodAllowed(method string, methods []string) bool {
 	return false
 }
 
+// extract a generic parameter from the request (API key, protocol, etc)
+// from the headers (new way, "Mulch-Name") or from FormValue (old way, "name")
+func requestGetMulchParam(r *http.Request, name string) string {
+	headerName := "Mulch-" + strings.Title(name)
+
+	val := r.Header.Get(headerName)
+	if name == "" {
+		val = r.FormValue(name)
+	}
+	return val
+}
+
 func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request) {
 	cn, ok := w.(http.CloseNotifier)
 	if !ok {
@@ -216,7 +228,7 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 
 	if route.NoProtoCheck == false {
-		clientProto, _ := strconv.Atoi(r.FormValue("protocol"))
+		clientProto, _ := strconv.Atoi(requestGetMulchParam(r, "protocol"))
 		if clientProto != ProtocolVersion {
 			errMsg := fmt.Sprintf("Protocol mismatch, server requires version %d", ProtocolVersion)
 			app.Log.Errorf("%d: %s", 400, errMsg)
@@ -239,7 +251,7 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 	}
 
 	if route.Public == false {
-		valid, key := app.APIKeysDB.IsValidKey(r.FormValue("key"))
+		valid, key := app.APIKeysDB.IsValidKey(requestGetMulchParam(r, "key"))
 		if valid == false {
 			errMsg := "invalid key"
 			app.Log.Errorf("%d: %s", 403, errMsg)
