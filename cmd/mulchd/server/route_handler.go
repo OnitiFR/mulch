@@ -55,7 +55,7 @@ func requestGetMulchParam(r *http.Request, name string) string {
 	headerName := "Mulch-" + strings.Title(name)
 
 	val := r.Header.Get(headerName)
-	if name == "" {
+	if val == "" {
 		val = r.FormValue(name)
 	}
 	return val
