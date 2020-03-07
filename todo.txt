@@ -1,4 +1,3 @@
-- dump SIGQUIT to a timestamped file (journald is overflooded by the size of the dump)
 - BUGFIX: investigate the very annoying and rare mulch-proxy children-parent lockup /!\
   - get newly implemented SIGQUIT dump during outage (both front and 0!)
   - look if we see 200 returns on 0 duing outage

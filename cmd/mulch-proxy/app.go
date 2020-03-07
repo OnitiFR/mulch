@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -148,9 +149,22 @@ func (app *App) initSigQUITHandler() {
 
 	go func() {
 		for _ = range c {
-			app.Log.Infof("QUIT Signal, dumping data to stderr")
-			writeGoroutineStacks(os.Stderr)
-			app.ProxyServer.RequestList.Dump(os.Stderr)
+			ts := time.Now().Format("20060102-150405")
+			filename := path.Clean(os.TempDir() + "/" + "mulch-proxy-" + ts + ".dump")
+			file, err := os.Create(filename)
+			if err != nil {
+				app.Log.Errorf("unable to create %s: %s", filename, err)
+				return
+			}
+
+			defer file.Close()
+			writer := bufio.NewWriter(file)
+
+			app.Log.Infof("QUIT Signal, dumping data to %s", filename)
+			writeGoroutineStacks(writer)
+			app.ProxyServer.RequestList.Dump(writer)
+
+			writer.Flush()
 		}
 	}()
 }
