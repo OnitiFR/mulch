@@ -160,11 +160,13 @@ func (app *App) initSigQUITHandler() {
 			defer file.Close()
 			writer := bufio.NewWriter(file)
 
-			app.Log.Infof("QUIT Signal, dumping data to %s", filename)
+			fmt.Fprintf(writer, "-- mulch-proxy %s dump (%s)\n\n", Version, ts)
 			writeGoroutineStacks(writer)
+			fmt.Fprintf(writer, "\n\n")
 			app.ProxyServer.RequestList.Dump(writer)
 
 			writer.Flush()
+			app.Log.Infof("QUIT Signal, dumped data to %s", filename)
 		}
 	}()
 }
