@@ -161,6 +161,8 @@ func (proxy *ProxyServer) hostPolicy(ctx context.Context, host string) error {
 		return nil
 	}
 
+	proxy.Log.Tracef("hostPolicy OK, new certificate request for '%s'", host)
+
 	return fmt.Errorf("No configuration found for host '%s' ", host)
 }
 
