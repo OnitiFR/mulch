@@ -160,11 +160,11 @@ func (proxy *ProxyServer) hostPolicy(ctx context.Context, host string) error {
 
 	_, err := proxy.DomainDB.GetByName(host)
 	if err == nil {
-		proxy.Log.Tracef("hostPolicy OK, '%s' found in DomainDB", host)
+		proxy.Log.Tracef("hostPolicy OK, host '%s' found in DomainDB", host)
 		return nil
 	}
 
-	return fmt.Errorf("No configuration found for host '%s' ", host)
+	return fmt.Errorf("hostPolicy ERROR, host '%s' not found in DomainDB", host)
 }
 
 // func reverseProxyErrorHandler(rw http.ResponseWriter, req *http.Request, err error) {
