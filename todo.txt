@@ -9,6 +9,7 @@
   - check for system limits (grep Threads /proc/$(pidof mulch-proxy)/status, done: far from limits, even during outage)
   - run DoS-like benchmarks (done: OK with up to 8k simultaneous requests)
 - add Version to mulch status
+- check vm deactivate completion
 - support vm creation with -i "between childs" (and check domain conflict on activate)
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
 - proxy / proxy-chain request stats?
