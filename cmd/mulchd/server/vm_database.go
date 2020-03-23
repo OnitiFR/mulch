@@ -67,6 +67,7 @@ func NewVMDatabase(filename string, domainFilename string, onUpdate updateCallba
 
 // build domain database, updated with each vm.LastIP (and name, as it's not
 // available at config file reading time)
+// TODO: CVID?
 func (vmdb *VMDatabase) genDomainsDB() error {
 	domains := make(map[string]*common.Domain)
 
@@ -171,6 +172,7 @@ func (vmdb *VMDatabase) Update() error {
 }
 
 // Delete the VM from the database using its name
+// TODO: CVID
 func (vmdb *VMDatabase) Delete(name *VMName) error {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
@@ -216,6 +218,7 @@ func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 		return fmt.Errorf("VM %s already exists in database", name)
 	}
 
+	// TODO: CVID
 	if active {
 		// set any other instance as inactive
 		for _, entry := range vmdb.db {
@@ -234,6 +237,9 @@ func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 	vmdb.db[name.ID()] = entry
 	err := vmdb.save()
 	if err != nil {
+		// TODO: CVID: real world test of this failure:
+		// (vm create: pre-test ok, Add failing because of save() in case of duplicate domain)
+		delete(vmdb.db, name.ID())
 		return err
 	}
 	return nil
@@ -476,6 +482,7 @@ func (vmdb *VMDatabase) GetCountForName(name string) int {
 }
 
 // SetActiveRevision change the active instance (RevisionNone is allowed)
+// TODO: CVID
 func (vmdb *VMDatabase) SetActiveRevision(name string, revision int) error {
 	// sanity checks (out of lock!)
 	if revision == RevisionNone {

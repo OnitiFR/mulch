@@ -146,6 +146,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	}
 
 	// check for conclicting domains (will also be done later while saving vm database)
+	// TODO: CVID
 	err = CheckDomainsConflicts(app.VMDB, vmConfig.Domains, vmName.Name, app.Config)
 	if err != nil {
 		return nil, nil, err
@@ -1211,6 +1212,7 @@ func VMRestoreNoChecks(vm *VM, vmName *VMName, backup *Backup, app *App, log *Lo
 
 // VMRename will rename the VM in Mulch and in libvirt (including disks)
 // TODO: try to make some sort of transaction here
+// WARNING: currently not used (old rebuild system) so… unproven code.
 func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 	conn, err := app.Libvirt.GetConnection()
 	if err != nil {
@@ -1319,8 +1321,8 @@ func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 		return err
 	}
 
-	// the Delete() may have set a previous WM as active. It's bad
-	// because the Add() below will fail is active is true.
+	// the Delete() may have set a previous VM as active. It's bad
+	// because the Add() below will fail if active is true.
 	if active {
 		// an error is non-fatal for us (no previous active VM, for instance)
 		app.VMDB.SetActiveRevision(orgVMName.Name, RevisionNone)
