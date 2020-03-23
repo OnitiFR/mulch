@@ -4,9 +4,10 @@ After=network-online.target
 
 [Service]
 User={USER}
-ExecStart={MULCH_PROXY}
+ExecStart={MULCH_PROXY_START}
 Type=simple
 Restart=on-failure
+ExecStartPre=+/sbin/setcap 'cap_net_bind_service=+ep' {MULCH_PROXY}
 LimitNOFILE=4096
 
 [Install]

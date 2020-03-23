@@ -226,9 +226,11 @@ function gen_services() {
     sed -i'' "s|{USER}|$USER|" "$SOURCE/mulch-proxy.service"
     check $?
 
-    sed -i'' "s|{MULCHD}|$mulchd_bin -path \"$ETC\"|" "$SOURCE/mulchd.service"
+    sed -i'' "s|{MULCHD_START}|$mulchd_bin -path \"$ETC\"|" "$SOURCE/mulchd.service"
     check $?
-    sed -i'' "s|{MULCH_PROXY}|$proxy_bin -path \"$ETC\"|" "$SOURCE/mulch-proxy.service"
+    sed -i'' "s|{MULCH_PROXY_START}|$proxy_bin -path \"$ETC\"|" "$SOURCE/mulch-proxy.service"
+    check $?
+    sed -i'' "s|{MULCH_PROXY}|$proxy_bin|" "$SOURCE/mulch-proxy.service"
     check $?
 }
 
