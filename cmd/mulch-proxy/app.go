@@ -149,24 +149,26 @@ func (app *App) initSigQUITHandler() {
 
 	go func() {
 		for _ = range c {
-			ts := time.Now().Format("20060102-150405")
-			filename := path.Clean(os.TempDir() + "/" + "mulch-proxy-" + ts + ".dump")
-			file, err := os.Create(filename)
-			if err != nil {
-				app.Log.Errorf("unable to create %s: %s", filename, err)
-				return
-			}
+			func() { // so we can use defer
+				ts := time.Now().Format("20060102-150405")
+				filename := path.Clean(os.TempDir() + "/" + "mulch-proxy-" + ts + ".dump")
+				file, err := os.Create(filename)
+				if err != nil {
+					app.Log.Errorf("unable to create %s: %s", filename, err)
+					return
+				}
 
-			defer file.Close()
-			writer := bufio.NewWriter(file)
+				defer file.Close()
+				writer := bufio.NewWriter(file)
 
-			fmt.Fprintf(writer, "-- mulch-proxy %s dump (%s)\n\n", Version, ts)
-			writeGoroutineStacks(writer)
-			fmt.Fprintf(writer, "\n\n")
-			app.ProxyServer.RequestList.Dump(writer)
+				fmt.Fprintf(writer, "-- mulch-proxy %s dump (%s)\n\n", Version, ts)
+				writeGoroutineStacks(writer)
+				fmt.Fprintf(writer, "\n\n")
+				app.ProxyServer.RequestList.Dump(writer)
 
-			writer.Flush()
-			app.Log.Infof("QUIT Signal, dumped data to %s", filename)
+				writer.Flush()
+				app.Log.Infof("QUIT Signal, dumped data to %s", filename)
+			}()
 		}
 	}()
 }
