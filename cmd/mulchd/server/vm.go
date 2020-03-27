@@ -145,11 +145,12 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		return nil, nil, fmt.Errorf("seed %s is not ready", vmConfig.Seed)
 	}
 
-	// check for conclicting domains (will also be done later while saving vm database)
-	// TODO: CVID
-	err = CheckDomainsConflicts(app.VMDB, vmConfig.Domains, vmName.Name, app.Config)
-	if err != nil {
-		return nil, nil, err
+	if active {
+		// check for conclicting domains (will also be done later while saving vm database)
+		err = CheckDomainsConflicts(app.VMDB, vmConfig.Domains, vmName.Name, app.Config)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	// check if backup exists (if a restore was requested)

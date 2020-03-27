@@ -26,7 +26,7 @@ type VMDatabaseEntry struct {
 
 // VMDatabase describes a persistent DataBase of VMs structures
 // ---
-// It include a maternity, where all the baby VM (= currently building)
+// It includes a maternity, where all the baby VM (= currently building)
 // are stored. This transient database is not stored on disk.
 // (this DB is used by GetBySecretUUID, for instance)
 type VMDatabase struct {
@@ -36,16 +36,18 @@ type VMDatabase struct {
 	maternityDB    map[string]*VMDatabaseEntry
 	mutex          sync.Mutex
 	onUpdate       updateCallback
+	config         *AppConfig
 }
 
 // NewVMDatabase instanciates a new VMDatabase
-func NewVMDatabase(filename string, domainFilename string, onUpdate updateCallback) (*VMDatabase, error) {
+func NewVMDatabase(filename string, domainFilename string, onUpdate updateCallback, config *AppConfig) (*VMDatabase, error) {
 	vmdb := &VMDatabase{
 		filename:       filename,
 		domainFilename: domainFilename,
 		db:             make(map[string]*VMDatabaseEntry),
 		maternityDB:    make(map[string]*VMDatabaseEntry),
 		onUpdate:       onUpdate,
+		config:         config,
 	}
 
 	// if the file exists, load it
@@ -67,7 +69,6 @@ func NewVMDatabase(filename string, domainFilename string, onUpdate updateCallba
 
 // build domain database, updated with each vm.LastIP (and name, as it's not
 // available at config file reading time)
-// TODO: CVID?
 func (vmdb *VMDatabase) genDomainsDB() error {
 	domains := make(map[string]*common.Domain)
 
@@ -172,36 +173,43 @@ func (vmdb *VMDatabase) Update() error {
 }
 
 // Delete the VM from the database using its name
-// TODO: CVID
 func (vmdb *VMDatabase) Delete(name *VMName) error {
-	vmdb.mutex.Lock()
-	defer vmdb.mutex.Unlock()
-
-	entryToDelete, exists := vmdb.db[name.ID()]
-	if exists == false {
+	entryToDelete, err := vmdb.GetEntryByName(name)
+	if err != nil {
 		return fmt.Errorf("VM '%s' was not found in database", name.ID())
 	}
 
 	if entryToDelete.Active {
 		// set "highest" instance active (if any)
-		var highest *VMDatabaseEntry
 		maxRevision := -1
-		for _, entry := range vmdb.db {
+		vmNames := vmdb.GetNames()
+
+		for _, vmName := range vmNames {
+			entry, err := vmdb.GetEntryByName(vmName)
+			if err != nil {
+				return err
+			}
 			if entry.Name.Name == entryToDelete.Name.Name &&
 				entry.Name.Revision != entryToDelete.Name.Revision &&
 				entry.Name.Revision > maxRevision {
 				maxRevision = entry.Name.Revision
-				highest = entry
 			}
 		}
-		if highest != nil {
-			highest.Active = true
+
+		if maxRevision >= 0 {
+			err := vmdb.SetActiveRevision(entryToDelete.Name.Name, maxRevision)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
 	delete(vmdb.db, name.ID())
 
-	err := vmdb.save()
+	err = vmdb.save()
 	if err != nil {
 		return err
 	}
@@ -211,6 +219,14 @@ func (vmdb *VMDatabase) Delete(name *VMName) error {
 
 // Add a new VM in the database
 func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
+
+	if active {
+		err := CheckDomainsConflicts(vmdb, vm.Config.Domains, name.Name, vmdb.config)
+		if err != nil {
+			return err
+		}
+	}
+
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
@@ -218,7 +234,6 @@ func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 		return fmt.Errorf("VM %s already exists in database", name)
 	}
 
-	// TODO: CVID
 	if active {
 		// set any other instance as inactive
 		for _, entry := range vmdb.db {
@@ -237,8 +252,7 @@ func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 	vmdb.db[name.ID()] = entry
 	err := vmdb.save()
 	if err != nil {
-		// TODO: CVID: real world test of this failure:
-		// (vm create: pre-test ok, Add failing because of save() in case of duplicate domain)
+		// we may have deactivate a previous VM, though :/
 		delete(vmdb.db, name.ID())
 		return err
 	}
@@ -482,7 +496,6 @@ func (vmdb *VMDatabase) GetCountForName(name string) int {
 }
 
 // SetActiveRevision change the active instance (RevisionNone is allowed)
-// TODO: CVID
 func (vmdb *VMDatabase) SetActiveRevision(name string, revision int) error {
 	// sanity checks (out of lock!)
 	if revision == RevisionNone {
@@ -491,7 +504,12 @@ func (vmdb *VMDatabase) SetActiveRevision(name string, revision int) error {
 		}
 	} else {
 		vmName := NewVMName(name, revision)
-		if _, err := vmdb.GetByName(vmName); err != nil {
+		vm, err := vmdb.GetByName(vmName)
+		if err != nil {
+			return err
+		}
+		err = CheckDomainsConflicts(vmdb, vm.Config.Domains, name, vmdb.config)
+		if err != nil {
 			return err
 		}
 	}

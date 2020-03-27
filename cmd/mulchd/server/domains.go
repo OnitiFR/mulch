@@ -22,12 +22,17 @@ func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM s
 			continue
 		}
 
-		vm, err := db.GetByName(vmName)
+		entry, err := db.GetEntryByName(vmName)
 		if err != nil {
 			return err
 		}
-		for _, domain := range vm.Config.Domains {
-			domainMap[domain.Name] = vm
+
+		if entry.Active == false {
+			continue
+		}
+
+		for _, domain := range entry.VM.Config.Domains {
+			domainMap[domain.Name] = entry.VM
 		}
 	}
 

@@ -217,7 +217,7 @@ func (app *App) initVMDB() error {
 	}
 
 	app.ProxyReloader = NewProxyReloader(app)
-	vmdb, err := NewVMDatabase(dbPath, domainDbPath, app.ProxyReloader.Request)
+	vmdb, err := NewVMDatabase(dbPath, domainDbPath, app.ProxyReloader.Request, app.Config)
 	if err != nil {
 		return err
 	}

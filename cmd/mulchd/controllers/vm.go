@@ -441,7 +441,7 @@ func ActionVMController(req *server.Request) {
 			req.Stream.Successf("rebuild completed (%s)", after.Sub(before))
 		}
 	case "redefine":
-		err := RedefineVM(req, vm)
+		err := RedefineVM(req, vm, entry.Active)
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
 		} else {
@@ -767,7 +767,7 @@ func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) erro
 }
 
 // RedefineVM replace VM config file with a new one, for next rebuild
-func RedefineVM(req *server.Request, vm *server.VM) error {
+func RedefineVM(req *server.Request, vm *server.VM, active bool) error {
 	if vm.Locked == true && req.HTTP.FormValue("force") != common.TrueStr {
 		return errors.New("VM is locked (see --force)")
 	}
@@ -791,11 +791,11 @@ func RedefineVM(req *server.Request, vm *server.VM) error {
 		return fmt.Errorf("VM name does not match")
 	}
 
-	// check for conclicting domains
-	// TODO: CVID
-	err = server.CheckDomainsConflicts(req.App.VMDB, conf.Domains, conf.Name, req.App.Config)
-	if err != nil {
-		return err
+	if active {
+		err = server.CheckDomainsConflicts(req.App.VMDB, conf.Domains, conf.Name, req.App.Config)
+		if err != nil {
+			return err
+		}
 	}
 
 	// change author
