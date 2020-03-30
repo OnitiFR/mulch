@@ -112,7 +112,7 @@ func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 
 	// We're still very gentle here, there are some legitimate "long idling request"
 	// use case out there. But we should add a runtime setting somewhere to
-	// allow the admin to drastically lower this value.
+	// allow the admin to drastically lower this value. (ex: Træfik default is 3min)
 	IdleTimeout := 15 * time.Minute
 
 	proxy.HTTP = &http.Server{
