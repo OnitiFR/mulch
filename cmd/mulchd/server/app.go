@@ -138,7 +138,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	app.AlertSender.RunKeepAlive()
+	app.AlertSender.RunKeepAlive(5)
 
 	err = app.initSeedsDB()
 	if err != nil {
