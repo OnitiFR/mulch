@@ -9,9 +9,9 @@
   - lower IdleTimeout to see if it's of any effect
   - check for system limits (grep Threads /proc/$(pidof mulch-proxy)/status, done: far from limits, even during outage)
   - run DoS-like benchmarks (done: OK with up to 8k simultaneous requests)
+- add timeout on VM creation scripts OR at least allow VM deletion
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
 - proxy / proxy-chain request stats?
-- add timeout on VM creation scripts
 - check domains validity on VM create, PS: domain name validation is HARD :(
 - double operation on "vm do" command?
   - can't reproduce
