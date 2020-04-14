@@ -5,7 +5,7 @@
   - look if we see 200 returns on 0 duing outage (OK)
   - test direct child proxy access during outage (OK!)
   - test other child proxy access during outage (OK!)
-  - test with newer Go releases (current: 1.10.4)
+  - test with newer Go releases (current: 1.10.4) (OK! failure with 1.13.6)
   - lower IdleTimeout to see if it's of any effect
   - check for system limits (grep Threads /proc/$(pidof mulch-proxy)/status, done: far from limits, even during outage)
   - run DoS-like benchmarks (done: OK with up to 8k simultaneous requests)
