@@ -8,6 +8,7 @@ cd $HTML_DIR || exit $?
 
 wp core update || exit $?
 wp plugin update --all || exit $?
+wp theme status || exit $? # refresh update cache
 wp theme update --all || exit $?
 wp language core update || exit $?
 wp language plugin update --all || exit $?
