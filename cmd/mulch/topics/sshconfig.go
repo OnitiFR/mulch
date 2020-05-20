@@ -26,8 +26,8 @@ var sshConfigCmdData sshConfigCmdDataStruct
 var sshConfigCmd = &cobra.Command{
 	Use:   "ssh-config",
 	Short: "Update local SSH config",
-	Long: `Create or update your locale SSH config with aliases, allowing you to
-use usual ssh/scp/sftp/… commands directly to your VMs without any
+	Long: `Create or update your local SSH config with aliases, allowing you to
+use usual ssh/scp/sftp/… commands directly with your VMs without any
 aditionnal configuration:
 
 ssh vm-mulch
