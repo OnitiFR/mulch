@@ -74,6 +74,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		ChainDomain:           chainDomain,
 		Log:                   app.Log,
 		RequestList:           NewRequestList(trace),
+		Trace:                 trace,
 	})
 
 	app.ProxyServer.RefreshReverseProxies()
@@ -143,6 +144,7 @@ func (app *App) initSigHUPHandler() {
 	}()
 }
 
+// kill -QUIT $(pidof mulch-proxy)
 func (app *App) initSigQUITHandler() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGQUIT)
@@ -161,7 +163,7 @@ func (app *App) initSigQUITHandler() {
 				defer file.Close()
 				writer := bufio.NewWriter(file)
 
-				fmt.Fprintf(writer, "-- mulch-proxy %s dump (%s)\n\n", Version, ts)
+				fmt.Fprintf(writer, "-- mulch-proxy %s dump (dump time: %s)\n\n", Version, ts)
 				writeGoroutineStacks(writer)
 				fmt.Fprintf(writer, "\n\n")
 				app.ProxyServer.RequestList.Dump(writer)

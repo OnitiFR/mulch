@@ -29,10 +29,3 @@ func writeGoroutineStacks(w io.Writer) error {
 	_, err := w.Write(buf)
 	return err
 }
-
-// InstallSIGQUIT will react to SIGQUIT signal and dump all goroutines
-// without exiting.
-// kill -QUIT $(pidof mulch-proxy)
-func InstallSIGQUIT() {
-
-}

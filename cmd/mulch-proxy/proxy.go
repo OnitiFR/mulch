@@ -51,10 +51,11 @@ type ProxyServerParams struct {
 	ChainDomain           string
 	Log                   *Log
 	RequestList           *RequestList
+	Trace                 bool
 }
 
 var contextKeyID interface{} = 1
-var requestCouner uint64
+var requestCounter uint64
 
 // Until Go 1.11 and his reverseProxy.ErrorHandler is mainstream, let's
 // have our own error generator
@@ -222,16 +223,18 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 		proto = ProtoHTTPS
 	}
 
-	id := atomic.AddUint64(&requestCouner, 1)
-	ctx := req.Context()
-	ctx = context.WithValue(ctx, contextKeyID, id)
-	req = req.WithContext(ctx)
+	id := atomic.AddUint64(&requestCounter, 1)
+	if proxy.config.Trace {
+		ctx := req.Context()
+		ctx = context.WithValue(ctx, contextKeyID, id)
+		req = req.WithContext(ctx)
 
-	proxy.RequestList.AddRequest(id, req)
-	defer proxy.RequestList.DeleteRequest(id)
+		proxy.RequestList.AddRequest(id, req)
+		defer proxy.RequestList.DeleteRequest(id)
 
-	// User-Agent? Datetime?
-	proxy.Log.Tracef("> {%d} %s %s %t %s %s %s", id, req.RemoteAddr, proto, fromParent, req.Host, req.Method, req.RequestURI)
+		// User-Agent? Datetime?
+		proxy.Log.Tracef("> {%d} %s %s %t %s %s %s", id, req.RemoteAddr, proto, fromParent, req.Host, req.Method, req.RequestURI)
+	}
 
 	// trust our parent, whatever protocol was user inter-proxy
 	if fromParent {
@@ -306,11 +309,15 @@ func (proxy *ProxyServer) RefreshReverseProxies() {
 
 		// domain.reverseProxy.ErrorHandler = reverseProxyErrorHandler
 		domain.ReverseProxy.ModifyResponse = func(resp *http.Response) (err error) {
-			ctx := resp.Request.Context()
 			if proxy.config.ChainMode != ChainModeParent {
 				resp.Header.Set("X-Mulch", domain.VMName)
 			}
-			proxy.Log.Tracef("< {%d} %d", ctx.Value(contextKeyID), resp.StatusCode)
+
+			if proxy.config.Trace {
+				ctx := resp.Request.Context()
+				proxy.Log.Tracef("< {%d} %d", ctx.Value(contextKeyID), resp.StatusCode)
+			}
+
 			return nil
 		}
 		domain.ReverseProxy.Transport = &errorHandlingRoundTripper{

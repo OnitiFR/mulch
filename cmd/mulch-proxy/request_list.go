@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -59,7 +60,10 @@ func (rl *RequestList) DeleteRequest(id uint64) {
 
 // Dump RequestList content to a Log
 func (rl *RequestList) Dump(w io.Writer) {
+	fmt.Fprintf(w, "-- Request Counter: %d\n", atomic.LoadUint64(&requestCounter))
+
 	if !rl.trace {
+		fmt.Fprintf(w, "-- No RequestList (trace not unabled)\n")
 		return
 	}
 
