@@ -1,7 +1,8 @@
 - BUGFIX: investigate the very annoying and rare mulch-proxy children-parent lockup /!\
+  - try to create a repro, see https://github.com/golang/go/issues/36026 for template
   - have a deeper look at net/http/transport.go settings (proxy.go RoundTrip() func)
   - see if we can debug low-level inter-proxies HTTP2 connections (ex: connection "age")
-  - test with HTTP inter-proxies exchanges instead of HTTPS
+  - test with HTTP inter-proxies exchanges instead of HTTPS (will probably fallback to HTTP/1.1)
   - get newly implemented SIGQUIT dump during outage (done, front & m0)
   - look if we see 200 returns on 0 duing outage (OK)
   - test direct child proxy access during outage (OK!)
