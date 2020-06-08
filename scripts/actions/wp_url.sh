@@ -27,7 +27,7 @@ else
     echo "You should now update URL in content."
     echo "minimal example:"
     echo "  wp search-replace '$old' '$url' --skip-columns=guid"
-    echo "(next time, add 'with-content' argument, and I will do this automatically)"
+    echo "(next time, add 'with-content' argument to do this)"
     echo ""
     echo "See also extensions like 'Velvet Blues Update URLs'."
 fi
