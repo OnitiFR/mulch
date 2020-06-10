@@ -93,7 +93,8 @@ EOS
 echo "installing phpMyAdmin…"
 sudo -E apt-get -y -qq install phpmyadmin 2> /dev/null
 if [ $? -ne 0 ]; then
-    # on Debian 10 / Ubuntu 19.10, phpMyAdmin is not available (yet?)
+    # on Debian 10 / Ubuntu 19.10, phpMyAdmin is not available as a package
+    # fixed since Ubuntu 20.04
     sudo -E apt-get -y -qq install jq || exit $?
     latest="$(curl -fsSL 'https://www.phpmyadmin.net/home_page/version.json' | jq -r '.version')"
 
@@ -108,6 +109,8 @@ if [ $? -ne 0 ]; then
 
     sudo mkdir /usr/share/phpmyadmin/tmp || exit $?
     sudo chown $_APP_USER:$_APP_USER /usr/share/phpmyadmin/tmp || exit $?
+
+    phpMyAdminConf="/usr/share/phpmyadmin/config.inc.php"
 
     sudo bash -c "cat > /etc/apache2/conf-available/phpmyadmin.conf" <<- EOS
 # phpMyAdmin default Apache configuration
@@ -150,10 +153,14 @@ EOS
     if [ -d /var/lib/phpmyadmin/tmp/ ]; then
         sudo chown $_APP_USER:$_APP_USER /var/lib/phpmyadmin/tmp/ || exit $?
     fi
-
     if [ -f /var/lib/phpmyadmin/blowfish_secret.inc.php ]; then
         sudo chown $_APP_USER:$_APP_USER /var/lib/phpmyadmin/blowfish_secret.inc.php || exit $?
     fi
+    if [ -f /etc/phpmyadmin/config-db.php ]; then
+        sudo chown $_APP_USER:$_APP_USER /etc/phpmyadmin/config-db.php || exit $?
+    fi
+
+    phpMyAdminConf="/etc/phpmyadmin/conf.d/deb_lamp_sso.php"
 
     # bug: phpMyAdmin < 4.8 + PHP 7.2 = count() error
     # tested targets: Ubuntu 18.04 / 18.10 / 19.04
@@ -165,10 +172,11 @@ EOS
     sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf || exit $?
 fi
 
+# configure phpMyAdmin "SSO" ("do db" action)
 if [ "$PHPMYADMIN_SSO" != "disable" ]; then
     sudo bash -c "echo 'Auth failure' > /usr/share/phpmyadmin/auth.html" || exit $?
 
-    sudo bash -c "cat > /usr/share/phpmyadmin/config.inc.php" <<- 'EOS'
+    sudo bash -c "cat > $phpMyAdminConf" <<- 'EOS'
 <?php
 $cfg['Servers'][1]['auth_type'] = 'signon';
 $cfg['Servers'][1]['SignonSession'] = 'SignonSession';
