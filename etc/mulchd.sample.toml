@@ -95,9 +95,9 @@ name = "ubuntu_1804"
 url = "http://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img"
 
 [[seed]]
-name = "ubuntu_1910"
-url = "http://cloud-images.ubuntu.com/eoan/current/eoan-server-cloudimg-amd64.img"
+name = "ubuntu_2004"
+url = "http://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64-disk-kvm.img"
 
 #[[seed]]
-#name = "ubuntu_1910_lamp"
-#seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_1910_lamp.toml"
+#name = "ubuntu_2004_lamp"
+#seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2004_lamp.toml"
