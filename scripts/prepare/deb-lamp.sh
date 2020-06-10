@@ -136,7 +136,7 @@ Alias /_sql /usr/share/phpmyadmin
 </Directory>
 EOS
     [ $? -eq 0 ] || exit $?
-else # apt install was successful    
+else # apt install was successful
     # change to /_sql instead of /phpmyadmin
     sudo sed -i 's|Alias /phpmyadmin|Alias /_sql|' /etc/phpmyadmin/apache.conf || exit $?
     sudo bash -c "cat >> /etc/phpmyadmin/apache.conf" <<- EOS
@@ -148,7 +148,7 @@ EOS
     [ $? -eq 0 ] || exit $?
 
     if [ -d /var/lib/phpmyadmin/tmp/ ]; then
-        sudo chown $_APP_USER:$_APP_USER /usr/share/phpmyadmin/tmp || exit $?
+        sudo chown $_APP_USER:$_APP_USER /var/lib/phpmyadmin/tmp/ || exit $?
     fi
 
     if [ -f /var/lib/phpmyadmin/blowfish_secret.inc.php ]; then
