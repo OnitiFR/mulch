@@ -101,25 +101,13 @@ if [ $? -ne 0 ]; then
     sudo curl -s $url --output /usr/local/lib/pma.tgz || exit $?
     sudo tar xzf /usr/local/lib/pma.tgz -C /usr/share || exit $?
     sudo rm -f /usr/local/lib/pma.tgz
-    sudo rm -rf /usr/share/phpmyadmin/ 
+    sudo rm -rf /usr/share/phpmyadmin/
     sudo mv /usr/share/phpMyAdmin-* /usr/share/phpmyadmin || exit $?
     # rm changelog, readme, etc…
     sudo rm -f /usr/share/phpmyadmin/[ABCDEFGHIJKLMNOPQRSTUVW]*
 
     sudo mkdir /usr/share/phpmyadmin/tmp || exit $?
     sudo chown $_APP_USER:$_APP_USER /usr/share/phpmyadmin/tmp || exit $?
-
-    if [ "$PHPMYADMIN_SSO" != "disable" ]; then
-        sudo bash -c "echo 'Auth failure' > /usr/share/phpmyadmin/auth.html" || exit $?
-
-        sudo bash -c "cat > /usr/share/phpmyadmin/config.inc.php" <<- 'EOS'
-<?php
-$cfg['Servers'][1]['auth_type'] = 'signon';
-$cfg['Servers'][1]['SignonSession'] = 'SignonSession';
-$cfg['Servers'][1]['SignonURL'] = '/_sql/auth.html';
-EOS
-        [ $? -eq 0 ] || exit $?
-    fi
 
     sudo bash -c "cat > /etc/apache2/conf-available/phpmyadmin.conf" <<- EOS
 # phpMyAdmin default Apache configuration
@@ -148,7 +136,7 @@ Alias /_sql /usr/share/phpmyadmin
 </Directory>
 EOS
     [ $? -eq 0 ] || exit $?
-else
+else # apt install was successful    
     # change to /_sql instead of /phpmyadmin
     sudo sed -i 's|Alias /phpmyadmin|Alias /_sql|' /etc/phpmyadmin/apache.conf || exit $?
     sudo bash -c "cat >> /etc/phpmyadmin/apache.conf" <<- EOS
@@ -159,6 +147,14 @@ else
 EOS
     [ $? -eq 0 ] || exit $?
 
+    if [ -d /var/lib/phpmyadmin/tmp/ ]; then
+        sudo chown $_APP_USER:$_APP_USER /usr/share/phpmyadmin/tmp || exit $?
+    fi
+
+    if [ -f /var/lib/phpmyadmin/blowfish_secret.inc.php ]; then
+        sudo chown $_APP_USER:$_APP_USER /var/lib/phpmyadmin/blowfish_secret.inc.php || exit $?
+    fi
+
     # bug: phpMyAdmin < 4.8 + PHP 7.2 = count() error
     # tested targets: Ubuntu 18.04 / 18.10 / 19.04
     # remaining tests: Ubuntu 16.04, Debian 9
@@ -167,6 +163,18 @@ EOS
     fi
 
     sudo ln -s /etc/phpmyadmin/apache.conf /etc/apache2/conf-available/phpmyadmin.conf || exit $?
+fi
+
+if [ "$PHPMYADMIN_SSO" != "disable" ]; then
+    sudo bash -c "echo 'Auth failure' > /usr/share/phpmyadmin/auth.html" || exit $?
+
+    sudo bash -c "cat > /usr/share/phpmyadmin/config.inc.php" <<- 'EOS'
+<?php
+$cfg['Servers'][1]['auth_type'] = 'signon';
+$cfg['Servers'][1]['SignonSession'] = 'SignonSession';
+$cfg['Servers'][1]['SignonURL'] = '/_sql/auth.html';
+EOS
+    [ $? -eq 0 ] || exit $?
 fi
 
 sudo a2enconf phpmyadmin || exit $?
