@@ -12,9 +12,12 @@ html_dir="/home/$_APP_USER/public_html/"
 export DEBIAN_FRONTEND="noninteractive"
 # NB: second line (mysql, curl, …) install phpMyAdmin dependencies
 sudo -E apt-get -y -qq install apache2 php \
-    php-mysql php-curl php-zip php-bz2 php-gd php-mbstring php-xml php-pear php-php-gettext \
+    php-mysql php-curl php-zip php-bz2 php-gd php-mbstring php-xml php-pear \
     php-intl php-bcmath php-imagick \
     mariadb-server pwgen || exit $?
+
+# no more available with Ubuntu 20.04, packaged phpMyAdmin will use motranslator/shapefile instead
+sudo -E apt-get -y -qq install php-php-gettext 2> /dev/null
 
 MYSQL_PASSWORD=$(pwgen -1 16)
 [ $? -eq 0 ] || exit $?
@@ -98,7 +101,7 @@ if [ $? -ne 0 ]; then
     sudo curl -s $url --output /usr/local/lib/pma.tgz || exit $?
     sudo tar xzf /usr/local/lib/pma.tgz -C /usr/share || exit $?
     sudo rm -f /usr/local/lib/pma.tgz
-    sudo rm -rf /usr/share/phpmyadmin/
+    sudo rm -rf /usr/share/phpmyadmin/ 
     sudo mv /usr/share/phpMyAdmin-* /usr/share/phpmyadmin || exit $?
     # rm changelog, readme, etc…
     sudo rm -f /usr/share/phpmyadmin/[ABCDEFGHIJKLMNOPQRSTUVW]*
