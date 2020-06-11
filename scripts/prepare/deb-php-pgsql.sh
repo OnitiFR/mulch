@@ -89,7 +89,7 @@ EOS
 sudo a2enmod rewrite expires || exit $?
 
 # Adminer
-adminer_url="https://github.com/vrana/adminer/releases/download/v4.7.6/adminer-4.7.6.php"
+adminer_url="https://github.com/vrana/adminer/releases/download/v4.7.7/adminer-4.7.7.php"
 sudo mkdir -p /usr/share/adminer || exit $?
 sudo wget -q -O /usr/share/adminer/adminer.php "$adminer_url" || exit $?
 
