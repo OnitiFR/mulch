@@ -4,7 +4,7 @@
   - see if we can debug low-level inter-proxies HTTP2 connections (ex: connection "age")
   - test with HTTP inter-proxies exchanges instead of HTTPS (will probably fallback to HTTP/1.1)
   - get newly implemented SIGQUIT dump during outage (done, front & m0)
-  - look if we see 200 returns on 0 duing outage (OK)
+  - look if we see 200 returns on 0 during outage (OK)
   - test direct child proxy access during outage (OK!)
   - test other child proxy access during outage (OK!)
   - test with newer Go releases (current: 1.10.4) (OK! failure with 1.13.6)
@@ -25,6 +25,7 @@
   - Go changed the way cert are stored?
   - can't reproduce
 - add a SSH keepalive for Run.SSHConn?
+- full async API?
 - write API public documentation
 - continue tests on snapshots (see branch "snapshots")
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
