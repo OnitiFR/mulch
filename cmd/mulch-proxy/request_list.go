@@ -23,7 +23,7 @@ type RequestList struct {
 }
 
 // NewRequestList instances a new RequestList
-// trace=bool will currently completely disable the list
+// trace=false will currently completely disable the list
 func NewRequestList(trace bool) *RequestList {
 	return &RequestList{
 		trace:    trace,
