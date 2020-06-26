@@ -162,7 +162,7 @@ Host *
 		} else {
 			fmt.Printf(`
 Warning: in order to use aliases, you should add the following line
-to your SSH config file '%s':
+*at the top* of your SSH config file '%s':
 ---
 %s
 ---
