@@ -19,6 +19,7 @@
 - proxy / proxy-chain request stats?
 - check domains validity on VM create, PS: domain name validation is HARD :(
 - "hanging" operations (ex: mulch do xyz log + vm rebuild)
+- add comments to backups (and other objects ?)
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - check TLS cert renewal!
   - reported issue: vm is deleted, recreated 3 months later, cert is invalid
