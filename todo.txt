@@ -26,6 +26,7 @@
   - Go changed the way cert are stored?
   - can't reproduce
 - add a SSH keepalive for Run.SSHConn?
+- investigate all the preparePipes.funcX (sometimes ?) found in the stacktrace
 - full async API?
 - write API public documentation
 - continue tests on snapshots (see branch "snapshots")
