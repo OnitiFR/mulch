@@ -26,7 +26,9 @@
   - Go changed the way cert are stored?
   - can't reproduce
 - add a SSH keepalive for Run.SSHConn?
-- investigate all the preparePipes.funcX (sometimes ?) found in the stacktrace
+- mulchd "outage" of 2020-07-22:
+    - investigate all the preparePipes.funcX found in the stacktrace (see m2 log)
+    - check for a possible deadlock / missing timeout in the message hub? (same)
 - full async API?
 - write API public documentation
 - continue tests on snapshots (see branch "snapshots")
