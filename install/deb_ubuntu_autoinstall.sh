@@ -4,7 +4,7 @@
 
 echo "This is a Mulch server install script for Ubuntu."
 echo "It was tested on: (default server install)"
-echo " - Ubuntu 18.04 to 19.04"
+echo " - Ubuntu 18.04 to 20.04"
 echo " - Debian 10"
 echo "It's intended to be used for a quick demo install, since most settings are left to default values."
 echo ""
@@ -39,6 +39,7 @@ sudo -iu mulch go get -u github.com/OnitiFR/mulch/cmd/... || exit $?
 sudo -iu mulch mkdir -p /home/mulch/mulch/etc /home/mulch/mulch/data /home/mulch/mulch/storage || exit $?
 cd /home/mulch/go/src/github.com/OnitiFR/mulch || exit $?
 sudo -iu mulch /home/mulch/go/src/github.com/OnitiFR/mulch/install.sh --etc /home/mulch/mulch/etc/ --data /home/mulch/mulch/data/ --storage /home/mulch/mulch/storage/ || exit $?
+echo "-- OK, let me do most of this setup for you…"
 
 setcap 'cap_net_bind_service=+ep' /home/mulch/go/bin/mulch-proxy || exit $?
 cp mulchd.service mulch-proxy.service /etc/systemd/system/ || exit $?
