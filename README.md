@@ -308,7 +308,7 @@ How do I install the server? (mulchd and mulch-proxy)
 
 ### Requirements:
 
-#### Ubuntu (19.04 / 18.10 / 18.04) / Debian (10)
+#### Ubuntu (19.04 / 18.10 / 18.04 / 20.04) / Debian (10)
 Note : Debian 9 is not supported (libvirt is too old [missing disk aliases])
 ```
 sudo apt install golang-go
