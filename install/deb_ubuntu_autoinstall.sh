@@ -34,6 +34,9 @@ if [ ! -d /home/mulch ]; then
     useradd mulch -s /bin/bash -m -G libvirt || exit $?
 fi
 
+echo "Updating Go ACME client… (needed for Let's Encrypt ACMEv2)"
+go get -u golang.org/x/crypto/acme/autocert || exit $?
+
 echo "Compiling and installing mulch…"
 sudo -iu mulch go get -u github.com/OnitiFR/mulch/cmd/... || exit $?
 sudo -iu mulch mkdir -p /home/mulch/mulch/etc /home/mulch/mulch/data /home/mulch/mulch/storage || exit $?
