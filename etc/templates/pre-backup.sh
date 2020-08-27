@@ -20,7 +20,7 @@ done
 tmpfile=$(mktemp)
 rm "$tmpfile"
 
-# now tries to create a new XFS instead of resizing the the existing
+# now tries to create a new XFS instead of resizing the existing
 # template ext2 FS. It's way faster on large volumes and do not implies
 # big qcow2 files as a result.
 which mkfs.xfs > /dev/null
