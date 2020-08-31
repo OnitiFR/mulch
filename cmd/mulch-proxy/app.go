@@ -150,7 +150,7 @@ func (app *App) initSigQUITHandler() {
 	signal.Notify(c, syscall.SIGQUIT)
 
 	go func() {
-		for _ = range c {
+		for range c {
 			func() { // so we can use defer
 				ts := time.Now().Format("20060102-150405")
 				filename := path.Clean(os.TempDir() + "/" + "mulch-proxy-" + ts + ".dump")
