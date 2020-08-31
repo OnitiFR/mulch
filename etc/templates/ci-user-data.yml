@@ -64,7 +64,7 @@ write_files:
     path: /usr/local/bin/phone_home
 
   - content: |
-      # Created by Mulch as a template, add your own settings if needed.
+      # Created by Mulch, erased on rebuild (see env option in TOML file to add yours)
       export _MULCH_SUPER_USER='$_MULCH_SUPER_USER'
       export _APP_USER='$_APP_USER'
       export _VM_NAME='$_VM_NAME'
@@ -74,6 +74,7 @@ write_files:
       export _KEY_DESC='$_KEY_DESC'
       export _BACKUP='/mnt/backup'
       export _DOMAIN_FIRST='$_DOMAIN_FIRST'
+      export _MULCH_PROXY_IP='$_MULCH_PROXY_IP'
       export _DOMAINS='$_DOMAINS'
       $__EXTRA_ENV
     owner: root:root

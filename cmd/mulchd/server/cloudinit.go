@@ -41,7 +41,9 @@ func cloudInitExtraEnv(envMap map[string]string) string {
 func CloudInitDataGen(vm *VM, vmName *VMName, app *App) (string, string, error) {
 	userDataTemplate := app.Config.GetTemplateFilepath("ci-user-data.yml")
 
-	phURL := "http://" + app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(AppInternalServerPost) + "/phone"
+	mulchIP := app.Libvirt.NetworkXML.IPs[0].Address
+
+	phURL := "http://" + mulchIP + ":" + strconv.Itoa(AppInternalServerPost) + "/phone"
 
 	sshKeyPair := app.SSHPairDB.GetByName(SSHSuperUserPair)
 	if sshKeyPair == nil {
@@ -75,6 +77,7 @@ func CloudInitDataGen(vm *VM, vmName *VMName, app *App) (string, string, error) 
 	userDataVariables["_VM_INIT_DATE"] = vm.InitDate.Format(time.RFC3339)
 	userDataVariables["_DOMAINS"] = strings.Join(domains, ",")
 	userDataVariables["_DOMAIN_FIRST"] = firstDomain
+	userDataVariables["_MULCH_PROXY_IP"] = mulchIP
 	userDataVariables["__EXTRA_ENV"] = cloudInitExtraEnv(vm.Config.Env)
 
 	userData, err := cloudInitUserData(userDataTemplate, userDataVariables)
