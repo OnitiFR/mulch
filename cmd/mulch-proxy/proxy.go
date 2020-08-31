@@ -66,6 +66,8 @@ type errorHandlingRoundTripper struct {
 }
 
 func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	// we may have to clone http.DefaultTransport to adjust settings
+	// t := http.DefaultTransport.(*http.Transport).Clone()
 	tr := http.DefaultTransport
 	res, err := tr.RoundTrip(req)
 	if err != nil {
