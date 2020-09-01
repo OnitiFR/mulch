@@ -215,6 +215,11 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	parts := strings.Split(req.Host, ":")
 	host := strings.ToLower(parts[0])
 
+	if req.Header.Get(WatchDogHeaderName) != "" {
+		res.Write([]byte("OK"))
+		return
+	}
+
 	fromParent := false
 	if proxy.config.ChainMode == ChainModeChild && proxy.config.ChainPSK == req.Header.Get(PSKHeaderName) {
 		fromParent = true

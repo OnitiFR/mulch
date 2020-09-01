@@ -174,3 +174,23 @@ func (ddb *DomainDatabase) GetConflictingDomains(reqDomains []string, childForwa
 	}
 	return conflicts
 }
+
+// GetChildren returns the list of children-proxies URLs
+// This function is only useful for a parent proxy, of course (empty list otherwise)
+func (ddb *DomainDatabase) GetChildren() []string {
+	ddb.mutex.Lock()
+	defer ddb.mutex.Unlock()
+
+	children := make(map[string]bool)
+	for _, domain := range ddb.db {
+		if domain.Chained == true {
+			children[domain.TargetURL] = true
+		}
+	}
+
+	keys := make([]string, 0, len(children))
+	for k := range children {
+		keys = append(keys, k)
+	}
+	return keys
+}

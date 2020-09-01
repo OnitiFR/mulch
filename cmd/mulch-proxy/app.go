@@ -28,6 +28,9 @@ type App struct {
 // PSKHeaderName is the name of HTTP header for the PSK
 const PSKHeaderName = "Mulch-PSK"
 
+// WatchDogHeaderName is used for parent-to-child watchdog requests
+const WatchDogHeaderName = "Mulch-Watchdog"
+
 // NewApp creates a new application
 func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app := &App{
@@ -96,6 +99,10 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 			app.Log.Error("Unable to contact parent proxy. This is a startup safety check.")
 			return nil, err
 		}
+	}
+
+	if app.Config.ChainMode == ChainModeParent {
+		InstallChildrenWatchdog(ddb, app.Log)
 	}
 
 	return app, nil

@@ -1,9 +1,10 @@
 - BUGFIX: investigate the very annoying and rare mulch-proxy children-parent deadlock /!\
   - try to create a repro, see https://github.com/golang/go/issues/36026 for template
   - have a deeper look at net/http/transport.go settings (proxy.go RoundTrip() func)
-    - ResponseHeaderTimeout may help next requests to timeout, but will not kill the underlying HTTP2 connection, I guess (and seems unsupported for HTTP2 :/)
+    - ResponseHeaderTimeout may help next requests to timeout, but will not kill the underlying HTTP2 connection, I guess (and seems unsupported for HTTP2? :/)
   - see if we can debug low-level inter-proxies HTTP2 connections (ex: connection "age")
   - lower IdleTimeout to see if it's of any effect
+  - new: currently testing a dedicated watchdog for this issue, see watchdog.go
 - use of /tmp/mulch-proxy-xxx for dumps is not secure
 - switch default SSH user to app instead of admin (update client sshconfig.go doc)
 - add timeout on VM creation scripts OR at least allow VM deletion
