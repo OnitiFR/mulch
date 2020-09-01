@@ -74,7 +74,7 @@ proxy_chain_parent_url = ""
 # this value afterward
 proxy_chain_child_url = ""
 
-# Pre-Shared Key between children and the parent proxy
+# Pre-Shared Key between children and the parent proxy (min length: 16)
 proxy_chain_psk = ""
 
 # Auto-rebuild will check everyday, at specified time, if any VM need
