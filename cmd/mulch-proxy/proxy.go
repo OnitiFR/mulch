@@ -52,6 +52,7 @@ type ProxyServerParams struct {
 	Log                   *Log
 	RequestList           *RequestList
 	Trace                 bool
+	Debug                 bool
 }
 
 var contextKeyID interface{} = 1
@@ -231,14 +232,17 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	}
 
 	id := atomic.AddUint64(&requestCounter, 1)
-	if proxy.config.Trace {
+
+	if proxy.config.Debug {
 		ctx := req.Context()
 		ctx = context.WithValue(ctx, contextKeyID, id)
 		req = req.WithContext(ctx)
 
 		proxy.RequestList.AddRequest(id, req)
 		defer proxy.RequestList.DeleteRequest(id)
+	}
 
+	if proxy.config.Trace {
 		// User-Agent? Datetime?
 		proxy.Log.Tracef("> {%d} %s %s %t %s %s %s", id, req.RemoteAddr, proto, fromParent, req.Host, req.Method, req.RequestURI)
 	}
@@ -320,7 +324,7 @@ func (proxy *ProxyServer) RefreshReverseProxies() {
 				resp.Header.Set("X-Mulch", domain.VMName)
 			}
 
-			if proxy.config.Trace {
+			if proxy.config.Debug {
 				ctx := resp.Request.Context()
 				proxy.Log.Tracef("< {%d} %d", ctx.Value(contextKeyID), resp.StatusCode)
 			}

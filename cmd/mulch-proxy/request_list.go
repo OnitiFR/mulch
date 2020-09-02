@@ -17,23 +17,23 @@ type Request struct {
 
 // RequestList store requests in thread-safe map
 type RequestList struct {
-	trace    bool
+	enable   bool
 	requests map[uint64]Request
 	mutex    sync.Mutex
 }
 
 // NewRequestList instances a new RequestList
-// trace=false will currently completely disable the list
-func NewRequestList(trace bool) *RequestList {
+// debug=false will currently completely disable the list
+func NewRequestList(enable bool) *RequestList {
 	return &RequestList{
-		trace:    trace,
+		enable:   enable,
 		requests: make(map[uint64]Request),
 	}
 }
 
 // AddRequest to the RequestList
 func (rl *RequestList) AddRequest(id uint64, req *http.Request) {
-	if !rl.trace {
+	if !rl.enable {
 		return
 	}
 
@@ -48,7 +48,7 @@ func (rl *RequestList) AddRequest(id uint64, req *http.Request) {
 
 // DeleteRequest from the RequestList
 func (rl *RequestList) DeleteRequest(id uint64) {
-	if !rl.trace {
+	if !rl.enable {
 		return
 	}
 
@@ -62,8 +62,8 @@ func (rl *RequestList) DeleteRequest(id uint64) {
 func (rl *RequestList) Dump(w io.Writer) {
 	fmt.Fprintf(w, "-- Request Counter: %d\n", atomic.LoadUint64(&requestCounter))
 
-	if !rl.trace {
-		fmt.Fprintf(w, "-- No RequestList (trace not unabled)\n")
+	if !rl.enable {
+		fmt.Fprintf(w, "-- No RequestList (debug not unabled)\n")
 		return
 	}
 

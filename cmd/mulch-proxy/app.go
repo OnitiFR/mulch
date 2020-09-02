@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,6 +24,7 @@ type App struct {
 	Log         *Log
 	ProxyServer *ProxyServer
 	APIServer   *APIServer
+	Rand        *rand.Rand
 }
 
 // PSKHeaderName is the name of HTTP header for the PSK
@@ -32,10 +34,17 @@ const PSKHeaderName = "Mulch-PSK"
 const WatchDogHeaderName = "Mulch-Watchdog"
 
 // NewApp creates a new application
-func NewApp(config *AppConfig, trace bool) (*App, error) {
+func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
+
+	// -debug implies -trace
+	if debug == true && trace == false {
+		trace = true
+	}
+
 	app := &App{
 		Config: config,
 		Log:    NewLog(trace),
+		Rand:   rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 
 	app.Log.Trace("starting application")
@@ -76,8 +85,9 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		ChainPSK:              app.Config.ChainPSK,
 		ChainDomain:           chainDomain,
 		Log:                   app.Log,
-		RequestList:           NewRequestList(trace),
+		RequestList:           NewRequestList(debug),
 		Trace:                 trace,
+		Debug:                 debug,
 	})
 
 	app.ProxyServer.RefreshReverseProxies()
@@ -160,7 +170,8 @@ func (app *App) initSigQUITHandler() {
 		for range c {
 			func() { // so we can use defer
 				ts := time.Now().Format("20060102-150405")
-				filename := path.Clean(os.TempDir() + "/" + "mulch-proxy-" + ts + ".dump")
+				rnd := strconv.Itoa(app.Rand.Int())
+				filename := path.Clean(os.TempDir() + "/" + "mulch-proxy-" + ts + "-" + rnd + ".dump")
 				file, err := os.Create(filename)
 				if err != nil {
 					app.Log.Errorf("unable to create %s: %s", filename, err)
