@@ -151,7 +151,7 @@ func (cm *CertManager) ScheduleSelfCalls() {
 		for {
 			err := cm.selfCall()
 			if err != nil {
-				cm.Log.Warningf("unable to call our own HTTPS domain: %s", err)
+				cm.Log.Warningf("unable to call our own HTTPS domain: %s (mulch-proxy log may contain more details)", err)
 			}
 			time.Sleep(24 * time.Hour)
 		}
