@@ -41,7 +41,7 @@ func watchChild(url string, log *Log) error {
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Trace(err.Error())
+		log.Errorf("watchdog: %s", err.Error())
 		return nil
 	}
 	req.Header.Set(WatchDogHeaderName, "true")
@@ -51,11 +51,12 @@ func watchChild(url string, log *Log) error {
 		Timeout: time.Duration(5 * time.Second),
 	}
 	http1Client.Transport = &http.Transport{
-		TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+		TLSNextProto:      make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+		DisableKeepAlives: true,
 	}
 	response1, err := http1Client.Do(req)
 	if err != nil {
-		log.Trace(err.Error())
+		log.Errorf("watchdog: HTTP1: %s", err.Error())
 		return nil
 	}
 	defer response1.Body.Close()
@@ -63,7 +64,7 @@ func watchChild(url string, log *Log) error {
 	// drain response
 	_, err = ioutil.ReadAll(response1.Body)
 	if err != nil {
-		log.Trace(err.Error())
+		log.Errorf("watchdog: HTTP1 drain: %s", err.Error())
 		return nil
 	}
 
@@ -78,7 +79,7 @@ func watchChild(url string, log *Log) error {
 			// OK, we have a REAL problem with this child, here!
 			return err
 		}
-		log.Trace(err.Error()) // another error
+		log.Errorf("watchdog: HTTP2: %s", err.Error()) // another error
 		return nil
 	}
 	defer response2.Body.Close()
@@ -86,7 +87,7 @@ func watchChild(url string, log *Log) error {
 	// drain response
 	_, err = ioutil.ReadAll(response2.Body)
 	if err != nil {
-		log.Trace(err.Error())
+		log.Errorf("watchdog: HTTP2 drain: %s", err.Error())
 		return nil
 	}
 
@@ -111,6 +112,8 @@ func watchChildren(ddb *DomainDatabase, log *Log) {
 			}
 		}
 	}
+
+	log.Trace("watchdog: end")
 }
 
 // InstallChildrenWatchdog will check HTTP2 links to our children (as a parent proxy) every minute
