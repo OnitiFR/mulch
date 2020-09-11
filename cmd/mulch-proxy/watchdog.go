@@ -1,7 +1,7 @@
 package main
 
 import (
-	"crypto/tls"
+	"errors"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -31,14 +31,57 @@ import (
 	so we have no clean way to kill the faulty HTTP2 link.
 
 	The best (current) way for us to mitigate this situation is to detect
-	this deadlock ("child is responding with HTTP1 but not with HTTP2") and
-	kill the whole proccess. Systemd (or whatever service manager) will instantly
+	this deadlock ("child is responding [TCP] but not with HTTP2") and kill
+	the whole proccess. Systemd (or whatever service manager) will instantly
 	restart the proxy, causing a short downtime every two weeks or so. Better
 	than a full lock of a child :(
 */
 
-func watchChild(url string, log *Log) error {
+// dialTest will attempt a TCP connection to host in the urlIn,
+// with default HTTP/HTTPS port number if not provided in the URL
+// returns nil error if connection was successful
+func dialTest(urlIn string, timeout time.Duration) error {
+	urlObj, err := url.Parse(urlIn)
+	if err != nil {
+		return err
+	}
+	host := ""
+	port := ""
 
+	if urlObj.Port() != "" {
+		// port is explicit
+		host, port, err = net.SplitHostPort(urlObj.Host)
+		if err != nil {
+			return err
+		}
+	} else {
+		host = urlObj.Host
+		port = "80"
+		if urlObj.Scheme == ProtoHTTPS {
+			port = "443"
+		}
+	}
+
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
+	if err != nil {
+		return err
+	}
+	if conn != nil {
+		conn.Close()
+		return nil
+	}
+	return errors.New("no error, but no connection either")
+}
+
+func watchChild(url string, log *Log) error {
+	// check if we get a TCP connection to this child
+	err := dialTest(url, 5*time.Second)
+	if err != nil {
+		log.Errorf("watchdog: child %s seems down (%s)", url, err)
+		return nil
+	}
+
+	// -- child seems up, so let's see we can get an HTTP2 response
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Errorf("watchdog: %s", err.Error())
@@ -46,29 +89,6 @@ func watchChild(url string, log *Log) error {
 	}
 	req.Header.Set(WatchDogHeaderName, "true")
 
-	// -- test child with HTTP1
-	http1Client := &http.Client{
-		Timeout: time.Duration(5 * time.Second),
-	}
-	http1Client.Transport = &http.Transport{
-		TLSNextProto:      make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
-		DisableKeepAlives: true,
-	}
-	response1, err := http1Client.Do(req)
-	if err != nil {
-		log.Errorf("watchdog: HTTP1: %s", err.Error())
-		return nil
-	}
-	defer response1.Body.Close()
-
-	// drain response
-	_, err = ioutil.ReadAll(response1.Body)
-	if err != nil {
-		log.Errorf("watchdog: HTTP1 drain: %s", err.Error())
-		return nil
-	}
-
-	// -- child is OK with HTTP1, so let's see if HTTP2 is also OK
 	http2Client := &http.Client{
 		Timeout: time.Duration(5 * time.Second),
 	}
@@ -79,7 +99,7 @@ func watchChild(url string, log *Log) error {
 			// OK, we have a REAL problem with this child, here!
 			return err
 		}
-		log.Errorf("watchdog: HTTP2: %s", err.Error()) // another error
+		log.Errorf("watchdog: HTTP2: %s (%s)", err.Error(), url) // another error
 		return nil
 	}
 	defer response2.Body.Close()
