@@ -4,7 +4,7 @@
 # From another system, it will backup the VM, download the resulting file
 # and delete the remote backup on the Mulch server.
 
-# This script remove local backups older than 20 days.
+# This script remove local backups older than 10 days.
 
 if [ -z "$2" ]; then
     (>&2 echo "ERROR: give vm-name and destination backup-dir")
