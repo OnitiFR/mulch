@@ -123,7 +123,7 @@ func (message *Message) Print(showTime bool, showTarget bool) error {
 
 	target := ""
 	if showTarget {
-		target = " [" + message.Target + "] "
+		target = "[" + message.Target + "] "
 	}
 
 	fmt.Printf("%s%s%s: %s\n", time, target, mtype, content)
