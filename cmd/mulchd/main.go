@@ -10,7 +10,7 @@ import (
 )
 
 var configPath = flag.String("path", "./etc/", "configuration path")
-var configTrace = flag.Bool("trace", false, "show trace message (debug)")
+var configTrace = flag.Bool("trace", false, "show trace messages (debug)")
 var configVersion = flag.Bool("version", false, "show version")
 
 func main() {
