@@ -8,6 +8,7 @@
 - switch default SSH user to app instead of admin (update client sshconfig.go doc)
 - add timeout on VM creation scripts OR at least allow VM deletion
 - add/check server timeouts when client disapears on do action (ex: kill -9 on "mulch do xx logs")
+- add "variables" to TOML files? (like $author or $USER in VM name or URL, to create "generic" TOML files)
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
 - proxy / proxy-chain request stats?
 - check domains validity on VM create, PS: domain name validation is HARD :(
