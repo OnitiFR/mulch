@@ -24,6 +24,7 @@
 - mulchd "outage" of 2020-07-22:
     - investigate all the preparePipes.funcX found in the stacktrace (see m2 log)
     - check for a possible deadlock / missing timeout in the message hub? (same)
+- still some hanging SSH shown in status (try with a client reboot?)
 - full async API?
 - write API public documentation
 - continue tests on snapshots (see branch "snapshots")
