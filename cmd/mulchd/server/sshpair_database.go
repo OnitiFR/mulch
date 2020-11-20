@@ -136,7 +136,7 @@ func (db *SSHPairDatabase) Count() int {
 	return len(db.db)
 }
 
-// GetPublicKeyAuth return an PublicKey AuthMethod for named key pair
+// GetPublicKeyAuth return a PublicKey AuthMethod for named key pair
 func (db *SSHPairDatabase) GetPublicKeyAuth(name string) (ssh.AuthMethod, error) {
 	sshSuperUserPair := db.GetByName(name)
 	if sshSuperUserPair == nil {

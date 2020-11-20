@@ -181,12 +181,18 @@ func (app *App) initSSHPairDB() error {
 
 	if pairdb.GetByName(SSHSuperUserPair) == nil {
 		app.Log.Info("generating super user SSH key pair")
-		pairdb.AddNew(SSHSuperUserPair)
+		err = pairdb.AddNew(SSHSuperUserPair)
+		if err != nil {
+			return err
+		}
 	}
 
 	if pairdb.GetByName(SSHProxyPair) == nil {
 		app.Log.Info("generating SSH Proxy key pair")
-		pairdb.AddNew(SSHProxyPair)
+		err = pairdb.AddNew(SSHProxyPair)
+		if err != nil {
+			return err
+		}
 	}
 
 	app.SSHPairDB = pairdb

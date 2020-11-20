@@ -2,39 +2,39 @@ package server
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
 
+	"github.com/mikesmitty/edkey"
 	"golang.org/x/crypto/ssh"
 )
 
-// MakeSSHKey generates a OpenSSH formatted key pair
+// MakeSSHKey generates a OpenSSH formatted key pair (ED25519)
 func MakeSSHKey() (private string, public string, err error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("key generation: %s", err)
 	}
 
 	bufPriv := new(bytes.Buffer)
 	privateKeyPEM := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+		Type:  "OPENSSH PRIVATE KEY",
+		Bytes: edkey.MarshalED25519PrivateKey(privateKey),
 	}
 
 	if errE := pem.Encode(bufPriv, privateKeyPEM); err != nil {
-		return "", "", errE
+		return "", "", fmt.Errorf("pem encoding: %s", errE)
 	}
 
 	// generate and write public key
-	pub, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	pub, err := ssh.NewPublicKey(publicKey)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("public key generation: %s", err)
 	}
 	return bufPriv.String(), string(ssh.MarshalAuthorizedKey(pub)), nil
 }

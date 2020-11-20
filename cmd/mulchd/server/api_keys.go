@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -84,7 +85,7 @@ func (db *APIKeyDatabase) load(log *Log) error {
 	dec := json.NewDecoder(f)
 	err = dec.Decode(&db.keys)
 	if err != nil {
-		return err
+		return fmt.Errorf("decoding %s: %s", db.filename, err)
 	}
 
 	log.Infof("found %d API key(s) in database %s", len(db.keys), db.filename)
@@ -93,6 +94,16 @@ func (db *APIKeyDatabase) load(log *Log) error {
 		if len(key.Key) < apiKeyMinLength {
 			log.Warningf("API key '%s' is too short, disabling it (minimum length: %d)", key.Comment, apiKeyMinLength)
 			key.Key = "INVALID"
+			continue
+		}
+		if strings.HasPrefix(key.SSHPublic, "ssh-rsa") {
+			log.Warningf("migrate %s API key from RSA to ED25519", key.Comment)
+			priv, pub, err := MakeSSHKey()
+			if err != nil {
+				return err
+			}
+			key.SSHPrivate = priv
+			key.SSHPublic = pub
 		}
 	}
 
