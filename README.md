@@ -185,7 +185,7 @@ url = "http://cloud-images.ubuntu.com/cosmic/current/cosmic-server-cloudimg-amd6
 
 Mulchd will download images on first boot and each time the image is updated by the vendor.
 
-Mulch requires OpenStack compliant images, and Cloud-Init 0.X is no more supported (see Debian 9 and less are out).
+Mulch requires OpenStack compliant images, and Cloud-Init 0.X is no more supported (so Debian 9 and less are out).
 
 ![mulch seed](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-seed.png)
 
@@ -309,7 +309,6 @@ How do I install the server? (mulchd and mulch-proxy)
 ### Requirements:
 
 #### Ubuntu (19.04 / 18.10 / 18.04 / 20.04) / Debian (10)
-Note : Debian 9 is not supported (libvirt is too old [missing disk aliases])
 ```
 sudo apt install golang-go
 sudo apt install ebtables gawk libxml2-utils libcap2-bin dnsmasq libvirt-daemon-system libvirt-dev
