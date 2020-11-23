@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/pem"
 	"fmt"
@@ -11,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/mikesmitty/edkey"
+	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh"
 )
 
