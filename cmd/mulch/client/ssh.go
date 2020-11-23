@@ -17,8 +17,9 @@ const SSHPort = 8022
 // MulchSSHSubDir is the name of mulch dedicated .ssh sub-directory
 const MulchSSHSubDir = "mulch/"
 
-// SSHKeyPrefix is the prefix for SSH keys
-const SSHKeyPrefix = "id_rsa_"
+// SSHKeyPrefix is the prefix for SSH keys (was 'id_rsa_' but we
+// switched to ed25519, so let's use a generic name)
+const SSHKeyPrefix = "id_"
 
 // GetSSHPath returns the path of a file in the user SSH config path
 func GetSSHPath(file string) string {
