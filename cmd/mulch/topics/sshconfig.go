@@ -114,6 +114,12 @@ func sshConfigCmdGenerate(conf *sshConfigCmdDataStruct) error {
 
 Include mulch/aliases_*.conf
 
+# Insert your usual hosts here:
+# Host foobar
+#	HostName foo.bar.tld
+#	User foo
+#	IdentityFile /home/foo/.ssh/id_foo
+
 # do not spread our ssh keys to other hosts
 Host *
     IdentitiesOnly yes
