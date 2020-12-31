@@ -43,7 +43,7 @@ const (
 	SeedRefreshIfNeeded = false
 )
 
-// NewSeeder instanciates a new VMDatabase
+// NewSeeder instanciates a new SeedDatabase
 func NewSeeder(filename string, app *App) (*SeedDatabase, error) {
 	db := &SeedDatabase{
 		app:      app,
