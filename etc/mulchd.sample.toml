@@ -86,11 +86,13 @@ auto_rebuild_time = "23:30"
 name = "debian_10"
 # the generic image was removed by Debian, let's use Oniti service to get the latest URL
 #url = "http://cdimage.debian.org/cdimage/openstack/current-10/debian-10-openstack-amd64.qcow2"
-url = "https://files.oniti.fr/seeds/debian_10/amd64"
+url = "https://files.oniti.fr/seeds/debian/10/amd64"
 
 [[seed]]
 name = "centos_7"
-url = "http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
+# image are now "versioned" by CentOS, let's use Oniti service to get the lastest URL
+#url = "http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
+url = "https://files.oniti.fr/seeds/centos/7/x86_64"
 
 [[seed]]
 name = "ubuntu_1804"
