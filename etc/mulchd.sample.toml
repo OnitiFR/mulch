@@ -84,9 +84,9 @@ auto_rebuild_time = "23:30"
 # Sample seeds
 [[seed]]
 name = "debian_10"
-# debian remove the generic image, let's use Oniti service to get the latest URL
+# the generic image was removed by Debian, let's use Oniti service to get the latest URL
 #url = "http://cdimage.debian.org/cdimage/openstack/current-10/debian-10-openstack-amd64.qcow2"
-url = "https://files.oniti.fr/seeds/debian_10"
+url = "https://files.oniti.fr/seeds/debian_10/amd64"
 
 [[seed]]
 name = "centos_7"
