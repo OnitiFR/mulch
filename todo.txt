@@ -1,11 +1,7 @@
 - migrate old guest keys from RSA? On rebuild? At least print a warning at startup if mulch_super_user is RSA?
-- BUGFIX: investigate the very annoying and rare mulch-proxy children-parent deadlock /!\
-  - try to create a repro, see https://github.com/golang/go/issues/36026 for template
-  - have a deeper look at net/http/transport.go settings (proxy.go RoundTrip() func)
-    - ResponseHeaderTimeout may help next requests to timeout, but will not kill the underlying HTTP2 connection, I guess (and seems unsupported for HTTP2? :/)
-  - see if we can debug low-level inter-proxies HTTP2 connections (ex: connection "age")
-  - lower IdleTimeout to see if it's of any effect
+- BUG: very annoying and rare mulch-proxy children-parent deadlock /!\
   - new: currently testing a dedicated watchdog for this issue, see watchdog.go
+  - try to create a repro, see https://github.com/golang/go/issues/36026 for template
 - switch default SSH user to app instead of admin (update client sshconfig.go doc)
 - add timeout on VM creation scripts OR at least allow VM deletion
 - add/check server timeouts when client disapears on do action (ex: kill -9 on "mulch do xx logs")
@@ -37,8 +33,8 @@
 - VM tags
 - have a look at ansible? (for sample scripts)
 - remove the need to supply the VM name for redefine command?
-  - keep: sanity check for a dangerous op, but looks confusing to the user
-  - remove: change controller logic
+  - pro-keep: sanity check for a dangerous op, but looks confusing to the user
+  - con-remove: change controller logic
 - shortcut for "do action" (ex: mulch open xyz) with completion ?
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
 - flag for compression / no compression on "vm backup"
