@@ -1,5 +1,4 @@
 - migrate old guest keys from RSA? On rebuild? At least print a warning at startup if mulch_super_user is RSA?
-- add image date to "seed status" command
 - BUGFIX: investigate the very annoying and rare mulch-proxy children-parent deadlock /!\
   - try to create a repro, see https://github.com/golang/go/issues/36026 for template
   - have a deeper look at net/http/transport.go settings (proxy.go RoundTrip() func)

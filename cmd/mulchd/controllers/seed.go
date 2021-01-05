@@ -66,14 +66,15 @@ func GetSeedStatusController(req *server.Request) {
 	}
 
 	data := &common.APISeedStatus{
-		Name:       seedName,
-		File:       seed.GetVolumeName(),
-		Ready:      seed.Ready,
-		URL:        seed.URL,
-		Seeder:     seed.Seeder,
-		Size:       seed.Size,
-		Status:     seed.Status,
-		StatusTime: seed.StatusTime,
+		Name:         seedName,
+		File:         seed.GetVolumeName(),
+		Ready:        seed.Ready,
+		URL:          seed.URL,
+		Seeder:       seed.Seeder,
+		Size:         seed.Size,
+		Status:       seed.Status,
+		StatusTime:   seed.StatusTime,
+		LastModified: seed.LastModified,
 	}
 
 	req.Response.Header().Set("Content-Type", "application/json")
