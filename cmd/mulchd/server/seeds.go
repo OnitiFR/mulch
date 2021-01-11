@@ -451,7 +451,7 @@ func (db *SeedDatabase) seedDownload(seed *Seed, tmpPath string) (string, error)
 
 	total, _ := strconv.Atoi(resp.Header.Get("Content-Length"))
 	if total == 0 {
-		return "", errors.New("image size is 0")
+		return "", errors.New("image size is 0, check URL")
 	}
 
 	seed.Size = uint64(total)
