@@ -179,8 +179,9 @@ func (app *App) initSSHPairDB() error {
 		return err
 	}
 
+	SSHSuperUserPair := app.Config.MulchSuperUserSSHKey
 	if pairdb.GetByName(SSHSuperUserPair) == nil {
-		app.Log.Info("generating super user SSH key pair")
+		app.Log.Infof("generating super user SSH key pair '%s'", SSHSuperUserPair)
 		err = pairdb.AddNew(SSHSuperUserPair)
 		if err != nil {
 			return err
@@ -285,6 +286,9 @@ func (app *App) initVMDB() error {
 					}
 
 				}
+				if vm.MulchSuperUserSSHKey == "" {
+					vm.MulchSuperUserSSHKey = app.Config.MulchSuperUserSSHKey
+				}
 
 				// + "rebuild" parts of the VM in the DB
 				vm.App = app
@@ -293,6 +297,7 @@ func (app *App) initVMDB() error {
 		}
 	}
 
+	app.VMDB.Update() // save anything that happend during the previous loop
 	app.Log.Infof("found %d VM(s) in database %s", app.VMDB.Count(), dbPath)
 
 	// detect missing entries from DB?

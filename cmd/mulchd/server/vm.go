@@ -58,19 +58,20 @@ const BackupBlankRestore = "-"
 
 // VM defines a virtual machine ("domain")
 type VM struct {
-	LibvirtUUID         string
-	SecretUUID          string
-	App                 *App
-	Config              *VMConfig
-	AuthorKey           string
-	InitDate            time.Time
-	LastIP              string
-	Locked              bool
-	WIP                 VMOperation
-	LastRebuildDuration time.Duration
-	LastRebuildDowntime time.Duration
-	AssignedMAC         string
-	AssignedIPv4        string
+	App                  *App `json:"-"`
+	LibvirtUUID          string
+	SecretUUID           string
+	Config               *VMConfig
+	AuthorKey            string
+	MulchSuperUserSSHKey string
+	InitDate             time.Time
+	LastIP               string
+	Locked               bool
+	WIP                  VMOperation
+	LastRebuildDuration  time.Duration
+	LastRebuildDowntime  time.Duration
+	AssignedMAC          string
+	AssignedIPv4         string
 }
 
 // SetOperation change VM WIP
@@ -98,13 +99,14 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	}
 
 	vm := &VM{
-		App:        app,
-		SecretUUID: secretUUID.String(),
-		Config:     vmConfig, // copy()? (deep)
-		AuthorKey:  authorKey,
-		InitDate:   time.Now(),
-		Locked:     false,
-		WIP:        VMOperationNone,
+		App:                  app,
+		SecretUUID:           secretUUID.String(),
+		Config:               vmConfig, // copy()? (deep)
+		AuthorKey:            authorKey,
+		MulchSuperUserSSHKey: app.Config.MulchSuperUserSSHKey,
+		InitDate:             time.Now(),
+		Locked:               false,
+		WIP:                  VMOperationNone,
 	}
 
 	conn, err := app.Libvirt.GetConnection()
@@ -164,7 +166,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		}
 	}
 
-	SSHSuperUserAuth, err := app.SSHPairDB.GetPublicKeyAuth(SSHSuperUserPair)
+	SSHSuperUserAuth, err := app.SSHPairDB.GetPublicKeyAuth(vm.MulchSuperUserSSHKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -945,7 +947,7 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 		return "", fmt.Errorf("a backup with the same name already exists (%s)", volName)
 	}
 
-	SSHSuperUserAuth, err := app.SSHPairDB.GetPublicKeyAuth(SSHSuperUserPair)
+	SSHSuperUserAuth, err := app.SSHPairDB.GetPublicKeyAuth(vm.MulchSuperUserSSHKey)
 	if err != nil {
 		return "", err
 	}
@@ -1154,7 +1156,7 @@ func VMRestoreNoChecks(vm *VM, vmName *VMName, backup *Backup, app *App, log *Lo
 	}
 	defer post.Close()
 
-	SSHSuperUserAuth, err := app.SSHPairDB.GetPublicKeyAuth(SSHSuperUserPair)
+	SSHSuperUserAuth, err := app.SSHPairDB.GetPublicKeyAuth(vm.MulchSuperUserSSHKey)
 	if err != nil {
 		return err
 	}

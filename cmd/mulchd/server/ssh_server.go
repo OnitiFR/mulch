@@ -33,11 +33,6 @@ func NewSSHProxyServer(app *App) error {
 		return err
 	}
 
-	destAuth, err := app.SSHPairDB.GetPublicKeyAuth(SSHSuperUserPair)
-	if err != nil {
-		return err
-	}
-
 	app.sshClients = make(map[net.Addr]*sshServerClient)
 
 	config := &ssh.ServerConfig{
@@ -121,6 +116,11 @@ func NewSSHProxyServer(app *App) error {
 				if errG != nil {
 					return nil, errG
 				}
+			}
+
+			destAuth, errP := app.SSHPairDB.GetPublicKeyAuth(vm.MulchSuperUserSSHKey)
+			if errP != nil {
+				return nil, errP
 			}
 
 			client.vm = vm

@@ -516,7 +516,7 @@ func ExecScriptVM(req *server.Request, vm *server.VM, vmName *server.VMName) err
 
 	as := req.HTTP.FormValue("as")
 
-	SSHSuperUserAuth, err := req.App.SSHPairDB.GetPublicKeyAuth(server.SSHSuperUserPair)
+	SSHSuperUserAuth, err := req.App.SSHPairDB.GetPublicKeyAuth(vm.MulchSuperUserSSHKey)
 	if err != nil {
 		return err
 	}
@@ -571,7 +571,7 @@ func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error
 	}
 	defer stream.Close()
 
-	SSHSuperUserAuth, err := req.App.SSHPairDB.GetPublicKeyAuth(server.SSHSuperUserPair)
+	SSHSuperUserAuth, err := req.App.SSHPairDB.GetPublicKeyAuth(vm.MulchSuperUserSSHKey)
 	if err != nil {
 		return err
 	}

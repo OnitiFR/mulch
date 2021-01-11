@@ -45,7 +45,7 @@ func CloudInitDataGen(vm *VM, vmName *VMName, app *App) (string, string, error) 
 
 	phURL := "http://" + mulchIP + ":" + strconv.Itoa(AppInternalServerPost) + "/phone"
 
-	sshKeyPair := app.SSHPairDB.GetByName(SSHSuperUserPair)
+	sshKeyPair := app.SSHPairDB.GetByName(vm.MulchSuperUserSSHKey)
 	if sshKeyPair == nil {
 		return "", "", errors.New("can't find SSH super user key pair")
 	}

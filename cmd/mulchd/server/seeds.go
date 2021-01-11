@@ -276,7 +276,7 @@ func (db *SeedDatabase) RefreshSeeder(seed *Seed, force bool) error {
 	log.Successf("VM %s created successfully (%s)", vmName, after.Sub(before))
 
 	// run post-seeder
-	SSHSuperUserAuth, err := db.app.SSHPairDB.GetPublicKeyAuth(SSHSuperUserPair)
+	SSHSuperUserAuth, err := db.app.SSHPairDB.GetPublicKeyAuth(vm.MulchSuperUserSSHKey)
 	if err != nil {
 		return err
 	}

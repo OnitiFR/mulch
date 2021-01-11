@@ -11,8 +11,7 @@ import (
 
 // Mulchd SSH key pairs (generated during launch if needed)
 const (
-	SSHSuperUserPair = "mulch_super_user"
-	SSHProxyPair     = "mulch_ssh_proxy"
+	SSHProxyPair = "mulch_ssh_proxy"
 )
 
 // SSHPair describes an OpenSSH formatted key pair

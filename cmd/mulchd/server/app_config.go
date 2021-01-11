@@ -62,6 +62,9 @@ type AppConfig struct {
 	// User (sudoer) created by Mulch in VMs
 	MulchSuperUser string
 
+	// Name of the SSH key in SSHPairDatabase for this sudoer
+	MulchSuperUserSSHKey string
+
 	// Everyday VM auto-rebuild time ("HH:MM")
 	AutoRebuildTime string
 
@@ -93,6 +96,7 @@ type tomlAppConfig struct {
 	ProxyChainChildURL    string `toml:"proxy_chain_child_url"`
 	ProxyChainPSK         string `toml:"proxy_chain_psk"`
 	MulchSuperUser        string `toml:"mulch_super_user"`
+	MulchSuperUserSSHKey  string `toml:"mulch_super_user_ssh_key"`
 	AutoRebuildTime       string `toml:"auto_rebuild_time"`
 	Seed                  []tomlConfigSeed
 }
@@ -125,6 +129,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		ProxyListenSSH:        ":8022",
 		ProxySSHExtraKeysFile: "",
 		MulchSuperUser:        "admin",
+		MulchSuperUserSSHKey:  "mulch_super_user",
 		AutoRebuildTime:       "23:30",
 	}
 
@@ -167,6 +172,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	appConfig.TempPath = tConfig.TempPath
 	appConfig.VMPrefix = tConfig.VMPrefix
 	appConfig.MulchSuperUser = tConfig.MulchSuperUser
+	appConfig.MulchSuperUserSSHKey = tConfig.MulchSuperUserSSHKey
 
 	appConfig.ProxyListenSSH = tConfig.ProxyListenSSH
 	appConfig.ProxySSHExtraKeysFile = tConfig.ProxySSHExtraKeysFile
