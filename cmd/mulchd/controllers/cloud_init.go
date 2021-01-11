@@ -40,6 +40,8 @@ func CloudInitController(req *server.Request) {
 		req.Println(metaData)
 	case "user-data":
 		req.Println(userData)
+	case "vendor-data":
+		req.Println("") // nothing here (yet?), everything is sent as user-data
 	default:
 		errMsg := "invalid requested filename"
 		log.Error(errMsg)
