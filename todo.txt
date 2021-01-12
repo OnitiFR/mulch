@@ -1,5 +1,10 @@
+- VM "groups" + internal hostnames
+  - switch to clean-traffic-gateway as a default (see also new "isolated" network setting)
+  - dynamic nwfilter with all IPs of the group?
+  - see this? <dns><host ip='10.104.10.11'><hostname>myvm.mulch</hostname></host></dns>
 - BUG: very annoying and rare mulch-proxy children-parent deadlock /!\
   - new: currently testing a dedicated watchdog for this issue, see watchdog.go
+  - was the issue specific to our system?! Nothing since months, now (with new system)
   - try to create a repro, see https://github.com/golang/go/issues/36026 for template
 - switch default SSH user to app instead of admin (update client sshconfig.go doc)
 - add timeout on VM creation scripts OR at least allow VM deletion
@@ -21,6 +26,9 @@
     - investigate all the preparePipes.funcX found in the stacktrace (see m2 log)
     - check for a possible deadlock / missing timeout in the message hub? (same)
 - still some hanging SSH shown in status (try with a client reboot?)
+- VM tags
+- flag for compression / no compression on "vm backup"
+
 - full async API?
 - write API public documentation
 - continue tests on snapshots (see branch "snapshots")
@@ -29,14 +37,12 @@
 - libvirtd watchdog + alert (ex: timeout in VMStateDatabase?)
 - clean VM XML template (ex: no display device [serial console])
 - create a nice and shiny website for Mulch project
-- VM tags
 - have a look at ansible? (for sample scripts)
 - remove the need to supply the VM name for redefine command?
   - pro-keep: sanity check for a dangerous op, but looks confusing to the user
   - con-remove: change controller logic
 - shortcut for "do action" (ex: mulch open xyz) with completion?
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
-- flag for compression / no compression on "vm backup"
 - rights / limited access (warning: logs may expose sensitive data)
 - check for missing response.Body.Close() (or things like that)
 - check for io.Reader bad usages ("they must record the number of bytes read into the buffer, reslice the buffer, process that data, and only then, consult the error." https://dave.cheney.net/2019/09/05/dont-force-allocations-on-the-callers-of-your-api)
