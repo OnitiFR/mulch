@@ -1,7 +1,8 @@
 - VM "groups" + internal hostnames
   - switch to clean-traffic-gateway as a default (see also new "isolated" network setting)
-  - dynamic nwfilter with all IPs of the group?
-  - see this? <dns><host ip='10.104.10.11'><hostname>myvm.mulch</hostname></host></dns>
+  - a) dynamic nwfilter with all IPs of the group?
+    - see this? <dns><host ip='10.104.10.11'><hostname>myvm.mulch</hostname></host></dns>
+  - b) TCP port proxy?
 - BUG: very annoying and rare mulch-proxy children-parent deadlock /!\
   - new: currently testing a dedicated watchdog for this issue, see watchdog.go
   - was the issue specific to our system?! Nothing since months, now (with new system)
