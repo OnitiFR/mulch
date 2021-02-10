@@ -95,6 +95,7 @@
       <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
       <filterref filter='mulch-filter'>
         <parameter name='IP' value='0.0.0.0'/>
+        <parameter name='GATEWAY_MAC' value='00:00:00:00:00:00'/>
       </filterref>
     </interface>
     <serial type='pty'>

@@ -281,16 +281,24 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 			if intf.FilterRef.Filter != AppNWFilter {
 				return nil, nil, fmt.Errorf("vm xml file: need filterref '%s'", AppNWFilter)
 			}
-			foundParam := 0
+			foundParamIP := 0
+			foundParamGateway := 0
 			for index, param := range intf.FilterRef.Parameters {
+				// Parameters are not pointer, we need to use the index to modify values
 				if param.Name == "IP" {
-					// Parameters are not pointer, we need to use the index to modify values
 					intf.FilterRef.Parameters[index].Value = vm.AssignedIPv4
-					foundParam++
+					foundParamIP++
+				}
+				if param.Name == "GATEWAY_MAC" {
+					intf.FilterRef.Parameters[index].Value = app.Libvirt.NetworkXML.MAC.Address
+					foundParamGateway++
 				}
 			}
-			if foundParam != 1 {
-				return nil, nil, fmt.Errorf("vm xml file: found %d IP parameter(s) for %s filter, exactly one is needed", foundParam, AppNWFilter)
+			if foundParamIP != 1 {
+				return nil, nil, fmt.Errorf("vm xml file: found %d IP parameter(s) for %s filter, exactly one is needed", foundParamIP, AppNWFilter)
+			}
+			if foundParamGateway != 1 {
+				return nil, nil, fmt.Errorf("vm xml file: found %d GATEWAY_MAC parameter(s) for %s filter, exactly one is needed", foundParamGateway, AppNWFilter)
 			}
 			foundInterfaces++
 		}

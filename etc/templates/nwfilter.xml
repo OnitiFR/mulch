@@ -9,6 +9,11 @@
     <ip protocol='tcp' dstportstart='25'/>
   </rule>
 
+  <!-- allow DHCP requests (denied by clean-traffic-gateway)-->
+  <rule action='accept' direction='out' priority='500'>
+    <ip protocol='udp' dstportstart='67'/>
+  </rule>
+
   <!-- this filter will use our own $IP parameter -->
-  <filterref filter='clean-traffic'/>
+  <filterref filter='clean-traffic-gateway'/>
 </filter>
