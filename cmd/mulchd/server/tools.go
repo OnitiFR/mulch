@@ -9,9 +9,15 @@ import (
 	"regexp"
 )
 
-// IsValidName returns true is argument use only allowed chars for a name
+// IsValidName returns true if argument use only allowed chars for a name
 func IsValidName(token string) bool {
 	match, _ := regexp.MatchString("^[A-Za-z0-9_]*$", token)
+	return match
+}
+
+// IsValidGroupName returns true if group is a valid group name (@ + isValidName)
+func IsValidGroupName(group string) bool {
+	match, _ := regexp.MatchString("^@[A-Za-z0-9_]*$", group)
 	return match
 }
 

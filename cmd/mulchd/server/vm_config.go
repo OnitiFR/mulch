@@ -36,6 +36,7 @@ type VMConfig struct {
 	CPUCount       int
 	Domains        []*common.Domain
 	Env            map[string]string
+	Ports          []*VMPort
 	BackupDiskSize uint64
 	BackupCompress bool
 	RestoreBackup  string
@@ -78,6 +79,7 @@ type tomlVMConfig struct {
 	RedirectToHTTPS bool `toml:"redirect_to_https"`
 	Redirects       [][]string
 	Env             [][]string
+	Ports           []string
 	BackupDiskSize  datasize.ByteSize `toml:"backup_disk_size"`
 	BackupCompress  bool              `toml:"backup_compress"`
 	RestoreBackup   string            `toml:"restore_backup"`
@@ -327,7 +329,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 		vmConfig.Domains = append(vmConfig.Domains, &domain)
 	}
 
-	// check for ducplicated domain
+	// check for duplicated domain
 	domainMap := make(map[string]bool)
 	for _, domain := range vmConfig.Domains {
 		_, exist := domainMap[domain.Name]
@@ -366,8 +368,13 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 		vmConfig.Env[key] = val
 	}
 
+	vmConfig.Ports, err = NewVMPortArray(tConfig.Ports)
+	if err != nil {
+		return nil, err
+	}
+
 	if tConfig.BackupDiskSize < 32*datasize.MB {
-		return nil, fmt.Errorf("looks like a too small backup disk (%s)", tConfig.BackupDiskSize)
+		return nil, fmt.Errorf("looks like a too small backup disk (%s, min 32MB)", tConfig.BackupDiskSize)
 	}
 	vmConfig.BackupDiskSize = tConfig.BackupDiskSize.Bytes()
 	vmConfig.BackupCompress = tConfig.BackupCompress

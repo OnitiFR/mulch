@@ -38,6 +38,26 @@ redirects = [
     ["old.test1.localhost", "test1.localhost", "301"], # default HTTP redirect is 302
 ]
 
+# Allow communications **between VMs** of the same @group using a TCP-proxy
+# Notes:
+#   - only TCP is supported currently
+#   - no need to declare groups
+#   - you can import a non-existing (yet!) port (with a warning)
+ports = [
+    # Export a port:
+    #   any VMs can then connect to my PgSQL server using "5432/tcp<-@mygroup"
+    "5432/tcp->@mygroup",
+
+    # Access an exported port:
+    #   you can connect to the Redis server of another VM using:
+    #   $_MULCH_PROXY_IP for the host
+    #   $_PORT1 for the port (since it's the first "<-" in the list)
+    "6379/tcp<-@mygroup",
+
+    # Another example with rsync, connect to $_MULCH_PROXY_IP:$_PORT2
+    "873/tcp<-@mygroup",
+]
+
 backup_disk_size = "2G"
 
 # backup speed vs back size (it depends a lot on backup content)

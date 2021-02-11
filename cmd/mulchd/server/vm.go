@@ -153,6 +153,10 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		if err != nil {
 			return nil, nil, err
 		}
+		err = CheckPortsConflicts(app.VMDB, vmConfig.Ports, vmName.Name, log)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	// check if backup exists (if a restore was requested)

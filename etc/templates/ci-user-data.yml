@@ -75,6 +75,11 @@ write_files:
       export _BACKUP='/mnt/backup'
       export _DOMAIN_FIRST='$_DOMAIN_FIRST'
       export _MULCH_PROXY_IP='$_MULCH_PROXY_IP'
+      export _PORT1=9001
+      export _PORT2=9002
+      export _PORT3=9003
+      export _PORT4=9004
+      export _PORT5=9005
       export _DOMAINS='$_DOMAINS'
       $__EXTRA_ENV
     owner: root:root

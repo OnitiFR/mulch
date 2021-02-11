@@ -796,6 +796,10 @@ func RedefineVM(req *server.Request, vm *server.VM, active bool) error {
 		if err != nil {
 			return err
 		}
+		err = server.CheckPortsConflicts(req.App.VMDB, conf.Ports, conf.Name, req.Stream)
+		if err != nil {
+			return err
+		}
 	}
 
 	// change author

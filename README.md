@@ -263,6 +263,29 @@ proxy_chain_psk = "MySecretPreShareKey123"
 
 And that's it.
 
+#### Inter-VM communication
+
+By default, no traffic is allowed between VMs. You can choose to export a port from a VM to group.
+
+Any other VM can then import the port from the group, and connect to this port (using an internal TCP-proxy)
+
+To export a PostgreSQL server, use this in the VM TOML file:
+```toml
+ports = [
+    "5432/tcp->@my_project",
+]
+```
+
+Then, to import this port from another VM:
+```toml
+ports = [
+    "5432/tcp<-@my_project",
+]
+```
+Then, connect to `$_MULCH_PROXY_IP:$_PORT1` (because it's the first "<-" in the list).
+
+Ports are dynamic, they're affected immediately by commands like `vm redefine` and `vm active`, no rebuild is needed. See sample TOML file for more informations.
+
 #### More…
 You can lock a VM, so no "big" operation, like delete or rebuild can be done until the VM
 is unlocked. Useful for precious VMs.

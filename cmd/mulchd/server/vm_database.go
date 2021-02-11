@@ -225,6 +225,10 @@ func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 		if err != nil {
 			return err
 		}
+		err = CheckPortsConflicts(vmdb, vm.Config.Ports, name.Name, nil)
+		if err != nil {
+			return err
+		}
 	}
 
 	vmdb.mutex.Lock()
@@ -509,6 +513,10 @@ func (vmdb *VMDatabase) SetActiveRevision(name string, revision int) error {
 			return err
 		}
 		err = CheckDomainsConflicts(vmdb, vm.Config.Domains, name, vmdb.config)
+		if err != nil {
+			return err
+		}
+		err = CheckPortsConflicts(vmdb, vm.Config.Ports, name, nil)
 		if err != nil {
 			return err
 		}
