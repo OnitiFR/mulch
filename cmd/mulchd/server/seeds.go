@@ -298,7 +298,7 @@ func (db *SeedDatabase) RefreshSeeder(seed *Seed, force bool) error {
 			Log: log,
 		},
 		Tasks: []*RunTask{
-			&RunTask{
+			{
 				ScriptName:   "post-seeder.sh",
 				ScriptReader: post,
 				As:           db.app.Config.MulchSuperUser,

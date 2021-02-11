@@ -532,7 +532,7 @@ func ExecScriptVM(req *server.Request, vm *server.VM, vmName *server.VMName) err
 			Log: req.Stream,
 		},
 		Tasks: []*server.RunTask{
-			&server.RunTask{
+			{
 				ScriptName:   header.Filename,
 				ScriptReader: script,
 				As:           as,
@@ -590,7 +590,7 @@ func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error
 			Log: req.Stream,
 		},
 		Tasks: []*server.RunTask{
-			&server.RunTask{
+			{
 				ScriptName:   path.Base(action.ScriptURL),
 				ScriptReader: stream,
 				As:           action.User,
