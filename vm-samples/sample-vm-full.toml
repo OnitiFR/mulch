@@ -28,11 +28,6 @@ env = [
     ["MULCH_HTTP_BASIC_AUTH", "mulch:secret"],
 ]
 
-backup_disk_size = "2G"
-
-# backup speed vs back size (it depends a lot on backup content)
-backup_compress = true
-
 # DNS domains
 # 'test1.localhost->1234' means that 'test1.localhost' HTTP requests
 # are going to be proxied to VM's 1234 port. Default is 80.
@@ -42,6 +37,11 @@ redirects = [
     ["www.test1.localhost", "test1.localhost"],
     ["old.test1.localhost", "test1.localhost", "301"], # default HTTP redirect is 302
 ]
+
+backup_disk_size = "2G"
+
+# backup speed vs back size (it depends a lot on backup content)
+backup_compress = true
 
 # Auto-rebuild this VM every week, possible values: daily/weekly/monthly
 # See also auto_rebuild_time global setting.
