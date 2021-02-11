@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"sync"
@@ -32,22 +33,24 @@ type VMDatabaseEntry struct {
 type VMDatabase struct {
 	filename       string
 	domainFilename string
+	portFilename   string
 	db             map[string]*VMDatabaseEntry
 	maternityDB    map[string]*VMDatabaseEntry
 	mutex          sync.Mutex
 	onUpdate       updateCallback
-	config         *AppConfig
+	app            *App
 }
 
 // NewVMDatabase instanciates a new VMDatabase
-func NewVMDatabase(filename string, domainFilename string, onUpdate updateCallback, config *AppConfig) (*VMDatabase, error) {
+func NewVMDatabase(filename string, domainFilename string, portFilename string, onUpdate updateCallback, app *App) (*VMDatabase, error) {
 	vmdb := &VMDatabase{
 		filename:       filename,
 		domainFilename: domainFilename,
+		portFilename:   portFilename,
 		db:             make(map[string]*VMDatabaseEntry),
 		maternityDB:    make(map[string]*VMDatabaseEntry),
 		onUpdate:       onUpdate,
-		config:         config,
+		app:            app,
 	}
 
 	// if the file exists, load it
@@ -107,6 +110,89 @@ func (vmdb *VMDatabase) genDomainsDB() error {
 	return nil
 }
 
+// build port database for the TCP proxy
+func (vmdb *VMDatabase) genPortsDB() error {
+	var vmList []*VM
+	exportedPortMap := make(map[string]*VM)
+
+	for _, entry := range vmdb.maternityDB {
+		vmList = append(vmList, entry.VM)
+	}
+	for _, entry := range vmdb.db {
+		// we currently allow an inactive VM to connect to other ports
+		// (since we allow it during its construction)
+		vmList = append(vmList, entry.VM)
+	}
+
+	// build a map of all exported ports
+	for _, vm := range vmList {
+		for _, p := range vm.Config.Ports {
+			if p.Direction == VMPortDirectionExport {
+				exportedPortMap[p.String()] = vm
+			}
+		}
+	}
+
+	listeners := make(common.TCPPortListeners)
+	gateway := vmdb.app.Libvirt.NetworkXML.IPs[0].Address
+
+	for _, vm := range vmList {
+		for _, p := range vm.Config.Ports {
+			if p.Protocol != VMPortProtocolTCP {
+				return fmt.Errorf("unsupported protocol '%s'", p.String())
+			}
+
+			if p.Direction == VMPortDirectionImport {
+				// who exports this port?
+				exportedPort := *p
+				exportedPort.Direction = VMPortDirectionExport
+				exportingVM, found := exportedPortMap[exportedPort.String()]
+				if !found {
+					vmdb.app.Log.Tracef("unable to found port '%s' for VM '%s'", exportedPort.String(), vm.Config.Name)
+					continue
+				}
+
+				// add to the correct listener
+				listenPort := VMPortBaseForward + uint16(p.Index)
+				listener, exists := listeners[listenPort]
+				if !exists {
+					listenStr := fmt.Sprintf("%s:%d", gateway, listenPort)
+					listenAddr, err := net.ResolveTCPAddr("tcp", listenStr)
+					if err != nil {
+						return err
+					}
+					listener = &common.TCPPortListener{
+						ListenAddr: listenAddr,
+						Forwards:   make(map[string]*net.TCPAddr),
+					}
+					listeners[listenPort] = listener
+				}
+
+				forwardStr := fmt.Sprintf("%s:%d", exportingVM.AssignedIPv4, p.Port)
+				forwardAddr, err := net.ResolveTCPAddr("tcp", forwardStr)
+				if err != nil {
+					return err
+				}
+				listener.Forwards[vm.AssignedIPv4] = forwardAddr
+			}
+		}
+	}
+
+	f, err := os.OpenFile(vmdb.portFilename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	enc := json.NewEncoder(f)
+	err = enc.Encode(&listeners)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // This is done internaly, because it must be done with the mutex locked,
 // but we can't lock it here, since save() is called by functions that
 // are already locking the mutex.
@@ -124,6 +210,11 @@ func (vmdb *VMDatabase) save() error {
 	}
 
 	err = vmdb.genDomainsDB()
+	if err != nil {
+		return err
+	}
+
+	err = vmdb.genPortsDB()
 	if err != nil {
 		return err
 	}
@@ -221,7 +312,7 @@ func (vmdb *VMDatabase) Delete(name *VMName) error {
 func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 
 	if active {
-		err := CheckDomainsConflicts(vmdb, vm.Config.Domains, name.Name, vmdb.config)
+		err := CheckDomainsConflicts(vmdb, vm.Config.Domains, name.Name, vmdb.app.Config)
 		if err != nil {
 			return err
 		}
@@ -512,7 +603,7 @@ func (vmdb *VMDatabase) SetActiveRevision(name string, revision int) error {
 		if err != nil {
 			return err
 		}
-		err = CheckDomainsConflicts(vmdb, vm.Config.Domains, name, vmdb.config)
+		err = CheckDomainsConflicts(vmdb, vm.Config.Domains, name, vmdb.app.Config)
 		if err != nil {
 			return err
 		}

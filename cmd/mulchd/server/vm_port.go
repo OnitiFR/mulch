@@ -15,6 +15,10 @@ const (
 	VMPortDirectionInvalid = -1
 )
 
+// VMPortBaseForward is the value to add to port index
+// (ex : first listening port will be 9001, 2nd will be 9002, …)
+const VMPortBaseForward uint16 = 9001
+
 // VMPort is a network port inside a VM
 type VMPort struct {
 	Port      uint16
@@ -113,7 +117,6 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 // and warn if an imported port is not exported (yet?) by another VM (if log is not nil)
 func CheckPortsConflicts(db *VMDatabase, ports []*VMPort, excludeVM string, log *Log) error {
 	exportPortMap := make(map[string]*VM)
-	importPortMap := make(map[string]*VM)
 
 	// build maps
 	vmNames := db.GetNames()
@@ -134,8 +137,6 @@ func CheckPortsConflicts(db *VMDatabase, ports []*VMPort, excludeVM string, log 
 		for _, port := range entry.VM.Config.Ports {
 			if port.Direction == VMPortDirectionExport {
 				exportPortMap[port.String()] = entry.VM
-			} else if port.Direction == VMPortDirectionImport {
-				importPortMap[port.String()] = entry.VM
 			}
 		}
 	}
@@ -148,9 +149,17 @@ func CheckPortsConflicts(db *VMDatabase, ports []*VMPort, excludeVM string, log 
 				return fmt.Errorf("vm '%s' is already exporting '%s'", vm.Config.Name, port.String())
 			}
 		} else if port.Direction == VMPortDirectionImport {
-			_, exist := importPortMap[port.String()]
+			reversed := *port
+			reversed.Direction = VMPortDirectionExport
+			for _, p := range ports {
+				if p.String() == reversed.String() {
+					return fmt.Errorf("cannot import one of our ports (%s)", port.String())
+				}
+			}
+
+			_, exist := exportPortMap[reversed.String()]
 			if exist == false && log != nil {
-				log.Warningf("port '%s' is not exported (yet?) by anyone", port.String())
+				log.Warningf("port '%s' is not exported by anyone (yet?)", port.String())
 			}
 		}
 	}

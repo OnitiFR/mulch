@@ -82,14 +82,28 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	app.Log = NewLog("", app.Hub, app.LogHistory)
 	app.Log.Trace("log system available")
 
-	lv, err := NewLibvirt(config.LibVirtURI)
+	err := app.checkDataPath()
+	if err != nil {
+		return nil, err
+	}
+
+	app.Libvirt, err = NewLibvirt(config.LibVirtURI)
 	if err != nil {
 		return nil, err
 	}
 	app.Log.Info(fmt.Sprintf("libvirt connection to '%s' OK", config.LibVirtURI))
-	app.Libvirt = lv
 
-	err = app.checkDataPath()
+	err = app.initLibvirtStorage()
+	if err != nil {
+		return nil, err
+	}
+
+	err = app.initLibvirtNetwork()
+	if err != nil {
+		return nil, err
+	}
+
+	err = app.initLibvirtNWFilter()
 	if err != nil {
 		return nil, err
 	}
@@ -109,27 +123,18 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 		return nil, err
 	}
 
+	// clean DHCP leases
+	err = app.Libvirt.RebuildDHCPStaticLeases(app)
+	if err != nil {
+		return nil, fmt.Errorf("RebuildDHCPStaticHost: %s", err)
+	}
+
 	err = app.initBackupDB()
 	if err != nil {
 		return nil, err
 	}
 
 	err = app.initAPIKeysDB()
-	if err != nil {
-		return nil, err
-	}
-
-	err = app.initLibvirtStorage()
-	if err != nil {
-		return nil, err
-	}
-
-	err = app.initLibvirtNetwork()
-	if err != nil {
-		return nil, err
-	}
-
-	err = app.initLibvirtNWFilter()
 	if err != nil {
 		return nil, err
 	}
@@ -205,6 +210,7 @@ func (app *App) initSSHPairDB() error {
 func (app *App) initVMDB() error {
 	dbPath := app.Config.DataPath + "/mulch-vm-v2.db"
 	domainDbPath := app.Config.DataPath + "/mulch-proxy-domains.db"
+	portsDbPath := app.Config.DataPath + "/mulch-proxy-ports.db"
 
 	dbPathV1 := app.Config.DataPath + "/mulch-vm.db"
 	if common.PathExist(dbPathV1) && !common.PathExist(dbPath) {
@@ -224,7 +230,7 @@ func (app *App) initVMDB() error {
 	}
 
 	app.ProxyReloader = NewProxyReloader(app)
-	vmdb, err := NewVMDatabase(dbPath, domainDbPath, app.ProxyReloader.Request, app.Config)
+	vmdb, err := NewVMDatabase(dbPath, domainDbPath, portsDbPath, app.ProxyReloader.Request, app)
 	if err != nil {
 		return err
 	}
@@ -403,12 +409,6 @@ func (app *App) initLibvirtNetwork() error {
 
 	app.Libvirt.Network = net
 	app.Libvirt.NetworkXML = netcfg
-
-	// clean DHCP leases
-	err = app.Libvirt.RebuildDHCPStaticLeases(app)
-	if err != nil {
-		return fmt.Errorf("RebuildDHCPStaticHost: %s", err)
-	}
 
 	return nil
 }
