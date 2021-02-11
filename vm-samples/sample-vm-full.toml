@@ -29,6 +29,8 @@ env = [
 ]
 
 backup_disk_size = "2G"
+
+# backup speed vs back size (it depends a lot on backup content)
 backup_compress = true
 
 # DNS domains
