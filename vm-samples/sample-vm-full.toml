@@ -41,8 +41,8 @@ redirects = [
 # Allow communications **between VMs** of the same @group using a TCP-proxy
 # Notes:
 #   - only TCP is supported currently
-#   - no need to declare groups
-#   - you can import a non-existing (yet!) port (with a warning)
+#   - groups are automatically declared
+#   - you can import a non-existing (yet) port (with a warning)
 ports = [
     # Export a port:
     #   any VMs can then connect to my PgSQL server using "5432/tcp<-@mygroup"
@@ -50,11 +50,19 @@ ports = [
 
     # Access an exported port:
     #   you can connect to the Redis server of another VM using:
-    #   $_MULCH_PROXY_IP for the host
-    #   $_PORT1 for the port (since it's the first "<-" in the list)
+    #   host: $_MULCH_PROXY_IP
+    #   port: $_6379_TCP (or $_PORT1, see below)
     "6379/tcp<-@mygroup",
 
-    # Another example with rsync, connect to $_MULCH_PROXY_IP:$_PORT2
+    # In some cases, $_6379_TCP is not good option (variable may not exist yet
+    # because of a recent vm redefine or because you imported two 6379 port
+    # from two different groups). In this case, use $_PORTx variables:
+    #   $_PORT1 is for the first "<-" port in the list
+    #   $_PORT2 the second one, and so on…
+
+    # Another example with rsync, connect to:
+    # $_MULCH_PROXY_IP:$_873_TCP or
+    # $_MULCH_PROXY_IP:$_PORT2
     "873/tcp<-@mygroup",
 ]
 

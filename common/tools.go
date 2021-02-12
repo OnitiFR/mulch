@@ -37,6 +37,10 @@ func InterfaceValueToString(iv interface{}) string {
 	switch iv.(type) {
 	case int:
 		return fmt.Sprintf("%d", iv.(int))
+	case int16:
+		return fmt.Sprintf("%d", iv.(int16))
+	case uint16:
+		return fmt.Sprintf("%d", iv.(uint16))
 	case int32:
 		return fmt.Sprintf("%d", iv.(int32))
 	case int64:
@@ -61,6 +65,15 @@ func InterfaceValueToString(iv interface{}) string {
 		return strings.Join(iv.([]string), ", ")
 	}
 	return "INVALID_TYPE"
+}
+
+// MapStringToInterface convert a map[string]string to a map[string]interface{}
+func MapStringToInterface(ms map[string]string) map[string]interface{} {
+	mi := make(map[string]interface{}, len(ms))
+	for k, v := range ms {
+		mi[k] = v
+	}
+	return mi
 }
 
 // StringFindVariables returns a deduplicated slice of all "variables" ($test)

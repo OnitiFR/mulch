@@ -29,10 +29,10 @@ func cloudInitUserData(templateFile string, variables map[string]interface{}) ([
 	return []byte(expanded), nil
 }
 
-func cloudInitExtraEnv(envMap map[string]string) string {
+func cloudInitGenExports(envMap map[string]interface{}) string {
 	res := ""
 	for key, val := range envMap {
-		res = res + fmt.Sprintf("export %s=\"%s\"; ", key, val)
+		res = res + fmt.Sprintf("export %s=\"%s\"; ", key, common.InterfaceValueToString(val))
 	}
 	return res
 }
@@ -65,20 +65,44 @@ func CloudInitDataGen(vm *VM, vmName *VMName, app *App) (string, string, error) 
 	// DO NOT FORGET TO UPDATE ci-user-data.yml TEMPLATE TOO!
 	userDataVariables := make(map[string]interface{})
 	userDataVariables["_SSH_PUBKEY"] = sshKeyPair.Public
-	userDataVariables["_PHONE_HOME_URL"] = phURL
 	userDataVariables["_PACKAGE_UPGRADE"] = vm.Config.InitUpgrade
-	userDataVariables["_MULCH_SUPER_USER"] = app.Config.MulchSuperUser
+	userDataVariables["_PHONE_HOME_URL"] = phURL
 	userDataVariables["_TIMEZONE"] = vm.Config.Timezone
+	userDataVariables["_MULCH_SUPER_USER"] = app.Config.MulchSuperUser
 	userDataVariables["_APP_USER"] = vm.Config.AppUser
-	userDataVariables["_VM_NAME"] = vmName.Name
-	userDataVariables["_VM_REVISION"] = vmName.Revision
-	userDataVariables["_KEY_DESC"] = vm.AuthorKey
-	userDataVariables["_MULCH_VERSION"] = Version
-	userDataVariables["_VM_INIT_DATE"] = vm.InitDate.Format(time.RFC3339)
-	userDataVariables["_DOMAINS"] = strings.Join(domains, ",")
-	userDataVariables["_DOMAIN_FIRST"] = firstDomain
-	userDataVariables["_MULCH_PROXY_IP"] = mulchIP
-	userDataVariables["__EXTRA_ENV"] = cloudInitExtraEnv(vm.Config.Env)
+
+	mainEnv := make(map[string]interface{})
+	mainEnv["_MULCH_SUPER_USER"] = app.Config.MulchSuperUser
+	mainEnv["_BACKUP"] = "/mnt/backup"
+	mainEnv["_APP_USER"] = vm.Config.AppUser
+	mainEnv["_VM_NAME"] = vmName.Name
+	mainEnv["_VM_REVISION"] = vmName.Revision
+	mainEnv["_KEY_DESC"] = vm.AuthorKey
+	mainEnv["_MULCH_VERSION"] = Version
+	mainEnv["_VM_INIT_DATE"] = vm.InitDate.Format(time.RFC3339)
+	mainEnv["_DOMAINS"] = strings.Join(domains, ",")
+	mainEnv["_DOMAIN_FIRST"] = firstDomain
+	mainEnv["_MULCH_PROXY_IP"] = mulchIP
+	mainEnv["_PORT1"] = VMPortBaseForward + 0
+	mainEnv["_PORT2"] = VMPortBaseForward + 1
+	mainEnv["_PORT3"] = VMPortBaseForward + 2
+	mainEnv["_PORT4"] = VMPortBaseForward + 3
+	mainEnv["_PORT5"] = VMPortBaseForward + 4
+	for _, port := range vm.Config.Ports {
+		if port.Direction == VMPortDirectionImport {
+			name := fmt.Sprintf("_%d_%s", port.Port, "TCP")
+			_, exists := mainEnv[name]
+			if exists == true {
+				// name conflict, force the user to use _PORTx
+				mainEnv[name] = "CONFLICT"
+				continue
+			}
+			mainEnv[name] = VMPortBaseForward + uint16(port.Index)
+		}
+	}
+
+	userDataVariables["__MAIN_ENV"] = cloudInitGenExports(mainEnv)
+	userDataVariables["__EXTRA_ENV"] = cloudInitGenExports(common.MapStringToInterface(vm.Config.Env))
 
 	userData, err := cloudInitUserData(userDataTemplate, userDataVariables)
 	if err != nil {

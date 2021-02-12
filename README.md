@@ -282,7 +282,7 @@ ports = [
     "5432/tcp<-@my_project",
 ]
 ```
-Then, connect to `$_MULCH_PROXY_IP:$_PORT1` (because it's the first "<-" in the list).
+Then, connect to `$_MULCH_PROXY_IP:$_5432_TCP`
 
 Ports are dynamic, they're affected immediately by commands like `vm redefine` and `vm active`, no rebuild is needed. See sample TOML file for more informations.
 
