@@ -83,5 +83,7 @@ func (server *PortServer) refreshListeners() error {
 		}
 	}
 
+	server.Log.Infof("refresh: %d port(s)", len(server.Listeners))
+
 	return nil
 }

@@ -133,6 +133,13 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		return nil, nil, fmt.Errorf("Unexpected error: %s", err)
 	}
 
+	// we assign static DHCP leases for network security reasons (see clean-traffic nwfilter)
+	vm.AssignedMAC = RandomUniqueMAC(app)
+	vm.AssignedIPv4, err = RandomUniqueIPv4(app)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	app.VMDB.AddToMaternity(vm, vmName)
 	defer app.VMDB.DeleteFromMaternity(vmName)
 
@@ -171,12 +178,6 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	}
 
 	SSHSuperUserAuth, err := app.SSHPairDB.GetPublicKeyAuth(vm.MulchSuperUserSSHKey)
-	if err != nil {
-		return nil, nil, err
-	}
-	// we assign static DHCP leases for network security reasons (see clean-traffic nwfilter)
-	vm.AssignedMAC = RandomUniqueMAC(app)
-	vm.AssignedIPv4, err = RandomUniqueIPv4(app)
 	if err != nil {
 		return nil, nil, err
 	}

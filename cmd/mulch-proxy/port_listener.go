@@ -1,17 +1,22 @@
 package main
 
 import (
+	"fmt"
 	"net"
+	"sync"
 )
 
 // PortListener is a TCP listener holder
 type PortListener struct {
-	listenAddr *net.TCPAddr
-	listener   *net.TCPListener
-	forwardMap map[string]*net.TCPAddr
-	log        *Log
-	closed     bool
-	version    int
+	listenAddr    *net.TCPAddr
+	listener      *net.TCPListener
+	port          uint16
+	forwardMap    map[string]*net.TCPAddr
+	closeChannels map[string]chan bool
+	log           *Log
+	closed        bool
+	version       int
+	mutex         sync.Mutex
 }
 
 // NewPortListener will listen on port and forward clients
@@ -19,14 +24,20 @@ func NewPortListener(listenAddr *net.TCPAddr, forwardMap map[string]*net.TCPAddr
 	var err error
 
 	listener := &PortListener{
-		listenAddr: listenAddr,
-		forwardMap: forwardMap,
-		log:        log,
-		version:    version,
-		closed:     false,
+		listenAddr:    listenAddr,
+		port:          uint16(listenAddr.Port),
+		closeChannels: make(map[string]chan bool),
+		log:           log,
+		version:       version,
+		closed:        false,
 	}
 
 	listener.listener, err = net.ListenTCP("tcp", listenAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	err = listener.UpdateForwardMap(forwardMap)
 	if err != nil {
 		return nil, err
 	}
@@ -48,16 +59,17 @@ func (pl *PortListener) Listen() {
 		}
 
 		sourceIP := conn.RemoteAddr().(*net.TCPAddr).IP.String()
-		forwardTo, exists := pl.forwardMap[sourceIP]
-		if exists {
-			// TODO: have a list of all established connection (or at least
-			// a wat to clone a specific [or all] connection)
-			go NewPortForward(conn, forwardTo, pl.log)
+		forwardTo, existsF := pl.forwardMap[sourceIP]
+		key := fmt.Sprintf("%s->%s", sourceIP, forwardTo.IP.String())
+		closeChan, existsC := pl.closeChannels[key]
+
+		if existsF && existsC {
+			pl.log.Tracef("+ TCP %s:%d", key, pl.port)
+			go NewPortForward(conn, forwardTo, closeChan, pl.log)
 		} else {
 			conn.Close()
 		}
 	}
-
 }
 
 // Close the listener
@@ -67,13 +79,48 @@ func (pl *PortListener) Close() error {
 	if err != nil {
 		return err
 	}
-	// TODO: close and wait all established connections
+
+	pl.mutex.Lock()
+	defer pl.mutex.Unlock()
+
+	for key, c := range pl.closeChannels {
+		close(c)
+		delete(pl.closeChannels, key)
+	}
+
 	return nil
 }
 
 // UpdateForwardMap will update our forwarding config
 func (pl *PortListener) UpdateForwardMap(forwardMap map[string]*net.TCPAddr) error {
-	// TODO: look if we need to close some outdated connections
+	pl.mutex.Lock()
+	defer pl.mutex.Unlock()
+
+	allowedForwards := make(map[string]bool)
+	for srcIP, forward := range forwardMap {
+		key := fmt.Sprintf("%s->%s", srcIP, forward.IP.String())
+		allowedForwards[key] = true
+	}
+
+	// add missing close channels
+	for key := range allowedForwards {
+		_, exists := pl.closeChannels[key]
+		if !exists {
+			pl.closeChannels[key] = make(chan bool)
+			// pl.log.Tracef("add close chan %s (port %d)", key, pl.port)
+		}
+	}
+
+	// close old ones
+	for key, c := range pl.closeChannels {
+		_, exists := allowedForwards[key]
+		if !exists {
+			// pl.log.Tracef("closing chan %s (port %d)", key, pl.port)
+			close(c)
+			delete(pl.closeChannels, key)
+		}
+	}
+
 	pl.forwardMap = forwardMap
 	return nil
 }
