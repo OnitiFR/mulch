@@ -343,7 +343,10 @@ func (proxy *ProxyServer) RefreshReverseProxies() {
 
 // ReloadDomains reload domains config file
 func (proxy *ProxyServer) ReloadDomains() {
-	proxy.DomainDB.Reload()
+	err := proxy.DomainDB.Reload()
+	if err != nil {
+		proxy.Log.Error(err.Error())
+	}
 	proxy.RefreshReverseProxies()
 }
 

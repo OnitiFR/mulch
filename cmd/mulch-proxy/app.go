@@ -24,6 +24,7 @@ type App struct {
 	Log         *Log
 	ProxyServer *ProxyServer
 	APIServer   *APIServer
+	PortServer  *PortServer
 	Rand        *rand.Rand
 }
 
@@ -92,6 +93,12 @@ func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 
 	app.ProxyServer.RefreshReverseProxies()
 
+	portDBFile := path.Clean(app.Config.DataPath + "/mulch-proxy-ports.db")
+	app.PortServer, err = NewPortServer(portDBFile, app.Log)
+	if err != nil {
+		return nil, err
+	}
+
 	app.initSigHUPHandler()
 	app.initSigQUITHandler()
 
@@ -153,9 +160,10 @@ func (app *App) initSigHUPHandler() {
 	go func() {
 		for sig := range c {
 			if sig == syscall.SIGHUP {
-				app.Log.Infof("HUP Signal, reloading domains")
+				app.Log.Infof("HUP Signal, reloading domains and ports")
 				app.ProxyServer.ReloadDomains()
 				app.refreshDomains()
+				app.PortServer.ReloadPorts()
 			}
 		}
 	}()
