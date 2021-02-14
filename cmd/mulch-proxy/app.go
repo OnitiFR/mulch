@@ -193,6 +193,9 @@ func (app *App) initSigQUITHandler() {
 				writeGoroutineStacks(writer)
 				fmt.Fprintf(writer, "\n\n")
 				app.ProxyServer.RequestList.Dump(writer)
+				fmt.Fprintf(writer, "\n\n")
+				// TODO: add a proper dump (listener list, connections per listeners, etc)
+				fmt.Fprintf(writer, "port proxy: %d connection(s)\n", app.PortServer.GetTotalConnections())
 
 				writer.Flush()
 				app.Log.Infof("QUIT Signal, dumped data to %s", filename)

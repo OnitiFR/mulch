@@ -3,9 +3,8 @@ package main
 import (
 	"io"
 	"net"
+	"sync/atomic"
 )
-
-// TODO: clean error logging (needed at all? trace?)
 
 // PortForward is an actual established port forwarding
 type PortForward struct {
@@ -18,7 +17,7 @@ type PortForward struct {
 }
 
 // NewPortForward will connect to remote host and forward connection
-func NewPortForward(fromConn io.ReadWriteCloser, toAddr *net.TCPAddr, closeChanExternal chan bool, log *Log) {
+func NewPortForward(fromConn io.ReadWriteCloser, toAddr *net.TCPAddr, closeChanExternal chan bool, log *Log, connectionCount *int32) {
 	defer func() {
 		err := fromConn.Close()
 		if err != nil {
@@ -49,6 +48,8 @@ func NewPortForward(fromConn io.ReadWriteCloser, toAddr *net.TCPAddr, closeChanE
 		}
 	}()
 
+	atomic.AddInt32(connectionCount, 1)
+
 	go pf.pipe(pf.fromConn, pf.toConn)
 	go pf.pipe(pf.toConn, pf.fromConn)
 
@@ -56,7 +57,8 @@ func NewPortForward(fromConn io.ReadWriteCloser, toAddr *net.TCPAddr, closeChanE
 	case <-pf.closeChanInternal:
 	case <-pf.closeChanExternal:
 	}
-	// pf.log.Trace("TCP closed")
+
+	atomic.AddInt32(connectionCount, -1)
 }
 
 // pipe a reader to a writer

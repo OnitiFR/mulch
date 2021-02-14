@@ -8,15 +8,16 @@ import (
 
 // PortListener is a TCP listener holder
 type PortListener struct {
-	listenAddr    *net.TCPAddr
-	listener      *net.TCPListener
-	port          uint16
-	forwardMap    map[string]*net.TCPAddr
-	closeChannels map[string]chan bool
-	log           *Log
-	closed        bool
-	version       int
-	mutex         sync.Mutex
+	ConnectionCount int32
+	listenAddr      *net.TCPAddr
+	listener        *net.TCPListener
+	port            uint16
+	forwardMap      map[string]*net.TCPAddr
+	closeChannels   map[string]chan bool
+	log             *Log
+	closed          bool
+	version         int
+	mutex           sync.Mutex
 }
 
 // NewPortListener will listen on port and forward clients
@@ -65,7 +66,7 @@ func (pl *PortListener) Listen() {
 
 		if existsF && existsC {
 			pl.log.Tracef("+ TCP %s:%d", key, pl.port)
-			go NewPortForward(conn, forwardTo, closeChan, pl.log)
+			go NewPortForward(conn, forwardTo, closeChan, pl.log, &pl.ConnectionCount)
 		} else {
 			conn.Close()
 		}

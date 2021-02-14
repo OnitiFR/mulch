@@ -1,5 +1,7 @@
 package main
 
+import "sync/atomic"
+
 // PortServer will manage TCP forward proxy port listeners
 type PortServer struct {
 	PortDB         *PortDatabase
@@ -43,6 +45,15 @@ func (server *PortServer) ReloadPorts() {
 	}
 }
 
+// GetTotalConnections return the total connection count for all listeners
+func (server *PortServer) GetTotalConnections() int {
+	total := 0
+	for _, l := range server.Listeners {
+		total += int(atomic.LoadInt32(&l.ConnectionCount))
+	}
+	return total
+}
+
 // sync listeners and update forward maps
 func (server *PortServer) refreshListeners() error {
 	var err error
@@ -83,7 +94,7 @@ func (server *PortServer) refreshListeners() error {
 		}
 	}
 
-	server.Log.Infof("refresh: %d port(s)", len(server.Listeners))
+	server.Log.Infof("refresh: %d port(s) - %d connection(s)", len(server.Listeners), server.GetTotalConnections())
 
 	return nil
 }
