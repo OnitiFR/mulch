@@ -1,14 +1,7 @@
-- VM "groups" + internal hostnames
-  - switch to clean-traffic-gateway as a default (see also new "isolated" network setting)
-  - a) dynamic nwfilter with all IPs of the group?
-    - see this? <dns><host ip='10.104.10.11'><hostname>myvm.mulch</hostname></host></dns>
-  - b) TCP port proxy?
-- BUG: very annoying and rare mulch-proxy children-parent deadlock /!\
-  - new: currently testing a dedicated watchdog for this issue, see watchdog.go
-  - was the issue specific to our system?! Nothing since months, now (with new system)
-  - try to create a repro, see https://github.com/golang/go/issues/36026 for template
+- allow to disable auto-rebuild
 - switch default SSH user to app instead of admin (update client sshconfig.go doc)
 - add timeout on VM creation scripts OR at least allow VM deletion
+  - note: for deletion, shutting down is not a good option when scripts started, I think
 - add/check server timeouts when client disapears on do action (ex: kill -9 on "mulch do xx logs")
 - add "variables" to TOML files? (like $author or $USER in VM name or URL, to create "generic" TOML files)
 - provide a whereis feature / add "official" scripts (like wtf_is_my_vm.sh) to the client?
