@@ -1,6 +1,6 @@
 <!--
     This sample file was generated with virt-install. You may want to do
-    the same so things like os/cpu matches more your own hardare.
+    the same, so things like os/cpu matches more your own hardware.
 -->
 <domain type='kvm'>
   <name>undefined-name</name>
@@ -28,12 +28,12 @@
   </features>
   <!-- You may want to adjust that.
 
-    If your real CPU is newer, you may miss some performances
+    If your real CPU is newer, you may miss some performances.
     If your real CPU is old, you may get a 'CPU is incompatible with host CPU'
     error while creating a new VM.
 
     Use "virsh capabilities | grep model" for current CPU model as seen by
-    libvirt (warning: for live migration, model must match)
+    libvirt (warning: for live migration, models must match)
   -->
   <cpu mode='custom' match='exact' check='partial'>
     <!-- <model fallback='allow'>Haswell-noTSX</model> -->
@@ -52,8 +52,8 @@
     <suspend-to-disk enabled='no'/>
   </pm>
   <devices>
-    <!-- OK for Fedora 30, may be different for you -->
-    <!-- ex: Ubuntu 18.04: /usr/bin/kvm -->
+    <!-- OK for Fedora 33, may be different for you -->
+    <!-- ex: Ubuntu 20.04: /usr/bin/kvm -->
     <emulator>/usr/bin/qemu-kvm</emulator>
 
     <disk type='file' device='disk'>
