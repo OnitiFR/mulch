@@ -89,7 +89,7 @@ proxy_chain_psk = ""
 # (note: in this case, X-Forwarded-For and X-Real-Ip will have the same value)
 #
 # This setting is proxy_chain compliant (the original IP is preserved).
-proxy_force_x_forward_for = false
+proxy_force_x_forwarded_for = false
 
 # Auto-rebuild will check everyday, at specified time, if any VM need
 # an automatic rebuild (according its settings). Format: HH:MM
