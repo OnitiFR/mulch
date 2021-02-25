@@ -204,13 +204,15 @@ func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string,
 	if fromParent {
 		// delete PSK, since our next destination is the VM itself
 		req.Header.Del(PSKHeaderName)
-		if proxy.config.ForceXForwardedFor {
-			req.Header.Set("X-Forwarded-For", req.Header.Get("X-Real-Ip"))
-		}
 	} else {
 		// we erase this header, so it's a bit more… believable.
 		req.Header.Set("X-Real-Ip", ip)
-		if proxy.config.ForceXForwardedFor {
+	}
+
+	if proxy.config.ForceXForwardedFor {
+		// prevent httputil.ReverseProxy to set X-Forwarded-For by itself
+		req.RemoteAddr = "invalid"
+		if !fromParent {
 			req.Header.Set("X-Forwarded-For", ip)
 		}
 	}
