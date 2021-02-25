@@ -81,6 +81,16 @@ proxy_chain_child_url = ""
 # Pre-Shared Key between children and the parent proxy (min length: 16)
 proxy_chain_psk = ""
 
+# HTTP X-Forwarded-For header is commonly used to get the originating IP
+# address of clients, with the chain of intermediate proxies. This header
+# is hard to use in a secure way, since the beginning of the chain can be
+# forged. If you set this setting to true, mulch-proxy will replace the value
+# of this header with the immediate remote address, a much more secure value.
+# (note: in this case, X-Forwarded-For and X-Real-Ip will have the same value)
+#
+# This setting is proxy_chain compliant (the original IP is preserved).
+proxy_force_x_forward_for = false
+
 # Auto-rebuild will check everyday, at specified time, if any VM need
 # an automatic rebuild (according its settings). Format: HH:MM
 auto_rebuild_time = "23:30"

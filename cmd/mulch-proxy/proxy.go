@@ -49,6 +49,7 @@ type ProxyServerParams struct {
 	ChainMode             int
 	ChainPSK              string
 	ChainDomain           string
+	ForceXForwardFor      bool
 	Log                   *Log
 	RequestList           *RequestList
 	Trace                 bool
@@ -203,9 +204,15 @@ func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string,
 	if fromParent {
 		// delete PSK, since our next destination is the VM itself
 		req.Header.Del(PSKHeaderName)
+		if proxy.config.ForceXForwardFor {
+			req.Header.Set("X-Forward-For", req.Header.Get("X-Real-Ip"))
+		}
 	} else {
 		// we erase this header, so it's a bit more… believable.
 		req.Header.Set("X-Real-Ip", ip)
+		if proxy.config.ForceXForwardFor {
+			req.Header.Set("X-Forward-For", ip)
+		}
 	}
 
 	domain.ReverseProxy.ServeHTTP(res, req)
@@ -247,7 +254,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 		proxy.Log.Tracef("> {%d} %s %s %t %s %s %s", id, req.RemoteAddr, proto, fromParent, req.Host, req.Method, req.RequestURI)
 	}
 
-	// trust our parent, whatever protocol was user inter-proxy
+	// trust our parent, whatever protocol was used inter-proxy
 	if fromParent {
 		proto = req.Header.Get("X-Forwarded-Proto")
 	}

@@ -85,6 +85,7 @@ func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 		ChainMode:             app.Config.ChainMode,
 		ChainPSK:              app.Config.ChainPSK,
 		ChainDomain:           chainDomain,
+		ForceXForwardFor:      app.Config.ForceXForwardFor,
 		Log:                   app.Log,
 		RequestList:           NewRequestList(debug),
 		Trace:                 trace,

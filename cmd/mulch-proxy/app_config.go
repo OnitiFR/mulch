@@ -54,6 +54,9 @@ type AppConfig struct {
 	// Pre-Shared key for the chain
 	ChainPSK string
 
+	// Replace X-Forward-For header with remote address
+	ForceXForwardFor bool
+
 	// global mulchd configuration path
 	configPath string
 }
@@ -66,10 +69,11 @@ type tomlAppConfig struct {
 	HTTPSAddress      string `toml:"proxy_listen_https"`
 	ListenHTTPSDomain string `toml:"listen_https_domain"`
 
-	ChainMode      string `toml:"proxy_chain_mode"`
-	ChainParentURL string `toml:"proxy_chain_parent_url"`
-	ChainChildURL  string `toml:"proxy_chain_child_url"`
-	ChainPSK       string `toml:"proxy_chain_psk"`
+	ChainMode        string `toml:"proxy_chain_mode"`
+	ChainParentURL   string `toml:"proxy_chain_parent_url"`
+	ChainChildURL    string `toml:"proxy_chain_child_url"`
+	ChainPSK         string `toml:"proxy_chain_psk"`
+	ForceXForwardFor bool   `toml:"proxy_force_x_forward_for"`
 }
 
 // NewAppConfigFromTomlFile return a AppConfig using
@@ -168,6 +172,8 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 			return nil, errors.New("proxy_chain_child_url is reserved for proxy chain children")
 		}
 	}
+
+	appConfig.ForceXForwardFor = tConfig.ForceXForwardFor
 
 	return appConfig, nil
 }
