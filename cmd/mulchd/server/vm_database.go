@@ -112,20 +112,24 @@ func (vmdb *VMDatabase) genDomainsDB() error {
 
 // build port database for the TCP proxy
 func (vmdb *VMDatabase) genPortsDB() error {
-	var vmList []*VM
+	var vmEntries []*VMDatabaseEntry
 	exportedPortMap := make(map[string]*VM)
 
 	for _, entry := range vmdb.maternityDB {
-		vmList = append(vmList, entry.VM)
+		vmEntries = append(vmEntries, entry)
 	}
 	for _, entry := range vmdb.db {
 		// we currently allow an inactive VM to connect to other ports
 		// (since we allow it during its construction)
-		vmList = append(vmList, entry.VM)
+		vmEntries = append(vmEntries, entry)
 	}
 
 	// build a map of all exported ports
-	for _, vm := range vmList {
+	for _, entry := range vmEntries {
+		if !entry.Active {
+			continue
+		}
+		vm := entry.VM
 		for _, p := range vm.Config.Ports {
 			if p.Direction == VMPortDirectionExport {
 				exportedPortMap[p.String()] = vm
@@ -136,45 +140,48 @@ func (vmdb *VMDatabase) genPortsDB() error {
 	listeners := make(common.TCPPortListeners)
 	gateway := vmdb.app.Libvirt.NetworkXML.IPs[0].Address
 
-	for _, vm := range vmList {
+	for _, entry := range vmEntries {
+		vm := entry.VM
 		for _, p := range vm.Config.Ports {
 			if p.Protocol != VMPortProtocolTCP {
 				return fmt.Errorf("unsupported protocol '%s'", p.String())
 			}
 
-			if p.Direction == VMPortDirectionImport {
-				// who exports this port?
-				exportedPort := *p
-				exportedPort.Direction = VMPortDirectionExport
-				exportingVM, found := exportedPortMap[exportedPort.String()]
-				if !found {
-					vmdb.app.Log.Tracef("unable to found port '%s' for VM '%s'", exportedPort.String(), vm.Config.Name)
-					continue
-				}
+			if p.Direction != VMPortDirectionImport {
+				continue
+			}
 
-				// add to the correct listener
-				listenPort := VMPortBaseForward + uint16(p.Index)
-				listener, exists := listeners[listenPort]
-				if !exists {
-					listenStr := fmt.Sprintf("%s:%d", gateway, listenPort)
-					listenAddr, err := net.ResolveTCPAddr("tcp", listenStr)
-					if err != nil {
-						return err
-					}
-					listener = &common.TCPPortListener{
-						ListenAddr: listenAddr,
-						Forwards:   make(map[string]*net.TCPAddr),
-					}
-					listeners[listenPort] = listener
-				}
+			// who exports this port?
+			exportedPort := *p
+			exportedPort.Direction = VMPortDirectionExport
+			exportingVM, found := exportedPortMap[exportedPort.String()]
+			if !found {
+				vmdb.app.Log.Tracef("unable to found port '%s' for VM '%s'", exportedPort.String(), vm.Config.Name)
+				continue
+			}
 
-				forwardStr := fmt.Sprintf("%s:%d", exportingVM.AssignedIPv4, p.Port)
-				forwardAddr, err := net.ResolveTCPAddr("tcp", forwardStr)
+			// add to the correct listener
+			listenPort := VMPortBaseForward + uint16(p.Index)
+			listener, exists := listeners[listenPort]
+			if !exists {
+				listenStr := fmt.Sprintf("%s:%d", gateway, listenPort)
+				listenAddr, err := net.ResolveTCPAddr("tcp", listenStr)
 				if err != nil {
 					return err
 				}
-				listener.Forwards[vm.AssignedIPv4] = forwardAddr
+				listener = &common.TCPPortListener{
+					ListenAddr: listenAddr,
+					Forwards:   make(map[string]*net.TCPAddr),
+				}
+				listeners[listenPort] = listener
 			}
+
+			forwardStr := fmt.Sprintf("%s:%d", exportingVM.AssignedIPv4, p.Port)
+			forwardAddr, err := net.ResolveTCPAddr("tcp", forwardStr)
+			if err != nil {
+				return err
+			}
+			listener.Forwards[vm.AssignedIPv4] = forwardAddr
 		}
 	}
 

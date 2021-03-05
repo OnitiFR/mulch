@@ -1,4 +1,3 @@
-- check port-export on rebuild, only export for active VM
 - allow to disable auto-rebuild
 - switch default SSH user to app instead of admin (update client sshconfig.go doc)
 - add timeout on VM creation scripts OR at least allow VM deletion
