@@ -203,7 +203,6 @@ func (call *APICall) Do() {
 	if cvnHeader != "" {
 		currentVMName = cvnHeader
 	}
-
 	switch mime {
 	case "application/x-ndjson":
 		err := printJSONStream(resp.Body, call)

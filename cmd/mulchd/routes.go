@@ -44,6 +44,12 @@ func AddRoutes(app *server.App) {
 	}, server.RouteAPI)
 
 	app.AddRoute(&server.Route{
+		Route:   "GET /vm/search",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.SearchVMsController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
 		Route:   "GET /vm/config/*",
 		Type:    server.RouteTypeCustom,
 		Handler: controllers.GetVMConfigController,
