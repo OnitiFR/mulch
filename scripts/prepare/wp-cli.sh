@@ -22,3 +22,5 @@ echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/maste
 echo "_MULCH_ACTION_USER=$_APP_USER"
 echo "_MULCH_ACTION_DESCRIPTION=Reset siteurl+home settings using first VM domain name (argument 'with-content' available)"
 echo "_MULCH_ACTION=commit"
+
+echo "_MULCH_TAG_ADD=wp-cli"
