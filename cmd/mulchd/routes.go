@@ -162,4 +162,9 @@ func AddRoutes(app *server.App) {
 		Handler: controllers.GetStatusController,
 	}, server.RouteAPI)
 
+	app.AddRoute(&server.Route{
+		Route:   "GET /state/zip",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.GetStateZipController,
+	}, server.RouteAPI)
 }
