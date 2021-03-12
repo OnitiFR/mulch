@@ -25,4 +25,6 @@ type APIVMInfos struct {
 	Locked              bool
 	AssignedIPv4        string
 	AssignedMAC         string
+	DoActions           []string
+	Tags                []string
 }

@@ -95,6 +95,17 @@ func searchVMsFunctions(vm **server.VM) map[string]govaluate.ExpressionFunction 
 			return exists, nil
 		},
 
+		// has_tag(string) bool
+		// return true if the VM has specified tag
+		"has_tag": func(args ...interface{}) (interface{}, error) {
+			if _, castOK := args[0].(string); castOK == false {
+				return nil, errors.New("has_tag() argument 1 must be a string")
+			}
+			tag := args[0].(string)
+			_, exists := (*vm).Config.Tags[tag]
+			return exists, nil
+		},
+
 		// like(string) bool
 		// return true if the wildcard match the VM's name
 		"like": func(args ...interface{}) (interface{}, error) {

@@ -44,6 +44,7 @@ List of functions:
  - has_domain(string) bool
  - has_script(string, string) bool (arg1: install/prepare/backup/restore)
  - has_action(string) bool
+ - has_tag(string) bool
 
 `,
 	Args: cobra.ExactArgs(1),

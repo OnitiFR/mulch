@@ -21,6 +21,12 @@ func IsValidGroupName(group string) bool {
 	return match
 }
 
+// IsValidWord returns true if argument use only allowed chars for a name
+func IsValidWord(token string) bool {
+	match, _ := regexp.MatchString("^[A-Za-z0-9_-]*$", token)
+	return match
+}
+
 // RandString generate a random string of A-Za-z0-9 runes
 func RandString(n int, rand *rand.Rand) string {
 	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")

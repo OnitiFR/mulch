@@ -672,6 +672,16 @@ func GetVMInfosController(req *server.Request) {
 		domains = append(domains, domain.Name)
 	}
 
+	var actions []string
+	for action := range vm.Config.DoActions {
+		actions = append(actions, action)
+	}
+
+	var tags []string
+	for tag := range vm.Config.Tags {
+		tags = append(tags, tag)
+	}
+
 	data := &common.APIVMInfos{
 		Name:                entry.Name.Name,
 		Revision:            entry.Name.Revision,
@@ -694,6 +704,8 @@ func GetVMInfosController(req *server.Request) {
 		Locked:              vm.Locked,
 		AssignedIPv4:        vm.AssignedIPv4,
 		AssignedMAC:         vm.AssignedMAC,
+		DoActions:           actions,
+		Tags:                tags,
 	}
 
 	req.Response.Header().Set("Content-Type", "application/json")
@@ -806,6 +818,7 @@ func RedefineVM(req *server.Request, vm *server.VM, active bool) error {
 	vm.AuthorKey = req.APIKey.Comment
 
 	oldActions := vm.Config.DoActions
+	oldTags := vm.Config.Tags
 
 	// redefine config
 	vm.Config = conf
@@ -821,6 +834,13 @@ func RedefineVM(req *server.Request, vm *server.VM, active bool) error {
 			continue
 		}
 		vm.Config.DoActions[name] = action
+	}
+
+	// copy "old" script tags
+	for tag, from := range oldTags {
+		if from == server.VMTagFromScript {
+			vm.Config.Tags[tag] = from
+		}
 	}
 
 	req.App.VMDB.Update()

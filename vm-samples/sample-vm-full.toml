@@ -28,6 +28,11 @@ env = [
     ["MULCH_HTTP_BASIC_AUTH", "mulch:secret"],
 ]
 
+# Tags will allow you to search a group of VM
+# ex: mulch vm search 'has_tag("myclient")'
+# You can also add a tag from a prepare script, print a line like: _MULCH_TAG_ADD=pgsql
+tags = ["online-shop", "ruby"]
+
 # DNS domains
 # 'test1.localhost->1234' means that 'test1.localhost' HTTP requests
 # are going to be proxied to VM's 1234 port. Default is 80.

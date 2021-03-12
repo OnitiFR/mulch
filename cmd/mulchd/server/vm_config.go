@@ -21,6 +21,12 @@ const (
 	VMAutoRebuildMonthly = "monthly"
 )
 
+// VM tag from config or from script?
+const (
+	VMTagFromConfig = true
+	VMTagFromScript = false
+)
+
 // VMConfig stores needed parameters for a new VM
 type VMConfig struct {
 	FileContent string // config file content
@@ -48,6 +54,7 @@ type VMConfig struct {
 	Restore []*VMConfigScript
 
 	DoActions map[string]*VMDoAction
+	Tags      map[string]bool
 }
 
 // VMConfigScript is a script for prepare, install, save and restore steps
@@ -95,6 +102,7 @@ type tomlVMConfig struct {
 	Restore          []string
 
 	DoActions []tomlVMDoAction `toml:"do-actions"`
+	Tags      []string         `toml:"tags"`
 }
 
 type tomlVMDoAction struct {
@@ -162,7 +170,7 @@ func vmConfigGetScript(tScript string, prefixURL string) (*VMConfigScript, error
 func vmConfigGetDoAction(tDoAction *tomlVMDoAction) (*VMDoAction, error) {
 	doAction := &VMDoAction{}
 
-	if tDoAction.Name == "" || !IsValidName(tDoAction.Name) {
+	if tDoAction.Name == "" || !IsValidWord(tDoAction.Name) {
 		return nil, fmt.Errorf("invalid action name '%s'", tDoAction.Name)
 	}
 
@@ -436,6 +444,15 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 			return nil, fmt.Errorf("duplicate do-action '%s'", action.Name)
 		}
 		vmConfig.DoActions[action.Name] = action
+	}
+
+	// build a map of tags
+	vmConfig.Tags = make(map[string]bool)
+	for _, tag := range tConfig.Tags {
+		if !IsValidWord(tag) {
+			return nil, fmt.Errorf("invalid tag name '%s'", tag)
+		}
+		vmConfig.Tags[tag] = VMTagFromConfig
 	}
 
 	return vmConfig, nil

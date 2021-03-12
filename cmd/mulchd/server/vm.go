@@ -424,7 +424,19 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 			if errDoAction != nil {
 				return
 			}
-
+			if isVar, value = common.StringIsVariable(line, "_MULCH_TAG_ADD"); isVar {
+				if !IsValidWord(value) {
+					errDoAction = fmt.Errorf("invalid action name '%s'", value)
+					return
+				}
+				_, exists := vm.Config.Tags[value]
+				if exists {
+					errDoAction = fmt.Errorf("tag '%s' already exists for this VM", value)
+					return
+				}
+				vm.Config.Tags[value] = VMTagFromScript
+				log.Infof("tag '%s' added", value)
+			}
 			if isVar, value = common.StringIsVariable(line, "_MULCH_ACTION_NAME"); isVar {
 				vmDoAction.Name = value
 			}
@@ -451,6 +463,10 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 				}
 				if vmDoAction.Name == "" || vmDoAction.User == "" || vmDoAction.ScriptURL == "" {
 					errDoAction = fmt.Errorf("invalid action, missing information (need name, user and script)")
+					return
+				}
+				if !IsValidWord(vmDoAction.Name) {
+					errDoAction = fmt.Errorf("invalid action name '%s'", vmDoAction.Name)
 					return
 				}
 				_, exists := vm.Config.DoActions[vmDoAction.Name]
