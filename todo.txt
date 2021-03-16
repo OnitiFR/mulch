@@ -17,6 +17,7 @@
     - check for a possible deadlock / missing timeout in the message hub? (same)
 - still some hanging SSH shown in status (try with a client reboot?)
 - flag for compression / no compression on "vm backup"
+- fix completion when using a non-default (-c) config file (see barry: __barry_get_config)
 
 - full async API?
 - write API public documentation
