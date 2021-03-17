@@ -73,7 +73,7 @@ __mulch_get_servers() {
     COMPREPLY=( $( compgen -W "${out[*]}" -- "$cur" ) )
 }
 
-__custom_func() {
+__mulch_custom_func() {
     case ${last_command} in
         mulch_vm_create)
             __internal_list_toml_files
