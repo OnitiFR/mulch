@@ -40,15 +40,6 @@ type Route struct {
 	path   string
 }
 
-func isRouteMethodAllowed(method string, methods []string) bool {
-	for _, m := range methods {
-		if strings.ToUpper(m) == strings.ToUpper(method) {
-			return true
-		}
-	}
-	return false
-}
-
 // extract a generic parameter from the request (API key, protocol, etc)
 // from the headers (new way, "Mulch-Name") or from FormValue (old way, "name")
 func requestGetMulchParam(r *http.Request, name string) string {
@@ -134,7 +125,6 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 				fmt.Println(err)
 			}
 			flusher.Flush()
-			break
 		}
 	}
 }
@@ -211,8 +201,8 @@ func (app *App) registerRouteHandlers(mux *http.ServeMux, inRoutes map[string][]
 
 				if validRoute == nil {
 					errMsg := fmt.Sprintf("Method was %s for route %s", r.Method, path)
-					app.Log.Errorf("%d: %s", 405, errMsg)
-					http.Error(w, errMsg, 405)
+					app.Log.Errorf("%d: %s", http.StatusMethodNotAllowed, errMsg)
+					http.Error(w, errMsg, http.StatusMethodNotAllowed)
 					return
 				}
 				routeHandleFunc(validRoute, w, r, app)
@@ -227,7 +217,7 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 
-	if route.NoProtoCheck == false {
+	if !route.NoProtoCheck {
 		clientProto, _ := strconv.Atoi(requestGetMulchParam(r, "protocol"))
 		if clientProto != ProtocolVersion {
 			errMsg := fmt.Sprintf("Protocol mismatch, server requires version %d", ProtocolVersion)
@@ -250,12 +240,12 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 		streamStarted:   false,
 	}
 
-	if route.Public == false {
+	if !route.Public {
 		valid, key := app.APIKeysDB.IsValidKey(requestGetMulchParam(r, "key"))
-		if valid == false {
+		if !valid {
 			errMsg := "invalid key"
-			app.Log.Errorf("%d: %s", 403, errMsg)
-			http.Error(w, errMsg, 403)
+			app.Log.Errorf("%d: %s", http.StatusForbidden, errMsg)
+			http.Error(w, errMsg, http.StatusForbidden)
 			return
 		}
 		request.APIKey = key

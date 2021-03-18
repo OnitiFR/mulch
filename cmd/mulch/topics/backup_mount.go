@@ -32,11 +32,11 @@ Warning: use 'mulch backup umount' command, not the system's 'umount'.
 			log.Fatalf("guestmount command not found: %s", err)
 		}
 
-		if common.PathExist(backupFile) == false {
+		if !common.PathExist(backupFile) {
 			log.Fatalf("backup file '%s' does not exists", backupFile)
 		}
 
-		if common.PathExist(mountPoint) == false {
+		if !common.PathExist(mountPoint) {
 			log.Fatalf("mount point '%s' does not exists", mountPoint)
 		}
 

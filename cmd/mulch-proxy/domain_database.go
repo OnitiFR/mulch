@@ -26,7 +26,7 @@ func NewDomainDatabase(filename string, autoCreate bool) (*DomainDatabase, error
 		filename: filename,
 	}
 
-	if autoCreate == true && common.PathExist(filename) == false {
+	if autoCreate && !common.PathExist(filename) {
 		ddb.db = make(map[string]*common.Domain)
 		err := ddb.save()
 		if err != nil {
@@ -103,7 +103,7 @@ func (ddb *DomainDatabase) GetByName(name string) (*common.Domain, error) {
 
 	domain, exists := ddb.db[name]
 	if !exists {
-		return nil, fmt.Errorf("Domain '%s' not found in database", name)
+		return nil, fmt.Errorf("domain '%s' not found in database", name)
 	}
 	return domain, nil
 }
@@ -183,7 +183,7 @@ func (ddb *DomainDatabase) GetChildren() []string {
 
 	children := make(map[string]bool)
 	for _, domain := range ddb.db {
-		if domain.Chained == true {
+		if domain.Chained {
 			children[domain.TargetURL] = true
 		}
 	}

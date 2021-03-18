@@ -95,7 +95,7 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 		port.Port = uint16(portNum)
 
 		group := strings.TrimSpace(strings.ToLower(lineParts[1]))
-		if IsValidGroupName(group) == false {
+		if !IsValidGroupName(group) {
 			return nil, fmt.Errorf("invalid group name '%s' (ex: @my_group)", group)
 		}
 		port.Group = group
@@ -130,7 +130,7 @@ func CheckPortsConflicts(db *VMDatabase, ports []*VMPort, excludeVM string, log 
 			return err
 		}
 
-		if entry.Active == false {
+		if !entry.Active {
 			continue
 		}
 
@@ -145,7 +145,7 @@ func CheckPortsConflicts(db *VMDatabase, ports []*VMPort, excludeVM string, log 
 	for _, port := range ports {
 		if port.Direction == VMPortDirectionExport {
 			vm, exist := exportPortMap[port.String()]
-			if exist == true {
+			if exist {
 				return fmt.Errorf("vm '%s' is already exporting '%s'", vm.Config.Name, port.String())
 			}
 		} else if port.Direction == VMPortDirectionImport {
@@ -158,7 +158,7 @@ func CheckPortsConflicts(db *VMDatabase, ports []*VMPort, excludeVM string, log 
 			}
 
 			_, exist := exportPortMap[reversed.String()]
-			if exist == false && log != nil {
+			if !exist && log != nil {
 				log.Warningf("port '%s' is not exported by anyone (yet?)", port.String())
 			}
 		}

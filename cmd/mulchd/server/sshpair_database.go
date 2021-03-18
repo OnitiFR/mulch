@@ -99,7 +99,7 @@ func (db *SSHPairDatabase) load() error {
 
 // AddNew and add a SSH pair
 func (db *SSHPairDatabase) AddNew(name string) error {
-	if _, exists := db.db[name]; exists == true {
+	if _, exists := db.db[name]; exists {
 		return fmt.Errorf("SSH Pair '%s' already exists in database", name)
 	}
 

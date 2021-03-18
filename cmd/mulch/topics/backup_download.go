@@ -19,7 +19,7 @@ var backupDownloadCmd = &cobra.Command{
 
 		force, _ := cmd.Flags().GetBool("force")
 
-		if common.PathExist(backupName) == true && force == false {
+		if common.PathExist(backupName) && !force {
 			log.Fatalf("file %s already exists (use -f for overwrite)", backupName)
 		}
 

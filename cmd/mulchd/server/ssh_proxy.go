@@ -137,7 +137,7 @@ func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Con
 		// down = external client to mulch ssh proxy (for usual channels)
 		downChannel, downRequests, err := newChannel.Accept()
 		if err != nil {
-			return fmt.Errorf("Accept: %s", err)
+			return fmt.Errorf("failed Accept: %s", err)
 		}
 
 		// requests + two Copy

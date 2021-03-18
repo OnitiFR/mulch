@@ -73,9 +73,7 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) error {
 
 		run.Log.Infof("------ [%s] script: %s ------", run.Caption, task.ScriptName)
 
-		var scanner *bufio.Scanner
-
-		scanner = bufio.NewScanner(task.ScriptReader)
+		scanner := bufio.NewScanner(task.ScriptReader)
 
 		args := task.Arguments
 		// params := make(map[string]interface{})
@@ -131,7 +129,7 @@ func (run *Run) preparePipes(errorChan chan error) error {
 
 	stdin, err := session.StdinPipe()
 	if err != nil {
-		return fmt.Errorf("Unable to setup stdin for session: %v", err)
+		return fmt.Errorf("unable to setup stdin for session: %v", err)
 	}
 	go func() {
 		errI := run.stdinInject(stdin, exitStatus)
@@ -140,7 +138,7 @@ func (run *Run) preparePipes(errorChan chan error) error {
 
 	stdout, err := session.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("Unable to setup stdout for session: %v", err)
+		return fmt.Errorf("unable to setup stdout for session: %v", err)
 	}
 	go func() {
 		errI := run.readStdout(stdout, exitStatus)
@@ -149,7 +147,7 @@ func (run *Run) preparePipes(errorChan chan error) error {
 
 	stderr, err := session.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("Unable to setup stderr for session: %v", err)
+		return fmt.Errorf("unable to setup stderr for session: %v", err)
 	}
 	go func() {
 		errI := run.readStderr(stderr)

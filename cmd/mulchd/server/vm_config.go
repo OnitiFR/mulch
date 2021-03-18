@@ -325,7 +325,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 				break
 			}
 		}
-		if found == false {
+		if !found {
 			return nil, fmt.Errorf("cannot redirect to '%s', it's not one of VM's domains", dest)
 		}
 
@@ -341,7 +341,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 	domainMap := make(map[string]bool)
 	for _, domain := range vmConfig.Domains {
 		_, exist := domainMap[domain.Name]
-		if exist == true {
+		if exist {
 			return nil, fmt.Errorf("domain '%s' is duplicated in this VM", domain.Name)
 		}
 		domainMap[domain.Name] = true
@@ -369,7 +369,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) 
 		// TODO: check for reserved names?
 
 		_, exists := vmConfig.Env[key]
-		if exists == true {
+		if exists {
 			return nil, fmt.Errorf("duplicated 'env' name '%s'", key)
 		}
 

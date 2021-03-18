@@ -103,7 +103,7 @@ func (call *APICall) Do() {
 	for key, val := range call.Args {
 		data.Add(key, val)
 	}
-	if call.api.Trace == true {
+	if call.api.Trace {
 		data.Add("trace", "true")
 	}
 
@@ -302,7 +302,7 @@ func dealWithSpecialMessages(content string) error {
 	if isVar, value := common.StringIsVariable(content, "_MULCH_OPEN_URL"); isVar {
 		_, err := url.ParseRequestURI(value)
 		if err != nil {
-			return fmt.Errorf("Invalid URL: %s", value)
+			return fmt.Errorf("invalid URL: %s", value)
 		}
 		openBrowser(value)
 	}
@@ -314,7 +314,7 @@ func dealWithSpecialMessages(content string) error {
 
 		atPos := strings.Index(value, "@")
 		if atPos == -1 {
-			return fmt.Errorf("Invalid format: %s (need user@path/file)", value)
+			return fmt.Errorf("invalid format: %s (need user@path/file)", value)
 		}
 		user := value[:atPos]
 		filepath := value[atPos+1:]
@@ -329,7 +329,7 @@ func dealWithSpecialMessages(content string) error {
 }
 
 func downloadFile(filename string, reader io.Reader) error {
-	if common.PathExist(filename) == true {
+	if common.PathExist(filename) {
 		return fmt.Errorf("error: file '%s' already exists", filename)
 	}
 

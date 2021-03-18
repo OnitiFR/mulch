@@ -2,8 +2,6 @@ package server
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha1"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -54,7 +52,7 @@ func (connection *SSHConnection) Close() error {
 
 // knownHostHash hash hostname using salt64 like ssh is
 // doing for "hashed" .ssh/known_hosts files
-func knownHostHash(hostname string, salt64 string) string {
+/*func knownHostHash(hostname string, salt64 string) string {
 	buffer, err := base64.StdEncoding.DecodeString(salt64)
 	if err != nil {
 		return ""
@@ -65,7 +63,7 @@ func knownHostHash(hostname string, salt64 string) string {
 
 	hash := base64.StdEncoding.EncodeToString(res)
 	return hash
-}
+}*/
 
 // We don't check SSH fingerprint, because it changes at each VM reconstruction
 // and we're not using SSH outside of local host
@@ -180,7 +178,7 @@ func SSHAgent(pubkeyFile string, log *Log) (ssh.AuthMethod, error) {
 		}
 
 		for _, potentialSigner := range agentSigners {
-			if bytes.Compare(key.Marshal(), potentialSigner.PublicKey().Marshal()) == 0 {
+			if bytes.Equal(key.Marshal(), potentialSigner.PublicKey().Marshal()) {
 				log.Tracef("successfully found %s key in the SSH agent (%s)", pubkeyFile, fields[2])
 				cb := func() ([]ssh.Signer, error) {
 					signers := []ssh.Signer{potentialSigner}

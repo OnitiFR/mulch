@@ -18,7 +18,7 @@ func searchVMsFunctions(vm **server.VM) map[string]govaluate.ExpressionFunction 
 
 		// strlen(string) int
 		"strlen": func(args ...interface{}) (interface{}, error) {
-			if _, castOK := args[0].(string); castOK == false {
+			if _, castOK := args[0].(string); !castOK {
 				return nil, errors.New("strlen() argument must be a string")
 			}
 			length := len(args[0].(string))
@@ -28,7 +28,7 @@ func searchVMsFunctions(vm **server.VM) map[string]govaluate.ExpressionFunction 
 		// env(string) string
 		// return an empty string if the env does not exist
 		"env": func(args ...interface{}) (interface{}, error) {
-			if _, castOK := args[0].(string); castOK == false {
+			if _, castOK := args[0].(string); !castOK {
 				return nil, errors.New("env() argument must be a string")
 			}
 			envName := args[0].(string)
@@ -38,7 +38,7 @@ func searchVMsFunctions(vm **server.VM) map[string]govaluate.ExpressionFunction 
 		// has_domain(string) bool
 		// return true if VM has the specified domain
 		"has_domain": func(args ...interface{}) (interface{}, error) {
-			if _, castOK := args[0].(string); castOK == false {
+			if _, castOK := args[0].(string); !castOK {
 				return nil, errors.New("has_domain() argument must be a string")
 			}
 			domainArg := args[0].(string)
@@ -53,10 +53,10 @@ func searchVMsFunctions(vm **server.VM) map[string]govaluate.ExpressionFunction 
 		// has_script(type string, path string) bool
 		// return true if VM has the specified script (name without path)
 		"has_script": func(args ...interface{}) (interface{}, error) {
-			if _, castOK := args[0].(string); castOK == false {
+			if _, castOK := args[0].(string); !castOK {
 				return nil, errors.New("has_script() argument 1 must be a string")
 			}
-			if _, castOK := args[1].(string); castOK == false {
+			if _, castOK := args[1].(string); !castOK {
 				return nil, errors.New("has_script() argument 2 must be a string")
 			}
 			scriptType := args[0].(string)
@@ -87,7 +87,7 @@ func searchVMsFunctions(vm **server.VM) map[string]govaluate.ExpressionFunction 
 		// has_action(string) bool
 		// return true if the VM has specified action
 		"has_action": func(args ...interface{}) (interface{}, error) {
-			if _, castOK := args[0].(string); castOK == false {
+			if _, castOK := args[0].(string); !castOK {
 				return nil, errors.New("has_action() argument 1 must be a string")
 			}
 			action := args[0].(string)
@@ -98,7 +98,7 @@ func searchVMsFunctions(vm **server.VM) map[string]govaluate.ExpressionFunction 
 		// has_tag(string) bool
 		// return true if the VM has specified tag
 		"has_tag": func(args ...interface{}) (interface{}, error) {
-			if _, castOK := args[0].(string); castOK == false {
+			if _, castOK := args[0].(string); !castOK {
 				return nil, errors.New("has_tag() argument 1 must be a string")
 			}
 			tag := args[0].(string)
@@ -109,7 +109,7 @@ func searchVMsFunctions(vm **server.VM) map[string]govaluate.ExpressionFunction 
 		// like(string) bool
 		// return true if the wildcard match the VM's name
 		"like": func(args ...interface{}) (interface{}, error) {
-			if _, castOK := args[0].(string); castOK == false {
+			if _, castOK := args[0].(string); !castOK {
 				return nil, errors.New("like() argument 1 must be a string")
 			}
 			expr := args[0].(string)
@@ -211,12 +211,12 @@ func SearchVMsController(req *server.Request) {
 			return
 		}
 
-		if _, castOK := res.(bool); castOK == false {
+		if _, castOK := res.(bool); !castOK {
 			http.Error(req.Response, "require a boolean expression", 400)
 			return
 		}
 
-		if res.(bool) == true {
+		if res.(bool) {
 			matches = append(matches, vmName)
 		}
 	}
@@ -227,7 +227,7 @@ func SearchVMsController(req *server.Request) {
 	}
 
 	for _, vmName := range matches {
-		if showRevision == true {
+		if showRevision {
 			req.Printf("%s;%d\n", vmName.Name, vmName.Revision)
 		} else {
 			req.Println(vmName.Name)

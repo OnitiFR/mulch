@@ -92,7 +92,7 @@ func CloudInitDataGen(vm *VM, vmName *VMName, app *App) (string, string, error) 
 		if port.Direction == VMPortDirectionImport {
 			name := fmt.Sprintf("_%d_%s", port.Port, "TCP")
 			_, exists := mainEnv[name]
-			if exists == true {
+			if exists {
 				// name conflict, force the user to use _PORTx
 				mainEnv[name] = "CONFLICT"
 				continue

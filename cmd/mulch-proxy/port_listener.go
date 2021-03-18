@@ -53,7 +53,7 @@ func (pl *PortListener) Listen() {
 	for {
 		conn, err := pl.listener.AcceptTCP()
 		if err != nil {
-			if pl.closed == true {
+			if pl.closed {
 				break
 			}
 			pl.log.Errorf("port proxy: %s: failed to accept connection: %s", pl.listenAddr.String(), err)

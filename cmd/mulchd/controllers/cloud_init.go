@@ -34,6 +34,11 @@ func CloudInitController(req *server.Request) {
 	log.Infof("requesting cloud-init/%s", filename)
 
 	metaData, userData, err := server.CloudInitDataGen(entry.VM, entry.Name, req.App)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
 
 	switch filename {
 	case "meta-data":

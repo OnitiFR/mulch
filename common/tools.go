@@ -34,35 +34,35 @@ func PathExist(path string) bool {
 
 // InterfaceValueToString converts most interface types to string
 func InterfaceValueToString(iv interface{}) string {
-	switch iv.(type) {
+	switch civ := iv.(type) {
 	case int:
-		return fmt.Sprintf("%d", iv.(int))
+		return fmt.Sprintf("%d", civ)
 	case int16:
-		return fmt.Sprintf("%d", iv.(int16))
+		return fmt.Sprintf("%d", civ)
 	case uint16:
-		return fmt.Sprintf("%d", iv.(uint16))
+		return fmt.Sprintf("%d", civ)
 	case int32:
-		return fmt.Sprintf("%d", iv.(int32))
+		return fmt.Sprintf("%d", civ)
 	case int64:
-		return strconv.FormatInt(iv.(int64), 10)
+		return strconv.FormatInt(civ, 10)
 	case uint64:
-		return strconv.FormatUint(iv.(uint64), 10)
+		return strconv.FormatUint(civ, 10)
 	case float32:
-		return fmt.Sprintf("%f", iv.(float32))
+		return fmt.Sprintf("%f", civ)
 	case float64:
-		return strconv.FormatFloat(iv.(float64), 'f', -1, 64)
+		return strconv.FormatFloat(civ, 'f', -1, 64)
 	case string:
-		return iv.(string)
+		return civ
 	case []byte:
-		return string(iv.([]byte))
+		return string(civ)
 	case bool:
-		return strconv.FormatBool(iv.(bool))
+		return strconv.FormatBool(civ)
 	case time.Time:
-		return iv.(time.Time).String()
+		return civ.String()
 	case time.Duration:
-		return iv.(time.Duration).String()
+		return civ.String()
 	case []string:
-		return strings.Join(iv.([]string), ", ")
+		return strings.Join(civ, ", ")
 	}
 	return "INVALID_TYPE"
 }
@@ -101,7 +101,7 @@ func StringFindVariables(str string) []string {
 func StringExpandVariables(str string, variables map[string]interface{}) string {
 	vars := StringFindVariables(str)
 	for _, v := range vars {
-		if val, exists := variables[v]; exists == true {
+		if val, exists := variables[v]; exists {
 			re := regexp.MustCompile("\\$" + v + "(" + stringWordSeparators + "|$)")
 			str = re.ReplaceAllString(str, InterfaceValueToString(val)+"${1}")
 		}

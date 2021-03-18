@@ -74,7 +74,7 @@ func SearchSSHAuthorizedKey(searchedPubKey ssh.PublicKey, authorizedKeysFile str
 		if errP != nil {
 			continue
 		}
-		if bytes.Compare(pubKey.Marshal(), searchedPubKey.Marshal()) == 0 {
+		if bytes.Equal(pubKey.Marshal(), searchedPubKey.Marshal()) {
 			return pubKey, comment, nil
 		}
 	}

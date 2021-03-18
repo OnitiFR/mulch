@@ -44,7 +44,7 @@ func NewLog(trace bool) *Log {
 
 // Log is a low-level function for sending a Message
 func (log *Log) Log(message *Message) {
-	if message.Type == MessageTrace && log.trace == false {
+	if message.Type == MessageTrace && !log.trace {
 		return
 	}
 	fmt.Printf("%s: %s\n", message.Type, message.Message)

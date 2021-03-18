@@ -23,7 +23,7 @@ var backupUmountCmd = &cobra.Command{
 			log.Fatalf("guestunmount command not found: %s", err)
 		}
 
-		if common.PathExist(mountPoint) == false {
+		if !common.PathExist(mountPoint) {
 			log.Fatalf("mount point '%s' does not exists", mountPoint)
 		}
 

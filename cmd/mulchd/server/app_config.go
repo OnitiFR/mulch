@@ -211,12 +211,12 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 			return nil, fmt.Errorf("seed 'name' not defined")
 		}
 
-		if IsValidName(seed.Name) == false {
+		if !IsValidName(seed.Name) {
 			return nil, fmt.Errorf("'%s' is not a valid seed name", seed.Name)
 		}
 
 		_, exists := appConfig.Seeds[seed.Name]
-		if exists == true {
+		if exists {
 			return nil, fmt.Errorf("seed name '%s' already defined", seed.Name)
 		}
 

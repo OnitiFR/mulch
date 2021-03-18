@@ -96,7 +96,7 @@ func (vmsdb *VMStateDatabase) Update() error {
 			return err
 		}
 		sState := VMStateDown
-		if state == true {
+		if state {
 			sState = VMStateUp
 		}
 		newStates[vmName.ID()] = sState
@@ -104,7 +104,7 @@ func (vmsdb *VMStateDatabase) Update() error {
 
 	// compare states with previous ones
 	eq := reflect.DeepEqual(vmsdb.db, newStates)
-	if eq == true {
+	if eq {
 		return nil
 	}
 
@@ -153,7 +153,7 @@ func (vmsdb *VMStateDatabase) restoreStates() {
 			continue
 		}
 
-		if coldState == VMStateUp && hotState == false {
+		if coldState == VMStateUp && !hotState {
 			vmsdb.app.Log.Infof("restore state: starting %s", entry.Name)
 			wg.Add(1)
 			go func() {
@@ -164,7 +164,7 @@ func (vmsdb *VMStateDatabase) restoreStates() {
 				wg.Done()
 			}()
 		}
-		if coldState == VMStateDown && hotState == true {
+		if coldState == VMStateDown && hotState {
 			wg.Add(1)
 			vmsdb.app.Log.Infof("restore state: stopping %s", entry.Name)
 			go func() {
@@ -186,7 +186,7 @@ func (vmsdb *VMStateDatabase) restoreStates() {
 // NOTE: very crude timeout-baed implementation, should use sync.Cond
 func (vmsdb *VMStateDatabase) WaitRestore() {
 	for {
-		if vmsdb.restored == true {
+		if vmsdb.restored {
 			return
 		}
 		time.Sleep(2 * time.Second)

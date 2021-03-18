@@ -26,7 +26,7 @@ var vmListCmd = &cobra.Command{
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		vmListFlagBasic, _ = cmd.Flags().GetBool("basic")
-		if vmListFlagBasic == true {
+		if vmListFlagBasic {
 			client.GetExitMessage().Disable()
 		}
 
@@ -68,12 +68,12 @@ func vmListCB(reader io.Reader, headers http.Header) {
 			}
 
 			locked := "false"
-			if line.Locked == true {
+			if line.Locked {
 				locked = yellow("locked")
 			}
 
 			name := line.Name
-			if line.Active == false {
+			if !line.Active {
 				name = grey(name)
 			}
 

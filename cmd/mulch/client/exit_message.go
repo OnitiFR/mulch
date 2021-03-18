@@ -30,7 +30,7 @@ func (em *ExitMessage) Disable() {
 
 // Display global ExitMessage
 func (em *ExitMessage) Display() {
-	if em.Disabled == true || em.Message == "" {
+	if em.Disabled || em.Message == "" {
 		return
 	}
 	fmt.Println()

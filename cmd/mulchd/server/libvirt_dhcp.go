@@ -150,13 +150,13 @@ func (lv *Libvirt) rebuildDHCPStaticLeases(app *App) error {
 	// update lv.NetworkXML
 	xmldoc, err := lv.Network.GetXMLDesc(0)
 	if err != nil {
-		return fmt.Errorf("GetXMLDesc: %s", err)
+		return fmt.Errorf("failed GetXMLDesc: %s", err)
 	}
 
 	netcfg := &libvirtxml.Network{}
 	err = netcfg.Unmarshal(xmldoc)
 	if err != nil {
-		return fmt.Errorf("Unmarshal: %s", err)
+		return fmt.Errorf("failed Unmarshal: %s", err)
 	}
 
 	lv.NetworkXML = netcfg

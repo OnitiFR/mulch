@@ -83,7 +83,7 @@ func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 			Body:          ioutil.NopCloser(bytes.NewBufferString(body)),
 			ContentLength: int64(len(body)),
 			Request:       req,
-			Header:        make(http.Header, 0),
+			Header:        make(http.Header),
 		}, nil
 	}
 	return res, err
@@ -197,7 +197,7 @@ func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string,
 
 	// we are a parent and this request is forwarded to a child, add PSK to
 	// authenticate ourself
-	if proxy.config.ChainMode == ChainModeParent && domain.Chained == true {
+	if proxy.config.ChainMode == ChainModeParent && domain.Chained {
 		req.Header.Set(PSKHeaderName, proxy.config.ChainPSK)
 	}
 
@@ -297,7 +297,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	}
 
 	// redirect to https?
-	if proto == ProtoHTTP && domain.RedirectToHTTPS == true {
+	if proto == ProtoHTTP && domain.RedirectToHTTPS {
 		newURI := "https://" + req.Host + req.URL.String()
 		http.Redirect(res, req, newURI, http.StatusFound)
 		return
@@ -320,7 +320,7 @@ func (proxy *ProxyServer) RefreshReverseProxies() {
 			continue
 		}
 
-		if domain.Chained == false {
+		if !domain.Chained {
 			domain.TargetURL = fmt.Sprintf("http://%s:%d", domain.DestinationHost, domain.DestinationPort)
 		}
 

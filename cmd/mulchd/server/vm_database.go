@@ -76,7 +76,7 @@ func (vmdb *VMDatabase) genDomainsDB() error {
 	domains := make(map[string]*common.Domain)
 
 	for _, entry := range vmdb.db {
-		if entry.Active == false {
+		if !entry.Active {
 			continue
 		}
 		vm := entry.VM
@@ -87,7 +87,7 @@ func (vmdb *VMDatabase) genDomainsDB() error {
 			}
 
 			otherDomain, exist := domains[domain.Name]
-			if exist == true {
+			if exist {
 				return fmt.Errorf("domain '%s' is duplicated in '%s' and '%s' VMs", domain.Name, otherDomain.VMName, domain.VMName)
 			}
 
@@ -332,7 +332,7 @@ func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
-	if _, exists := vmdb.db[name.ID()]; exists == true {
+	if _, exists := vmdb.db[name.ID()]; exists {
 		return fmt.Errorf("VM %s already exists in database", name)
 	}
 
@@ -367,7 +367,7 @@ func (vmdb *VMDatabase) DeleteFromMaternity(name *VMName) error {
 	defer vmdb.mutex.Unlock()
 
 	_, exists := vmdb.maternityDB[name.ID()]
-	if exists == false {
+	if !exists {
 		return fmt.Errorf("VM '%s' was not found in maternity database", name.ID())
 	}
 
@@ -381,7 +381,7 @@ func (vmdb *VMDatabase) AddToMaternity(vm *VM, name *VMName) error {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
-	if _, exists := vmdb.maternityDB[name.ID()]; exists == true {
+	if _, exists := vmdb.maternityDB[name.ID()]; exists {
 		return fmt.Errorf("VM %s already exists in maternity database", name)
 	}
 

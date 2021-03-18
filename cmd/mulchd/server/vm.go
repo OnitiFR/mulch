@@ -130,7 +130,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	}
 	errDetails := err.(libvirt.Error)
 	if errDetails.Domain != libvirt.FROM_QEMU || errDetails.Code != libvirt.ERR_NO_DOMAIN {
-		return nil, nil, fmt.Errorf("Unexpected error: %s", err)
+		return nil, nil, fmt.Errorf("unexpected error: %s", err)
 	}
 
 	// we assign static DHCP leases for network security reasons (see clean-traffic nwfilter)
@@ -150,7 +150,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		return nil, nil, err
 	}
 
-	if seed.Ready == false {
+	if !seed.Ready {
 		return nil, nil, fmt.Errorf("seed %s is not ready", vmConfig.Seed)
 	}
 
@@ -259,7 +259,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 			domcfg.SysInfo.System.Entry[i].Value = serial
 		}
 	}
-	if serialFound == false {
+	if !serialFound {
 		return nil, nil, errors.New("vm xml file: <sysinfo type='smbios'><system><entry name='serial'> entry not found")
 	}
 
@@ -356,13 +356,13 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	phone := app.PhoneHome.Register(secretUUID.String())
 	defer phone.Unregister()
 
-	for done := false; done == false; {
+	for done := false; !done; {
 		select {
 		case <-time.After(10 * time.Minute):
 			return nil, nil, errors.New("vm init is too long, something probably went wrong")
 		case call := <-phone.PhoneCalls:
 			// seeders already have phone call service, let's filter it out
-			if call.CloutInit == true {
+			if call.CloutInit {
 				done = true
 				log.Info("vm phoned home, cloud-init was successful")
 				vm.LastIP = call.RemoteIP
@@ -626,7 +626,7 @@ func VMStopByName(name *VMName, app *App, log *Log) error {
 	}
 
 	// wait shutoff state
-	for done := false; done == false; {
+	for done := false; !done; {
 		select {
 		case <-time.After(5 * time.Minute):
 			return errors.New("vm shutdown is too long")
@@ -681,7 +681,7 @@ func VMStartByName(name *VMName, secretUUID string, app *App, log *Log) error {
 
 	log.Infof("started, waiting phone call from %s", name)
 
-	for done := false; done == false; {
+	for done := false; !done; {
 		select {
 		case <-time.After(10 * time.Minute):
 			return fmt.Errorf("vm is too long to start, something probably went wrong (%s)", name)
@@ -713,7 +713,7 @@ func VMDelete(vmName *VMName, app *App, log *Log) error {
 		return err
 	}
 
-	if vm.Locked == true {
+	if vm.Locked {
 		return errors.New("VM is locked (see 'unlock' command)")
 	}
 
@@ -743,7 +743,7 @@ func VMDelete(vmName *VMName, app *App, log *Log) error {
 			return errG
 		}
 		if state != libvirt.DOMAIN_SHUTOFF {
-			return errors.New("Unable to force stop (destroy) the VM")
+			return errors.New("unable to force stop (destroy) the VM")
 		}
 	}
 
@@ -927,7 +927,7 @@ func VMDetachBackup(vmName *VMName, app *App) error {
 		}
 	}
 
-	if found == false {
+	if !found {
 		return errors.New("can't find backup disk")
 	}
 
@@ -959,7 +959,7 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 	defer vm.SetOperation(VMOperationNone)
 
 	running, _ := VMIsRunning(vmName, app)
-	if running == false {
+	if !running {
 		return "", errors.New("VM should be up and running to do a backup")
 	}
 
@@ -1010,7 +1010,7 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 	// defer detach + vol delete in case of failure
 	commit := false
 	defer func() {
-		if commit == false {
+		if !commit {
 			log.Info("force post-backup")
 			tasks := []*RunTask{}
 			tasks = append(tasks, &RunTask{
@@ -1115,7 +1115,7 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 	}
 	log.Info("backup disk detached")
 
-	if vm.Config.BackupCompress && compressAllow == BackupCompressAllow {
+	if vm.Config.BackupCompress && compressAllow {
 		err = app.Libvirt.BackupCompress(
 			volName,
 			app.Config.GetTemplateFilepath("volume.xml"),
@@ -1261,7 +1261,7 @@ func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 	}
 
 	running, _ := VMIsRunning(orgVMName, app)
-	if running == true {
+	if running {
 		return errors.New("can't rename a running VM")
 	}
 
@@ -1402,7 +1402,7 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 	}
 
 	running, _ := VMIsRunning(vmName, app)
-	if running == false {
+	if !running {
 		return errors.New("VM should be up and running")
 	}
 
@@ -1426,11 +1426,11 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 	newVM, newVMName, err := NewVM(conf, false, VMStopOnScriptFailure, authorKey, app, log)
 	if err != nil {
 		log.Error(err.Error())
-		return fmt.Errorf("Cannot create VM: %s", err)
+		return fmt.Errorf("cannot create VM: %s", err)
 	}
 
 	defer func() {
-		if success == false {
+		if !success {
 			err = VMDelete(newVMName, app, log)
 			if err != nil {
 				log.Error(err.Error())
@@ -1450,7 +1450,7 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 		}
 
 		defer func() {
-			if success == false {
+			if !success {
 				err = app.VMDB.SetActiveRevision(vmName.Name, vmName.Revision)
 				if err != nil {
 					log.Error(err.Error())

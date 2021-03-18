@@ -389,7 +389,7 @@ func ActionVMController(req *server.Request) {
 			req.Stream.Successf("%s is now locked", entry.Name)
 		}
 	case "unlock":
-		if vm.Locked == false {
+		if !vm.Locked {
 			req.Stream.Warningf("%s already unlocked", entry.Name)
 		}
 		err := server.VMLockUnlock(entry.Name, false, req.App.VMDB)
@@ -510,7 +510,7 @@ func ExecScriptVM(req *server.Request, vm *server.VM, vmName *server.VMName) err
 	defer req.App.Operations.Remove(operation)
 
 	running, _ := server.VMIsRunning(vmName, req.App)
-	if running == false {
+	if !running {
 		return errors.New("VM should be up and running")
 	}
 
@@ -561,7 +561,7 @@ func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error
 	}
 
 	running, _ := server.VMIsRunning(vmName, req.App)
-	if running == false {
+	if !running {
 		return errors.New("VM should be up and running")
 	}
 
@@ -769,7 +769,7 @@ func BackupVM(req *server.Request, vmName *server.VMName) (string, error) {
 // RebuildVMv2 delete VM and rebuilds it from a backup (2nd version, using revisions)
 func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) error {
 
-	if vm.Locked == true && req.HTTP.FormValue("force") != common.TrueStr {
+	if vm.Locked && req.HTTP.FormValue("force") != common.TrueStr {
 		return errors.New("VM is locked (see --force)")
 	}
 
@@ -780,7 +780,7 @@ func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) erro
 
 // RedefineVM replace VM config file with a new one, for next rebuild
 func RedefineVM(req *server.Request, vm *server.VM, active bool) error {
-	if vm.Locked == true && req.HTTP.FormValue("force") != common.TrueStr {
+	if vm.Locked && req.HTTP.FormValue("force") != common.TrueStr {
 		return errors.New("VM is locked (see --force)")
 	}
 
@@ -826,7 +826,7 @@ func RedefineVM(req *server.Request, vm *server.VM, active bool) error {
 	// re-add old 'from prepare' actions (only if a new 'from config' action with
 	// the same name is not already defined)
 	for name, action := range oldActions {
-		if action.FromConfig == true {
+		if action.FromConfig {
 			continue
 		}
 		if _, exists := vm.Config.DoActions[name]; exists {

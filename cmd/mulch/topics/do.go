@@ -33,7 +33,7 @@ See [[do-actions]] in TOML description file.
 		doListFlagBasic, _ = cmd.Flags().GetBool("basic")
 		revision, _ := cmd.Flags().GetString("revision")
 
-		if doListFlagBasic == true {
+		if doListFlagBasic {
 			client.GetExitMessage().Disable()
 		}
 

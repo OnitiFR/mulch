@@ -16,7 +16,7 @@ var configVersion = flag.Bool("version", false, "show version")
 func main() {
 	flag.Parse()
 
-	if *configVersion == true {
+	if *configVersion {
 		fmt.Println(server.Version)
 		os.Exit(0)
 	}

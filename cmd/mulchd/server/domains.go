@@ -27,7 +27,7 @@ func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM s
 			return err
 		}
 
-		if entry.Active == false {
+		if !entry.Active {
 			continue
 		}
 
@@ -38,7 +38,7 @@ func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM s
 
 	for _, domain := range domains {
 		vm, exist := domainMap[domain.Name]
-		if exist == true {
+		if exist {
 			return fmt.Errorf("vm '%s' already registered domain '%s'", vm.Config.Name, domain.Name)
 		}
 	}

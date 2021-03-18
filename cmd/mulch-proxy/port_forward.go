@@ -72,7 +72,7 @@ func (pf *PortForward) pipe(src io.Reader, dst io.Writer) {
 		}
 		b := buff[:n]
 
-		n, err = dst.Write(b)
+		_, err = dst.Write(b)
 		if err != nil {
 			pf.close()
 			return

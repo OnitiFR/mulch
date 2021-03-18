@@ -100,8 +100,8 @@ func (db *BackupDatabase) Delete(name string) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	if _, exists := db.db[name]; exists == false {
-		return fmt.Errorf("Backup '%s' was not found in database", name)
+	if _, exists := db.db[name]; !exists {
+		return fmt.Errorf("backup '%s' was not found in database", name)
 	}
 
 	delete(db.db, name)
@@ -119,8 +119,8 @@ func (db *BackupDatabase) Add(backup *Backup) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	if _, exists := db.db[backup.DiskName]; exists == true {
-		return fmt.Errorf("Backup '%s' already exists in database", backup.DiskName)
+	if _, exists := db.db[backup.DiskName]; exists {
+		return fmt.Errorf("backup '%s' already exists in database", backup.DiskName)
 	}
 
 	db.db[backup.DiskName] = backup

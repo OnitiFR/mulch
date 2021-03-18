@@ -27,7 +27,7 @@ func (req *Request) StartStream() {
 	defer req.streamMutex.Unlock()
 
 	// already started
-	if req.streamStarted == true {
+	if req.streamStarted {
 		return
 	}
 
@@ -37,7 +37,7 @@ func (req *Request) StartStream() {
 
 // WaitStream waits for StartStream()
 func (req *Request) WaitStream() {
-	_ = <-req.startStreamChan
+	<-req.startStreamChan
 }
 
 // SetTarget define or change the default target for the request, for both

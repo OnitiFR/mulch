@@ -38,7 +38,7 @@ const WatchDogHeaderName = "Mulch-Watchdog"
 func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 
 	// -debug implies -trace
-	if debug == true && trace == false {
+	if debug && !trace {
 		trace = true
 	}
 
@@ -127,7 +127,7 @@ func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 }
 
 func (app *App) checkDataPath() error {
-	if common.PathExist(app.Config.DataPath) == false {
+	if !common.PathExist(app.Config.DataPath) {
 		return fmt.Errorf("data path (%s) does not exist", app.Config.DataPath)
 	}
 	lastPidFilename := path.Clean(app.Config.DataPath + "/mulch-proxy-last.pid")

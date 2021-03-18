@@ -25,8 +25,8 @@ type APIServer struct {
 func (srv *APIServer) registerRoutes() {
 	// very crude router, because we have very few routes
 	srv.Muxer.HandleFunc("/domains", func(w http.ResponseWriter, r *http.Request) {
-		if srv.checkPSK(r) == false {
-			http.Error(w, "Forbidden", 403)
+		if !srv.checkPSK(r) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
 
@@ -39,13 +39,13 @@ func (srv *APIServer) registerRoutes() {
 		}
 
 		errMsg := fmt.Sprintf("Method %s not allowed for route /domains", r.Method)
-		srv.Log.Errorf("%d: %s", 405, errMsg)
-		http.Error(w, errMsg, 405)
+		srv.Log.Errorf("%d: %s", http.StatusMethodNotAllowed, errMsg)
+		http.Error(w, errMsg, http.StatusMethodNotAllowed)
 	})
 
 	srv.Muxer.HandleFunc("/domains/conflicts", func(w http.ResponseWriter, r *http.Request) {
-		if srv.checkPSK(r) == false {
-			http.Error(w, "Forbidden", 403)
+		if !srv.checkPSK(r) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
 			return
 		}
 
@@ -55,16 +55,13 @@ func (srv *APIServer) registerRoutes() {
 		}
 
 		errMsg := fmt.Sprintf("Method %s not allowed for route /domains/conflicts", r.Method)
-		srv.Log.Errorf("%d: %s", 405, errMsg)
-		http.Error(w, errMsg, 405)
+		srv.Log.Errorf("%d: %s", http.StatusMethodNotAllowed, errMsg)
+		http.Error(w, errMsg, http.StatusMethodNotAllowed)
 	})
 }
 
 func (srv *APIServer) checkPSK(request *http.Request) bool {
-	if request.Header.Get(PSKHeaderName) == srv.Config.ChainPSK {
-		return true
-	}
-	return false
+	return request.Header.Get(PSKHeaderName) == srv.Config.ChainPSK
 }
 
 // NewAPIServer creates and runs the API server

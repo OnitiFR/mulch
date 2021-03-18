@@ -70,7 +70,7 @@ func NewMessage(mtype string, target string, message string) *Message {
 // MatchTarget returns true if the message matches the target
 // exact searches are usefull for specific target logs (excluding all "global" messages)
 func (message *Message) MatchTarget(target string, exact bool) bool {
-	if exact == true && target != message.Target {
+	if exact && target != message.Target {
 		return false
 	}
 
@@ -106,7 +106,7 @@ func (message *Message) Print(showTime bool, showTarget bool) error {
 		content = c(content)
 		mtype = c(mtype)
 	case MessageFailure:
-		retError = errors.New("Exiting with failure status due to previous errors")
+		retError = errors.New("exiting with failure status due to previous errors")
 		c := color.New(color.FgHiRed).SprintFunc()
 		content = c(content)
 		mtype = c(mtype)

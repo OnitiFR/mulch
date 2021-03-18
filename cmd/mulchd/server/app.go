@@ -170,7 +170,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 }
 
 func (app *App) checkDataPath() error {
-	if common.PathExist(app.Config.DataPath) == false {
+	if !common.PathExist(app.Config.DataPath) {
 		return fmt.Errorf("data path (%s) does not exist", app.Config.DataPath)
 	}
 	return nil

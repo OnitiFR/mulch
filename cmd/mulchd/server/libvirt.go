@@ -63,7 +63,7 @@ func (lv *Libvirt) GetConnection() (*libvirt.Connect, error) {
 		return nil, err
 	}
 
-	if alive == false {
+	if !alive {
 		lv.CloseConnection()
 		conn, err := libvirt.NewConnect(lv.uri)
 		if err != nil {
@@ -173,7 +173,7 @@ func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, temp
 		return nil, nil, fmt.Errorf("GetOrCreateStoragePool: pool.Refresh: %s", err)
 	}
 
-	if active, errI := pool.IsActive(); active == false || errI != nil {
+	if active, errI := pool.IsActive(); !active || errI != nil {
 		return nil, nil, fmt.Errorf("GetOrCreateStoragePool: pool %s is not active: %s", poolName, errI)
 	}
 
@@ -228,7 +228,7 @@ func (lv *Libvirt) GetOrCreateNetwork(networkName string, templateFile string, l
 		}
 	}
 
-	if active, errI := net.IsActive(); active == false || errI != nil {
+	if active, errI := net.IsActive(); !active || errI != nil {
 		return nil, nil, fmt.Errorf("GetOrCreateNetwork: network %s is not active: %s", networkName, errI)
 	}
 

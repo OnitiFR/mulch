@@ -43,12 +43,12 @@ func autoRebuildVM(vmName *VMName, app *App) error {
 	}
 
 	// we currently rebuild only active VMs
-	if entry.Active == false {
+	if !entry.Active {
 		return nil
 	}
 
 	running, _ := VMIsRunning(vmName, app)
-	if running == false {
+	if !running {
 		// VM is down, this is not an error (i guess?)
 		return nil
 	}
@@ -94,19 +94,19 @@ func autoRebuildVM(vmName *VMName, app *App) error {
 
 // IsRebuildNeeded return true if lastRebuild is older than rebuildSetting
 func IsRebuildNeeded(rebuildSetting string, lastRebuild time.Time) bool {
-	lastRebuildAgo := time.Now().Sub(lastRebuild)
+	sinceLastRebuild := time.Since(lastRebuild)
 
 	rebuild := false
 
-	if rebuildSetting == VMAutoRebuildDaily && lastRebuildAgo > 24*time.Hour {
+	if rebuildSetting == VMAutoRebuildDaily && sinceLastRebuild > 24*time.Hour {
 		rebuild = true
 	}
 
-	if rebuildSetting == VMAutoRebuildWeekly && lastRebuildAgo > 7*24*time.Hour {
+	if rebuildSetting == VMAutoRebuildWeekly && sinceLastRebuild > 7*24*time.Hour {
 		rebuild = true
 	}
 
-	if rebuildSetting == VMAutoRebuildMonthly && lastRebuildAgo > 30*24*time.Hour {
+	if rebuildSetting == VMAutoRebuildMonthly && sinceLastRebuild > 30*24*time.Hour {
 		rebuild = true
 	}
 	return rebuild

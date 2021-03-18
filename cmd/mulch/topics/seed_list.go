@@ -27,7 +27,7 @@ var seedListCmd = &cobra.Command{
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		seedListFlagBasic, _ = cmd.Flags().GetBool("basic")
-		if seedListFlagBasic == true {
+		if seedListFlagBasic {
 			client.GetExitMessage().Disable()
 		}
 
@@ -60,7 +60,7 @@ func seedsCB(reader io.Reader, headers http.Header) {
 		green := color.New(color.FgHiGreen).SprintFunc()
 		for _, line := range data {
 			state := red("not-ready")
-			if line.Ready == true {
+			if line.Ready {
 				state = green("ready")
 			}
 

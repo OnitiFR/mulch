@@ -56,7 +56,7 @@ func sshCmdInfoCB(reader io.Reader, headers http.Header) {
 		log.Fatal(err.Error())
 	}
 
-	if data.Up == false {
+	if !data.Up {
 		log.Fatal(fmt.Errorf("error, VM is not running"))
 	}
 

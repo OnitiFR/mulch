@@ -26,7 +26,7 @@ func InitCertCache(certPath string) (string, error) {
 		return "", err
 	}
 
-	if stat.IsDir() == false {
+	if !stat.IsDir() {
 		return "", fmt.Errorf("%s is not a directory", cacheDir)
 	}
 

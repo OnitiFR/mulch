@@ -27,7 +27,7 @@ func NewLog(target string, hub *Hub, history *LogHistory) *Log {
 func (log *Log) Log(message *common.Message) {
 	message.Target = log.target
 
-	if !(message.Type == common.MessageTrace && log.hub.trace == false) {
+	if !(message.Type == common.MessageTrace && !log.hub.trace) {
 		// TODO: use our own *log.Logger (see log.go in Nosee project)
 		fmt.Printf("%s(%s): %s\n", message.Type, message.Target, message.Message)
 	}

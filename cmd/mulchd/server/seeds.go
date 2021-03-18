@@ -60,7 +60,7 @@ func NewSeeder(filename string, app *App) (*SeedDatabase, error) {
 	}
 
 	for _, seed := range db.db {
-		if seed.Ready == false {
+		if !seed.Ready {
 			// Reset LastModified to restart download
 			seed.LastModified = time.Time{}
 		}
@@ -93,7 +93,7 @@ func NewSeeder(filename string, app *App) (*SeedDatabase, error) {
 	// 2 - remove old entries
 	for name, oldSeed := range db.db {
 		_, exists := app.Config.Seeds[name]
-		if exists == false {
+		if !exists {
 			app.Log.Infof("removing old seed '%s'", name)
 			delete(db.db, name)
 			app.Libvirt.DeleteVolume(oldSeed.GetVolumeName(), app.Libvirt.Pools.Seeds)
@@ -142,7 +142,7 @@ func (db *SeedDatabase) load() error {
 // GetByName returns a seed using its name (or an error)
 func (db *SeedDatabase) GetByName(name string) (*Seed, error) {
 	seed, exits := db.db[name]
-	if exits == false {
+	if !exits {
 		return nil, fmt.Errorf("seed %s does not exists", name)
 	}
 	return seed, nil
@@ -244,7 +244,7 @@ func (db *SeedDatabase) RefreshSeeder(seed *Seed, force bool) error {
 		return fmt.Errorf("seeder is missing 'auto_rebuild' setting (it's the whole point :)")
 	}
 
-	if !IsRebuildNeeded(conf.AutoRebuild, seed.LastModified) && force != SeedRefreshForce {
+	if !IsRebuildNeeded(conf.AutoRebuild, seed.LastModified) && !force {
 		log.Tracef("no rebuild needed yet for seeder '%s'", seed.Name)
 		return nil
 	}
@@ -379,7 +379,7 @@ func (db *SeedDatabase) RefreshSeed(seed *Seed, force bool) error {
 	if err != nil {
 		return fmt.Errorf("can't parse Last-Modified header: %s", err)
 	}
-	if seed.LastModified != t || force == SeedRefreshForce {
+	if seed.LastModified != t || force {
 		log.Infof("downloading seed '%s'", name)
 
 		before := time.Now()

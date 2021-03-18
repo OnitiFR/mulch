@@ -25,7 +25,7 @@ var backupListCmd = &cobra.Command{
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		backupListFlagBasic, _ = cmd.Flags().GetBool("basic")
-		if backupListFlagBasic == true {
+		if backupListFlagBasic {
 			client.GetExitMessage().Disable()
 		}
 

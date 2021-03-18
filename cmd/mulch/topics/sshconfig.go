@@ -135,7 +135,7 @@ Host *
 
 	fmt.Println("Generated aliases:")
 	for _, vm := range *conf.vmList {
-		if vm.Active == false {
+		if !vm.Active {
 			continue
 		}
 

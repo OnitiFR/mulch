@@ -14,7 +14,6 @@ type sshServerClient struct {
 	sshClient  *ssh.Client
 	remoteAddr net.Addr
 	vm         *VM
-	vmID       string
 	sshUser    string
 	apiAuth    string
 	startTime  time.Time
@@ -159,7 +158,7 @@ func NewSSHProxyServer(app *App) error {
 		config,
 		app.Log,
 		func(c ssh.ConnMetadata) (*ssh.Client, error) {
-			client, _ := app.sshClients[c.RemoteAddr()]
+			client := app.sshClients[c.RemoteAddr()]
 			// we could delete entry here, but we keep it for infos/stats (see status command)
 			app.Log.Tracef("SSH proxy: connection accepted from %s forwarded to %s", c.RemoteAddr(), client.sshClient.RemoteAddr())
 
