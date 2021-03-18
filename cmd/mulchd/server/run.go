@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"io"
 	"time"
@@ -25,11 +26,10 @@ type Run struct {
 	// DialDuration time.Duration
 	Log            *Log
 	StdoutCallback func(string)
-	CloseChannel   <-chan bool
 }
 
 // Go will execute the Run
-func (run *Run) Go() error {
+func (run *Run) Go(ctx context.Context) error {
 	const bootstrap = "bash -s --"
 	errorChan := make(chan error)
 
@@ -43,15 +43,14 @@ func (run *Run) Go() error {
 	}
 	defer run.SSHConn.Close()
 
-	if err := run.preparePipes(errorChan); err != nil {
+	if err := run.preparePipes(ctx, errorChan); err != nil {
 		return err
 	}
 
 	go func() {
-		// "a receive from a nil channel blocks forever"
-		<-run.CloseChannel
-		run.Log.Trace("Close request received, closing SSH session")
-		run.SSHConn.Session.Close()
+		<-ctx.Done()
+		run.Log.Tracef("Close request received, closing SSH session (%s)", ctx.Err())
+		run.SSHConn.Close()
 	}()
 
 	if err := run.SSHConn.Session.Run(bootstrap); err != nil {
@@ -62,6 +61,7 @@ func (run *Run) Go() error {
 	// in every case, so… let's timeout.
 	select {
 	case err := <-errorChan:
+		// we exit on the first error of any stream
 		return err
 	case <-time.After(1 * time.Second):
 		return errors.New("timeout after waiting stderr errorChan")

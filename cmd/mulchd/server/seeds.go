@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -287,6 +288,9 @@ func (db *SeedDatabase) RefreshSeeder(seed *Seed, force bool) error {
 	}
 	defer post.Close()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	run := &Run{
 		SSHConn: &SSHConnection{
 			User: db.app.Config.MulchSuperUser,
@@ -306,7 +310,7 @@ func (db *SeedDatabase) RefreshSeeder(seed *Seed, force bool) error {
 		},
 		Log: log,
 	}
-	err = run.Go()
+	err = run.Go(ctx)
 	if err != nil {
 		return err
 	}

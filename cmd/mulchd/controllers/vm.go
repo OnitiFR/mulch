@@ -501,14 +501,6 @@ func ExecScriptVM(req *server.Request, vm *server.VM, vmName *server.VMName) err
 		return fmt.Errorf("'script' field: %s", err)
 	}
 
-	operation := req.App.Operations.Add(&server.Operation{
-		Origin:        req.APIKey.Comment,
-		Action:        "exec",
-		Ressource:     "vm",
-		RessourceName: vmName.ID(),
-	})
-	defer req.App.Operations.Remove(operation)
-
 	running, _ := server.VMIsRunning(vmName, req.App)
 	if !running {
 		return errors.New("VM should be up and running")
@@ -538,10 +530,9 @@ func ExecScriptVM(req *server.Request, vm *server.VM, vmName *server.VMName) err
 				As:           as,
 			},
 		},
-		Log:          req.Stream,
-		CloseChannel: req.Response.(http.CloseNotifier).CloseNotify(),
+		Log: req.Stream,
 	}
-	err = run.Go()
+	err = run.Go(req.HTTP.Context())
 	if err != nil {
 		return err
 	}
@@ -597,10 +588,9 @@ func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error
 				Arguments:    arguments,
 			},
 		},
-		Log:          req.Stream,
-		CloseChannel: req.Response.(http.CloseNotifier).CloseNotify(),
+		Log: req.Stream,
 	}
-	err = run.Go()
+	err = run.Go(req.HTTP.Context())
 	if err != nil {
 		return err
 	}

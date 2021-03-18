@@ -2,13 +2,14 @@ package server
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
 )
 
-func (run *Run) readStdout(std io.Reader, exitStatus chan int) error {
+func (run *Run) readStdout(ctx context.Context, std io.Reader, exitStatus chan int) error {
 	scanner := bufio.NewScanner(std)
 
 	for scanner.Scan() {
@@ -29,7 +30,11 @@ func (run *Run) readStdout(std io.Reader, exitStatus chan int) error {
 					continue
 				}
 				run.Log.Tracef("EXIT detected: %s (status %d)", text, status)
-				exitStatus <- status
+				select {
+				case exitStatus <- status:
+				case <-ctx.Done():
+					return fmt.Errorf("premature exit: %s", ctx.Err())
+				}
 			default:
 				run.Log.Errorf("unknown keyword: %s", text)
 			}
@@ -63,7 +68,7 @@ func (run *Run) readStderr(std io.Reader) error {
 }
 
 // scripts -> ssh
-func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) error {
+func (run *Run) stdinInject(ctx context.Context, out io.WriteCloser, exitStatus chan int) error {
 
 	defer out.Close()
 
@@ -115,15 +120,19 @@ func (run *Run) stdinInject(out io.WriteCloser, exitStatus chan int) error {
 			return fmt.Errorf("error scanner: %s", err)
 		}
 
-		status := <-exitStatus
-		if status != 0 {
-			return fmt.Errorf("detected non-zero exit status: %d", status)
+		select {
+		case status := <-exitStatus:
+			if status != 0 {
+				return fmt.Errorf("detected non-zero exit status: %d", status)
+			}
+		case <-ctx.Done():
+			return fmt.Errorf("context exit: %s", ctx.Err())
 		}
 	}
 	return nil
 }
 
-func (run *Run) preparePipes(errorChan chan error) error {
+func (run *Run) preparePipes(ctx context.Context, errorChan chan error) error {
 	exitStatus := make(chan int)
 	session := run.SSHConn.Session
 
@@ -132,8 +141,11 @@ func (run *Run) preparePipes(errorChan chan error) error {
 		return fmt.Errorf("unable to setup stdin for session: %v", err)
 	}
 	go func() {
-		errI := run.stdinInject(stdin, exitStatus)
-		errorChan <- errI
+		errI := run.stdinInject(ctx, stdin, exitStatus)
+		select {
+		case errorChan <- errI:
+		case <-ctx.Done():
+		}
 	}()
 
 	stdout, err := session.StdoutPipe()
@@ -141,8 +153,11 @@ func (run *Run) preparePipes(errorChan chan error) error {
 		return fmt.Errorf("unable to setup stdout for session: %v", err)
 	}
 	go func() {
-		errI := run.readStdout(stdout, exitStatus)
-		errorChan <- errI
+		errI := run.readStdout(ctx, stdout, exitStatus)
+		select {
+		case errorChan <- errI:
+		case <-ctx.Done():
+		}
 	}()
 
 	stderr, err := session.StderrPipe()
@@ -151,7 +166,10 @@ func (run *Run) preparePipes(errorChan chan error) error {
 	}
 	go func() {
 		errI := run.readStderr(stderr)
-		errorChan <- errI
+		select {
+		case errorChan <- errI:
+		case <-ctx.Done():
+		}
 	}()
 
 	return nil

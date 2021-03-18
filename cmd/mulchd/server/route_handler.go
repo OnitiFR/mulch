@@ -52,14 +52,11 @@ func requestGetMulchParam(r *http.Request, name string) string {
 	return val
 }
 
-func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request) {
-	cn, ok := w.(http.CloseNotifier)
-	if !ok {
-		errMsg := fmt.Sprintf("stream preparation: CloseNotifier failed")
-		request.App.Log.Error(errMsg)
-		http.Error(w, errMsg, 500)
-		return
-	}
+func routeStreamHandler(request *Request) {
+	w := request.Response
+	r := request.HTTP
+	ctx := r.Context()
+
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		errMsg := fmt.Sprintf("stream preparation: Flusher failed")
@@ -92,7 +89,10 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 		request.Route.Handler(request)
 		// let's ensure the last message have time to be flushed
 		time.Sleep(time.Duration(100) * time.Millisecond)
-		closer <- true
+		select {
+		case closer <- true:
+		case <-ctx.Done():
+		}
 	}()
 
 	// allow request.Route.Handler to update headers
@@ -105,7 +105,7 @@ func routeStreamHandler(w http.ResponseWriter, r *http.Request, request *Request
 		case <-closer:
 			client.Unregister()
 			return
-		case <-cn.CloseNotify():
+		case <-ctx.Done():
 			client.Unregister()
 			return
 		// TODO: make timeout configurable
@@ -256,7 +256,7 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 
 	switch route.Type {
 	case RouteTypeStream:
-		routeStreamHandler(w, r, request)
+		routeStreamHandler(request)
 	case RouteTypeCustom:
 		request.Stream = NewLog("", app.Hub, app.LogHistory)
 		request.streamStarted = true

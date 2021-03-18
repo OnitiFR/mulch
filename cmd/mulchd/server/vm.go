@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -189,6 +190,9 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	}
 	app.Libvirt.AddTransientDHCPHost(transientLease, app)
 	defer app.Libvirt.RemoveTransientDHCPHost(transientLease, app)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// 1 - copy from reference image
 	log.Infof("creating VM disk '%s'", diskName)
@@ -486,7 +490,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 			}
 		},
 	}
-	err = run.Go()
+	err = run.Go(ctx)
 	if err != nil {
 		if !allowScriptFailure {
 			return nil, nil, err
@@ -545,7 +549,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 				}
 			},
 		}
-		err = run.Go()
+		err = run.Go(ctx)
 		if err != nil {
 			if !allowScriptFailure {
 				return nil, nil, err
@@ -1007,6 +1011,9 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 	}
 	defer post.Close()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// defer detach + vol delete in case of failure
 	commit := false
 	defer func() {
@@ -1032,7 +1039,7 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 				Tasks: tasks,
 				Log:   log,
 			}
-			errRun := run.Go()
+			errRun := run.Go(ctx)
 			if errRun != nil {
 				log.Errorf("failed post-backup: %s", errRun)
 				// continue anyway, it's not fatal
@@ -1102,7 +1109,7 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 		Tasks: tasks,
 		Log:   log,
 	}
-	err = run.Go()
+	err = run.Go(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -1190,6 +1197,9 @@ func VMRestoreNoChecks(vm *VM, vmName *VMName, backup *Backup, app *App, log *Lo
 		return err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	tasks := []*RunTask{}
 	tasks = append(tasks, &RunTask{
 		ScriptName:   "pre-restore.sh",
@@ -1231,7 +1241,7 @@ func VMRestoreNoChecks(vm *VM, vmName *VMName, backup *Backup, app *App, log *Lo
 		Tasks: tasks,
 		Log:   log,
 	}
-	err = run.Go()
+	err = run.Go(ctx)
 	if err != nil {
 		return err
 	}

@@ -1,24 +1,28 @@
+Resource leaks:
+- check that the switch to Context fixes all known resource leaks
+- mulchd "outage" of 2020-07-22:
+    - investigate all the preparePipes.funcX found in the stacktrace (see m2 log)
+    - check for a possible deadlock / missing timeout in the message hub? (same)
+    - maybe fixed by the switch to Context of run.go
+- still some hanging SSH shown in status (try with a client reboot?)
+
+Short term:
 - allow to disable auto-rebuild
 - switch default SSH user to app instead of admin (update client sshconfig.go doc)
 - add timeout on VM creation scripts OR at least allow VM deletion
   - note: for deletion, shutting down is not a good option when scripts started, I think
-- add/check server timeouts when client disapears on do action (ex: kill -9 on "mulch do xx logs")
 - add "variables" to TOML files? (like $author or $USER in VM name or URL, to create "generic" TOML files)
 - provide a whereis feature / add "official" scripts (like wtf_is_my_vm.sh) to the client?
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
 - proxy / proxy-chain request stats?
 - check domains validity on VM create, PS: domain name validation is HARD :(
-- "hanging" operations (ex: mulch do xyz log + vm rebuild)
 - add comments to backups (and other objects ?)
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - add a SSH keepalive for Run.SSHConn?
-- mulchd "outage" of 2020-07-22:
-    - investigate all the preparePipes.funcX found in the stacktrace (see m2 log)
-    - check for a possible deadlock / missing timeout in the message hub? (same)
-- still some hanging SSH shown in status (try with a client reboot?)
 - flag for compression / no compression on "vm backup"
 - fix completion when using a non-default (-c) config file (see barry: __barry_get_config)
 
+Long term:
 - full async API?
 - write API public documentation
 - continue tests on snapshots (see branch "snapshots")
