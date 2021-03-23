@@ -226,6 +226,7 @@ DROP DATABASE IF EXISTS test;
 DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
 FLUSH PRIVILEGES;
 EOS
+[ $? -eq 0 ] || exit $?
 
 # create mysql user and db (use args?)
 sudo bash -c "cat | mysql -su root" <<- EOS
