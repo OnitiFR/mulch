@@ -214,7 +214,7 @@ fi
 sudo a2enconf phpmyadmin || exit $?
 sudo a2enmod rewrite expires || exit $?
 
-sudo sed -i 's/^disable_functions = \(.*\)/disable_functions = \1phpinfo,/' /etc/php/*/apache2/php.ini
+sudo sed -i 's/^disable_functions = \(.*\)/disable_functions = \1phpinfo,/' /etc/php/*/apache2/php.ini || exit $?
 
 # mysql_secure_installation
 # In recent release of MariaDB, root access is only possible
