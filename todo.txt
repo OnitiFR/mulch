@@ -5,6 +5,8 @@ Resource leaks:
     - check for a possible deadlock / missing timeout in the message hub? (same)
     - maybe fixed by the switch to Context of run.go
 - still some hanging SSH shown in status (try with a client reboot?)
+- memory usage (10+GB)
+- scp "sub-MBps" speeds
 
 Short term:
 - allow to disable auto-rebuild
