@@ -8,6 +8,7 @@ Resource leaks:
 - mulchd long-term memory usage (10+GB)
 
 Short term:
+- fatal error: concurrent map writes → ssh_server.go:167
 - allow to disable auto-rebuild
 - switch default SSH user to app instead of admin (update client sshconfig.go doc)
 - fix "Client error: sftp copy error: : no known_hosts" error on dump command
