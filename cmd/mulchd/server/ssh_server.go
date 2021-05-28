@@ -5,6 +5,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -17,6 +18,11 @@ type sshServerClient struct {
 	sshUser    string
 	apiAuth    string
 	startTime  time.Time
+}
+
+type sshServerClients struct {
+	db    map[net.Addr]*sshServerClient
+	mutex sync.Mutex
 }
 
 // NewSSHProxyServer creates and starts our SSH proxy to VMs
@@ -32,7 +38,7 @@ func NewSSHProxyServer(app *App) error {
 		return err
 	}
 
-	app.sshClients = make(map[net.Addr]*sshServerClient)
+	app.sshClients = newSSHServerClients()
 
 	config := &ssh.ServerConfig{
 		PublicKeyCallback: func(c ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
@@ -145,7 +151,7 @@ func NewSSHProxyServer(app *App) error {
 			client.sshClient = sshClient
 
 			app.Log.Trace("SSH Proxy: adding client to the map")
-			app.sshClients[c.RemoteAddr()] = &client
+			app.sshClients.add(c.RemoteAddr(), &client)
 			return nil, nil
 		},
 	}
@@ -158,13 +164,13 @@ func NewSSHProxyServer(app *App) error {
 		config,
 		app.Log,
 		func(c ssh.ConnMetadata) (*ssh.Client, error) {
-			client := app.sshClients[c.RemoteAddr()]
+			client := app.sshClients.findByAddress(c.RemoteAddr())
 			// we could delete entry here, but we keep it for infos/stats (see status command)
 			app.Log.Tracef("SSH proxy: connection accepted from %s forwarded to %s", c.RemoteAddr(), client.sshClient.RemoteAddr())
 
 			return client.sshClient, err
 		}, func(c ssh.ConnMetadata) error {
-			delete(app.sshClients, c.RemoteAddr())
+			app.sshClients.delete(c.RemoteAddr())
 			app.Log.Tracef("SSH proxy: connection closed from: %s", c.RemoteAddr())
 			return nil
 		})
@@ -174,4 +180,31 @@ func NewSSHProxyServer(app *App) error {
 
 	app.Log.Infof("SSH proxy server listening on %s", app.Config.ProxyListenSSH)
 	return nil
+}
+
+// newSSHServerClients create a new sshClients database
+func newSSHServerClients() *sshServerClients {
+	return &sshServerClients{
+		db: make(map[net.Addr]*sshServerClient),
+	}
+}
+
+// add a client with address addr to the database
+func (sc *sshServerClients) add(addr net.Addr, client *sshServerClient) {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
+	sc.db[addr] = client
+}
+
+// delete a client by its address
+func (sc *sshServerClients) delete(addr net.Addr) {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
+	delete(sc.db, addr)
+}
+
+func (sc *sshServerClients) findByAddress(addr net.Addr) *sshServerClient {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
+	return sc.db[addr]
 }

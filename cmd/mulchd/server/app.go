@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -56,7 +55,7 @@ type App struct {
 	Seeder         *SeedDatabase
 	routesInternal map[string][]*Route
 	routesAPI      map[string][]*Route
-	sshClients     map[net.Addr]*sshServerClient
+	sshClients     *sshServerClients
 	Operations     *OperationList
 	ProxyReloader  *ProxyReloader
 }
