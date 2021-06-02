@@ -24,6 +24,7 @@ Short term:
 - flag for compression / no compression on "vm backup"
 - fix completion when using a non-default (-c) config file (see barry: __barry_get_config)
 - common/message.go: add showDate to showTime? (-dd?)
+- on redefine, show what's instantaneous and what's needing a rebuild?
 
 Long term:
 - full async API?
