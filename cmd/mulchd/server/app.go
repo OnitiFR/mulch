@@ -447,7 +447,7 @@ func (app *App) initSigQUITHandler() {
 			func() { // so we can use defer
 				ts := time.Now().Format("20060102-150405")
 				rnd := strconv.Itoa(app.Rand.Int())
-				filename := path.Clean(os.TempDir() + "/" + "mulchd-" + ts + "-" + rnd + ".pprof")
+				filename := path.Clean(os.TempDir() + "/" + "mulchd-" + ts + "-" + rnd + ".prof")
 				file, err := os.Create(filename)
 				if err != nil {
 					app.Log.Errorf("unable to create %s: %s", filename, err)
