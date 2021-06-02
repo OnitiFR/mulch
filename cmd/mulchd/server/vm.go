@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
-	uuid "github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 	"golang.org/x/crypto/ssh"
 	libvirtxml "gopkg.in/libvirt/libvirt-go-xml.v5"
 	"gopkg.in/libvirt/libvirt-go.v5"

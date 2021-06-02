@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	"github.com/OnitiFR/mulch/common"
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 	"github.com/c2h5oh/datasize"
 	"github.com/fatih/color"
 )
