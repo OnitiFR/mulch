@@ -569,7 +569,8 @@ func (app *App) Status() (*common.APIStatus, error) {
 		allocatedDisks += int(vInfos.Allocation / 1024 / 1024)
 	}
 
-	for _, client := range app.sshClients {
+	clients := app.sshClients.getClients()
+	for _, client := range clients {
 		entry, err := app.VMDB.GetEntryByVM(client.vm)
 		if err != nil {
 			continue

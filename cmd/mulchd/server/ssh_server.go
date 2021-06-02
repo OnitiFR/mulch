@@ -208,3 +208,15 @@ func (sc *sshServerClients) findByAddress(addr net.Addr) *sshServerClient {
 	defer sc.mutex.Unlock()
 	return sc.db[addr]
 }
+
+// getClients as an array
+func (sc *sshServerClients) getClients() []*sshServerClient {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
+
+	clients := make([]*sshServerClient, 0, len(sc.db))
+	for _, entry := range sc.db {
+		clients = append(clients, entry)
+	}
+	return clients
+}
