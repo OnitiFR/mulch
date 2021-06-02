@@ -249,7 +249,7 @@ func (call *APICall) Do() {
 			green := color.New(color.FgHiGreen).SprintFunc()
 			yellow := color.New(color.FgHiYellow).SprintFunc()
 			msg := fmt.Sprintf("According to the server, a client update is available: %s → %s\n", yellow(Version), green(latestClientVersionKnownByServer))
-			msg = msg + fmt.Sprintf("Update:\n    go get -u github.com/OnitiFR/mulch/cmd/mulch\n")
+			msg = msg + "Update:\n    go get -u github.com/OnitiFR/mulch/cmd/mulch\n"
 			GetExitMessage().Message = msg
 		}
 	}

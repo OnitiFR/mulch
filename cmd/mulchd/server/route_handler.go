@@ -59,7 +59,7 @@ func routeStreamHandler(request *Request) {
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		errMsg := fmt.Sprintf("stream preparation: Flusher failed")
+		errMsg := "stream preparation: Flusher failed"
 		request.App.Log.Error(errMsg)
 		http.Error(w, errMsg, 500)
 		return

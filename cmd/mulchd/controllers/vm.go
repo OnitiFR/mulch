@@ -606,7 +606,7 @@ func GetVMConfigController(req *server.Request) {
 	vmName := req.SubPath
 
 	if vmName == "" {
-		msg := fmt.Sprintf("no VM name given")
+		msg := "no VM name given"
 		req.App.Log.Error(msg)
 		http.Error(req.Response, msg, 400)
 		return
@@ -627,7 +627,7 @@ func GetVMInfosController(req *server.Request) {
 	vmName := req.SubPath
 
 	if vmName == "" {
-		msg := fmt.Sprintf("no VM name given")
+		msg := "no VM name given"
 		req.App.Log.Error(msg)
 		http.Error(req.Response, msg, 400)
 		return
@@ -714,7 +714,7 @@ func GetVMDoActionsController(req *server.Request) {
 	vmName := req.SubPath
 
 	if vmName == "" {
-		msg := fmt.Sprintf("no VM name given")
+		msg := "no VM name given"
 		req.App.Log.Error(msg)
 		http.Error(req.Response, msg, 400)
 		return

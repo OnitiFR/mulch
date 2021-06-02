@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -30,7 +29,7 @@ func GetLogHistoryController(req *server.Request) {
 
 	lines, err := strconv.Atoi(linesStr)
 	if err != nil || lines < 1 || lines > logControllerHistoryMaxLines {
-		msg := fmt.Sprintf("invalid 'lines' value")
+		msg := "invalid 'lines' value"
 		req.App.Log.Error(msg)
 		http.Error(req.Response, msg, 400)
 		return

@@ -2,9 +2,7 @@ package server
 
 import (
 	"bytes"
-	"crypto/x509"
 	"encoding/base64"
-	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -110,28 +108,6 @@ func PublicKeyFile(file string) ssh.AuthMethod {
 	}
 
 	key, err := ssh.ParsePrivateKey(buffer)
-	if err != nil {
-		return nil
-	}
-	return ssh.PublicKeys(key)
-}
-
-// PublicKeyFilePassPhrase returns an AuthMethod using a private key file
-// and a passphrase
-func PublicKeyFilePassPhrase(file, passphrase string) ssh.AuthMethod {
-	buffer, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil
-	}
-
-	block, _ := pem.Decode(buffer)
-	private, err := x509.DecryptPEMBlock(block, []byte(passphrase))
-	if err != nil {
-		return nil
-	}
-	block.Headers = nil
-	block.Bytes = private
-	key, err := ssh.ParsePrivateKey(pem.EncodeToMemory(block))
 	if err != nil {
 		return nil
 	}

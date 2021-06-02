@@ -51,7 +51,7 @@ func GetSeedStatusController(req *server.Request) {
 	seedName := req.SubPath
 
 	if seedName == "" {
-		msg := fmt.Sprintf("no seed name given")
+		msg := "no seed name given"
 		req.App.Log.Error(msg)
 		http.Error(req.Response, msg, 400)
 		return
