@@ -1,13 +1,18 @@
 package server
 
 import (
+	"bufio"
 	"crypto/tls"
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
+	"os/signal"
+	"path"
+	"runtime/pprof"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
@@ -85,6 +90,8 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	app.initSigQUITHandler()
 
 	app.Libvirt, err = NewLibvirt(config.LibVirtURI)
 	if err != nil {
@@ -427,6 +434,39 @@ func (app *App) initLibvirtNWFilter() error {
 func (app *App) initWebServers() {
 	app.MuxInternal = http.NewServeMux()
 	app.MuxAPI = http.NewServeMux()
+}
+
+// write a pprof memory profile dump on SIGQUIT
+// kill -QUIT $(pidof mulchd)
+func (app *App) initSigQUITHandler() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGQUIT)
+
+	go func() {
+		for range c {
+			func() { // so we can use defer
+				ts := time.Now().Format("20060102-150405")
+				rnd := strconv.Itoa(app.Rand.Int())
+				filename := path.Clean(os.TempDir() + "/" + "mulchd-" + ts + "-" + rnd + ".pprof")
+				file, err := os.Create(filename)
+				if err != nil {
+					app.Log.Errorf("unable to create %s: %s", filename, err)
+					return
+				}
+
+				defer file.Close()
+				writer := bufio.NewWriter(file)
+				defer writer.Flush()
+
+				if err := pprof.Lookup("heap").WriteTo(writer, 0); err != nil {
+					app.Log.Errorf("could not write memory profile: %s", err)
+					return
+				}
+
+				app.Log.Infof("QUIT Signal, dumped data to %s", filename)
+			}()
+		}
+	}()
 }
 
 // Run will start the app servers (foreground)
