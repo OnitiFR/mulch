@@ -210,19 +210,13 @@ func (proxy *ProxyServer) serveReverseProxy(domain *common.Domain, proto string,
 	}
 
 	if proxy.config.ForceXForwardedFor {
-		var remoteAddr = req.RemoteAddr
-
 		// prevent httputil.ReverseProxy to set X-Forwarded-For by itself
 		req.RemoteAddr = "invalid"
 		if !fromParent {
 			req.Header.Set("X-Forwarded-For", ip)
 		}
-		domain.ReverseProxy.ServeHTTP(res, req)
-		req.RemoteAddr = remoteAddr // restore value for the RequestList
-	} else {
-		domain.ReverseProxy.ServeHTTP(res, req)
 	}
-
+	domain.ReverseProxy.ServeHTTP(res, req)
 }
 
 func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Request) {
@@ -252,7 +246,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 		ctx = context.WithValue(ctx, contextKeyID, id)
 		req = req.WithContext(ctx)
 
-		proxy.RequestList.AddRequest(id, req)
+		proxy.RequestList.AddRequest(id, req, req.RemoteAddr)
 		defer proxy.RequestList.DeleteRequest(id)
 	}
 

@@ -11,8 +11,9 @@ import (
 
 // Request for our RequestList
 type Request struct {
-	Request *http.Request
-	Start   time.Time
+	Request    *http.Request
+	RemoteAddr string // serveReverseProxy() may change the original value
+	Start      time.Time
 }
 
 // RequestList store requests in thread-safe map
@@ -32,7 +33,7 @@ func NewRequestList(enable bool) *RequestList {
 }
 
 // AddRequest to the RequestList
-func (rl *RequestList) AddRequest(id uint64, req *http.Request) {
+func (rl *RequestList) AddRequest(id uint64, req *http.Request, remoteAddr string) {
 	if !rl.enable {
 		return
 	}
@@ -41,8 +42,9 @@ func (rl *RequestList) AddRequest(id uint64, req *http.Request) {
 	defer rl.mutex.Unlock()
 
 	rl.requests[id] = Request{
-		Request: req,
-		Start:   time.Now(),
+		Request:    req,
+		RemoteAddr: remoteAddr,
+		Start:      time.Now(),
 	}
 }
 
@@ -76,6 +78,6 @@ func (rl *RequestList) Dump(w io.Writer) {
 	for id, request := range rl.requests {
 		age := now.Sub(request.Start)
 		req := request.Request
-		fmt.Fprintf(w, "req %d: %s %s %s %s (%s)\n", id, req.RemoteAddr, req.Host, req.Method, req.RequestURI, age)
+		fmt.Fprintf(w, "req %d: %s %s %s %s (%s)\n", id, request.RemoteAddr, req.Host, req.Method, req.RequestURI, age)
 	}
 }
