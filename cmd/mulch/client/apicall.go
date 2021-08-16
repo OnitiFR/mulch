@@ -129,8 +129,6 @@ func (call *APICall) Do() {
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		} else {
 			// multipart body, with file upload
-			// var buf bytes.Buffer
-			// multipartWriter := multipart.NewWriter(&buf)
 
 			pipeReader, pipeWriter := io.Pipe()
 			multipartWriter := multipart.NewWriter(pipeWriter)
@@ -148,12 +146,12 @@ func (call *APICall) Do() {
 				// range call.files
 				for field, filename := range call.files {
 					ff, errM := multipartWriter.CreateFormFile(field, path.Base(filename))
-					if err != nil {
+					if errM != nil {
 						log.Fatal(errM)
 					}
-					file, errM := os.Open(filename)
-					if err != nil {
-						log.Fatal(errM)
+					file, errO := os.Open(filename)
+					if errO != nil {
+						log.Fatal(errO)
 					}
 					defer file.Close()
 					if _, err = io.Copy(ff, file); err != nil {
