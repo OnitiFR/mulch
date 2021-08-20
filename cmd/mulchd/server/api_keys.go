@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/ryanuber/go-glob"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -21,6 +23,14 @@ type APIKey struct {
 	Key        string
 	SSHPrivate string
 	SSHPublic  string
+	Rights     []APIRight
+}
+
+// APIRight is a parsed "Rights" line
+type APIRight struct {
+	Method  string
+	Path    string
+	Headers map[string]string
 }
 
 // APIKeyDatabase describes a persistent API Key database
@@ -199,4 +209,51 @@ func (db *APIKeyDatabase) GetByPubKey(pub string) (*APIKey, error) {
 	}
 
 	return nil, nil
+}
+
+// IsAllowed will return true if the APIKey is allowed to request this method/path/headers
+// (req is optional, but will deny the access if the needed right requires some headers)
+func (key *APIKey) IsAllowed(method string, path string, req *http.Request) bool {
+	if len(key.Rights) == 0 {
+		// no restrictions for this key
+		return true
+	}
+
+	for _, right := range key.Rights {
+		// wrong method?
+		if !glob.Glob(right.Method, method) {
+			continue
+		}
+
+		// wrong path?
+		if !glob.Glob(right.Path, path) {
+			continue
+		}
+
+		// need to check headers?
+		if req != nil {
+			headersOK := true
+			for name, expr := range right.Headers {
+				val := req.FormValue(name)
+				if !glob.Glob(expr, val) {
+					headersOK = false
+					break
+				}
+			}
+
+			if !headersOK {
+				// at least on header failed
+				continue
+			}
+		} else {
+			if len(right.Headers) != 0 {
+				// headers needed but no request provided: denied
+				continue
+			}
+		}
+
+		return true
+	}
+
+	return false
 }

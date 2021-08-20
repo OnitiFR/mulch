@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -57,6 +58,10 @@ func NewSSHProxyServer(app *App) error {
 				parts := strings.Split(c.User(), "@")
 				if len(parts) != 2 {
 					return nil, fmt.Errorf("wrong user format '%s' (user@vm needed)", c.User())
+				}
+
+				if !apiKey.IsAllowed("GET", "/sshpair", nil) {
+					return nil, errors.New("permission denied (rights)")
 				}
 
 				user = parts[0]

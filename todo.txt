@@ -18,6 +18,7 @@ Short term:
 - fix "Client error: sftp copy error: : no known_hosts" error on dump command
 - add timeout on VM creation scripts OR at least allow VM deletion
   - note: for deletion, shutting down is not a good option when scripts started, I think
+- rights: logs may expose sensitive data (which ones ?)
 - add "variables" to TOML files? (like $author or $USER in VM name or URL, to create "generic" TOML files)
 - provide a whereis feature / add "official" scripts (like wtf_is_my_vm.sh) to the client?
 - proxy-chain: provide a way to clean old childs? (ex: proxy_chain_child_url have changed)
@@ -46,10 +47,6 @@ Long term:
   - con-remove: change controller logic
 - shortcut for "do action" (ex: mulch open xyz) with completion?
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
-- rights / limited access
-  - ex: "POST /vm/*" (exact route)
-  - "{action=backup}
-  - warning: logs may expose sensitive data (but are needed by client?)
 - check for missing response.Body.Close() (or things like that)
 - check for io.Reader bad usages ("they must record the number of bytes read into the buffer, reslice the buffer, process that data, and only then, consult the error." https://dave.cheney.net/2019/09/05/dont-force-allocations-on-the-callers-of-your-api)
 

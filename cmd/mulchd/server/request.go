@@ -59,3 +59,12 @@ func (req *Request) Printf(format string, args ...interface{}) {
 func (req *Request) Println(message string) {
 	req.Response.Write([]byte(fmt.Sprintf("%s\n", message)))
 }
+
+// IsAPIKeyAllowed will return true if the APIKey is allowed to do this request
+func (req *Request) IsAPIKeyAllowed() bool {
+
+	method := req.HTTP.Method
+	path := req.HTTP.URL.Path
+
+	return req.APIKey.IsAllowed(method, path, req.HTTP)
+}

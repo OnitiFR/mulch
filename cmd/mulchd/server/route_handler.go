@@ -248,7 +248,15 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 			http.Error(w, errMsg, http.StatusForbidden)
 			return
 		}
+
 		request.APIKey = key
+
+		if !request.IsAPIKeyAllowed() {
+			errMsg := "permission denied (rights)"
+			app.Log.Errorf("%d: %s", http.StatusForbidden, errMsg)
+			http.Error(w, errMsg, http.StatusForbidden)
+			return
+		}
 		app.Log.Tracef("API call: %s %s %s (key: %s)", ip, r.Method, route.path, key.Comment)
 	} else {
 		app.Log.Tracef("API call: %s %s %s", ip, r.Method, route.path)
