@@ -138,4 +138,5 @@ func DeleteKeyRightController(req *server.Request) {
 		return
 	}
 
+	req.Stream.Successf("right removed")
 }
