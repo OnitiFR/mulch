@@ -132,6 +132,7 @@ func AddRoutes(app *server.App) {
 		Type:    server.RouteTypeCustom,
 		Handler: controllers.DownloadBackupController,
 	}, server.RouteAPI)
+
 	app.AddRoute(&server.Route{
 		Route:   "DELETE /backup/*",
 		Type:    server.RouteTypeStream,
@@ -148,6 +149,24 @@ func AddRoutes(app *server.App) {
 		Route:   "POST /key",
 		Type:    server.RouteTypeStream,
 		Handler: controllers.NewKeyController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "GET /key/right/*",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.ListKeyRightsController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "POST /key/right/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.NewKeyRightController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "DELETE /key/right/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.DeleteKeyRightController,
 	}, server.RouteAPI)
 
 	app.AddRoute(&server.Route{

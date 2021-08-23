@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -211,6 +212,16 @@ func (db *APIKeyDatabase) GetByPubKey(pub string) (*APIKey, error) {
 	return nil, nil
 }
 
+// GetByComment returns an API key by its comment, or nil if not found
+func (db *APIKeyDatabase) GetByComment(comment string) *APIKey {
+	for _, key := range db.keys {
+		if key.Comment == comment {
+			return key
+		}
+	}
+	return nil
+}
+
 // IsAllowed will return true if the APIKey is allowed to request this method/path/headers
 // (req is optional, but will deny the access if the needed right requires some headers)
 func (key *APIKey) IsAllowed(method string, path string, req *http.Request) bool {
@@ -256,4 +267,95 @@ func (key *APIKey) IsAllowed(method string, path string, req *http.Request) bool
 	}
 
 	return false
+}
+
+// AddNewRight parse + add the right to the key
+// WARNING: you may have to save the APIKeyDatabase to the disk!
+// (see APIRight.String() form informations about the format)
+func (key *APIKey) AddNewRight(rightStr string) error {
+	rightStr = strings.TrimSpace(rightStr)
+
+	parts := strings.Split(rightStr, " ")
+
+	if len(parts) < 2 {
+		return errors.New("need at least method and path")
+	}
+
+	method := strings.ToUpper(strings.TrimSpace(parts[0]))
+	path := strings.TrimSpace(parts[1])
+
+	switch method {
+	case "GET", "POST", "PUT", "DELETE", "*":
+	default:
+		return fmt.Errorf("'%s' is an unsupported method", method)
+	}
+
+	if len(path) < 1 || (path[0] != '/' && path[1] != '*') {
+		return fmt.Errorf("'%s' is not a valid path", path)
+	}
+
+	right := APIRight{
+		Method:  method,
+		Path:    path,
+		Headers: make(map[string]string),
+	}
+
+	headers := parts[2:]
+	for _, header := range headers {
+		header = strings.TrimSpace(header)
+		hParts := strings.Split(header, "=")
+		if len(hParts) != 2 {
+			return fmt.Errorf("invalid header format '%s'", header)
+		}
+		name := strings.TrimSpace(hParts[0])
+		value := strings.TrimSpace(hParts[1])
+
+		if name == "" {
+			return fmt.Errorf("invalid header name in '%s'", header)
+		}
+
+		right.Headers[name] = value
+	}
+
+	// very basic duplication check
+	rs := right.String()
+	for _, r := range key.Rights {
+		if r.String() == rs {
+			return fmt.Errorf("right '%s' is duplicated", rs)
+		}
+	}
+
+	key.Rights = append(key.Rights, right)
+
+	return nil
+}
+
+// RemoveRight will remove the parsed right from the key
+func (key *APIKey) RemoveRight(rightStr string) error {
+	// TODO: clean the provided right with "parse + .String()"
+	for i, right := range key.Rights {
+		if right.String() == rightStr {
+			key.Rights = append(key.Rights[:i], key.Rights[i+1:]...)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("right '%s' not found in this key", rightStr)
+}
+
+// String will convert a right to a string
+func (right *APIRight) String() string {
+	var str string
+
+	str = right.Method + " " + right.Path
+
+	var headers []string
+	for header, value := range right.Headers {
+		h := header + "=" + value
+		headers = append(headers, h)
+	}
+	if len(headers) > 0 {
+		str = str + " " + strings.Join(headers, " ")
+	}
+	return str
 }
