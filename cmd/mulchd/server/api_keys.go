@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -273,7 +274,10 @@ func (key *APIKey) IsAllowed(method string, path string, req *http.Request) bool
 // WARNING: you may have to save the APIKeyDatabase to the disk!
 // (see APIRight.String() form informations about the format)
 func (key *APIKey) AddNewRight(rightStr string) error {
+	spaces := regexp.MustCompile(`\s+`)
+
 	rightStr = strings.TrimSpace(rightStr)
+	rightStr = spaces.ReplaceAllString(rightStr, " ")
 
 	parts := strings.Split(rightStr, " ")
 
@@ -333,6 +337,10 @@ func (key *APIKey) AddNewRight(rightStr string) error {
 // RemoveRight will remove the parsed right from the key
 func (key *APIKey) RemoveRight(rightStr string) error {
 	// TODO: clean the provided right with "parse + .String()"
+	spaces := regexp.MustCompile(`\s+`)
+	rightStr = strings.TrimSpace(rightStr)
+	rightStr = spaces.ReplaceAllString(rightStr, " ")
+
 	for i, right := range key.Rights {
 		if right.String() == rightStr {
 			key.Rights = append(key.Rights[:i], key.Rights[i+1:]...)

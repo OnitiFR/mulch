@@ -53,6 +53,7 @@ func NewKeyController(req *server.Request) {
 	req.Stream.Successf("Key '%s' created", key.Comment)
 }
 
+// ListKeyRightsController list all rights of a specific key
 func ListKeyRightsController(req *server.Request) {
 	keyName := req.SubPath
 
