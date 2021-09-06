@@ -142,13 +142,17 @@ VM have this lifecycle :
 ![mulch VMs lifecycle](https://raw.github.com/OnitiFR/mulch/master/doc/images/img_lifecycle.png)
 
  - **prepare** scripts: prepare the system for the application (install and configure web server, DB server, …)
- - **install** scripts: install and configure the application (download / git clone, composer, yarn, …)
+ - **install** scripts: install and configure the application (ex: cURL download)
  - **backup** scripts: copy all important data: code, DB, configs, … During backup, a virtual disk is attached to the VM.
  - **restore** scripts: restore the application from the attached disk, copying back code, data, … (see these as backup "symmetric" scripts)
 
 A new VM is channeled through *prepare* and *install* steps. If you create a
 VM from a previous backup, *install* is replaced by *restore*. All steps are optional, but missing steps
-will limit features.
+may limit features.
+
+Workflow examples:
+ - WordPress: *prepare* a lamp system, *install* WordPress using cURL, *backup* and *restore* database and files
+ - PHP application: *prepare* a lamp system and use `git clone`, `composer`, `yarn`, … (still in the *prepare* step) and *backup* and *restore* the database
 
 Note that you can modify *cloud-init* step, but it's used internally by Mulch for VM provisioning (injecting
 SSH keys, configure "home-phoning", …) and should have no interest to Mulch users.
