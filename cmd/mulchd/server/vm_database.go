@@ -131,7 +131,7 @@ func (vmdb *VMDatabase) genPortsDB() error {
 		}
 		vm := entry.VM
 		for _, p := range vm.Config.Ports {
-			if p.Direction == VMPortDirectionExport {
+			if p.Direction == VMPortDirectionExport && p.PublicPort == 0 {
 				exportedPortMap[p.String()] = vm
 			}
 		}
@@ -182,6 +182,40 @@ func (vmdb *VMDatabase) genPortsDB() error {
 				return err
 			}
 			listener.Forwards[vm.AssignedIPv4] = forwardAddr
+		}
+	}
+
+	// add listeners for public ports
+	for _, entry := range vmEntries {
+		if !entry.Active {
+			continue
+		}
+		vm := entry.VM
+		for _, p := range vm.Config.Ports {
+			if p.PublicPort != 0 {
+				listenStr := fmt.Sprintf(":%d", p.PublicPort)
+				listenAddr, err := net.ResolveTCPAddr("tcp", listenStr)
+				if err != nil {
+					return err
+				}
+				listener := &common.TCPPortListener{
+					ListenAddr: listenAddr,
+					Forwards:   make(map[string]*net.TCPAddr),
+				}
+
+				_, exists := listeners[p.PublicPort]
+				if exists {
+					return fmt.Errorf("public port %d is duplicated", p.PublicPort)
+				}
+				listeners[p.PublicPort] = listener
+
+				forwardStr := fmt.Sprintf("%s:%d", vm.AssignedIPv4, p.Port)
+				forwardAddr, err := net.ResolveTCPAddr("tcp", forwardStr)
+				if err != nil {
+					return err
+				}
+				listener.Forwards["*"] = forwardAddr
+			}
 		}
 	}
 

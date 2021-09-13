@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -13,6 +14,8 @@ const (
 	VMPortDirectionExport  = 0
 	VMPortDirectionImport  = 1
 	VMPortDirectionInvalid = -1
+
+	VMPortPublic = "@PUBLIC"
 )
 
 // VMPortBaseForward is the value to add to port index
@@ -21,11 +24,12 @@ const VMPortBaseForward uint16 = 9001
 
 // VMPort is a network port inside a VM
 type VMPort struct {
-	Port      uint16
-	Protocol  int // tcp
-	Direction int // export / import
-	Index     int // position in the direction (ex: 2nd exported port), 0 indexed
-	Group     string
+	Port       uint16
+	Protocol   int // tcp (VMPortProtocol*)
+	Direction  int // export / import
+	Index      int // position in the direction (ex: 2nd exported port), 0 indexed
+	Group      string
+	PublicPort uint16 // exported PUBLIC port (0 = private)
 }
 
 // String version of the VMPort (Index is not part of the string)
@@ -40,7 +44,21 @@ func (p *VMPort) String() string {
 		proto = "tcp"
 	}
 
-	return fmt.Sprintf("%d/%s%s%s", p.Port, proto, arrow, p.Group)
+	publicPort := ""
+	if p.PublicPort != 0 {
+		publicPort = fmt.Sprintf(":%d", p.PublicPort)
+	}
+
+	return fmt.Sprintf("%d/%s%s%s%s", p.Port, proto, arrow, p.Group, publicPort)
+}
+
+// GlobalID will return a "global" ID for the port (public ports are merged)
+// Useful for deduplication
+func (p *VMPort) GlobalID() string {
+	if p.PublicPort != 0 {
+		return fmt.Sprintf("...->%s:%d", p.Group, p.PublicPort)
+	}
+	return p.String()
 }
 
 // NewVMPortArray will parse an array of strings and return an array of *VMPort
@@ -83,7 +101,7 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse port as an integer in '%s' (ex: 22/tcp)", line)
 		}
-		if portNum < 1 && portNum > 65535 {
+		if portNum < 1 || portNum > 65535 {
 			return nil, fmt.Errorf("port '%d' is out of bound ", portNum)
 		}
 
@@ -94,15 +112,46 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 		port.Protocol = VMPortProtocolTCP
 		port.Port = uint16(portNum)
 
-		group := strings.TrimSpace(strings.ToLower(lineParts[1]))
-		if !IsValidGroupName(group) {
-			return nil, fmt.Errorf("invalid group name '%s' (ex: @my_group)", group)
+		group := strings.TrimSpace(lineParts[1])
+		if !strings.HasPrefix(group, VMPortPublic) {
+			// private
+			group := strings.ToLower(lineParts[1])
+			if !IsValidGroupName(group) {
+				return nil, fmt.Errorf("invalid group name '%s' (ex: @my_group)", group)
+			}
+			port.Group = group
+		} else {
+			// public
+			if port.Direction != VMPortDirectionExport {
+				return nil, errors.New("you can only export a public port (use direct connection to use it)")
+			}
+
+			groupParts := strings.Split(group, ":")
+			if groupParts[0] != VMPortPublic {
+				return nil, fmt.Errorf("invalid public group name '%s'", group)
+			}
+			port.Group = VMPortPublic
+
+			switch len(groupParts) {
+			case 1:
+				port.PublicPort = port.Port
+			case 2:
+				groupPortNum, err := strconv.Atoi(groupParts[1])
+				if err != nil {
+					return nil, fmt.Errorf("cannot parse port as an integer in '%s'", groupParts[1])
+				}
+				if groupPortNum < 1 || groupPortNum > 65535 {
+					return nil, fmt.Errorf("port '%d' is out of bound ", groupPortNum)
+				}
+				port.PublicPort = uint16(groupPortNum)
+			default:
+				return nil, fmt.Errorf("invalid public group '%s' (ex: PUBLIC:8080)", group)
+			}
 		}
-		port.Group = group
 
 		// check duplicates
 		for _, p := range ports {
-			if port.Port == p.Port && port.Direction == p.Direction && port.Protocol == p.Protocol && port.Group == p.Group {
+			if port.Port == p.Port && port.Direction == p.Direction && port.Protocol == p.Protocol && port.Group == p.Group && port.PublicPort == p.PublicPort {
 				return nil, fmt.Errorf("duplicate port '%s'", line)
 			}
 		}
@@ -136,7 +185,7 @@ func CheckPortsConflicts(db *VMDatabase, ports []*VMPort, excludeVM string, log 
 
 		for _, port := range entry.VM.Config.Ports {
 			if port.Direction == VMPortDirectionExport {
-				exportPortMap[port.String()] = entry.VM
+				exportPortMap[port.GlobalID()] = entry.VM
 			}
 		}
 	}
@@ -144,22 +193,22 @@ func CheckPortsConflicts(db *VMDatabase, ports []*VMPort, excludeVM string, log 
 	// search duplicate imports, warn about missing imports
 	for _, port := range ports {
 		if port.Direction == VMPortDirectionExport {
-			vm, exist := exportPortMap[port.String()]
+			vm, exist := exportPortMap[port.GlobalID()]
 			if exist {
-				return fmt.Errorf("vm '%s' is already exporting '%s'", vm.Config.Name, port.String())
+				return fmt.Errorf("vm '%s' is already exporting '%s'", vm.Config.Name, port.GlobalID())
 			}
 		} else if port.Direction == VMPortDirectionImport {
 			reversed := *port
 			reversed.Direction = VMPortDirectionExport
 			for _, p := range ports {
-				if p.String() == reversed.String() {
-					return fmt.Errorf("cannot import one of our ports (%s)", port.String())
+				if p.GlobalID() == reversed.GlobalID() {
+					return fmt.Errorf("cannot import one of our ports (%s)", port.GlobalID())
 				}
 			}
 
-			_, exist := exportPortMap[reversed.String()]
+			_, exist := exportPortMap[reversed.GlobalID()]
 			if !exist && log != nil {
-				log.Warningf("port '%s' is not exported by anyone (yet?)", port.String())
+				log.Warningf("port '%s' is not exported by anyone (yet?)", port.GlobalID())
 			}
 		}
 	}

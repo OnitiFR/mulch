@@ -269,9 +269,10 @@ And that's it.
 
 #### Inter-VM communication
 
-By default, no traffic is allowed between VMs. You can choose to export a port from a VM to group.
+By default, network traffic is not allowed between VMs, but you can choose to
+export a port from a VM to group.
 
-Any other VM can then import the port from the group, and connect to this port (using an internal TCP-proxy)
+Any other VM can then import the port from the group, and connect to this port (using an internal TCP-proxy).
 
 To export a PostgreSQL server, use this in the VM TOML file:
 ```toml
@@ -290,6 +291,27 @@ Then, connect to `$_MULCH_PROXY_IP:$_5432_TCP`
 
 Ports are dynamic, they're affected immediately by commands like `vm redefine` and `vm active`, no rebuild is needed. See sample TOML file for more informations.
 
+#### Port forwarding
+
+The TCP-proxy can also be used to expose a VM network port to the outside using the special `PUBLIC` group:
+
+```toml
+# expose IRC server of this VM to the outside world
+# (will listen on all host's interfaces)
+ports = [
+    "6667/tcp->@PUBLIC",
+]
+```
+
+You can specify a different external port if needed:
+
+```toml
+# export our port 22 as public port 2222
+ports = [
+    "22/tcp->@PUBLIC:2222",
+]
+```
+
 #### More…
 You can lock a VM, so no "big" operation, like delete or rebuild can be done until the VM
 is unlocked. Useful for precious VMs.
@@ -300,7 +322,7 @@ You still have the ability to use any libvirt tool, like virt-manager, to intera
 
 ![virt-manager](https://raw.github.com/OnitiFR/mulch/master/doc/images/virt-manager.png)
 
-You can also use 'do actions' for usual tasks. For instance `mulch do myvm db` will open your browser and automatically log you in phpMyAdmin (or any other db manager). And with included bash completion, such a command is just a matter of a few key presses !
+You can also use 'do actions' for usual tasks. For instance `mulch do myvm db` will open your browser and automatically log you in phpMyAdmin (or any other db manager). And with included bash completion, such a command is just a matter of a few pressed key!
 
 How do I install the client?
 ---

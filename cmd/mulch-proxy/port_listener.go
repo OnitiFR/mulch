@@ -12,6 +12,7 @@ type PortListener struct {
 	listenAddr      *net.TCPAddr
 	listener        *net.TCPListener
 	port            uint16
+	public          bool
 	forwardMap      map[string]*net.TCPAddr
 	closeChannels   map[string]chan bool
 	log             *Log
@@ -31,6 +32,11 @@ func NewPortListener(listenAddr *net.TCPAddr, forwardMap map[string]*net.TCPAddr
 		log:           log,
 		version:       version,
 		closed:        false,
+	}
+
+	_, exists := forwardMap["*"]
+	if exists {
+		listener.public = true
 	}
 
 	listener.listener, err = net.ListenTCP("tcp", listenAddr)
@@ -60,12 +66,29 @@ func (pl *PortListener) Listen() {
 		}
 
 		sourceIP := conn.RemoteAddr().(*net.TCPAddr).IP.String()
-		forwardTo, existsF := pl.forwardMap[sourceIP]
-		key := fmt.Sprintf("%s->%s", sourceIP, forwardTo.IP.String())
+
+		var forwardTo *net.TCPAddr
+		var existsF bool
+
+		if pl.public {
+			forwardTo, existsF = pl.forwardMap["*"]
+		} else {
+			forwardTo, existsF = pl.forwardMap[sourceIP]
+		}
+
+		key := "???"
+		if existsF {
+			if pl.public {
+				key = fmt.Sprintf("*->%s", forwardTo.IP.String())
+			} else {
+				key = fmt.Sprintf("%s->%s", sourceIP, forwardTo.IP.String())
+			}
+		}
+
 		closeChan, existsC := pl.closeChannels[key]
 
 		if existsF && existsC {
-			pl.log.Tracef("+ TCP %s:%d", key, pl.port)
+			pl.log.Tracef("+ TCP %s->%s:%d", sourceIP, forwardTo.IP.String(), pl.port)
 			go NewPortForward(conn, forwardTo, closeChan, pl.log, &pl.ConnectionCount)
 		} else {
 			conn.Close()
