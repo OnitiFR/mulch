@@ -23,4 +23,10 @@ echo "_MULCH_ACTION_USER=$_APP_USER"
 echo "_MULCH_ACTION_DESCRIPTION=Reset siteurl+home settings using first VM domain name (argument 'with-content' available)"
 echo "_MULCH_ACTION=commit"
 
+echo "_MULCH_ACTION_NAME=login"
+echo "_MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/wp_login.sh"
+echo "_MULCH_ACTION_USER=$_APP_USER"
+echo "_MULCH_ACTION_DESCRIPTION=Login with provided username"
+echo "_MULCH_ACTION=commit"
+
 echo "_MULCH_TAG_ADD=wp-cli"
