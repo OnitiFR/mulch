@@ -12,6 +12,7 @@ Resource leaks:
   - test with Go 1.16 (strange that we see this issue on our most memory pressured host [m2])
 
 Short term:
+- check the guestmount check? (Fedora)
 - systemd CapabilityBoundingSet/AmbientCapabilities = CAP_NET_BIND_SERVICE (+NoNewPrivileges=true) [systemd v229+]
 - allow to disable auto-rebuild
 - switch default SSH user to app instead of admin (update client sshconfig.go doc)
