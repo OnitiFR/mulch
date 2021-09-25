@@ -92,7 +92,7 @@ __mulch_custom_func() {
             __internal_list_vms
             return
             ;;
-        mulch_backup_cat | mulch_backup_delete | mulch_backup_download | mulch_backup_mount)
+        mulch_backup_cat | mulch_backup_delete | mulch_backup_download)
             __internal_list_backups
             return
             ;;
