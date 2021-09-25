@@ -29,7 +29,7 @@ Warning: use 'mulch backup umount' command, not the system's 'umount'.
 
 		guestmountPath, err := exec.LookPath("guestmount")
 		if err != nil {
-			log.Fatalf("guestmount command not found: %s", err)
+			log.Fatalf("guestmount command not found: %s (see help: mulch backup mount -h)", err)
 		}
 
 		if !common.PathExist(backupFile) {
