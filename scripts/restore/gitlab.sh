@@ -10,9 +10,9 @@ sudo chown git.git /var/opt/gitlab/backups/mulch_gitlab_backup.tar || exit $?
 sudo cp $_BACKUP/gitlab-secrets.json /etc/gitlab/ || exit $?
 sudo cp $_BACKUP/gitlab.rb /etc/gitlab/ || exit $?
 
-# TODO: erase
-# external_url 'https://xxx'
-# gitlab_rails['gitlab_ssh_host'] = 'xxx'
+# update domain
+sudo sed -i "s|^external_url .*$|external_url 'http://$_DOMAIN_FIRST'|" /etc/gitlab/gitlab.rb || exit $?
+sudo sed -i "s|^gitlab_rails\['gitlab_ssh_host'\].*$|gitlab_rails\['gitlab_ssh_host'\] = '$_DOMAIN_FIRST'|" /etc/gitlab/gitlab.rb
 
 sudo gitlab-ctl stop puma || exit $?
 sudo gitlab-ctl stop sidekiq || exit $?
