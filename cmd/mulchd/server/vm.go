@@ -507,7 +507,10 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 			// 5a - restore backup
 			err = VMRestoreNoChecks(vm, vmName, backup, app, log)
 			if err != nil {
-				return nil, nil, err
+				if !allowScriptFailure {
+					return nil, nil, err
+				}
+				log.Error(err.Error())
 			}
 		}
 	} else {
