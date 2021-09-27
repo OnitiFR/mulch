@@ -2,6 +2,8 @@
 
 # -- Run with admin privileges
 
+sudo mkdir -p /var/opt/gitlab/backups/ || exit $?
+
 sudo cp $_BACKUP/mulch_gitlab_backup.tar /var/opt/gitlab/backups/ || exit $?
 sudo chown git.git /var/opt/gitlab/backups/mulch_gitlab_backup.tar || exit $?
 
