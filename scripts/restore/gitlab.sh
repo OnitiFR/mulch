@@ -10,6 +10,10 @@ sudo chown git.git /var/opt/gitlab/backups/mulch_gitlab_backup.tar || exit $?
 sudo cp $_BACKUP/gitlab-secrets.json /etc/gitlab/ || exit $?
 sudo cp $_BACKUP/gitlab.rb /etc/gitlab/ || exit $?
 
+# TODO: erase
+# external_url 'https://xxx'
+# gitlab_rails['gitlab_ssh_host'] = 'xxx'
+
 sudo gitlab-ctl stop puma || exit $?
 sudo gitlab-ctl stop sidekiq || exit $?
 
