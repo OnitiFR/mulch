@@ -19,7 +19,7 @@ sudo gitlab-ctl stop sidekiq || exit $?
 
 echo "backup restore…"
 
-sudo gitlab-backup restore BACKUP=mulch || exit $?
+sudo gitlab-backup restore BACKUP=mulch force=yes || exit $?
 
 sudo gitlab-ctl reconfigure || exit $?
 sudo gitlab-ctl restart || exit $?
