@@ -239,7 +239,8 @@ func (call *APICall) Do() {
 		log.Fatalf("unsupported content type '%s'", mime)
 	}
 
-	latestClientVersionKnownByServer := resp.Header.Get("Latest-Known-Client-Version")
+	// latestClientVersionKnownByServer := resp.Header.Get("Latest-Known-Client-Version")
+	latestClientVersionKnownByServer := "2.0.0"
 	if latestClientVersionKnownByServer != "" {
 		verFromServer, err1 := semver.Make(latestClientVersionKnownByServer)
 		verSelf, err2 := semver.Make(Version)
@@ -247,7 +248,9 @@ func (call *APICall) Do() {
 			green := color.New(color.FgHiGreen).SprintFunc()
 			yellow := color.New(color.FgHiYellow).SprintFunc()
 			msg := fmt.Sprintf("According to the server, a client update is available: %s → %s\n", yellow(Version), green(latestClientVersionKnownByServer))
-			msg = msg + "Update:\n    go get -u github.com/OnitiFR/mulch/cmd/mulch\n"
+			msg = msg + "Update:\n"
+			msg = msg + "    go install github.com/OnitiFR/mulch/cmd/mulch@latest (go1.17+)\n"
+			msg = msg + "    go get -u github.com/OnitiFR/mulch/cmd/mulch (go1.16-)\n"
 			GetExitMessage().Message = msg
 		}
 	}
