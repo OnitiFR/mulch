@@ -239,8 +239,7 @@ func (call *APICall) Do() {
 		log.Fatalf("unsupported content type '%s'", mime)
 	}
 
-	// latestClientVersionKnownByServer := resp.Header.Get("Latest-Known-Client-Version")
-	latestClientVersionKnownByServer := "2.0.0"
+	latestClientVersionKnownByServer := resp.Header.Get("Latest-Known-Client-Version")
 	if latestClientVersionKnownByServer != "" {
 		verFromServer, err1 := semver.Make(latestClientVersionKnownByServer)
 		verSelf, err2 := semver.Make(Version)
