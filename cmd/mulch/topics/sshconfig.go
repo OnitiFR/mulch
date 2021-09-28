@@ -18,6 +18,7 @@ type sshConfigCmdDataStruct struct {
 	hostname    string
 	vmList      *common.APIVMListEntries
 	privKeyPath string
+	all         bool
 }
 
 var sshConfigCmdData sshConfigCmdDataStruct
@@ -34,11 +35,12 @@ ssh vm-mulch
 scp file vm-mulch:
 …
 
-Name follows the format: {VM Name}-{Mulch Server Name}
+Name follows the format: {VM name}-{server name/alias}
+You'll be connected as application user.
 
-For each VM, two aliases are available:
- - myvm-mulch (admin user)
- - myvm-app-mulch (application user)
+If --all is used, two aliases are available per VM:
+ - myvm-mulch (application user)
+ - myvm-admin-mulch (admin user)
 `,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -52,6 +54,7 @@ For each VM, two aliases are available:
 			log.Fatal(err.Error())
 		}
 		sshConfigCmdData.hostname = hostname
+		sshConfigCmdData.all, _ = cmd.Flags().GetBool("all")
 
 		call := client.GlobalAPI.NewCall("GET", "/sshpair", map[string]string{})
 		call.JSONCallback = sshConfigCmdPairCB
@@ -139,23 +142,33 @@ Host *
 			continue
 		}
 
-		aliasName := vm.Name + "-" + client.GlobalConfig.Server.Name
+		serverName := client.GlobalConfig.Server.Name
+		if client.GlobalConfig.Server.Alias != "" {
+			serverName = client.GlobalConfig.Server.Alias
+
+		}
+
+		aliasName := vm.Name + "-" + serverName
 		fmt.Printf("  %s\n", aliasName)
 		file.WriteString(fmt.Sprintf("Host %s\n", aliasName))
 		file.WriteString(fmt.Sprintf("    HostName %s\n", conf.hostname))
 		file.WriteString(fmt.Sprintf("    IdentityFile %s\n", conf.privKeyPath))
 		file.WriteString(fmt.Sprintf("    Port %d\n", client.SSHPort))
-		file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.SuperUser, vm.Name))
+		file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.AppUser, vm.Name))
 		file.WriteString("\n")
 
-		appAliasName := vm.Name + "-app-" + client.GlobalConfig.Server.Name
-		fmt.Printf("  %s\n", appAliasName)
-		file.WriteString(fmt.Sprintf("Host %s\n", appAliasName))
-		file.WriteString(fmt.Sprintf("    HostName %s\n", conf.hostname))
-		file.WriteString(fmt.Sprintf("    IdentityFile %s\n", conf.privKeyPath))
-		file.WriteString(fmt.Sprintf("    Port %d\n", client.SSHPort))
-		file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.AppUser, vm.Name))
-		file.WriteString("\n\n")
+		if conf.all {
+			appAliasName := vm.Name + "-admin-" + serverName
+			fmt.Printf("  %s\n", appAliasName)
+			file.WriteString(fmt.Sprintf("Host %s\n", appAliasName))
+			file.WriteString(fmt.Sprintf("    HostName %s\n", conf.hostname))
+			file.WriteString(fmt.Sprintf("    IdentityFile %s\n", conf.privKeyPath))
+			file.WriteString(fmt.Sprintf("    Port %d\n", client.SSHPort))
+			file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.SuperUser, vm.Name))
+			file.WriteString("\n")
+		}
+
+		file.WriteString("\n")
 	}
 
 	includeIsHere, _ := common.FileContains(configPath, includeString)
@@ -181,4 +194,5 @@ Warning: in order to use aliases, you should add the following line
 
 func init() {
 	rootCmd.AddCommand(sshConfigCmd)
+	sshConfigCmd.Flags().BoolP("all", "a", false, "add all possible aliases")
 }

@@ -15,7 +15,6 @@ Short term:
 - systemd CapabilityBoundingSet/AmbientCapabilities = CAP_NET_BIND_SERVICE (+NoNewPrivileges=true) [systemd v229+]
 - make backup available at "prepare" stage during a restore?
 - allow to disable auto-rebuild?
-- switch default SSH user to app instead of admin (update client sshconfig.go doc)
 - fix "Client error: sftp copy error: : no known_hosts" error on dump command
 - add timeout on VM creation scripts OR at least allow VM deletion
   - note: for deletion, shutting down is not a good option when scripts started, I think

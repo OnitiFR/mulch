@@ -78,7 +78,7 @@ func sshCmdPairCB(reader io.Reader, headers http.Header) {
 		log.Fatal(err.Error())
 	}
 
-	user := sshCmdVM.SuperUser
+	user := sshCmdVM.AppUser
 	if sshCmdUser != "" {
 		user = sshCmdUser
 	}
@@ -108,6 +108,6 @@ func sshCmdPairCB(reader io.Reader, headers http.Header) {
 
 func init() {
 	rootCmd.AddCommand(sshCmd)
-	sshCmd.Flags().StringVarP(&sshCmdUser, "user", "u", "", "login user (default: super user)")
+	sshCmd.Flags().StringVarP(&sshCmdUser, "user", "u", "", "login user (default: app user)")
 	sshCmd.Flags().StringP("revision", "r", "", "revision number")
 }
