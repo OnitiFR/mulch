@@ -11,7 +11,11 @@ html_dir="/home/$_APP_USER/public_html/"
 pgpass="/home/$_APP_USER/.pgpass"
 
 export DEBIAN_FRONTEND="noninteractive"
-sudo -E apt-get -y -qq install apache2 php php-intl php-bcmath php-imagick pwgen postgresql postgresql-client php-pgsql || exit $?
+
+# specific version of PHP may have been installed by a previous script
+if ! command -v php &> /dev/null; then
+    sudo -E apt-get -y -qq install apache2 php php-intl php-bcmath php-imagick pwgen postgresql postgresql-client php-pgsql || exit $?
+fi
 
 PGSQL_PASSWORD=$(pwgen -1 16)
 [ $? -eq 0 ] || exit $?
