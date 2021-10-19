@@ -11,6 +11,7 @@ html_dir="/home/$_APP_USER/public_html/"
 pgpass="/home/$_APP_USER/.pgpass"
 
 export DEBIAN_FRONTEND="noninteractive"
+
 sudo -E apt-get -y -qq install apache2 php php-intl php-bcmath php-imagick pwgen postgresql postgresql-client php-pgsql || exit $?
 
 PGSQL_PASSWORD=$(pwgen -1 16)
