@@ -114,6 +114,8 @@ EOS
 
 sudo a2enmod rewrite expires || exit $?
 
+sudo sed -i 's/^disable_functions = \(.*\)/disable_functions = \1phpinfo,/' /etc/php/*/apache2/php.ini || exit $?
+
 # Adminer
 adminer_url="https://github.com/vrana/adminer/releases/download/v4.8.1/adminer-4.8.1.php"
 sudo mkdir -p /usr/share/adminer || exit $?
