@@ -753,7 +753,11 @@ func GetVMDoActionsController(req *server.Request) {
 
 // BackupVM launch the backup process
 func BackupVM(req *server.Request, vmName *server.VMName) (string, error) {
-	return server.VMBackup(vmName, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressAllow)
+	allowCompress := server.BackupCompressAllow
+	if req.HTTP.FormValue("allow-compress") == common.FalseStr {
+		allowCompress = server.BackupCompressDisable
+	}
+	return server.VMBackup(vmName, req.APIKey.Comment, req.App, req.Stream, allowCompress)
 }
 
 // RebuildVMv2 delete VM and rebuilds it from a backup (2nd version, using revisions)
