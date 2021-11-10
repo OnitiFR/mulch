@@ -2,9 +2,12 @@ package client
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -50,7 +53,15 @@ func SFTPCopy(vmName string, user string, filename string) error {
 		Auth: []ssh.AuthMethod{
 			publicKeyAuthFromPubFile(privKeyFile),
 		},
-		HostKeyCallback: hostKeyCallback,
+		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+			err := hostKeyCallback(hostname, remote, key)
+			var keyError *knownhosts.KeyError
+			if errors.As(err, &keyError) {
+				fmt.Println("Client warning: host key is unknown, authenticity can't be established!")
+				return nil
+			}
+			return err
+		},
 	}
 
 	// connect
