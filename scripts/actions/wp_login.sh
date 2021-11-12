@@ -1,7 +1,5 @@
 #!/bin/bash
 
-echo "note: you can provide a username as argument (default is '$_CALLING_KEY')"
-
 if [ -n "$1" ]; then
     user_login="$1"
 else
@@ -12,6 +10,8 @@ if [ -z "$user_login" ]; then
     >&2 echo "you must provide a username as argument"
     exit 1
 fi
+
+echo "note: you can provide a username as argument (default is '$_CALLING_KEY')"
 
 set -a
 . ~/env
