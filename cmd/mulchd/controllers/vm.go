@@ -586,6 +586,7 @@ func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error
 				ScriptReader: stream,
 				As:           action.User,
 				Arguments:    arguments,
+				EnvWords:     map[string]string{"_CALLING_KEY": req.APIKey.Comment},
 			},
 		},
 		Log: req.Stream,
