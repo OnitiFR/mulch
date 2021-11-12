@@ -24,9 +24,14 @@ var doCmd = &cobra.Command{
 	Long: `Execute a 'do action' on a VM.
 
 If no action is given, a list of available actions for the VM will be shown.
-You can give arguments to the script, but you may have to use -- for script flags.
+You can gives arguments to the script, but you may have to use -- separator.
+
 Ex: mulch do myvm open -- -fullscreen
-See [[do-actions]] in TOML description file.
+
+Notes:
+- see [[do-actions]] in TOML description file, and _MULCH_ACTION* special lines
+in prepare scripts
+- environment _CALLING_KEY is injected in the script
 `,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
