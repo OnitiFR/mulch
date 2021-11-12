@@ -115,11 +115,11 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 		group := strings.TrimSpace(lineParts[1])
 		if !strings.HasPrefix(group, VMPortPublic) {
 			// private
-			group := strings.ToLower(lineParts[1])
-			if !IsValidGroupName(group) {
-				return nil, fmt.Errorf("invalid group name '%s' (ex: @my_group)", group)
+			lgroup := strings.ToLower(group)
+			if !IsValidGroupName(lgroup) {
+				return nil, fmt.Errorf("invalid group name '%s' (ex: @my_group)", lgroup)
 			}
-			port.Group = group
+			port.Group = lgroup
 		} else {
 			// public
 			if port.Direction != VMPortDirectionExport {
