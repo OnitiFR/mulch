@@ -1,11 +1,17 @@
 #!/bin/bash
 
-if [ -z "$1" ]; then
-    echo "error: You must provide a username as argument"
-    exit 1
+echo "note: you can provide a username as argument (default is '$_CALLING_KEY')"
+
+if [ -n "$1" ]; then
+    user_login="$1"
+else
+    user_login="$_CALLING_KEY"
 fi
 
-user_login="$1"
+if [ -z "$user_login" ]; then
+    >&2 echo "you must provide a username as argument"
+    exit 1
+fi
 
 set -a
 . ~/env
