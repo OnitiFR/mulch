@@ -13,6 +13,7 @@ type RunTask struct {
 	ScriptReader io.Reader
 	As           string
 	Arguments    string
+	EnvWords     map[string]string
 }
 
 // Run is a list of Tasks on Host, including task results

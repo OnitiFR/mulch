@@ -101,6 +101,25 @@ func (run *Run) stdinInject(ctx context.Context, out io.WriteCloser, exitStatus 
 			return fmt.Errorf("error writing (init child bash): %s", err)
 		}
 
+		// add EnvWords "simple" environment variables
+		env := ""
+		for key, val := range task.EnvWords {
+			if !IsValidName(key) {
+				run.Log.Warningf("invalid environment variable name '%s'", key)
+				continue
+			}
+			if !IsValidWord(val) {
+				run.Log.Warningf("environment variable value '%s' is not allowed (only words are allowed)", val)
+				continue
+			}
+			env += fmt.Sprintf("export %s=%s; ", key, val)
+		}
+		// still no newline so we dont change line numbers
+		_, err = out.Write([]byte(env))
+		if err != nil {
+			return fmt.Errorf("error writing (EnvWords): %s", err)
+		}
+
 		for scanner.Scan() {
 			text := scanner.Text()
 			run.Log.Tracef("stdin=%s", text)
