@@ -528,6 +528,7 @@ func ExecScriptVM(req *server.Request, vm *server.VM, vmName *server.VMName) err
 				ScriptName:   header.Filename,
 				ScriptReader: script,
 				As:           as,
+				EnvWords:     map[string]string{"_CALLING_KEY": req.APIKey.Comment},
 			},
 		},
 		Log: req.Stream,
