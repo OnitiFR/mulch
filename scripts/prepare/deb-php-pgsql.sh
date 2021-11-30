@@ -139,7 +139,7 @@ sudo a2enconf adminer || exit $?
 
 sudo bash -c "cat > /usr/share/adminer/index.php" <<- EOS
 <?php
-header('Location: adminer.php?pgsql=&username=${_APP_USER}&db=${_APP_USER}');
+header('Location: adminer.php?pgsql');
 EOS
 [ $? -eq 0 ] || exit $?
 
