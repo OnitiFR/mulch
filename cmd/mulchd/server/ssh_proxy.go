@@ -101,7 +101,7 @@ func (proxy *SSHProxy) scheduleSSHKeepAlives(sshConn ssh.Conn, name string) {
 	t := time.NewTicker(1 * time.Minute)
 	defer t.Stop()
 	for range t.C {
-		proxy.log.Tracef("send SSH keepalive (%s)", name)
+		proxy.log.Tracef("send SSH keepalive (%s, %s)", name, sshConn.RemoteAddr())
 		err := sendSSHKeepAlive(sshConn, 10*time.Second)
 		if err != nil {
 			proxy.log.Tracef("ssh (%s) keepalive error: %s, closing", name, err)
