@@ -9,6 +9,8 @@
 # It will allow user "me" to connect to ANY VM. The VM name must then
 # be given as the SSH username: ssh -p 8022 -i id_rsa_me vm-name@mulch-server
 
+# A specific VM revision can be targeted, if needed: app@my-vm-r30
+
 # In all cases, the /home/me/.ssh/authorized_keys must contain *MUCLH* pub key.
 # (since connection is relayed by the SSH proxy using its own key).
 # You can find it in /home/admin/.ssh/authorized_keys

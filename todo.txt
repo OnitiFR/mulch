@@ -6,6 +6,8 @@ Resource leaks:
     - check for a possible deadlock / missing timeout in the message hub? (same)
     - maybe fixed by the switch to Context of run.go
 - still some hanging SSH shown in status (try with a client reboot?)
+    - scheduleSSHKeepAlives() does its job, the issue upper in the stack (runChannels never ends?)
+    - added goroutine pprof profile to help
 - mulchd long-term memory usage (10+GB)
   - normal for Go 1.12 → 1.15 runtimes, memory is released to the kernel if
     it needs it (MADV_FREE), but but RSS does not capture this information

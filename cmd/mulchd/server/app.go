@@ -436,6 +436,22 @@ func (app *App) initWebServers() {
 	app.MuxAPI = http.NewServeMux()
 }
 
+func writePprofProfile(profile string, filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("unable to create %s: %s", filename, err)
+	}
+
+	defer file.Close()
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+
+	if err := pprof.Lookup(profile).WriteTo(writer, 0); err != nil {
+		return fmt.Errorf("could not write profile: %s", err)
+	}
+	return nil
+}
+
 // write a pprof memory profile dump on SIGQUIT
 // kill -QUIT $(pidof mulchd)
 func (app *App) initSigQUITHandler() {
@@ -444,27 +460,24 @@ func (app *App) initSigQUITHandler() {
 
 	go func() {
 		for range c {
-			func() { // so we can use defer
-				ts := time.Now().Format("20060102-150405")
-				rnd := strconv.Itoa(app.Rand.Int())
-				filename := path.Clean(os.TempDir() + "/" + "mulchd-" + ts + "-" + rnd + ".prof")
-				file, err := os.Create(filename)
-				if err != nil {
-					app.Log.Errorf("unable to create %s: %s", filename, err)
-					return
-				}
+			app.Log.Infof("QUIT Signal")
 
-				defer file.Close()
-				writer := bufio.NewWriter(file)
-				defer writer.Flush()
+			ts := time.Now().Format("20060102-150405")
+			rnd := strconv.Itoa(app.Rand.Int())
 
-				if err := pprof.Lookup("heap").WriteTo(writer, 0); err != nil {
-					app.Log.Errorf("could not write memory profile: %s", err)
-					return
-				}
+			pathHeap := path.Clean(os.TempDir() + "/" + "mulchd-heap" + ts + "-" + rnd + ".prof")
+			app.Log.Infof("writing %s", pathHeap)
+			err := writePprofProfile("heap", pathHeap)
+			if err != nil {
+				app.Log.Error(err.Error())
+			}
 
-				app.Log.Infof("QUIT Signal, dumped data to %s", filename)
-			}()
+			pathGoroutine := path.Clean(os.TempDir() + "/" + "mulchd-goroutine" + ts + "-" + rnd + ".prof")
+			app.Log.Infof("writing %s", pathGoroutine)
+			err = writePprofProfile("goroutine", pathGoroutine)
+			if err != nil {
+				app.Log.Error(err.Error())
+			}
 		}
 	}()
 }
