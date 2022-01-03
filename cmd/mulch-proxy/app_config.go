@@ -89,7 +89,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	// defaults (if not in the file)
 	tConfig := &tomlAppConfig{
 		DataPath:     "./var/data", // example: /var/lib/mulch
-		AcmeURL:      "https://acme-staging.api.letsencrypt.org/directory",
+		AcmeURL:      "https://acme-staging-v02.api.letsencrypt.org/directory",
 		AcmeEmail:    "root@localhost.localdomain",
 		HTTPAddress:  ":80",
 		HTTPSAddress: ":443",

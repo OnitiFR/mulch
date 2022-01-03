@@ -53,7 +53,7 @@ proxy_ssh_extra_keys_file = ""
 # proxy_acme_url = "LETS_ENCRYPT_PRODUCTION"
 # Warning: define a proper email below!
 # Warning: you may have to clear ./data/certs/ directory if you change this setting
-proxy_acme_url = "https://acme-staging.api.letsencrypt.org/directory"
+proxy_acme_url = "https://acme-staging-v02.api.letsencrypt.org/directory"
 
 # Email will be used by CAs for notifications about issued certificates.
 proxy_acme_email = "root@localhost.localdomain"
