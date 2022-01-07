@@ -6,8 +6,8 @@
 . ~/env
 
 # https://wordpress.org/download/releases/ (tar.gz)
-WORDPRESS_VERSION="5.8.2"
-WORDPRESS_SHA1="c3b1b59553eafbf301c83b14c5eeae4cf1c86044"
+WORDPRESS_VERSION="5.8.3"
+WORDPRESS_SHA1="3be7ed4dc6f46fe98271b974c88153640e95ad49"
 
 mkdir -p tmp || exit $?
 echo "downloading Wordpress $WORDPRESS_VERSION ($WORDPRESS_SHA1)"
