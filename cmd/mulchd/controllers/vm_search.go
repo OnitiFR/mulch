@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/Knetic/govaluate"
@@ -246,6 +247,13 @@ func SearchVMsController(req *server.Request) {
 		http.Error(req.Response, "no matches", 404)
 		return
 	}
+
+	sort.Slice(matches, func(i, j int) bool {
+		if matches[i].Name == matches[j].Name {
+			return matches[i].Revision < matches[j].Revision
+		}
+		return matches[i].Name < matches[j].Name
+	})
 
 	for _, vmName := range matches {
 		if showRevision {

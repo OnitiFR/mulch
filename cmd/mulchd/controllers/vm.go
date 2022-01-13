@@ -262,7 +262,6 @@ func ListVMsController(req *server.Request) {
 			http.Error(req.Response, err.Error(), 500)
 		}
 	} else {
-
 		var retData common.APIVMListEntries
 		for _, vmName := range vmNames {
 			vm, err := req.App.VMDB.GetByName(vmName)
