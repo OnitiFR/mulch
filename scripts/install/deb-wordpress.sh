@@ -29,6 +29,8 @@ cat > .htaccess <<- EOS
 php_value upload_max_filesize 64M
 php_value post_max_size 64M
 
+Options -MultiViews -Indexes
+
 # BEGIN WordPress
 <IfModule mod_rewrite.c>
 RewriteEngine On
