@@ -18,6 +18,7 @@ import (
 
 var sshCmdVM *common.APIVMInfos
 var sshCmdUser string
+var sshCmdAsAdmin bool
 var sshCmdWithRevision bool
 
 //  sshCmd represents the "ssh" command
@@ -34,6 +35,8 @@ See 'vm list' for VM Names.
 		if err != nil {
 			log.Fatal(err.Error())
 		}
+
+		sshCmdAsAdmin, _ = cmd.Flags().GetBool("admin")
 
 		revision, _ := cmd.Flags().GetString("revision")
 		sshCmdWithRevision = false
@@ -83,6 +86,13 @@ func sshCmdPairCB(reader io.Reader, headers http.Header) {
 		user = sshCmdUser
 	}
 
+	if sshCmdAsAdmin {
+		if sshCmdUser != "" {
+			log.Fatal(fmt.Errorf("cannot use --admin and --user simultaneously"))
+		}
+		user = sshCmdVM.SuperUser
+	}
+
 	// legacy (no revision) destination
 	destination := user + "@" + sshCmdVM.Name + "@" + hostname
 	if sshCmdWithRevision {
@@ -108,6 +118,7 @@ func sshCmdPairCB(reader io.Reader, headers http.Header) {
 
 func init() {
 	rootCmd.AddCommand(sshCmd)
+	sshCmd.Flags().BoolP("admin", "a", false, "login as admin")
 	sshCmd.Flags().StringVarP(&sshCmdUser, "user", "u", "", "login user (default: app user)")
 	sshCmd.Flags().StringP("revision", "r", "", "revision number")
 }
