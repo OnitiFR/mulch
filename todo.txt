@@ -20,6 +20,7 @@ Short term:
 - allow to globally disable auto-rebuild?
 - add timeout on VM creation scripts OR at least allow VM deletion
   - note: for deletion, shutting down is not a good option when scripts started, I think
+    - need to find cases where it fails, all tests OK for now
 - rights: limit SSH to a specific VM? (check a fake vm=… header in the SSH proxy?)
 - rights: logs may expose sensitive data (which ones?)
 - rights: add predefined right groups for common usages?
