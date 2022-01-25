@@ -133,7 +133,7 @@ Mulch currently have 3 components :
  - `mulchd`: the server daemon
  - `mulch-proxy`: the HTTP proxy
 
-**Mulchd** receive requests from Mulch clients (REST API, HTTP, port `8686`) for VM management.
+**Mulchd** receive requests from Mulch clients (REST API, HTTP(S), port `8686`) for VM management.
 Application serving is done through HTTP(S) requests to **mulch-proxy** (ports `80` and `443`) and
 SSH proxied access is done by mulchd (port `8022`).
 
@@ -183,8 +183,8 @@ As said previously, seeds are base Linux images for VMs, defined in `mulchd.conf
 file:
 ```toml
 [[seed]]
-name = "ubuntu_1810"
-url = "http://cloud-images.ubuntu.com/cosmic/current/cosmic-server-cloudimg-amd64.img"
+name = "ubuntu_2004"
+url = "http://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64-disk-kvm.img"
 ```
 
 Mulchd will download images on first boot and each time the image is updated by the vendor.
@@ -199,12 +199,12 @@ file (based on another seed), prepare the VM, stop it and will then store its di
 a seed (the VM is then deleted).
 
 One usage of this feature is VM creation speedup, since you can pre-install packages.
-See the following example ([ubuntu_1910_lamp.toml](https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/ubuntu_1910_lamp.toml)) :
+See the following example ([ubuntu_2004_lamp.toml](https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2004_lamp.toml)) :
 
 ```toml
 [[seed]]
-name = "ubuntu_1910_lamp"
-seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/ubuntu_1910_lamp.toml"
+name = "ubuntu_2004_lamp"
+seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2004_lamp.toml"
 ```
 Seeds are automatically rebuild, so everything is kept up to date (base seed, packages, …).
 
@@ -239,7 +239,8 @@ backup of itself.
 Again, the general idea behind Mulch is to secure Ops by industrializing and simplify such
 processes ("service reconstructability").
 
-You can configure auto-rebuild for each VM with `auto_rebuild` setting (daily, weekly, monthly).
+You can configure auto-rebuild for each VM with `auto_rebuild` setting (daily, weekly,
+monthly). We highly recommend this.
 
 #### Reverse Proxy chaining
 When using multiple Mulch instances, a frontal mulch-proxy can be configured to forward traffic
@@ -270,7 +271,7 @@ And that's it.
 #### Inter-VM communication
 
 By default, network traffic is not allowed between VMs, but you can choose to
-export a port from a VM to group.
+export a port from a VM to a group (group names starts with `@`).
 
 Any other VM can then import the port from the group, and connect to this port (using an internal TCP-proxy).
 
@@ -287,7 +288,7 @@ ports = [
     "5432/tcp<-@my_project",
 ]
 ```
-Then, connect to `$_MULCH_PROXY_IP:$_5432_TCP`
+Then, inside the VM, connect to `$_MULCH_PROXY_IP:$_5432_TCP`
 
 Ports are dynamic, they're affected immediately by commands like `vm redefine` and `vm active`, no rebuild is needed. See sample TOML file for more informations.
 
@@ -314,7 +315,7 @@ ports = [
 
 #### More…
 You can lock a VM, so no "big" operation, like delete or rebuild can be done until the VM
-is unlocked. Useful for precious VMs.
+is unlocked. Useful for production VMs.
 
 ![mulch vm locked](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-vm-locked.png)
 
@@ -322,7 +323,7 @@ You still have the ability to use any libvirt tool, like virt-manager, to intera
 
 ![virt-manager](https://raw.github.com/OnitiFR/mulch/master/doc/images/virt-manager.png)
 
-You can also use 'do actions' for usual tasks. For instance `mulch do myvm db` will open your browser and automatically log you in phpMyAdmin (or any other db manager). And with included bash completion, such a command is just a matter of a few pressed key!
+You can also use 'do actions' for usual tasks. For instance `mulch do myvm db` will open your browser and automatically log you in phpMyAdmin (or any other db manager). And with included bash completion, such a command is just a matter of a few pressed keys!
 
 How do I install the client?
 ---
@@ -333,7 +334,7 @@ go get -u github.com/OnitiFR/mulch/cmd/mulch
 # or, for Go 1.17+
 go install github.com/OnitiFR/mulch/cmd/mulch@latest
 ```
-Usual Go requirements : check you have go/golang installed and `~/go/bin/` is in your `PATH` (or copy/link binary in one of your `PATH` directories; use `sudo ln -s /home/$USER/go/bin/mulch /usr/local/bin` if you have no idea of how to do this).
+Usual Go requirements : check you have go/golang installed and `~/go/bin/` is in your `PATH` (or copy/link binary in one of your `PATH` directories; use `sudo ln -s /home/$USER/go/bin/mulch /usr/local/bin` if you have no idea about how to do this).
 
 That's it, you can now run `mulch` command. It will show you a sample configuration file (`~/.mulch.toml`):
 ```toml
