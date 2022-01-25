@@ -291,7 +291,9 @@ func printJSONStream(body io.ReadCloser, call *APICall) error {
 		if !call.DisableSpecialMessages {
 			err = dealWithSpecialMessages(m.Message)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Client error: %s\n", err.Error())
+				c := color.New(color.FgRed).SprintFunc()
+				errMsg := c("Client error: ", err.Error())
+				fmt.Fprintf(os.Stderr, "%s\n", errMsg)
 			}
 		}
 	}
