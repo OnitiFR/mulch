@@ -15,6 +15,7 @@ import (
 const logCmdDefaultLines = 40
 
 var logCmdWithTarget = false
+var logCmdTimestamp common.MessageTimestamp
 
 var logCmd = &cobra.Command{
 	Use:   "log [target]",
@@ -42,6 +43,12 @@ Examples:
 			logCmdWithTarget = true
 		}
 
+		// force time as a minimum
+		logCmdTimestamp = client.GlobalConfig.Time
+		if logCmdTimestamp < common.MessagePrintTime {
+			logCmdTimestamp = common.MessagePrintTime
+		}
+
 		call := client.GlobalAPI.NewCall("GET", "/log/history", map[string]string{
 			"target": target,
 			"lines":  strconv.Itoa(lines),
@@ -54,7 +61,7 @@ Examples:
 				"target": target,
 			})
 			call2.DisableSpecialMessages = true
-			call2.TimestampShow(true)
+			call2.TimestampShow(logCmdTimestamp)
 			call2.PrintLogTarget = !logCmdWithTarget
 			call2.Do()
 		}
@@ -69,7 +76,7 @@ func logCmdHistoryCB(reader io.Reader, headers http.Header) {
 		log.Fatal(err)
 	}
 	for _, message := range messages {
-		message.Print(common.MessagePrintTime, !logCmdWithTarget)
+		message.Print(logCmdTimestamp, !logCmdWithTarget)
 	}
 }
 

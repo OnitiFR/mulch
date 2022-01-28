@@ -1,5 +1,7 @@
 package client
 
+import "github.com/OnitiFR/mulch/common"
+
 // RootConfig describes client application config parameters
 type RootConfig struct {
 	ConfigFile string
@@ -7,7 +9,7 @@ type RootConfig struct {
 	Server  *ServerConfig
 	Aliases map[string]string
 	Trace   bool
-	Time    bool
+	Time    common.MessageTimestamp
 }
 
 // ServerConfig describes a server (from config file)

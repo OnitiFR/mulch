@@ -7,6 +7,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
+	"github.com/OnitiFR/mulch/common"
 )
 
 type tomlServerConfig struct {
@@ -17,10 +18,10 @@ type tomlServerConfig struct {
 }
 
 type tomlRootConfig struct {
-	Trace   bool
-	Time    bool
-	Default string
-	Server  []*tomlServerConfig
+	Trace     bool
+	Timestamp string
+	Default   string
+	Server    []*tomlServerConfig
 }
 
 // NewRootConfig reads configuration from filename and
@@ -30,13 +31,13 @@ func NewRootConfig(filename string) (*client.RootConfig, error) {
 	rootConfig := &client.RootConfig{}
 
 	envTrace, _ := strconv.ParseBool(os.Getenv("TRACE"))
-	envTime, _ := strconv.ParseBool(os.Getenv("TIME"))
+	envTimestamp := os.Getenv("TIMESTAMP")
 	envServer := os.Getenv("SERVER")
 
 	tConfig := &tomlRootConfig{
-		Trace:   envTrace,
-		Time:    envTime,
-		Default: envServer,
+		Trace:     envTrace,
+		Timestamp: envTimestamp,
+		Default:   envServer,
 	}
 
 	if stat, err := os.Stat(filename); err == nil {
@@ -74,9 +75,13 @@ func NewRootConfig(filename string) (*client.RootConfig, error) {
 		trace, _ := strconv.ParseBool(flagTrace.Value.String())
 		tConfig.Trace = trace
 	}
-	if flagTime.Changed {
-		time, _ := strconv.ParseBool(flagTime.Value.String())
-		tConfig.Time = time
+
+	dCount, _ := strconv.Atoi(flagTime.Value.String())
+	switch dCount {
+	case 1:
+		tConfig.Timestamp = "time"
+	case 2:
+		tConfig.Timestamp = "datetime"
 	}
 
 	if flagServer.Changed {
@@ -121,7 +126,13 @@ func NewRootConfig(filename string) (*client.RootConfig, error) {
 	}
 
 	rootConfig.Trace = tConfig.Trace
-	rootConfig.Time = tConfig.Time
+	rootConfig.Time = common.MessagePrintNoTime
+	switch tConfig.Timestamp {
+	case "time":
+		rootConfig.Time = common.MessagePrintTime
+	case "datetime":
+		rootConfig.Time = common.MessagePrintDateTime
+	}
 
 	if rootCmd.PersistentFlags().Lookup("dump-servers").Changed {
 		for _, server := range tConfig.Server {

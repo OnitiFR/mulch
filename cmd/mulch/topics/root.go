@@ -50,7 +50,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&client.GlobalCfgFile, "config", "c", "", "config file (default is $HOME/.mulch.toml)")
 
 	rootCmd.PersistentFlags().BoolP("trace", "t", false, "also show server TRACE messages (debug)")
-	rootCmd.PersistentFlags().BoolP("time", "d", false, "show server timestamps on messages")
+	rootCmd.PersistentFlags().CountP("time", "d", "show server time on messages (use -dd to also show date)")
 	rootCmd.PersistentFlags().StringP("server", "s", "", "selected server in the config file")
 	rootCmd.PersistentFlags().BoolP("dump-servers", "", false, "dump server list and exit")
 
@@ -101,10 +101,10 @@ You can define multiple servers and use -s option to select one, or use
 default = "my-mulch" as a global setting (i.e. before [[server]]).
 First server is the default.
 
-Alias is optionnal but cool, see 'mulch help completion' for informations.
+Alias is optionnal but cool, see 'mulch completion' for informations.
 
-Global settings: trace, time
-Note: you can also use environment variables (TRACE, TIME, SERVER).
+Global settings: trace, timestamp (values: time/datetime)
+Note: you can also use environment variables (SERVER, TRACE, TIMESTAMP).
 `, cfgFile)
 		os.Exit(1)
 	}

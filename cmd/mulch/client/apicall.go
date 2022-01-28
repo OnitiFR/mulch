@@ -30,7 +30,7 @@ type API struct {
 	ServerURL string
 	APIKey    string
 	Trace     bool
-	Time      bool
+	Time      common.MessageTimestamp
 }
 
 // APICall describes a call to the API
@@ -48,7 +48,7 @@ type APICall struct {
 }
 
 // NewAPI create a new API instance
-func NewAPI(server string, apiKey string, trace bool, time bool) *API {
+func NewAPI(server string, apiKey string, trace bool, time common.MessageTimestamp) *API {
 	return &API{
 		ServerURL: server,
 		APIKey:    apiKey,
@@ -255,8 +255,8 @@ func (call *APICall) Do() {
 	}
 }
 
-// TimestampShow allow to override -d / --time flag
-func (call *APICall) TimestampShow(show bool) {
+// TimestampShow allow to override -d flags
+func (call *APICall) TimestampShow(show common.MessageTimestamp) {
 	call.api.Time = show
 }
 

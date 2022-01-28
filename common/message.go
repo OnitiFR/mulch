@@ -35,12 +35,20 @@ const (
 	MessageAllTargets = "*"
 )
 
-// Message.Print options
+// Message.Print target
 const (
-	MessagePrintTime     = true
-	MessagePrintNoTime   = false
 	MessagePrintTarget   = true
 	MessagePrintNoTarget = false
+)
+
+// MessagePrintTimestamp is the timestamp type (see MessagePrint*)
+type MessageTimestamp int
+
+// Message.Print time option
+const (
+	MessagePrintNoTime MessageTimestamp = iota
+	MessagePrintTime
+	MessagePrintDateTime
 )
 
 // Message.MatchTarget options
@@ -84,7 +92,7 @@ func (message *Message) MatchTarget(target string, exact bool) bool {
 }
 
 // Print the formatted message
-func (message *Message) Print(showTime bool, showTarget bool) error {
+func (message *Message) Print(showTime MessageTimestamp, showTarget bool) error {
 	var retError error
 
 	// the longest types are 7 chars wide
@@ -117,8 +125,10 @@ func (message *Message) Print(showTime bool, showTarget bool) error {
 	}
 
 	time := ""
-	if showTime {
+	if showTime == MessagePrintTime {
 		time = message.Time.Format("15:04:05") + " "
+	} else if showTime == MessagePrintDateTime {
+		time = message.Time.Format("2006-01-02 15:04:05") + " "
 	}
 
 	target := ""
