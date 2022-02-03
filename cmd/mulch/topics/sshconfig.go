@@ -160,7 +160,7 @@ Host *
 		file.WriteString(fmt.Sprintf("    HostName %s\n", conf.hostname))
 		file.WriteString(fmt.Sprintf("    IdentityFile %s\n", conf.privKeyPath))
 		file.WriteString(fmt.Sprintf("    Port %d\n", client.SSHPort))
-		file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.AppUser, vm.Name))
+		file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.AppUser, vm.Name+revision))
 		file.WriteString("\n")
 
 		if conf.all {
@@ -170,7 +170,7 @@ Host *
 			file.WriteString(fmt.Sprintf("    HostName %s\n", conf.hostname))
 			file.WriteString(fmt.Sprintf("    IdentityFile %s\n", conf.privKeyPath))
 			file.WriteString(fmt.Sprintf("    Port %d\n", client.SSHPort))
-			file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.SuperUser, vm.Name))
+			file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.SuperUser, vm.Name+revision))
 			file.WriteString("\n")
 		}
 
