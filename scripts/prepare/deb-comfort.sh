@@ -54,7 +54,7 @@ EOS
 [ $? -eq 0 ] || exit $?
 
 sudo bash -c "cat > /etc/profile.d/is_locked.sh" <<- EOS
-if ! shopt -oq posix; then
+if [ "x\${BASH_VERSION-}" != x -a "x\${PS1-}" != x ]; then
   if [ "\$(is_locked)" = true ]; then
     echo -e "Warning: this VM is \e[41mlocked\e[0m!"
   fi
