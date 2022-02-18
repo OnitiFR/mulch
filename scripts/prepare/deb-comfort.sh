@@ -53,6 +53,15 @@ fi
 EOS
 [ $? -eq 0 ] || exit $?
 
+sudo bash -c "cat > /etc/profile.d/is_locked.sh" <<- EOS
+if ! shopt -oq posix; then
+  if [ "$(is_locked)" = true ]; then
+    echo -e "Warning: this VM is \e[41mlocked\e[0m!"
+  fi
+fi
+EOS
+[ $? -eq 0 ] || exit $?
+
 # powerline: show VM name on prompt instead of hostname
 themes="/usr/share/powerline/config_files/themes/shell/default*.json"
 sudo sed -i "s/\"function\": \"powerline.segments.common.net.hostname\",/\"function\": \"powerline.segments.common.env.environment\", \"args\": {\"variable\": \"_VM_NAME\"},/" $themes || exit $?

@@ -62,6 +62,14 @@ write_files:
     path: /usr/local/bin/phone_home
 
   - content: |
+      #!/bin/bash
+      id=$(cat /var/lib/cloud/data/instance-id)
+      /usr/bin/curl -fs $_HOME_URL/locked?instance_id=$id
+    owner: root:root
+    permissions: '0755'
+    path: /usr/local/bin/is_locked
+
+  - content: |
       # Created by Mulch, erased on rebuild (see env option in TOML file to add yours)
       $__MAIN_ENV
       $__EXTRA_ENV

@@ -43,7 +43,8 @@ func CloudInitDataGen(vm *VM, vmName *VMName, app *App) (string, string, error) 
 
 	mulchIP := app.Libvirt.NetworkXML.IPs[0].Address
 
-	phURL := "http://" + mulchIP + ":" + strconv.Itoa(AppInternalServerPost) + "/phone"
+	homeURL := "http://" + mulchIP + ":" + strconv.Itoa(AppInternalServerPost)
+	phURL := homeURL + "/phone"
 
 	sshKeyPair := app.SSHPairDB.GetByName(vm.MulchSuperUserSSHKey)
 	if sshKeyPair == nil {
@@ -66,6 +67,7 @@ func CloudInitDataGen(vm *VM, vmName *VMName, app *App) (string, string, error) 
 	userDataVariables := make(map[string]interface{})
 	userDataVariables["_SSH_PUBKEY"] = sshKeyPair.Public
 	userDataVariables["_PACKAGE_UPGRADE"] = vm.Config.InitUpgrade
+	userDataVariables["_HOME_URL"] = homeURL
 	userDataVariables["_PHONE_HOME_URL"] = phURL
 	userDataVariables["_TIMEZONE"] = vm.Config.Timezone
 	userDataVariables["_MULCH_SUPER_USER"] = app.Config.MulchSuperUser

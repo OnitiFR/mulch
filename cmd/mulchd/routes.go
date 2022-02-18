@@ -17,6 +17,14 @@ func AddRoutes(app *server.App) {
 	}, server.RouteInternal)
 
 	app.AddRoute(&server.Route{
+		Route:        "GET /locked",
+		Type:         server.RouteTypeCustom,
+		Public:       true,
+		NoProtoCheck: true,
+		Handler:      controllers.LockedController,
+	}, server.RouteInternal)
+
+	app.AddRoute(&server.Route{
 		Route:        "GET /cloud-init/*",
 		Type:         server.RouteTypeCustom,
 		Public:       true,
