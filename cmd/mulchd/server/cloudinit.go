@@ -43,7 +43,7 @@ func CloudInitDataGen(vm *VM, vmName *VMName, app *App) (string, string, error) 
 
 	mulchIP := app.Libvirt.NetworkXML.IPs[0].Address
 
-	homeURL := "http://" + mulchIP + ":" + strconv.Itoa(AppInternalServerPost)
+	homeURL := "http://" + mulchIP + ":" + strconv.Itoa(app.Config.InternalServerPort)
 	phURL := homeURL + "/phone"
 
 	sshKeyPair := app.SSHPairDB.GetByName(vm.MulchSuperUserSSHKey)

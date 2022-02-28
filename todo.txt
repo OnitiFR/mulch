@@ -1,5 +1,6 @@
 Current branch:
 - client : migrate command
+- "friends" server config
 - server 2 server client
 - restore controller
 

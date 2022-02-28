@@ -32,9 +32,6 @@ const (
 	AppNWFilter = "mulch-filter"
 )
 
-// AppInternalServerPost for "phone home" internal HTTP server
-const AppInternalServerPost = 8585
-
 // LogHistorySize is the maximum number of messages in app log history
 // ~128kB / 1000 messages (very rough approx!)
 const LogHistorySize = 20000 // ~2.5mB
@@ -521,7 +518,7 @@ func (app *App) Run() {
 	}()
 
 	go func() {
-		listen := app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(AppInternalServerPost)
+		listen := app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(app.Config.InternalServerPort)
 		app.Log.Infof("Internal server listening on %s", listen)
 		err := http.ListenAndServe(listen, app.MuxInternal)
 		errChan <- fmt.Errorf("ListenAndServe internal server: %s", err)

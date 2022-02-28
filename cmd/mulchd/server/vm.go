@@ -252,7 +252,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 
 	domcfg.VCPU.Value = vm.Config.CPUCount
 
-	serial := "ds=nocloud-net;s=http://" + app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(AppInternalServerPost) + "/cloud-init/" + vm.SecretUUID + "/"
+	serial := "ds=nocloud-net;s=http://" + app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(app.Config.InternalServerPort) + "/cloud-init/" + vm.SecretUUID + "/"
 	serialFound := false
 	for i, entry := range domcfg.SysInfo.System.Entry {
 		if entry.Name == "version" {

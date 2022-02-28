@@ -21,6 +21,10 @@ type AppConfig struct {
 	// address where the API server will listen
 	Listen string
 
+	// port for "phone home" internal HTTP server
+	// (do not change if any VM was already built!)
+	InternalServerPort int
+
 	// API server HTTPS domain name (HTTP otherwise)
 	ListenHTTPSDomain string
 
@@ -71,6 +75,9 @@ type AppConfig struct {
 	// Seeds
 	Seeds map[string]ConfigSeed
 
+	// Peers
+	Peers map[string]ConfigPeer
+
 	// global mulchd configuration path
 	configPath string
 }
@@ -81,8 +88,15 @@ type ConfigSeed struct {
 	Seeder string
 }
 
+type ConfigPeer struct {
+	Name string
+	URL  string
+	Key  string
+}
+
 type tomlAppConfig struct {
 	Listen                string
+	InternalServerPort    int    `toml:"internal_port"`
 	ListenHTTPSDomain     string `toml:"listen_https_domain"`
 	LibVirtURI            string `toml:"libvirt_uri"`
 	StoragePath           string `toml:"storage_path"`
@@ -99,12 +113,19 @@ type tomlAppConfig struct {
 	MulchSuperUserSSHKey  string `toml:"mulch_super_user_ssh_key"`
 	AutoRebuildTime       string `toml:"auto_rebuild_time"`
 	Seed                  []tomlConfigSeed
+	Peer                  []tomlConfigPeer
 }
 
 type tomlConfigSeed struct {
 	Name   string
 	URL    string
 	Seeder string
+}
+
+type tomlConfigPeer struct {
+	Name string
+	URL  string
+	Key  string
 }
 
 // NewAppConfigFromTomlFile return a AppConfig using
@@ -116,11 +137,13 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	appConfig := &AppConfig{
 		configPath: configPath,
 		Seeds:      make(map[string]ConfigSeed),
+		Peers:      make(map[string]ConfigPeer),
 	}
 
 	// defaults (if not in the file)
 	tConfig := &tomlAppConfig{
 		Listen:                ":8686",
+		InternalServerPort:    8585,
 		LibVirtURI:            "qemu:///system",
 		StoragePath:           "./var/storage", // example: /srv/mulch
 		DataPath:              "./var/data",    // example: /var/lib/mulch
@@ -159,11 +182,13 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		return nil, fmt.Errorf("listen: '%s': wrong port number", tConfig.Listen)
 	}
 
-	if listenPort == AppInternalServerPost {
-		return nil, fmt.Errorf("listen address '%s' is reserved for internal use", tConfig.Listen)
-	}
 	appConfig.Listen = tConfig.Listen
+	appConfig.InternalServerPort = tConfig.InternalServerPort
 	appConfig.ListenHTTPSDomain = tConfig.ListenHTTPSDomain
+
+	if listenPort == appConfig.InternalServerPort {
+		return nil, fmt.Errorf("listen address '%s' is reserved for internal_port", tConfig.Listen)
+	}
 
 	// no check here for most of config elements, it's done later
 	appConfig.LibVirtURI = tConfig.LibVirtURI
@@ -230,6 +255,29 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 			Seeder: seed.Seeder,
 		}
 
+	}
+
+	for _, peer := range tConfig.Peer {
+		if peer.Name == "" {
+			return nil, fmt.Errorf("peer 'name' not defined")
+		}
+
+		if !IsValidName(peer.Name) {
+			return nil, fmt.Errorf("'%s' is not a valid peer name", peer.Name)
+		}
+
+		_, exists := appConfig.Peers[peer.Name]
+		if exists {
+			return nil, fmt.Errorf("duplicate peer '%s'", peer.Name)
+		}
+
+		if peer.URL == "" {
+			return nil, fmt.Errorf("peer '%s' have undefined 'url'", peer.Name)
+		}
+
+		// IDEA: test URL + key and show warning in case of failure?
+
+		appConfig.Peers[peer.Name] = ConfigPeer(peer)
 	}
 
 	return appConfig, nil
