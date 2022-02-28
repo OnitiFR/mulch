@@ -397,6 +397,33 @@ func (lv *Libvirt) UploadFileToLibvirt(pool *libvirt.StoragePool, poolXML *libvi
 	return lv.UploadFileToLibvirtFromReader(pool, poolXML, template, streamSrc, asName, log)
 }
 
+// VolumeDownloadToWriter return a *VolumeDownload for a download operation to a writer
+func (lv *Libvirt) VolumeDownloadToWriter(srcVolName string, pool *libvirt.StoragePool, dst io.WriteCloser) (*volumes.VolumeDownload, error) {
+	conn, errC := lv.GetConnection()
+	if errC != nil {
+		return nil, errC
+	}
+
+	err := lv.Pools.Seeds.Refresh(0)
+	if err != nil {
+		return nil, err
+	}
+
+	// find source volume
+	vol, err := pool.LookupStorageVolByName(srcVolName)
+	if err != nil {
+		return nil, err
+	}
+	defer vol.Free()
+
+	vd, err := volumes.NewVolumeDownloadToWriter(vol, conn, dst)
+	if err != nil {
+		return nil, err
+	}
+
+	return vd, nil
+}
+
 // ResizeDisk will change volume ("disk") size
 // (do not reduce a volume without knowing what you are doing!)
 func (lv *Libvirt) ResizeDisk(disk string, size uint64, pool *libvirt.StoragePool, log *Log) error {

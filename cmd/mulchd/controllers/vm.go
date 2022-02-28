@@ -457,6 +457,15 @@ func ActionVMController(req *server.Request) {
 				req.Stream.Successf("VM %s is now inactive", entry.Name.Name)
 			}
 		}
+	case "migrate":
+		before := time.Now()
+		err := MigrateVM(req, vm, entry.Name)
+		after := time.Now()
+		if err != nil {
+			req.Stream.Failuref("error: %s", err)
+		} else {
+			req.Stream.Successf("migration completed (%s)", after.Sub(before))
+		}
 	default:
 		req.Stream.Failuref("missing or invalid action ('%s') for '%s'", action, vmName)
 		return
@@ -842,6 +851,89 @@ func RedefineVM(req *server.Request, vm *server.VM, active bool) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// MigrateVM will migrate VM to a destination server ("peer")
+func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error {
+	running, _ := server.VMIsRunning(vmName, req.App)
+	if !running {
+		return errors.New("VM should be up and running")
+	}
+
+	if vm.WIP != server.VMOperationNone {
+		return fmt.Errorf("VM have a work in progress (%s)", string(vm.WIP))
+	}
+
+	if vm.Locked && req.HTTP.FormValue("force") != common.TrueStr {
+		return errors.New("VM is locked (see --force)")
+	}
+
+	destinationName := req.HTTP.FormValue("destination")
+	destination, exists := req.App.Config.Peers[destinationName]
+	if !exists {
+		return fmt.Errorf("destination peer '%s' does not exists", destinationName)
+	}
+
+	backup := req.App.BackupsDB.GetByName("lamp-r2-backup-20220228-175709.qcow2")
+	if backup == nil {
+		return errors.New("backup not found")
+	}
+
+	/*call := &server.PeerCall{
+		Peer:   destination,
+		Method: "POST",
+		Path:   "/vm/wp",
+		Args: map[string]string{
+			"action": "start",
+		},
+		Log: req.App.Log,
+	}*/
+
+	/*call := &server.PeerCall{
+		Peer:    destination,
+		Method:  "POST",
+		Path:    "/backup",
+		Args:    map[string]string{},
+		Log:     req.App.Log,
+		Libvirt: req.App.Libvirt,
+		UploadVolume: &server.PeerCallLibvirtFile{
+			Name: backup.DiskName,
+			As:   "migration-" + backup.DiskName,
+			Pool: req.App.Libvirt.Pools.Backups,
+		},
+	}*/
+
+	call := &server.PeerCall{
+		Peer:   destination,
+		Method: "POST",
+		Path:   "/vm",
+		Args: map[string]string{
+			"inactive": strconv.FormatBool(false),
+		},
+		UploadString: &server.PeerCallStringFile{
+			FieldName: "config",
+			FileName:  "vm.toml",
+			Content:   vm.Config.FileContent,
+		},
+		Log: req.App.Log,
+	}
+
+	err := call.Do()
+	if err != nil {
+		return err
+	}
+
+	// - create remote vm (in "to-restore" state, inactive)
+	// - de-activate source
+	// - backup source
+	// - upload backup
+	// - restore dest
+	// - activate dest
+	// - lock dest if source was locked
+	// - delete source
+	// - delete backup (source and dest)
 
 	return nil
 }

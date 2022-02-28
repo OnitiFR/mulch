@@ -68,15 +68,6 @@ func (api *API) NewCall(method string, path string, args map[string]string) *API
 	}
 }
 
-func cleanURL(urlIn string) (string, error) {
-	urlObj, err := url.Parse(urlIn)
-	if err != nil {
-		return urlIn, err
-	}
-	urlObj.Path = path.Clean(urlObj.Path)
-	return urlObj.String(), nil
-}
-
 // AddFile to the request (upload)
 func (call *APICall) AddFile(fieldname string, filename string) error {
 	// test readability
@@ -94,7 +85,7 @@ func (call *APICall) AddFile(fieldname string, filename string) error {
 func (call *APICall) Do() {
 	method := strings.ToUpper(call.Method)
 
-	apiURL, err := cleanURL(call.api.ServerURL + "/" + call.Path)
+	apiURL, err := common.CleanURL(call.api.ServerURL + "/" + call.Path)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -117,7 +108,7 @@ func (call *APICall) Do() {
 		finalURL := apiURL + "?" + data.Encode()
 		req, err = http.NewRequest(method, finalURL, nil)
 		if err != nil {
-			log.Fatal(removeAPIKeyFromString(err.Error(), call.api.APIKey))
+			log.Fatal(common.RemoveAPIKeyFromString(err.Error(), call.api.APIKey))
 		}
 	case "POST", "PUT":
 		if len(call.files) == 0 {
@@ -180,7 +171,7 @@ func (call *APICall) Do() {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatal(removeAPIKeyFromString(err.Error(), call.api.APIKey))
+		log.Fatal(common.RemoveAPIKeyFromString(err.Error(), call.api.APIKey))
 	}
 	defer resp.Body.Close()
 
@@ -258,13 +249,6 @@ func (call *APICall) Do() {
 // TimestampShow allow to override -d flags
 func (call *APICall) TimestampShow(show common.MessageTimestamp) {
 	call.api.Time = show
-}
-
-func removeAPIKeyFromString(in string, key string) string {
-	if key == "" {
-		return in
-	}
-	return strings.Replace(in, key, "xxx", -1)
 }
 
 func printJSONStream(body io.ReadCloser, call *APICall) error {
