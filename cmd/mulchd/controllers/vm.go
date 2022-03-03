@@ -925,11 +925,12 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 		return err
 	}
 
+	// Actions (need smart transaction!)
 	// - create remote vm (in "to-restore" state, inactive)
 	// - de-activate source
 	// - backup source
 	// - upload backup
-	// - restore dest
+	// - restore dest (need ctrl)
 	// - activate dest
 	// - lock dest if source was locked
 	// - delete source
