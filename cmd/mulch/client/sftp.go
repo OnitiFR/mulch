@@ -41,7 +41,7 @@ func SFTPCopy(vmName string, user string, filename string) error {
 	if err != nil {
 		return err
 	}
-	port := strconv.Itoa(SSHPort)
+	port := strconv.Itoa(GlobalConfig.Server.SSHPort)
 
 	hostKeyCallback, err := knownhosts.New(GetSSHPath("known_hosts"))
 	if err != nil {

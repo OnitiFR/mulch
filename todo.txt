@@ -1,9 +1,3 @@
-Current branch:
-- client : migrate command
-- "friends" server config
-- server 2 server client
-- restore controller
-
 Resource leaks:
 - check for remaining map race-conditions
 - check that the switch to Context fixes all known resource leaks

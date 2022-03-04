@@ -11,9 +11,6 @@ import (
 	"github.com/OnitiFR/mulch/common"
 )
 
-// SSHPort defines the mulchd SSH proxy port (should be configurable!)
-const SSHPort = 8022
-
 // MulchSSHSubDir is the name of mulch dedicated .ssh sub-directory
 const MulchSSHSubDir = "mulch/"
 

@@ -11,10 +11,11 @@ import (
 )
 
 type tomlServerConfig struct {
-	Name  string
-	URL   string
-	Key   string
-	Alias string
+	Name    string
+	URL     string
+	Key     string
+	Alias   string
+	SSHPort int `toml:"ssh_port"`
 }
 
 type tomlRootConfig struct {
@@ -101,11 +102,17 @@ func NewRootConfig(filename string) (*client.RootConfig, error) {
 			if rootConfig.Server != nil {
 				return nil, fmt.Errorf("multiple declaration of server '%s'", server.Name)
 			}
+
+			if server.SSHPort == 0 {
+				server.SSHPort = 8022
+			}
+
 			rootConfig.Server = &client.ServerConfig{
-				Name:  server.Name,
-				URL:   server.URL,
-				Key:   server.Key,
-				Alias: server.Alias,
+				Name:    server.Name,
+				URL:     server.URL,
+				Key:     server.Key,
+				Alias:   server.Alias,
+				SSHPort: server.SSHPort,
 			}
 		}
 	}

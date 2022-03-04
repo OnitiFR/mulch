@@ -103,7 +103,7 @@ func sshCmdPairCB(reader io.Reader, headers http.Header) {
 	args := []string{
 		"ssh",
 		"-i", privFilePath,
-		"-p", strconv.Itoa(client.SSHPort),
+		"-p", strconv.Itoa(client.GlobalConfig.Server.SSHPort),
 		destination,
 	}
 

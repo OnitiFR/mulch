@@ -17,10 +17,11 @@ type RootConfig struct {
 // root_config.go, NewRootConfig(), so remember to update
 // this function if any change is made here.
 type ServerConfig struct {
-	Name  string
-	URL   string
-	Key   string
-	Alias string
+	Name    string
+	URL     string
+	Key     string
+	Alias   string
+	SSHPort int
 }
 
 // GlobalHome is the user HOME

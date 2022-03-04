@@ -430,6 +430,13 @@ func ActionVMController(req *server.Request) {
 		} else {
 			req.Stream.Successf("backup completed (%s)", volHame)
 		}
+	case "restore":
+		err := RestoreVM(req, vm, entry.Name)
+		if err != nil {
+			req.Stream.Failuref("error: %s", err)
+		} else {
+			req.Stream.Successf("VM %s restored", entry.Name)
+		}
 	case "rebuild":
 		before := time.Now()
 		err := RebuildVMv2(req, vm, entry.Name)
@@ -770,6 +777,34 @@ func BackupVM(req *server.Request, vmName *server.VMName) (string, error) {
 	return server.VMBackup(vmName, req.APIKey.Comment, req.App, req.Stream, allowCompress)
 }
 
+func RestoreVM(req *server.Request, vm *server.VM, vmName *server.VMName) error {
+	backupName := req.HTTP.FormValue("backup_name")
+
+	if backupName == "" {
+		return errors.New("missing backup_name")
+	}
+
+	running, _ := server.VMIsRunning(vmName, req.App)
+	if !running {
+		return errors.New("VM should be up and running")
+	}
+
+	if vm.Locked && req.HTTP.FormValue("force") != common.TrueStr {
+		return errors.New("VM is locked (see --force)")
+	}
+
+	if vm.WIP != server.VMOperationNone {
+		return fmt.Errorf("VM have a work in progress (%s)", string(vm.WIP))
+	}
+
+	backup := req.App.BackupsDB.GetByName(backupName)
+	if backup == nil {
+		return fmt.Errorf("backup '%s' not found in database", backupName)
+	}
+
+	return server.VMRestoreNoChecks(vm, vmName, backup, req.App, req.App.Log)
+}
+
 // RebuildVMv2 delete VM and rebuilds it from a backup (2nd version, using revisions)
 func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) error {
 
@@ -876,10 +911,10 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 		return fmt.Errorf("destination peer '%s' does not exists", destinationName)
 	}
 
-	backup := req.App.BackupsDB.GetByName("lamp-r2-backup-20220228-175709.qcow2")
+	/*backup := req.App.BackupsDB.GetByName("lamp-r2-backup-20220228-175709.qcow2")
 	if backup == nil {
 		return errors.New("backup not found")
-	}
+	}*/
 
 	/*call := &server.PeerCall{
 		Peer:   destination,
@@ -905,17 +940,29 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 		},
 	}*/
 
-	call := &server.PeerCall{
+	/*call := &server.PeerCall{
 		Peer:   destination,
 		Method: "POST",
 		Path:   "/vm",
 		Args: map[string]string{
 			"inactive": strconv.FormatBool(false),
+			"restore":  server.BackupBlankRestore,
 		},
 		UploadString: &server.PeerCallStringFile{
 			FieldName: "config",
 			FileName:  "vm.toml",
 			Content:   vm.Config.FileContent,
+		},
+		Log: req.App.Log,
+	}*/
+
+	call := &server.PeerCall{
+		Peer:   destination,
+		Method: "POST",
+		Path:   "/vm/wp",
+		Args: map[string]string{
+			"action":      "restore",
+			"backup_name": "wp-r2-backup-20220304-165647.qcow2",
 		},
 		Log: req.App.Log,
 	}
@@ -927,6 +974,7 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 
 	// Actions (need smart transaction!)
 	// - create remote vm (in "to-restore" state, inactive)
+	// - get its name back! (its revision, tbe)
 	// - de-activate source
 	// - backup source
 	// - upload backup
@@ -935,6 +983,8 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 	// - lock dest if source was locked
 	// - delete source
 	// - delete backup (source and dest)
+
+	// add completion for peers (vm migrate cmd)
 
 	return nil
 }
