@@ -893,6 +893,9 @@ func RedefineVM(req *server.Request, vm *server.VM, active bool) error {
 
 // MigrateVM will migrate VM to a destination server ("peer")
 func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error {
+	log := req.Stream
+	commit := false
+
 	running, _ := server.VMIsRunning(vmName, req.App)
 	if !running {
 		return errors.New("VM should be up and running")
@@ -935,7 +938,7 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 			existingActiveVM = true
 			return nil
 		},
-		Log: req.App.Log,
+		Log: log,
 	}
 
 	err := call.Do()
@@ -944,7 +947,12 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 	}
 
 	if existingActiveVM {
-		req.App.Log.Warningf("active VM '%s' on '%s' will be deactivated", vmName.Name, destinationName)
+		log.Warningf("active VM '%s' on '%s' will be deactivated", vmName.Name, destinationName)
+	}
+
+	entry, err := req.App.VMDB.GetEntryByName(vmName)
+	if err != nil {
+		return err
 	}
 
 	// create remote VM
@@ -964,6 +972,7 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 			"inactive":           strconv.FormatBool(true),
 			"allow_new_revision": strconv.FormatBool(allowNewRevision),
 			"restore":            server.BackupBlankRestore,
+			"lock":               strconv.FormatBool(vm.Locked),
 		},
 		UploadString: &server.PeerCallStringFile{
 			FieldName: "config",
@@ -984,7 +993,7 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 			}
 			return nil
 		},
-		Log: req.App.Log,
+		Log: log,
 	}
 
 	err = call.Do()
@@ -992,77 +1001,163 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 		return err
 	}
 
-	fmt.Println(revision)
+	defer func() {
+		if !commit {
+			log.Info("deleting remote VM")
+			call = &server.PeerCall{
+				Peer:   destination,
+				Method: "POST",
+				Path:   "/vm/" + vmName.Name,
+				Args: map[string]string{
+					"action":   "unlock",
+					"revision": strconv.Itoa(revision),
+				},
+				Log: log,
+			}
+			call.Do()
 
-	/*backup := req.App.BackupsDB.GetByName("lamp-r2-backup-20220228-175709.qcow2")
-	if backup == nil {
-		return errors.New("backup not found")
-	}*/
+			call = &server.PeerCall{
+				Peer:   destination,
+				Method: "DELETE",
+				Path:   "/vm/" + vmName.Name,
+				Args: map[string]string{
+					"revision": strconv.Itoa(revision),
+				},
+				Log: log,
+			}
+			call.Do()
+		}
+	}()
 
-	/*call := &server.PeerCall{
-		Peer:   destination,
-		Method: "POST",
-		Path:   "/vm/wp",
-		Args: map[string]string{
-			"action": "start",
-		},
-		Log: req.App.Log,
-	}*/
+	sourceActive := entry.Active
+	if sourceActive {
+		log.Info("deactivating source VM")
+		err := req.App.VMDB.SetActiveRevision(vmName.Name, server.RevisionNone)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if !commit {
+				log.Info("re-activating source VM")
+				req.App.VMDB.SetActiveRevision(vmName.Name, vmName.Revision)
+			}
+		}()
+	}
 
-	/*call := &server.PeerCall{
+	// backup source VM
+	backup, err := server.VMBackup(vmName, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressDisable)
+	defer func() {
+		req.Stream.Infof("deleting backup %s", backup)
+		deleteBackup(backup, req)
+	}()
+
+	// upload backup
+	remoteBackup := "migration-" + backup
+	call = &server.PeerCall{
 		Peer:    destination,
 		Method:  "POST",
 		Path:    "/backup",
 		Args:    map[string]string{},
-		Log:     req.App.Log,
+		Log:     log,
 		Libvirt: req.App.Libvirt,
 		UploadVolume: &server.PeerCallLibvirtFile{
-			Name: backup.DiskName,
-			As:   "migration-" + backup.DiskName,
+			Name: backup,
+			As:   remoteBackup,
 			Pool: req.App.Libvirt.Pools.Backups,
 		},
-	}*/
+	}
 
-	/*call := &server.PeerCall{
+	err = call.Do()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		call = &server.PeerCall{
+			Peer:   destination,
+			Method: "DELETE",
+			Path:   "/backup/" + remoteBackup,
+			Args:   map[string]string{},
+			Log:    log,
+		}
+		call.Do()
+	}()
+
+	// restore backup
+	call = &server.PeerCall{
 		Peer:   destination,
 		Method: "POST",
-		Path:   "/vm",
-		Args: map[string]string{
-			"inactive": strconv.FormatBool(false),
-			"restore":  server.BackupBlankRestore,
-		},
-		UploadString: &server.PeerCallStringFile{
-			FieldName: "config",
-			FileName:  "vm.toml",
-			Content:   vm.Config.FileContent,
-		},
-		Log: req.App.Log,
-	}*/
-
-	/*call := &server.PeerCall{
-		Peer:   destination,
-		Method: "POST",
-		Path:   "/vm/wp",
+		Path:   "/vm/" + vmName.Name,
 		Args: map[string]string{
 			"action":      "restore",
-			"backup_name": "wp-r2-backup-20220304-165647.qcow2",
+			"backup_name": remoteBackup,
+			"revision":    strconv.Itoa(revision),
+			"force":       strconv.FormatBool(true),
 		},
-		Log: req.App.Log,
-	}*/
+		Log: log,
+	}
 
-	// Actions (need smart transaction!)
-	// - create remote vm (in "to-restore" state, inactive)
-	// - get its name back! (its revision, tbe)
-	// - de-activate source
-	// - backup source
-	// - upload backup
-	// - restore dest (need ctrl)
-	// - activate dest
-	// - lock dest if source was locked
-	// - delete source (unlock ?)
-	// - delete backup (source and dest)
+	err = call.Do()
+	if err != nil {
+		return err
+	}
 
-	// add completion for peers? (vm migrate cmd)
+	if sourceActive {
+		// activate destination
+		call = &server.PeerCall{
+			Peer:   destination,
+			Method: "POST",
+			Path:   "/vm/" + vmName.Name,
+			Args: map[string]string{
+				"action":   "activate",
+				"revision": strconv.Itoa(revision),
+			},
+			Log: log,
+		}
+
+		err = call.Do()
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			if !commit {
+				// de-activate destination so the source can be activated back
+				call = &server.PeerCall{
+					Peer:   destination,
+					Method: "POST",
+					Path:   "/vm/" + vmName.Name,
+					Args: map[string]string{
+						"action":   "activate",
+						"revision": strconv.Itoa(server.RevisionNone),
+					},
+					Log: log,
+				}
+				call.Do()
+			}
+		}()
+	}
+
+	// up to this point, it's only cleanups, we consider the transaction as successful
+	commit = true
+
+	// unlock source
+	if vm.Locked {
+		err = server.VMLockUnlock(vmName, false, req.App.VMDB)
+		if err != nil {
+			req.Stream.Error(err.Error())
+		}
+	}
+
+	// delete source
+	err = server.VMDelete(vmName, req.App, req.Stream)
+	if err != nil {
+		req.Stream.Error(err.Error())
+	}
+
+	// display downtime
+	// test all rollback steps (locked / unlocked, active / inactive)
+	// add completion for peers (vm migrate cmd)
 	// tags? (see rebuild for other things to preserve?)
 
 	return nil

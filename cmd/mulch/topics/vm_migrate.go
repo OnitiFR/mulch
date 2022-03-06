@@ -11,8 +11,12 @@ import (
 var vmMigrateCmd = &cobra.Command{
 	Use:   "migrate <vm-name> <destination-peer>",
 	Short: "Migrate a VM",
-	Long:  `Migrate a from this mulch server to another one ("destination").`,
-	Args:  cobra.ExactArgs(2),
+	Long: `Migrate a VM from this mulchd instance to another one ("destination").
+
+Any pre-existing active VM will be deactivated in favor of the migrated VM.
+Lock status will be preserved.
+`,
+	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		revision, _ := cmd.Flags().GetString("revision")
 		force, _ := cmd.Flags().GetBool("force")
