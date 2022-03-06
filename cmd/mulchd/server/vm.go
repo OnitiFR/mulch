@@ -386,6 +386,8 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		}
 	}
 
+	log.Infof("REVISION=%d", revision)
+
 	// 4 - run prepare scripts
 	log.Infof("running 'prepare' scripts")
 	tasks := []*RunTask{}

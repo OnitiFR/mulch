@@ -41,6 +41,7 @@ Long term:
 - full async API?
 - write API public documentation
 - continue tests on snapshots (see branch "snapshots")
+- use vm_prefix for disks/seeds/… to allow multiple mulchd on the same machine (or use different storages?)
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
   - (dhcp/dnsmasq? ebtables? mulch-network restart?)
 - libvirtd watchdog + alert (ex: timeout in VMStateDatabase?)

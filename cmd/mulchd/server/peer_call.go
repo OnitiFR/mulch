@@ -19,12 +19,15 @@ import (
 )
 
 type PeerCall struct {
-	Peer         ConfigPeer
-	Method       string
-	Path         string
-	Args         map[string]string
-	UploadVolume *PeerCallLibvirtFile
-	UploadString *PeerCallStringFile
+	Peer              ConfigPeer
+	Method            string
+	Path              string
+	Args              map[string]string
+	UploadVolume      *PeerCallLibvirtFile
+	UploadString      *PeerCallStringFile
+	TextCallback      func(body []byte) error
+	HTTPErrorCallback func(code int, body []byte, httpError error) error
+	MessageCallback   func(m *common.Message) error
 
 	Log     *Log
 	Libvirt *Libvirt
@@ -198,11 +201,18 @@ func (call *PeerCall) Do() error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("Error: %s (%v)\nMessage: %s",
+
+		httpError := fmt.Errorf("Error: %s (%v)\nMessage: %s",
 			resp.Status,
 			resp.StatusCode,
 			string(body),
 		)
+
+		if call.HTTPErrorCallback != nil {
+			return call.HTTPErrorCallback(resp.StatusCode, body, httpError)
+		}
+
+		return httpError
 	}
 
 	mime := resp.Header.Get("Content-Type")
@@ -214,12 +224,19 @@ func (call *PeerCall) Do() error {
 			return err
 		}
 	case "text/plain", "text/plain; charset=utf-8":
-		/*body*/ _, err := ioutil.ReadAll(resp.Body)
+		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
-		// fmt.Print(string(body))
-		return errors.New("unsupported text plain response")
+
+		if call.TextCallback == nil {
+			return errors.New("unsupported text plain response")
+		} else {
+			err := call.TextCallback(body)
+			if err != nil {
+				return err
+			}
+		}
 	default:
 		return fmt.Errorf("unsupported content type '%s'", mime)
 	}
@@ -245,8 +262,16 @@ func decodeJSONStream(body io.ReadCloser, call *PeerCall) error {
 			continue
 		}
 
-		m.Message = "<" + call.Peer.Name + "> " + m.Message
-		call.Log.Log(&m)
+		var mPrefixed = m
+		mPrefixed.Message = "<" + call.Peer.Name + "> " + m.Message
+		call.Log.Log(&mPrefixed)
+
+		if call.MessageCallback != nil {
+			err := call.MessageCallback(&m)
+			if err != nil {
+				return err
+			}
+		}
 
 		if m.Type == common.MessageFailure {
 			retError = fmt.Errorf("%s returned an error", call.Peer.Name)

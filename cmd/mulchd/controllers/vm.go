@@ -9,6 +9,7 @@ import (
 	"path"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
@@ -911,6 +912,88 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 		return fmt.Errorf("destination peer '%s' does not exists", destinationName)
 	}
 
+	// check any active VM with the same name on the destination
+	var existingActiveVM bool
+
+	call := &server.PeerCall{
+		Peer:   destination,
+		Method: "GET",
+		Path:   "/vm/search",
+		Args: map[string]string{
+			"q":             "name == '" + vmName.Name + "' && active == true",
+			"fail-on-empty": strconv.FormatBool(true),
+		},
+		HTTPErrorCallback: func(code int, body []byte, httpError error) error {
+			// "real" error
+			if code != http.StatusNotFound {
+				return httpError
+			}
+			existingActiveVM = false
+			return nil
+		},
+		TextCallback: func(body []byte) error {
+			existingActiveVM = true
+			return nil
+		},
+		Log: req.App.Log,
+	}
+
+	err := call.Do()
+	if err != nil {
+		return err
+	}
+
+	if existingActiveVM {
+		req.App.Log.Warningf("active VM '%s' on '%s' will be deactivated", vmName.Name, destinationName)
+	}
+
+	// create remote VM
+	revision := 0
+	allowNewRevisionStr := req.HTTP.FormValue("allow_new_revision")
+
+	allowNewRevision := false
+	if allowNewRevisionStr == common.TrueStr {
+		allowNewRevision = true
+	}
+
+	call = &server.PeerCall{
+		Peer:   destination,
+		Method: "POST",
+		Path:   "/vm",
+		Args: map[string]string{
+			"inactive":           strconv.FormatBool(true),
+			"allow_new_revision": strconv.FormatBool(allowNewRevision),
+			"restore":            server.BackupBlankRestore,
+		},
+		UploadString: &server.PeerCallStringFile{
+			FieldName: "config",
+			FileName:  "vm.toml",
+			Content:   vm.Config.FileContent,
+		},
+		MessageCallback: func(m *common.Message) error {
+			if m.Type == common.MessageInfo && strings.HasPrefix(m.Message, "REVISION=") {
+				parts := strings.Split(m.Message, "=")
+				if len(parts) == 2 {
+					revision, err = strconv.Atoi(parts[1])
+					if err != nil {
+						return fmt.Errorf("cannot parse revision: %s", err)
+					}
+				} else {
+					return fmt.Errorf("cannot parse '%s'", m.Message)
+				}
+			}
+			return nil
+		},
+		Log: req.App.Log,
+	}
+
+	err = call.Do()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(revision)
+
 	/*backup := req.App.BackupsDB.GetByName("lamp-r2-backup-20220228-175709.qcow2")
 	if backup == nil {
 		return errors.New("backup not found")
@@ -956,7 +1039,7 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 		Log: req.App.Log,
 	}*/
 
-	call := &server.PeerCall{
+	/*call := &server.PeerCall{
 		Peer:   destination,
 		Method: "POST",
 		Path:   "/vm/wp",
@@ -965,12 +1048,7 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 			"backup_name": "wp-r2-backup-20220304-165647.qcow2",
 		},
 		Log: req.App.Log,
-	}
-
-	err := call.Do()
-	if err != nil {
-		return err
-	}
+	}*/
 
 	// Actions (need smart transaction!)
 	// - create remote vm (in "to-restore" state, inactive)
@@ -981,10 +1059,11 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 	// - restore dest (need ctrl)
 	// - activate dest
 	// - lock dest if source was locked
-	// - delete source
+	// - delete source (unlock ?)
 	// - delete backup (source and dest)
 
-	// add completion for peers (vm migrate cmd)
+	// add completion for peers? (vm migrate cmd)
+	// tags? (see rebuild for other things to preserve?)
 
 	return nil
 }
