@@ -9,7 +9,6 @@ import (
 	"path"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
@@ -980,15 +979,10 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 			Content:   vm.Config.FileContent,
 		},
 		MessageCallback: func(m *common.Message) error {
-			if m.Type == common.MessageInfo && strings.HasPrefix(m.Message, "REVISION=") {
-				parts := strings.Split(m.Message, "=")
-				if len(parts) == 2 {
-					revision, err = strconv.Atoi(parts[1])
-					if err != nil {
-						return fmt.Errorf("cannot parse revision: %s", err)
-					}
-				} else {
-					return fmt.Errorf("cannot parse '%s'", m.Message)
+			if isRev, value := common.StringIsVariable(m.Message, "REVISION"); isRev {
+				revision, err = strconv.Atoi(value)
+				if err != nil {
+					return fmt.Errorf("cannot parse revision: %s", err)
 				}
 			}
 			return nil
@@ -1043,6 +1037,8 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 			}
 		}()
 	}
+
+	downtimeStart := time.Now()
 
 	// backup source VM
 	backup, err := server.VMBackup(vmName, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressDisable)
@@ -1138,6 +1134,9 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 		}()
 	}
 
+	downtimeEnd := time.Now()
+	downtime := downtimeEnd.Sub(downtimeStart)
+
 	// up to this point, it's only cleanups, we consider the transaction as successful
 	commit = true
 
@@ -1155,10 +1154,15 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 		req.Stream.Error(err.Error())
 	}
 
-	// display downtime
 	// test all rollback steps (locked / unlocked, active / inactive)
-	// add completion for peers (vm migrate cmd)
-	// tags? (see rebuild for other things to preserve?)
+	// add completion for 'vm migrate' cmd
+	// edge case: migration ok → local vm deletion → an existing "lower" inactive
+	// VM is activated (unharmful error if source was active?)
+	if sourceActive {
+		log.Infof("downtime: %s", downtime)
+	} else {
+		log.Infof("downtime: none (was not active)")
+	}
 
 	return nil
 }

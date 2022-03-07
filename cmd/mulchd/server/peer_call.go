@@ -264,6 +264,10 @@ func decodeJSONStream(body io.ReadCloser, call *PeerCall) error {
 
 		var mPrefixed = m
 		mPrefixed.Message = "<" + call.Peer.Name + "> " + m.Message
+		// downplay success messages (helping user's readability)
+		if mPrefixed.Type == common.MessageSuccess {
+			mPrefixed.Type = common.MessageInfo
+		}
 		call.Log.Log(&mPrefixed)
 
 		if call.MessageCallback != nil {
