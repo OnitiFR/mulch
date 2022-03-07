@@ -194,4 +194,10 @@ func AddRoutes(app *server.App) {
 		Type:    server.RouteTypeCustom,
 		Handler: controllers.GetStateZipController,
 	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "GET /peer",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.ListPeersController,
+	}, server.RouteAPI)
 }

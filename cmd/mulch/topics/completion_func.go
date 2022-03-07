@@ -75,11 +75,29 @@ __internal_list_keys() {
     fi
 }
 
+__internal_list_peers() {
+    local mulch_output out
+    __mulch_get_server
+    if mulch_output=$(mulch --server $__mulch_current_server peer list 2>/dev/null); then
+        out=($(echo "${mulch_output}"))
+        COMPREPLY=( $( compgen -W "${out[*]}" -- "$cur" ) )
+    fi
+}
+
 __mulch_get_servers() {
     local out servers
     servers=$(egrep '^[[:blank:]]*name[[:blank:]]*=' ~/.mulch.toml | awk -F= '{print $2}')
     out=($(echo $servers))
     COMPREPLY=( $( compgen -W "${out[*]}" -- "$cur" ) )
+}
+
+__internal_migrate() {
+	local prev_prev=${COMP_WORDS[COMP_CWORD-2]}
+    if [ "$prev" =  "migrate" ]; then
+        __internal_list_vms
+    elif [ "$prev_prev" =  "migrate" ]; then
+        __internal_list_peers
+    fi
 }
 
 __mulch_custom_func() {
@@ -102,6 +120,10 @@ __mulch_custom_func() {
             ;;
         mulch_do)
             __internal_doaction
+            return
+            ;;
+            mulch_vm_migrate)
+            __internal_migrate
             return
             ;;
         mulch_seed_status | mulch_seed_refresh)

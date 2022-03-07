@@ -8,6 +8,7 @@ import (
 )
 
 // LockedController will return "true" / "false" following vm.Locked value
+// (internal server only)
 func LockedController(req *server.Request) {
 	instanceID := req.HTTP.FormValue("instance_id")
 
