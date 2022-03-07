@@ -1155,7 +1155,6 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 	}
 
 	// test all rollback steps (locked / unlocked, active / inactive)
-	// add completion for 'vm migrate' cmd
 	// edge case: migration of active VM ok → local vm deletion → an existing
 	// "lower" inactive VM is activated (unharmful error if source was active?)
 	if sourceActive {
