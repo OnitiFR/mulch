@@ -1137,7 +1137,7 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 	downtimeEnd := time.Now()
 	downtime := downtimeEnd.Sub(downtimeStart)
 
-	// up to this point, it's only cleanups, we consider the transaction as successful
+	// from here, it's only cleanups, we consider the transaction as successful
 	commit = true
 
 	// unlock source
@@ -1156,8 +1156,8 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 
 	// test all rollback steps (locked / unlocked, active / inactive)
 	// add completion for 'vm migrate' cmd
-	// edge case: migration ok → local vm deletion → an existing "lower" inactive
-	// VM is activated (unharmful error if source was active?)
+	// edge case: migration of active VM ok → local vm deletion → an existing
+	// "lower" inactive VM is activated (unharmful error if source was active?)
 	if sourceActive {
 		log.Infof("downtime: %s", downtime)
 	} else {
