@@ -243,11 +243,11 @@ You can configure auto-rebuild for each VM with `auto_rebuild` setting (daily, w
 monthly). We highly recommend this.
 
 #### Reverse Proxy chaining
-When using multiple Mulch instances, a frontal mulch-proxy can be configured to forward traffic
-to children instances. It makes DNS configuration and VM migration between mulch servers way
-easier. Thanks to an internal inter-proxy API, everything is managed automatically:
-create your VM as usual and the parent mulch-proxy will instantly forward requests. And domain
-name conflicts between instances are automatically checked too.
+When using multiple Mulch instances, a frontal (standard) mulch-proxy can be configured to
+forward traffic to children instances. It makes DNS configuration and VM migration between
+mulch servers way easier. Thanks to an internal inter-proxy API, everything is managed
+automatically: create your VM as usual and the parent mulch-proxy will instantly forward
+requests. And domain name conflicts between instances are automatically checked too.
 
 ![mulch-proxy chaining](https://raw.github.com/OnitiFR/mulch/master/doc/images/img_chaining.png)
 
@@ -268,8 +268,10 @@ proxy_chain_psk = "MySecretPreShareKey123"
 
 And that's it.
 
-#### Inter-VM communication
+### VM migration
+WIP
 
+#### Inter-VM communication
 By default, network traffic is not allowed between VMs, but you can choose to
 export a port from a VM to a group (group names starts with `@`).
 
@@ -293,7 +295,6 @@ Then, inside the VM, connect to `$_MULCH_PROXY_IP:$_5432_TCP`
 Ports are dynamic, they're affected immediately by commands like `vm redefine` and `vm active`, no rebuild is needed. See sample TOML file for more informations.
 
 #### Port forwarding
-
 The TCP-proxy can also be used to expose a VM network port to the outside using the special `PUBLIC` group:
 
 ```toml

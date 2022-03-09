@@ -14,6 +14,7 @@ Resource leaks:
   - test with Go 1.16 (strange that we see this issue on our most memory pressured host [m2])
 
 Short term:
+- vm migration README!
 - explore vm migration possible edge case:
   // migration of active VM ok → local vm deletion → an existing
 	// "lower" inactive VM is activated (unharmful error if source was active?)
