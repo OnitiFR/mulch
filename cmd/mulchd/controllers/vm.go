@@ -914,6 +914,8 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 		return fmt.Errorf("destination peer '%s' does not exists", destinationName)
 	}
 
+	log.Infof("migrating %s to %s", vmName.String(), destination.Name)
+
 	// check any active VM with the same name on the destination
 	var existingActiveVM bool
 
@@ -1154,9 +1156,6 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 		req.Stream.Error(err.Error())
 	}
 
-	// test all rollback steps (locked / unlocked, active / inactive)
-	// edge case: migration of active VM ok → local vm deletion → an existing
-	// "lower" inactive VM is activated (unharmful error if source was active?)
 	if sourceActive {
 		log.Infof("downtime: %s", downtime)
 	} else {

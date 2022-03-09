@@ -45,7 +45,25 @@ type PeerCallStringFile struct {
 	Content   string
 }
 
+// Do a call to a peer (with detailed error messages)
 func (call *PeerCall) Do() error {
+	err := call.do()
+	if err != nil {
+		path := strings.TrimPrefix(call.Path, "/")
+		parts := strings.Split(path, "/")
+		entity := parts[0]
+
+		if _, actionExists := call.Args["action"]; entity == "vm" && actionExists {
+			entity = fmt.Sprintf("%s %s", call.Args["action"], entity)
+		}
+
+		return fmt.Errorf("call '%s' to %s failed: %s", entity, call.Peer.Name, err)
+	}
+	return nil
+}
+
+// do the actual call
+func (call *PeerCall) do() error {
 	method := strings.ToUpper(call.Method)
 
 	apiURL, err := common.CleanURL(call.Peer.URL + "/" + call.Path)
