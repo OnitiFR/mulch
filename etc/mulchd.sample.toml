@@ -118,3 +118,10 @@ url = "http://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64-
 #[[seed]]
 #name = "ubuntu_2004_lamp"
 #seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2004_lamp.toml"
+
+# Peers, allowing inter-mulchd VM migrations
+# (it's suggested to create a dedicated API key on the remote server)
+#[[peer]]
+#name = "server2"
+#url = "https://server2.mydomain.tld:8686"
+#key = "K8OpSluPnUzcL2XipfPwt14WBT79aegqe4lZikObMIsiErqgxxco0iptr5MliQCY"
