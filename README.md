@@ -268,8 +268,18 @@ proxy_chain_psk = "MySecretPreShareKey123"
 
 And that's it.
 
-### VM migration
-WIP
+#### VM migration
+In `mulchd.conf` config file, you can declare some other mulchd servers ("peers"), like so:
+```toml
+[[peer]]
+name = "server2"
+url = "https://server2.mydomain.tld:8686"
+key = "K8OpSluPnUzcL2XipfPwt14WBT79aegqe4lZikObMIsiErqgxxco0iptr5MliQCY"
+```
+You can then move a VM from a server to another with minimal downtime :
+```
+mulch vm migrate my_vm server2
+```
 
 #### Inter-VM communication
 By default, network traffic is not allowed between VMs, but you can choose to
