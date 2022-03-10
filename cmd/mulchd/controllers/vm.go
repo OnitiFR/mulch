@@ -958,6 +958,7 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 
 	// create remote VM
 	revision := 0
+	revisionFound := false
 	allowNewRevisionStr := req.HTTP.FormValue("allow_new_revision")
 
 	allowNewRevision := false
@@ -981,8 +982,9 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 			Content:   vm.Config.FileContent,
 		},
 		MessageCallback: func(m *common.Message) error {
-			if isRev, value := common.StringIsVariable(m.Message, "REVISION"); isRev {
+			if isRev, value := common.StringIsVariable(m.Message, "REVISION"); isRev && !revisionFound {
 				revision, err = strconv.Atoi(value)
+				revisionFound = true
 				if err != nil {
 					return fmt.Errorf("cannot parse revision: %s", err)
 				}
@@ -1024,6 +1026,10 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 			call.Do()
 		}
 	}()
+
+	if !revisionFound {
+		return errors.New("unable to retrieve revision of remote VM")
+	}
 
 	sourceActive := entry.Active
 	if sourceActive {
