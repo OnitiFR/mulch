@@ -439,7 +439,7 @@ func ActionVMController(req *server.Request) {
 		}
 	case "rebuild":
 		before := time.Now()
-		err := RebuildVMv2(req, vm, entry.Name)
+		err := RebuildVM(req, vm, entry.Name)
 		after := time.Now()
 		if err != nil {
 			req.Stream.Failuref("error: %s", err)
@@ -805,8 +805,8 @@ func RestoreVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 	return server.VMRestoreNoChecks(vm, vmName, backup, req.App, req.App.Log)
 }
 
-// RebuildVMv2 delete VM and rebuilds it from a backup (2nd version, using revisions)
-func RebuildVMv2(req *server.Request, vm *server.VM, vmName *server.VMName) error {
+// RebuildVM rebuilds a VM from a backup (with revision system) and delete the original
+func RebuildVM(req *server.Request, vm *server.VM, vmName *server.VMName) error {
 
 	if vm.Locked && req.HTTP.FormValue("force") != common.TrueStr {
 		return errors.New("VM is locked (see --force)")
