@@ -136,6 +136,12 @@ func AddRoutes(app *server.App) {
 	}, server.RouteAPI)
 
 	app.AddRoute(&server.Route{
+		Route:   "POST /backup/expire/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.SetBackupExpireController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
 		Route:   "GET /backup/*",
 		Type:    server.RouteTypeCustom,
 		Handler: controllers.DownloadBackupController,

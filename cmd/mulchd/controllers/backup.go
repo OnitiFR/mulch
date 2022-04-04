@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
 	"github.com/OnitiFR/mulch/cmd/mulchd/volumes"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/c2h5oh/datasize"
-	"gopkg.in/libvirt/libvirt-go.v5"
 )
 
 // ListBackupsController list Backups
@@ -55,6 +55,7 @@ func ListBackupsController(req *server.Request) {
 			DiskName:  backup.DiskName,
 			VMName:    backup.VM.Config.Name,
 			Created:   backup.Created,
+			Expire:    backup.Expire,
 			AuthorKey: backup.AuthorKey,
 			Size:      infos.Capacity,
 			AllocSize: infos.Allocation,
@@ -74,26 +75,7 @@ func ListBackupsController(req *server.Request) {
 }
 
 func deleteBackup(backupName string, req *server.Request) error {
-	backup := req.App.BackupsDB.GetByName(backupName)
-	if backup == nil {
-		return fmt.Errorf("backup '%s' not found in database", backupName)
-	}
-
-	vol, errDef := req.App.Libvirt.Pools.Backups.LookupStorageVolByName(backupName)
-	if errDef != nil {
-		return fmt.Errorf("failed LookupStorageVolByName: %s (%s)", errDef, backupName)
-	}
-	defer vol.Free()
-	errDef = vol.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL)
-	if errDef != nil {
-		return fmt.Errorf("failed Delete: %s (%s)", errDef, backupName)
-	}
-
-	err := req.App.BackupsDB.Delete(backupName)
-	if err != nil {
-		return fmt.Errorf("unable remove '%s' backup from DB: %s", backupName, err)
-	}
-	return nil
+	return server.BackupDelete(backupName, req.App)
 }
 
 // DeleteBackupController will delete a backup
@@ -182,6 +164,18 @@ func UploadBackupController(req *server.Request) {
 		return
 	}
 
+	expireStr := req.HTTP.FormValue("expire")
+	expire := time.Duration(0)
+	if expireStr != "" {
+		seconds, err := strconv.Atoi(expireStr)
+		if err != nil {
+			req.Stream.Failuref("unable to parse expire value")
+			return
+
+		}
+		expire = time.Duration(seconds) * time.Second
+	}
+
 	if req.App.BackupsDB.GetByName(header.Filename) != nil {
 		req.Stream.Failuref("backup '%s' already exists in database", header.Filename)
 		return
@@ -220,6 +214,10 @@ func UploadBackupController(req *server.Request) {
 		},
 	}
 
+	if expire > server.BackupNoExpiration {
+		backup.Expire = time.Now().Add(expire)
+	}
+
 	err = req.App.BackupsDB.Add(backup)
 	if err != nil {
 		req.Stream.Failuref("error adding backup to DB: %s", err)
@@ -227,4 +225,39 @@ func UploadBackupController(req *server.Request) {
 	}
 
 	req.Stream.Successf("backup '%s' uploaded successfully", header.Filename)
+}
+
+func SetBackupExpireController(req *server.Request) {
+	req.StartStream()
+
+	backupName := req.SubPath
+
+	expireStr := req.HTTP.FormValue("expire")
+	expire := time.Duration(0)
+	if expireStr != "" {
+		seconds, err := strconv.Atoi(expireStr)
+		if err != nil {
+			req.Stream.Failuref("unable to parse expire value")
+			return
+
+		}
+		expire = time.Duration(seconds) * time.Second
+	}
+
+	expireDate := time.Time{}
+	if expire > server.BackupNoExpiration {
+		expireDate = time.Now().Add(expire)
+	}
+
+	err := req.App.BackupsDB.Expire(backupName, expireDate)
+	if err != nil {
+		req.Stream.Failuref("unable to set expire value: %s", err)
+		return
+	}
+
+	if expire > server.BackupNoExpiration {
+		req.Stream.Successf("backup will expire in %s (%s)", expire, expireDate.Format("2006-01-02 15:04"))
+	} else {
+		req.Stream.Successf("backup '%s' will never expire", backupName)
+	}
 }

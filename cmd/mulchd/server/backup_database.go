@@ -9,27 +9,20 @@ import (
 	"time"
 )
 
-// Backup describes a VM backup
-type Backup struct {
-	DiskName  string
-	Created   time.Time
-	Expires   time.Time
-	AuthorKey string
-	VM        *VM
-}
-
 // BackupDatabase describes a persistent Backup instances database
 type BackupDatabase struct {
 	filename string
 	db       map[string]*Backup
 	mutex    sync.Mutex
+	app      *App
 }
 
 // NewBackupDatabase instanciates a new BackupDatabase
-func NewBackupDatabase(filename string) (*BackupDatabase, error) {
+func NewBackupDatabase(filename string, app *App) (*BackupDatabase, error) {
 	db := &BackupDatabase{
 		filename: filename,
 		db:       make(map[string]*Backup),
+		app:      app,
 	}
 
 	// if the file exists, load it
@@ -47,6 +40,17 @@ func NewBackupDatabase(filename string) (*BackupDatabase, error) {
 	}
 
 	return db, nil
+}
+
+// Run the database monitoring loop
+func (db *BackupDatabase) Run() error {
+	// small cooldown (app init)
+	time.Sleep(5 * time.Second)
+
+	for {
+		db.deleteExpired()
+		time.Sleep(10 * time.Minute)
+	}
 }
 
 // This is done internaly, because it must be done with the mutex locked,
@@ -96,11 +100,34 @@ func (db *BackupDatabase) load() error {
 	return nil
 }
 
-// Delete the Backup from the database using its name
-func (db *BackupDatabase) Delete(name string) error {
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
+// deleteExpired deletes all expired backups
+func (db *BackupDatabase) deleteExpired() {
+	expired := make([]string, 0)
 
+	db.mutex.Lock()
+	for _, backup := range db.db {
+		if backup.Expire.IsZero() {
+			continue
+		}
+
+		if backup.Expire.Before(time.Now()) {
+			expired = append(expired, backup.DiskName)
+		}
+	}
+	db.mutex.Unlock()
+
+	for _, backup := range expired {
+		db.app.Log.Infof("deleting expired backup '%s'", backup)
+		err := BackupDelete(backup, db.app)
+		if err != nil {
+			db.app.Log.Errorf("error deleting expired backup '%s': %s", backup, err)
+		}
+	}
+}
+
+// delete the Backup from the database using its name
+// (must be locked by the caller)
+func (db *BackupDatabase) delete(name string) error {
 	if _, exists := db.db[name]; !exists {
 		return fmt.Errorf("backup '%s' was not found in database", name)
 	}
@@ -113,6 +140,14 @@ func (db *BackupDatabase) Delete(name string) error {
 	}
 
 	return nil
+}
+
+// Delete the Backup from the database using its name
+func (db *BackupDatabase) Delete(name string) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	return db.delete(name)
 }
 
 // Add a new Backup in the database
@@ -162,4 +197,18 @@ func (db *BackupDatabase) Count() int {
 	defer db.mutex.Unlock()
 
 	return len(db.db)
+}
+
+// Expire defines the expiration date of a Backup (0 means no expiration)
+func (db *BackupDatabase) Expire(name string, expire time.Time) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	_, exists := db.db[name]
+	if !exists {
+		return fmt.Errorf("backup '%s' was not found in database", name)
+	}
+
+	db.db[name].Expire = expire
+	return nil
 }

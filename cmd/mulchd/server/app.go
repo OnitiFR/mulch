@@ -169,6 +169,8 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 
 	go AutoRebuildSchedule(app)
 
+	go app.BackupsDB.Run()
+
 	return app, nil
 }
 
@@ -327,7 +329,7 @@ func (app *App) initVMStateDB() error {
 func (app *App) initBackupDB() error {
 	dbPath := app.Config.DataPath + "/mulch-backups.db"
 
-	db, err := NewBackupDatabase(dbPath)
+	db, err := NewBackupDatabase(dbPath, app)
 	if err != nil {
 		return err
 	}

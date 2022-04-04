@@ -196,7 +196,7 @@ func NewVMController(req *server.Request) (*server.VM, error) {
 			req.Stream.Failuref(msg)
 			return nil, errors.New(msg)
 		}
-		backup, err := server.VMBackup(entry.Name, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressDisable)
+		backup, err := server.VMBackup(entry.Name, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressDisable, server.BackupNoExpiration)
 		if err != nil {
 			msg := fmt.Sprintf("Cannot backup: %s", err)
 			req.Stream.Failuref(msg)
@@ -774,7 +774,17 @@ func BackupVM(req *server.Request, vmName *server.VMName) (string, error) {
 	if req.HTTP.FormValue("allow-compress") == common.FalseStr {
 		allowCompress = server.BackupCompressDisable
 	}
-	return server.VMBackup(vmName, req.APIKey.Comment, req.App, req.Stream, allowCompress)
+	expireStr := req.HTTP.FormValue("expire")
+	expire := time.Duration(0)
+	if expireStr != "" {
+		seconds, err := strconv.Atoi(expireStr)
+		if err != nil {
+			return "", errors.New("unable to parse expire value")
+		}
+		expire = time.Duration(seconds) * time.Second
+	}
+
+	return server.VMBackup(vmName, req.APIKey.Comment, req.App, req.Stream, allowCompress, expire)
 }
 
 func RestoreVM(req *server.Request, vm *server.VM, vmName *server.VMName) error {
@@ -1049,7 +1059,7 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 	downtimeStart := time.Now()
 
 	// backup source VM
-	backup, err := server.VMBackup(vmName, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressDisable)
+	backup, err := server.VMBackup(vmName, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressDisable, server.BackupNoExpiration)
 	defer func() {
 		req.Stream.Infof("deleting backup %s", backup)
 		deleteBackup(backup, req)

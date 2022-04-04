@@ -60,8 +60,8 @@ func backupListCB(reader io.Reader, headers http.Header) {
 		strData := [][]string{}
 		for _, line := range data {
 			expires := ""
-			if !line.Expires.IsZero() {
-				expires = line.Expires.Format("2006-01-02 15:04:05")
+			if !line.Expire.IsZero() {
+				expires = line.Expire.Format("2006-01-02 15:04")
 			}
 			strData = append(strData, []string{
 				line.DiskName,

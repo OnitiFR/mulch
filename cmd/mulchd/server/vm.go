@@ -41,6 +41,9 @@ const (
 	BackupCompressDisable = false
 )
 
+// Backup expiration
+const BackupNoExpiration = 0
+
 // New VM : active or inactive
 const (
 	VMInactive = false
@@ -954,7 +957,7 @@ func VMDetachBackup(vmName *VMName, app *App) error {
 }
 
 // VMBackup launch the backup process (returns backup filename)
-func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllow bool) (string, error) {
+func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllow bool, expire time.Duration) (string, error) {
 	vm, err := app.VMDB.GetByName(vmName)
 	if err != nil {
 		return "", err
@@ -1138,12 +1141,18 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 		}
 	}
 
-	app.BackupsDB.Add(&Backup{
+	backup := &Backup{
 		DiskName:  volName,
 		Created:   time.Now(),
 		AuthorKey: authorKey,
 		VM:        vm,
-	})
+	}
+
+	if expire > BackupNoExpiration {
+		backup.Expire = time.Now().Add(expire)
+	}
+
+	app.BackupsDB.Add(backup)
 	after := time.Now()
 
 	log.Infof("BACKUP=%s", volName)
@@ -1476,7 +1485,7 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 
 	if backupAndRestore {
 		// backup rev+0
-		backupName, err := VMBackup(vmName, authorKey, app, log, BackupCompressDisable)
+		backupName, err := VMBackup(vmName, authorKey, app, log, BackupCompressDisable, BackupNoExpiration)
 		if err != nil {
 			return fmt.Errorf("creating backup: %s", err)
 		}

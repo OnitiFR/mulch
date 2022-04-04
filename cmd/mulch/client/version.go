@@ -1,7 +1,7 @@
 package client
 
 // Version of the client (x.y.z format)
-const Version = "1.6.10"
+const Version = "1.7.0"
 
 // ProtocolVersion implemented by this client
 const ProtocolVersion = 1

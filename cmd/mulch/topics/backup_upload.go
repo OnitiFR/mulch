@@ -14,8 +14,17 @@ var backupUploadCmd = &cobra.Command{
 	// Long: ``,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		call := client.GlobalAPI.NewCall("POST", "/backup", map[string]string{})
-		err := call.AddFile("file", args[0])
+		expire, _ := cmd.Flags().GetString("expire")
+
+		expireDuration, err := client.ParseExpiration(expire)
+		if err != nil {
+			log.Fatalf("unable to parse expiration: %s", err)
+		}
+
+		call := client.GlobalAPI.NewCall("POST", "/backup", map[string]string{
+			"expire": client.DurationAsSecondsString(expireDuration),
+		})
+		err = call.AddFile("file", args[0])
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -25,5 +34,6 @@ var backupUploadCmd = &cobra.Command{
 
 func init() {
 	backupCmd.AddCommand(backupUploadCmd)
+	backupUploadCmd.Flags().StringP("expire", "e", "", "expiration delay (ex: 2h, 10d, 1y)")
 	// backupUploadCmd.Flags().BoolP("force", "f", false, "overwrite existing file")
 }
