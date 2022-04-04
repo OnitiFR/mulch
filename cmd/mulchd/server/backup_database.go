@@ -13,6 +13,7 @@ import (
 type Backup struct {
 	DiskName  string
 	Created   time.Time
+	Expires   time.Time
 	AuthorKey string
 	VM        *VM
 }

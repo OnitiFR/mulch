@@ -16,6 +16,8 @@ require (
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/spf13/cobra v1.1.3
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
+	golang.org/x/sys v0.0.0-20220403205710-6acee93ad0eb // indirect
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	gopkg.in/libvirt/libvirt-go-xml.v5 v5.10.0
 	gopkg.in/libvirt/libvirt-go.v5 v5.10.0
 )

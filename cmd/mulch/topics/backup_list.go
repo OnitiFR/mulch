@@ -6,12 +6,10 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/c2h5oh/datasize"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -61,6 +59,10 @@ func backupListCB(reader io.Reader, headers http.Header) {
 
 		strData := [][]string{}
 		for _, line := range data {
+			expires := ""
+			if !line.Expires.IsZero() {
+				expires = line.Expires.Format("2006-01-02 15:04:05")
+			}
 			strData = append(strData, []string{
 				line.DiskName,
 				// line.VMName,
@@ -68,15 +70,12 @@ func backupListCB(reader io.Reader, headers http.Header) {
 				// line.Created.Format(time.RFC3339),
 				// (datasize.ByteSize(line.Size) * datasize.B).HR(),
 				(datasize.ByteSize(line.AllocSize) * datasize.B).HR(),
+				expires,
 			})
 		}
 
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Disk Name", "Author", "Size"})
-		table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-		table.SetCenterSeparator("|")
-		table.AppendBulk(strData)
-		table.Render()
+		headers := []string{"Disk Name", "Author", "Size", "Expires"}
+		client.RenderTableTruncateCol(0, headers, strData)
 	}
 }
 
