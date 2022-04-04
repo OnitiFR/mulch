@@ -39,6 +39,9 @@ Short term:
 - on redefine, show what's instantaneous and what's needing a rebuild?
 - allow a cron-style syntax for auto_rebuild
 - like restore_backup, allow to restore from a VM (ex: autorebuild from prod)
+- backup expiration?
+- "meta" informations for restore? (ex: gitlab version)
+  - must be available BEFORE the backup even exists (ex: rebuild)
 
 Long term:
 - full async API?
