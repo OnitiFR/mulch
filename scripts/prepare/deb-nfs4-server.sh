@@ -3,6 +3,14 @@
 # -- Run with sudo privileges
 # For: Debian 9+ (Ubuntu 22.04 will probably fail)
 
+# You must define the exported path with NFS4_EXPORT.
+# This directory will be created by the script.
+
+# You can then export port 2049 to a group:
+# ports = [
+#    "2049/tcp->@group",
+# ]
+
 if [ -z "$NFS4_EXPORT" ]; then
     >&2 echo "need NFS4_EXPORT env var (exported path)"
     exit 1
