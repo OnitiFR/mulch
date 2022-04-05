@@ -97,9 +97,8 @@ auto_rebuild_time = "23:30"
 
 # Sample seeds
 [[seed]]
-name = "debian_10"
-url = "http://cdimage.debian.org/cdimage/openstack/current-10/debian-10-openstack-amd64.qcow2"
-#url = "https://files.oniti.fr/seeds/debian/10/amd64"
+name = "debian_11"
+url = "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcloud-amd64.qcow2"
 
 [[seed]]
 name = "centos_7"
