@@ -15,8 +15,8 @@ sudo apt-get -y -qq install nfs-kernel-server || exit $?
 app_uid=$(id -u $_APP_USER) || exit $?
 app_gid=$(id -g $_APP_USER) || exit $?
 
-mkdir -p "$NFS4_EXPORT" || exit $?
-chown "$_APP_USER:$_APP_USER" "$NFS4_EXPORT" || exit $?
+sudo mkdir -p "$NFS4_EXPORT" || exit $?
+sudo chown "$_APP_USER:$_APP_USER" "$NFS4_EXPORT" || exit $?
 
 sudo bash -c "cat >> /etc/exports" <<- EOS
 
