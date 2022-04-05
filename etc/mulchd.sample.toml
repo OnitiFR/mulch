@@ -107,6 +107,10 @@ name = "centos_7"
 url = "https://files.oniti.fr/seeds/centos/7/x86_64"
 
 [[seed]]
+name = "rocky_8"
+url = "https://files.oniti.fr/seeds/rocky/8/x86_64"
+
+[[seed]]
 name = "ubuntu_1804"
 url = "http://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img"
 
