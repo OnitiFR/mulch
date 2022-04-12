@@ -21,6 +21,7 @@ Some examples:
   mulch vm search '(active == false && locked == false) || revision < 5'
   mulch vm search 'like("*_prod")'
   mulch vm search 'env("APP_ENV") != ""'
+  mulch vm search 'has_tag("wp-cli")'
   mulch vm search 'has_script("prepare", "deb-lamp.sh")'
   mulch vm search 'init_date < "2022-12-30"'
 
