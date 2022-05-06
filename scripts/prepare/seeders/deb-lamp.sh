@@ -7,7 +7,7 @@ export DEBIAN_FRONTEND="noninteractive"
 # NB: second line (mysql, curl, …) install phpMyAdmin dependencies
 sudo -E apt-get -y -qq install apache2 php \
     php-mysql php-curl php-zip php-bz2 php-gd php-mbstring php-xml php-pear \
-    php-intl php-bcmath php-imagick \
+    php-intl php-bcmath php-imagick php-soap \
     mariadb-server pwgen || exit $?
 
 # no more available with Ubuntu 20.04, packaged phpMyAdmin will use motranslator/shapefile instead
