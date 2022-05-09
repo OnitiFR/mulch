@@ -35,6 +35,6 @@ EOS
 
 echo "_MULCH_OPEN_URL=https://$_DOMAIN_FIRST/_sql/login/$filename"
 
-if [ "$(is_locked)" = true ]; then
+if [ "$(/usr/local/bin/is_locked)" = true ]; then
     echo -e "This VM is \e[41mlocked\e[0m."
 fi
