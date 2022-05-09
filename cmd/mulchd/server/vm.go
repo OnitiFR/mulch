@@ -1150,6 +1150,7 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 
 	if expire > BackupNoExpiration {
 		backup.Expire = time.Now().Add(expire)
+		log.Warningf("backup will expire on %s", backup.Expire.Format(time.RFC3339))
 	}
 
 	app.BackupsDB.Add(backup)
