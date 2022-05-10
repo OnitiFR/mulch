@@ -112,8 +112,9 @@ func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 		}
 	}
 
-	mux := &http.ServeMux{}
-	mux.HandleFunc("/", proxy.handleRequest)
+	// ditch the original ServeMux{} so we can behave like as transparently as possible
+	// (ex: no 301 path cleaning)
+	handler := http.HandlerFunc(proxy.handleRequest)
 
 	// We're still very gentle here, there are some legitimate "long idling request"
 	// use case out there. But we should add a runtime setting somewhere to
@@ -121,13 +122,13 @@ func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 	IdleTimeout := 15 * time.Minute
 
 	proxy.HTTP = &http.Server{
-		Handler:     manager.HTTPHandler(mux),
+		Handler:     manager.HTTPHandler(handler),
 		Addr:        config.ListenHTTP,
 		IdleTimeout: IdleTimeout,
 	}
 
 	proxy.HTTPS = &http.Server{
-		Handler:     mux,
+		Handler:     handler,
 		Addr:        config.ListenHTTPS,
 		TLSConfig:   &tls.Config{GetCertificate: manager.GetCertificate},
 		IdleTimeout: IdleTimeout,
