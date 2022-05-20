@@ -20,6 +20,25 @@ sudo -E apt-get -y -qq install apache2 php \
 # no more available with Ubuntu 20.04, packaged phpMyAdmin will use motranslator/shapefile instead
 sudo -E apt-get -y -qq install php-php-gettext 2> /dev/null
 
+# make sure that apache2 and mariadb are always running (see OOM killer on Debian)
+sudo mkdir -p /etc/systemd/system/apache2.service.d/ || exit $?
+sudo bash -c "cat > /etc/systemd/system/apache2.service.d/override.conf" <<- EOS
+[Service]
+Restart=always
+RestartSec=2s
+EOS
+[ $? -eq 0 ] || exit $?
+
+sudo mkdir -p /etc/systemd/system/mariadb.service.d/ || exit $?
+sudo bash -c "cat > /etc/systemd/system/mariadb.service.d/override.conf" <<- EOS
+[Service]
+Restart=always
+RestartSec=2s
+EOS
+[ $? -eq 0 ] || exit $?
+
+sudo systemctl daemon-reload || exit ?
+
 MYSQL_PASSWORD=$(pwgen -1 16)
 [ $? -eq 0 ] || exit $?
 
