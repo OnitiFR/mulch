@@ -70,9 +70,12 @@ ports = [
     # $_MULCH_PROXY_IP:$_PORT2
     "873/tcp<-@mygroup",
 
-    # expose IRC server of this VM to the outside world (PUBLIC keyword)
+    # Expose IRC server of this VM to the outside world (PUBLIC keyword)
     # (will listen on all host's interfaces)
     "6667/tcp->@PUBLIC",
+
+    # You may specify a different port on both sides
+    "6667/tcp->@PUBLIC:6668",
 ]
 
 backup_disk_size = "2G"
