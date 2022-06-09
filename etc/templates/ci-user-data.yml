@@ -4,8 +4,8 @@
 # https://cloudinit.readthedocs.io/en/latest/topics/format.html#cloud-config-data
 
 # ways to debug a failing cloud-init:
-# 1 - unable the root password, see below
-# 2 - use /dev/pts/xx to see boot output (cat, screen, ...)
+# 1 - use /dev/pts/xx to see boot output (cat, screen, ...)
+# 2 - unable the root password (see below) and log on console/pts
 
 package_upgrade: $_PACKAGE_UPGRADE
 package_reboot_if_required: $_PACKAGE_UPGRADE
