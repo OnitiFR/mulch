@@ -89,6 +89,30 @@ func vmGenDiskName(vmName *VMName) string {
 	return diskName
 }
 
+// vmGetConsoleDevice returns the console device of a **created** domain
+func vmGetConsoleDevice(domain *libvirt.Domain) (string, error) {
+	xmldoc, err := domain.GetXMLDesc(0)
+	if err != nil {
+		return "", err
+	}
+
+	domcfg := &libvirtxml.Domain{}
+	err = domcfg.Unmarshal(xmldoc)
+	if err != nil {
+		return "", err
+	}
+
+	for _, serial := range domcfg.Devices.Serials {
+		if serial.Alias != nil && serial.Alias.Name == "serial0" {
+			if serial.Source != nil && serial.Source.Pty != nil {
+				return serial.Source.Pty.Path, nil
+			}
+		}
+	}
+
+	return "", errors.New("serial device not found")
+}
+
 // NewVM builds a new virtual machine from config
 // TODO: this function is HUUUGE and needs to be splitted. It's tricky
 // because there's a "transaction" here.
@@ -358,6 +382,13 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	err = dom.Create()
 	if err != nil {
 		return nil, nil, err
+	}
+
+	console, err := vmGetConsoleDevice(dom)
+	if err != nil {
+		log.Warningf("can't get console device: %s", err)
+	} else {
+		log.Infof("console: %s", console)
 	}
 
 	phone := app.PhoneHome.Register(secretUUID.String())

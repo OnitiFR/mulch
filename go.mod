@@ -7,6 +7,7 @@ require (
 	github.com/Knetic/govaluate v3.0.0+incompatible
 	github.com/blang/semver/v4 v4.0.0
 	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.12.0
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a
