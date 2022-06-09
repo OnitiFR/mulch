@@ -3,9 +3,9 @@
 # Cloud Init configuration file
 # https://cloudinit.readthedocs.io/en/latest/topics/format.html#cloud-config-data
 
-#password: test
-#chpasswd: {expire: False}
-#ssh_pwauth: True
+# ways to debug a failing cloud-init:
+# 1 - unable the root password, see below
+# 2 - use /dev/pts/xx to see boot output (cat, screen, ...)
 
 package_upgrade: $_PACKAGE_UPGRADE
 package_reboot_if_required: $_PACKAGE_UPGRADE
@@ -13,11 +13,16 @@ package_reboot_if_required: $_PACKAGE_UPGRADE
 # we use this call to confirm Cloud-Init success
 phone_home:
   url: $_PHONE_HOME_URL
+  # needed because of broken cloud-init 22.2
+  tries: 10
 
 groups:
   - mulcher
 
 users:
+  #- name: root
+  #  lock_passwd: false
+  #  hashed_passwd: '' (use mkpass)
   - name: $_MULCH_SUPER_USER
     primary-group: mulcher
     gecos: Mulch Control and Command admin account
