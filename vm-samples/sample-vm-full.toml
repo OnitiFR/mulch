@@ -137,3 +137,4 @@ restore = [
 
 # Do actions may execute special commands on the client, ex:
 # echo "_MULCH_OPEN_URL=https://$_DOMAIN_FIRST/test"
+# echo "_MULCH_DOWNLOAD_FILE=$USER@$filename"
