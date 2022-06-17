@@ -14,6 +14,8 @@ Resource leaks:
   - test with Go 1.16 (strange that we see this issue on our most memory pressured host [m2])
 
 Short term:
+- port forwarding: support port range?
+- mulch client port forwarding (via SSH)?
 - README: add image for vm migration?
 - explore vm migration possible edge case:
   // migration of active VM ok → local vm deletion → an existing
