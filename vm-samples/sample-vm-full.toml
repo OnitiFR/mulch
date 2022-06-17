@@ -74,8 +74,12 @@ ports = [
     # (will listen on all host's interfaces)
     "6667/tcp->@PUBLIC",
 
-    # You may specify a different port on both sides
+    # For PUBLIC, you may specify a different port on both sides
     "6667/tcp->@PUBLIC:6668",
+
+    # Port ranges are available, too
+    "8080-8090/tcp->@PUBLIC",
+    "9080-9090/tcp->@PUBLIC:4000-4010",
 ]
 
 backup_disk_size = "2G"

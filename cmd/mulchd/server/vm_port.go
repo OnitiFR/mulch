@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -21,6 +22,10 @@ const (
 // VMPortBaseForward is the value to add to port index
 // (ex : first listening port will be 9001, 2nd will be 9002, …)
 const VMPortBaseForward uint16 = 9001
+
+// VMPortMaxRangeSize is the maximum size of a port range
+// This value is currently very arbitrary, we'll see.
+const VMPortMaxRangeSize = 20
 
 // VMPort is a network port inside a VM
 type VMPort struct {
@@ -67,7 +72,85 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 	importIndex := 0
 	exportIndex := 0
 
+	var strPortsAll []string
+
+	// 1 --- "explode" port ranges
+
+	// accepts:
+	// 2000-2010/tcp->@xxx
+	// 2000-2010/tcp -> @xxx
+	// 2000-2010/tcp -> @xxx:3000
+	// 2000-2010/tcp -> @xxx:3000-3010
+	isRange := regexp.MustCompile(`^(\d+)-(\d+)/(tcp) *(<-|->) *(@[A-Za-z0-9_]+)(:(\d+)(-(\d+))?)?$`)
+
 	for _, line := range strPorts {
+		line = strings.TrimSpace(line)
+		match := isRange.MatchString(line)
+		if !match {
+			strPortsAll = append(strPortsAll, line)
+			continue
+		}
+
+		items := isRange.FindStringSubmatch(line)
+
+		srcStart, err := strconv.Atoi(items[1])
+		if err != nil {
+			return nil, fmt.Errorf("invalid source port range '%s' in '%s'", items[1], line)
+		}
+
+		srcEnd, err := strconv.Atoi(items[2])
+		if err != nil {
+			return nil, fmt.Errorf("invalid source port range '%s' in '%s'", items[2], line)
+		}
+
+		proto := items[3]
+		direction := items[4]
+		group := items[5]
+
+		dstStart := srcStart
+		dstEnd := srcEnd
+
+		if items[7] != "" {
+			dstStart, err = strconv.Atoi(items[7])
+			if err != nil {
+				return nil, fmt.Errorf("invalid destination port range '%s' in '%s'", items[7], line)
+			}
+
+			if items[9] != "" {
+				dstEnd, err = strconv.Atoi(items[9])
+				if err != nil {
+					return nil, fmt.Errorf("invalid destination port range '%s' in '%s'", items[9], line)
+				}
+			} else {
+				dstEnd = dstStart + (srcEnd - srcStart)
+			}
+		}
+
+		if (srcEnd - srcStart) != (dstEnd - dstStart) {
+			return nil, fmt.Errorf("source and destination port ranges sizes are not the same in '%s'", line)
+		}
+
+		rangeSize := srcEnd - srcStart
+
+		if rangeSize > VMPortMaxRangeSize {
+			return nil, fmt.Errorf("port range is too big in '%s' (maximum: %d ports)", line, VMPortMaxRangeSize)
+		}
+
+		if rangeSize < 2 {
+			return nil, fmt.Errorf("port range is too small in '%s'", line)
+		}
+
+		for i := 0; i < rangeSize; i++ {
+			if srcStart == dstStart {
+				strPortsAll = append(strPortsAll, fmt.Sprintf("%d/%s %s %s", srcStart+i, proto, direction, group))
+			} else {
+				strPortsAll = append(strPortsAll, fmt.Sprintf("%d/%s %s %s:%d", srcStart+i, proto, direction, group, dstStart+i))
+			}
+		}
+	}
+
+	// 2 --- parse ports
+	for _, line := range strPortsAll {
 		var port VMPort
 		var sep string
 
