@@ -17,5 +17,5 @@ while [ ! -e "$part" ]; do
 done
 
 sudo mkdir -p "$_BACKUP" || exit $?
-sudo mount "$part" "$_BACKUP" || exit $?
 sudo chmod 0777 "$_BACKUP" || exit $?
+sudo mount -o ro "$part" "$_BACKUP" || exit $?
