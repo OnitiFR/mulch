@@ -17,6 +17,7 @@ Short term:
 - vm info: show ports?
 - mulch client port forwarding (via SSH)?
 - README: add image for vm migration?
+- mulch vm console? (/dev/pts/48, should allow multiple users)
 - explore vm migration possible edge case:
   // migration of active VM ok → local vm deletion → an existing
 	// "lower" inactive VM is activated (unharmful error if source was active?)
