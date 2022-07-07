@@ -14,8 +14,10 @@ export DEBIAN_FRONTEND="noninteractive"
 
 sudo -E apt-get -y -qq install apache2 php php-intl php-bcmath php-imagick pwgen postgresql postgresql-client php-pgsql || exit $?
 
-PGSQL_PASSWORD=$(pwgen -1 16)
-[ $? -eq 0 ] || exit $?
+if [ -z "$PGSQL_PASSWORD" ]; then
+    PGSQL_PASSWORD=$(pwgen -1 16)
+    [ $? -eq 0 ] || exit $?
+fi
 
 sudo bash -c "cat > $appenv" <<- EOS
 # local env for application

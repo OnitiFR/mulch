@@ -39,8 +39,10 @@ EOS
 
 sudo systemctl daemon-reload || exit ?
 
-MYSQL_PASSWORD=$(pwgen -1 16)
-[ $? -eq 0 ] || exit $?
+if [ -z "$MYSQL_PASSWORD" ]; then
+    MYSQL_PASSWORD=$(pwgen -1 16)
+    [ $? -eq 0 ] || exit $?
+fi
 
 # Warning: see below for MariaDB user/db creation
 sudo bash -c "cat > $appenv" <<- EOS
