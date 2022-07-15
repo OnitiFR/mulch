@@ -36,4 +36,5 @@ $_MULCH_PROXY_IP:/	$NFS4_MOUNT	nfs4	proto=tcp,port=$_2049_TCP 0 2
 EOS
 [ $? -eq 0 ] || exit $?
 
+echo "mounting NFS filesystems"
 sudo mount -a || exit $?
