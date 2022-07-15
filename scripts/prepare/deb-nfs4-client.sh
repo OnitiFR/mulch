@@ -32,7 +32,7 @@ sudo apt-get -y -qq install nfs-common || exit $?
 
 sudo bash -c "cat >> /etc/fstab" <<- EOS
 # (added by deb-nfs4-client.sh)
-$_MULCH_PROXY_IP:/	$NFS4_MOUNT	nfs4	proto=tcp,port=$_2049_TCP 0 2
+$_MULCH_PROXY_IP:/	$NFS4_MOUNT	nfs4	proto=tcp,timeo=100,port=$_2049_TCP 0 2
 EOS
 [ $? -eq 0 ] || exit $?
 
