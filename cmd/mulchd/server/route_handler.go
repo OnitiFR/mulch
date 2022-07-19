@@ -13,6 +13,8 @@ import (
 
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // Route types
@@ -43,7 +45,8 @@ type Route struct {
 // extract a generic parameter from the request (API key, protocol, etc)
 // from the headers (new way, "Mulch-Name") or from FormValue (old way, "name")
 func requestGetMulchParam(r *http.Request, name string) string {
-	headerName := "Mulch-" + strings.Title(name)
+	c := cases.Title(language.English)
+	headerName := "Mulch-" + c.String(name)
 
 	val := r.Header.Get(headerName)
 	if val == "" {
