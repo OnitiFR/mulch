@@ -1,3 +1,7 @@
+Always:
+- keep direct dependencies up to date
+- follow new libvirt.org/go/libvirt major releases, see https://libvirt.org/news.html
+
 Resource leaks:
 - check for remaining map race-conditions
 - check that the switch to Context fixes all known resource leaks
@@ -15,7 +19,6 @@ Resource leaks:
 
 Short term:
 - vm info: show ports?
-- investigate slow libvirt storage read/write operations (limited to F36? Go 1.18?)
 - mulch client port forwarding (via SSH)?
 - README: add image for vm migration?
 - vm console? (/dev/pts/xx, rolling buffer always-on?)
