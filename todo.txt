@@ -1,6 +1,8 @@
 Always:
 - keep direct dependencies up to date
-- follow new libvirt.org/go/libvirt major releases, see https://libvirt.org/news.html
+- follow new libvirt.org/go/libvirt major releases, see :
+  - https://libvirt.org/news.html
+  - https://pkg.go.dev/libvirt.org/go/libvirt
 
 Resource leaks:
 - check for remaining map race-conditions
@@ -18,6 +20,7 @@ Resource leaks:
   - test with Go 1.16 (strange that we see this issue on our most memory pressured host [m2])
 
 Short term:
+- explore recent IO slowdowns for libvirt storage on some systems (vm disk create, seed storage, etc)  (starts at 30MB/s, ends at 5)
 - vm info: show ports?
 - mulch client port forwarding (via SSH)?
 - README: add image for vm migration?
