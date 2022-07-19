@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
-	libvirtxml "gopkg.in/libvirt/libvirt-go-xml.v7"
-	libvirt "gopkg.in/libvirt/libvirt-go.v7"
+	"libvirt.org/go/libvirt"
+	"libvirt.org/go/libvirtxml"
 )
 
 // Mulch storage and network names, see the following usages:

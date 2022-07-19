@@ -14,8 +14,8 @@ import (
 	"github.com/OnitiFR/mulch/common"
 	"github.com/gofrs/uuid"
 	"golang.org/x/crypto/ssh"
-	libvirtxml "gopkg.in/libvirt/libvirt-go-xml.v7"
-	"gopkg.in/libvirt/libvirt-go.v7"
+	"libvirt.org/go/libvirt"
+	"libvirt.org/go/libvirtxml"
 )
 
 // Aliases for vm.xml file

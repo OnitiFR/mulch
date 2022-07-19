@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	libvirtxml "gopkg.in/libvirt/libvirt-go-xml.v7"
-	"gopkg.in/libvirt/libvirt-go.v7"
+	"libvirt.org/go/libvirt"
+	"libvirt.org/go/libvirtxml"
 )
 
 // LibvirtDHCPLeases stores a list (map) of static DHCP leases

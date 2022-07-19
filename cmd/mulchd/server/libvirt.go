@@ -11,8 +11,8 @@ import (
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/volumes"
 	"github.com/c2h5oh/datasize"
-	libvirtxml "gopkg.in/libvirt/libvirt-go-xml.v7"
-	"gopkg.in/libvirt/libvirt-go.v7"
+	"libvirt.org/go/libvirt"
+	"libvirt.org/go/libvirtxml"
 )
 
 // TODO: deal with keep-alive, disconnections, etc

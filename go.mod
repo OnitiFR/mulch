@@ -20,6 +20,6 @@ require (
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
 	golang.org/x/text v0.3.7
-	gopkg.in/libvirt/libvirt-go-xml.v7 v7.4.0
-	gopkg.in/libvirt/libvirt-go.v7 v7.4.0
+	libvirt.org/go/libvirt v1.8005.0
+	libvirt.org/go/libvirtxml v1.8005.0
 )
