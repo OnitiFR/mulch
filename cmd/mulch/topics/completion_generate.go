@@ -10,7 +10,7 @@ import (
 var completionGenerateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "Actually generates bash completion (see 'mulch completion')",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		rootCmd.GenBashCompletion(os.Stdout)
 	},
 }

@@ -14,7 +14,7 @@ var keyRightRemoveCmd = &cobra.Command{
 WARNING: no rights means full privileges.
 `,
 	Args: cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		call := client.GlobalAPI.NewCall("DELETE", "/key/right/"+args[0], map[string]string{
 			"right": args[1],
 		})

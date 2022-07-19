@@ -39,7 +39,7 @@ var backupListCmd = &cobra.Command{
 	},
 }
 
-func backupListCB(reader io.Reader, headers http.Header) {
+func backupListCB(reader io.Reader, _ http.Header) {
 	var data common.APIBackupListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

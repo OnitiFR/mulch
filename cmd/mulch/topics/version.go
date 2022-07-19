@@ -18,7 +18,7 @@ Examples:
   mulch version
   mulch version --remote`,
 	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		fmt.Printf("client version: %s\n", client.Version)
 		fmt.Printf("client protocol: %s\n", strconv.Itoa(client.ProtocolVersion))
 

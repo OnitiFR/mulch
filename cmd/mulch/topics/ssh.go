@@ -51,7 +51,7 @@ See 'vm list' for VM Names.
 	},
 }
 
-func sshCmdInfoCB(reader io.Reader, headers http.Header) {
+func sshCmdInfoCB(reader io.Reader, _ http.Header) {
 	var data common.APIVMInfos
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)
@@ -70,7 +70,7 @@ func sshCmdInfoCB(reader io.Reader, headers http.Header) {
 
 }
 
-func sshCmdPairCB(reader io.Reader, headers http.Header) {
+func sshCmdPairCB(reader io.Reader, _ http.Header) {
 	_, privFilePath, err := client.WriteSSHPair(reader)
 	if err != nil {
 		log.Fatal(err.Error())

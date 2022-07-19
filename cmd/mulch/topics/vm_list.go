@@ -24,7 +24,7 @@ var vmListCmd = &cobra.Command{
 	Short: "List all VMs",
 	// Long: ``,
 	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		vmListFlagBasic, _ = cmd.Flags().GetBool("basic")
 		if vmListFlagBasic {
 			client.GetExitMessage().Disable()
@@ -38,7 +38,7 @@ var vmListCmd = &cobra.Command{
 	},
 }
 
-func vmListCB(reader io.Reader, headers http.Header) {
+func vmListCB(reader io.Reader, _ http.Header) {
 	var data common.APIVMListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

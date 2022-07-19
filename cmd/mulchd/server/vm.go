@@ -1464,7 +1464,7 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 
 	configFile := vm.Config.FileContent
 
-	conf, err := NewVMConfigFromTomlReader(strings.NewReader(configFile), log)
+	conf, err := NewVMConfigFromTomlReader(strings.NewReader(configFile))
 	if err != nil {
 		return fmt.Errorf("decoding config: %s", err)
 	}

@@ -25,7 +25,7 @@ var seedListCmd = &cobra.Command{
 	Short: "List all Seeds",
 	// Long: ``,
 	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		seedListFlagBasic, _ = cmd.Flags().GetBool("basic")
 		if seedListFlagBasic {
 			client.GetExitMessage().Disable()
@@ -37,7 +37,7 @@ var seedListCmd = &cobra.Command{
 	},
 }
 
-func seedsCB(reader io.Reader, headers http.Header) {
+func seedsCB(reader io.Reader, _ http.Header) {
 	var data common.APISeedListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

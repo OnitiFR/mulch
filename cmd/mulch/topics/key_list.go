@@ -22,7 +22,7 @@ var keyListCmd = &cobra.Command{
 	Short: "List keys",
 	// Long: ``,
 	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		keyListFlagBasic, _ = cmd.Flags().GetBool("basic")
 		if keyListFlagBasic {
 			client.GetExitMessage().Disable()
@@ -34,7 +34,7 @@ var keyListCmd = &cobra.Command{
 	},
 }
 
-func keyListCB(reader io.Reader, headers http.Header) {
+func keyListCB(reader io.Reader, _ http.Header) {
 	var data common.APIKeyListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

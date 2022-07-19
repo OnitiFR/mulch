@@ -18,7 +18,7 @@ The key will be displayed by this command but will NOT be visible anymore
 after. The only option left will be to look at the daemon key database directly.
 `,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		call := client.GlobalAPI.NewCall("POST", "/key", map[string]string{
 			"comment": args[0],
 		})

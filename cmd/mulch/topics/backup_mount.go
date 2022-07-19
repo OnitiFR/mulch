@@ -23,7 +23,7 @@ names are : guestmount, libguestfs, libguestfs-tools.
 Warning: use 'mulch backup umount' command, not the system's 'umount'.
 	`,
 	Args: cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		backupFile := args[0]
 		mountPoint := args[1]
 

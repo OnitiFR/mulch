@@ -68,7 +68,7 @@ Examples:
 	},
 }
 
-func logCmdHistoryCB(reader io.Reader, headers http.Header) {
+func logCmdHistoryCB(reader io.Reader, _ http.Header) {
 	dec := json.NewDecoder(reader)
 	var messages []common.Message
 	err := dec.Decode(&messages)

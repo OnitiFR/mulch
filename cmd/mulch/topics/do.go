@@ -64,7 +64,7 @@ in prepare scripts
 	},
 }
 
-func doListCB(reader io.Reader, headers http.Header) {
+func doListCB(reader io.Reader, _ http.Header) {
 	var data common.APIVMDoListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

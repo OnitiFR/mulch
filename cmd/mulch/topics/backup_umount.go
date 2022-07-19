@@ -15,7 +15,7 @@ var backupUmountCmd = &cobra.Command{
 	Use:   "umount <mount-point>",
 	Short: "Unmount a backup image",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		mountPoint := args[0]
 
 		guestunmountPath, err := exec.LookPath("guestunmount")

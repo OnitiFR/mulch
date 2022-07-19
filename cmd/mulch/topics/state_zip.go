@@ -14,7 +14,7 @@ var stateZipCmd = &cobra.Command{
 	Use:   "zip",
 	Short: "Download a zip file with VMs configs and states",
 	Args:  cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		path, _ := cmd.Flags().GetString("path")
 		filename := fmt.Sprintf("mulch-state-%s-%s.zip",
 			client.GlobalConfig.Server.Name,

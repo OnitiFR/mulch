@@ -19,14 +19,14 @@ var seedStatusCmd = &cobra.Command{
 	Short: "Display seed status",
 	// Long: ``,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		call := client.GlobalAPI.NewCall("GET", "/seed/"+args[0], map[string]string{})
 		call.JSONCallback = seedStatusCB
 		call.Do()
 	},
 }
 
-func seedStatusCB(reader io.Reader, headers http.Header) {
+func seedStatusCB(reader io.Reader, _ http.Header) {
 	var data common.APISeedStatus
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

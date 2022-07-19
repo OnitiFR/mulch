@@ -95,7 +95,7 @@ func SFTPCopy(vmName string, user string, filename string) error {
 	return nil
 }
 
-func sftpPairCB(reader io.Reader, headers http.Header) {
+func sftpPairCB(reader io.Reader, _ http.Header) {
 	_, _, err := WriteSSHPair(reader)
 	if err != nil {
 		// no other (easy) choice here: log.Fatal

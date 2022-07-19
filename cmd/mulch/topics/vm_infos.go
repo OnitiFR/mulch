@@ -33,7 +33,7 @@ See 'vm list' for VM Names.
 	},
 }
 
-func vmInfosDisplay(reader io.Reader, headers http.Header) {
+func vmInfosDisplay(reader io.Reader, _ http.Header) {
 	var data common.APIVMInfos
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

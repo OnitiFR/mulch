@@ -236,7 +236,7 @@ func (db *SeedDatabase) RefreshSeeder(seed *Seed, force bool) error {
 	}
 	defer stream.Close()
 
-	conf, err := NewVMConfigFromTomlReader(stream, log)
+	conf, err := NewVMConfigFromTomlReader(stream)
 	if err != nil {
 		return fmt.Errorf("decoding config: %s", err)
 	}
@@ -398,6 +398,7 @@ func (db *SeedDatabase) RefreshSeed(seed *Seed, force bool) error {
 
 		// upload to libvirt seed storage
 		log.Infof("moving seed '%s' to storage", name)
+		seed.UpdateStatus("moving to storage")
 
 		errR := db.app.Libvirt.DeleteVolume(seed.GetVolumeName(), db.app.Libvirt.Pools.Seeds)
 		if err != nil {

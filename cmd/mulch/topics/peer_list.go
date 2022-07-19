@@ -11,7 +11,7 @@ var peerListCmd = &cobra.Command{
 	Short: "List peers",
 	// Long: ``,
 	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		call := client.GlobalAPI.NewCall("GET", "/peer", map[string]string{})
 		call.Do()
 	},

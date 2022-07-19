@@ -30,7 +30,7 @@ See also -e argument on other commands:
 `,
 	Args:    cobra.ExactArgs(2),
 	Aliases: []string{"remove"},
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 
 		expireDuration, err := client.ParseExpiration(args[1])
 		if err != nil {

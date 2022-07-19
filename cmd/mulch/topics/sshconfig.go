@@ -43,7 +43,7 @@ If --all is used, two aliases are available per VM:
  - myvm-admin-mulch (admin user)
 `,
 	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		err := client.CreateSSHMulchDir()
 		if err != nil {
 			log.Fatal(err.Error())
@@ -62,7 +62,7 @@ If --all is used, two aliases are available per VM:
 	},
 }
 
-func sshConfigCmdPairCB(reader io.Reader, headers http.Header) {
+func sshConfigCmdPairCB(reader io.Reader, _ http.Header) {
 	var data common.APISSHPair
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)
@@ -89,7 +89,7 @@ func sshConfigCmdPairCB(reader io.Reader, headers http.Header) {
 	call.Do()
 }
 
-func sshConfigCmdVMListCB(reader io.Reader, headers http.Header) {
+func sshConfigCmdVMListCB(reader io.Reader, _ http.Header) {
 	var data common.APIVMListEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

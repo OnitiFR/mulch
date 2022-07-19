@@ -19,14 +19,14 @@ var keyRightListCmd = &cobra.Command{
 	Short: "List key rights",
 	// Long: ``,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		call := client.GlobalAPI.NewCall("GET", "/key/right/"+args[0], map[string]string{})
 		call.JSONCallback = keyRightListCB
 		call.Do()
 	},
 }
 
-func keyRightListCB(reader io.Reader, headers http.Header) {
+func keyRightListCB(reader io.Reader, _ http.Header) {
 	var data common.APIKeyRightEntries
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)

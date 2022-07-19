@@ -15,7 +15,7 @@ See 'backup list' to get disk names.
 `,
 	Args:    cobra.ExactArgs(1),
 	Aliases: []string{"remove"},
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		call := client.GlobalAPI.NewCall("DELETE", "/backup/"+args[0], map[string]string{})
 		call.Do()
 	},

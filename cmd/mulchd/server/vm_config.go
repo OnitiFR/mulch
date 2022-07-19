@@ -191,7 +191,7 @@ func vmConfigGetDoAction(tDoAction *tomlVMDoAction) (*VMDoAction, error) {
 
 // NewVMConfigFromTomlReader cretes a new VMConfig instance from
 // a io.Reader containing VM configuration description
-func NewVMConfigFromTomlReader(configIn io.Reader, log *Log) (*VMConfig, error) {
+func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 	content, err := ioutil.ReadAll(configIn)
 	if err != nil {
 		return nil, err

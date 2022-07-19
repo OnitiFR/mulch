@@ -16,7 +16,7 @@ var backupCatCmd = &cobra.Command{
 Errors are still sent to stderr.
 	`,
 	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		backupName := args[0]
 
 		call := client.GlobalAPI.NewCall("GET", "/backup/"+backupName, map[string]string{})

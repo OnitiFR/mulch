@@ -11,7 +11,7 @@ var seedRefreshCmd = &cobra.Command{
 	Short: "Refresh a seed",
 	Long:  `Refresh means 'download again' for URL seeds and 'rebuild' for seeders`,
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		call := client.GlobalAPI.NewCall("POST", "/seed/"+args[0], map[string]string{
 			"action": "refresh",
 		})

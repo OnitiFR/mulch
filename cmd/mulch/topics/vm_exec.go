@@ -20,7 +20,7 @@ Example:
   mulch vm exec myvm admin script.sh
 `,
 	Args: cobra.ExactArgs(3),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		call := client.GlobalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
 			"action": "exec",
 			"as":     args[1],

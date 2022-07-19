@@ -32,7 +32,7 @@ Allow SSH access:
 GET /sshpair
 `,
 	Args: cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, args []string) {
 		call := client.GlobalAPI.NewCall("POST", "/key/right/"+args[0], map[string]string{
 			"right": args[1],
 		})

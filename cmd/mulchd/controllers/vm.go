@@ -62,7 +62,7 @@ func VMControllerConfigCheck(req *server.Request) (*server.VMConfig, string, err
 	}
 	filename := header.Filename
 
-	conf, err := server.NewVMConfigFromTomlReader(configFile, req.Stream)
+	conf, err := server.NewVMConfigFromTomlReader(configFile)
 	if err != nil {
 		return nil, "", fmt.Errorf("decoding config: %s", err)
 	}
@@ -843,7 +843,7 @@ func RedefineVM(req *server.Request, vm *server.VM, active bool) error {
 	}
 	req.Stream.Tracef("reading '%s' config file", header.Filename)
 
-	conf, err := server.NewVMConfigFromTomlReader(configFile, req.Stream)
+	conf, err := server.NewVMConfigFromTomlReader(configFile)
 	if err != nil {
 		return fmt.Errorf("decoding config: %s", err)
 	}
@@ -937,7 +937,7 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 			"q":             "name == '" + vmName.Name + "' && active == true",
 			"fail-on-empty": strconv.FormatBool(true),
 		},
-		HTTPErrorCallback: func(code int, body []byte, httpError error) error {
+		HTTPErrorCallback: func(code int, _ []byte, httpError error) error {
 			// "real" error
 			if code != http.StatusNotFound {
 				return httpError
@@ -945,7 +945,7 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 			existingActiveVM = false
 			return nil
 		},
-		TextCallback: func(body []byte) error {
+		TextCallback: func(_ []byte) error {
 			existingActiveVM = true
 			return nil
 		},

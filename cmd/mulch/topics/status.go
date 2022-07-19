@@ -19,7 +19,7 @@ var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Get informations about Mulchd host",
 	Args:  cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		call := client.GlobalAPI.NewCall("GET", "/status", map[string]string{})
 		call.JSONCallback = statusDisplay
 		call.Do()
