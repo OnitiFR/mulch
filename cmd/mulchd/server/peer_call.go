@@ -15,7 +15,7 @@ import (
 
 	"github.com/OnitiFR/mulch/common"
 	"github.com/c2h5oh/datasize"
-	libvirt "gopkg.in/libvirt/libvirt-go.v5"
+	libvirt "gopkg.in/libvirt/libvirt-go.v7"
 )
 
 type PeerCall struct {

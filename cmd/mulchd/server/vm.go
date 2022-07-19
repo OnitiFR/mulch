@@ -14,8 +14,8 @@ import (
 	"github.com/OnitiFR/mulch/common"
 	"github.com/gofrs/uuid"
 	"golang.org/x/crypto/ssh"
-	libvirtxml "gopkg.in/libvirt/libvirt-go-xml.v5"
-	"gopkg.in/libvirt/libvirt-go.v5"
+	libvirtxml "gopkg.in/libvirt/libvirt-go-xml.v7"
+	"gopkg.in/libvirt/libvirt-go.v7"
 )
 
 // Aliases for vm.xml file
@@ -277,17 +277,19 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	domcfg.CurrentMemory.Unit = "bytes"
 	domcfg.CurrentMemory.Value = uint(vm.Config.RAMSize)
 
-	domcfg.VCPU.Value = vm.Config.CPUCount
+	domcfg.VCPU.Value = uint(vm.Config.CPUCount)
 
 	serial := "ds=nocloud-net;s=http://" + app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(app.Config.InternalServerPort) + "/cloud-init/" + vm.SecretUUID + "/"
 	serialFound := false
-	for i, entry := range domcfg.SysInfo.System.Entry {
-		if entry.Name == "version" {
-			domcfg.SysInfo.System.Entry[i].Value = Version
-		}
-		if entry.Name == "serial" {
-			serialFound = true
-			domcfg.SysInfo.System.Entry[i].Value = serial
+	for s, sysinfo := range domcfg.SysInfo {
+		for i, entry := range sysinfo.SMBIOS.System.Entry {
+			if entry.Name == "version" {
+				domcfg.SysInfo[s].SMBIOS.System.Entry[i].Value = Version
+			}
+			if entry.Name == "serial" {
+				serialFound = true
+				domcfg.SysInfo[s].SMBIOS.System.Entry[i].Value = serial
+			}
 		}
 	}
 	if !serialFound {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	libvirt "gopkg.in/libvirt/libvirt-go.v5"
+	libvirt "gopkg.in/libvirt/libvirt-go.v7"
 )
 
 // Backup describes a VM backup
