@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/OnitiFR/mulch/common"
 	"github.com/c2h5oh/datasize"
@@ -161,6 +162,7 @@ func (call *PeerCall) do() error {
 					uploadErrChan <- errM
 				}
 
+				uploadStart := time.Now()
 				call.Log.Infof("uploading %s to %s", lvFile.Name, call.Peer.Name)
 
 				bytesWritten, errM := vd.Copy()
@@ -173,7 +175,8 @@ func (call *PeerCall) do() error {
 					uploadErrChan <- errM
 				}
 
-				call.Log.Infof("uploaded %s (%s)", lvFile.Name, (datasize.ByteSize(bytesWritten) * datasize.B).HR())
+				uploadDuration := time.Since(uploadStart)
+				call.Log.Infof("uploaded %s (%s) in %s", lvFile.Name, (datasize.ByteSize(bytesWritten) * datasize.B).HR(), uploadDuration)
 				close(uploadErrChan)
 			}()
 
