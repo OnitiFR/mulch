@@ -160,7 +160,7 @@ func UploadBackupController(req *server.Request) {
 	req.StartStream()
 	file, header, err := req.HTTP.FormFile("file")
 	if err != nil {
-		req.Stream.Failuref("error with 'file' field: %s", err)
+		req.Stream.Failuref("error with 'file' field: %s (not enough temp space?)", err)
 		return
 	}
 
