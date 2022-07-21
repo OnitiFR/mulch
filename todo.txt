@@ -20,6 +20,7 @@ Resource leaks:
   - test with Go 1.16 (strange that we see this issue on our most memory pressured host [m2])
 
 Short term:
+- clean multipart temp files after upload?
 - explore recent IO slowdowns for libvirt storage on some systems (vm disk create, seed storage, etc)  (starts at 30MB/s, ends at 5)
 - vm info: show ports?
 - mulch client port forwarding (via SSH)?

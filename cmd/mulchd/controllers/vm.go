@@ -918,6 +918,11 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 		return errors.New("VM is locked (see --force)")
 	}
 
+	keepSourceActive := false
+	if req.HTTP.FormValue("keep-source-active") == common.TrueStr {
+		keepSourceActive = true
+	}
+
 	destinationName := req.HTTP.FormValue("destination")
 	destination, exists := req.App.Config.Peers[destinationName]
 	if !exists {
@@ -1042,7 +1047,7 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 	}
 
 	sourceActive := entry.Active
-	if sourceActive {
+	if sourceActive && !keepSourceActive {
 		log.Info("deactivating source VM")
 		err := req.App.VMDB.SetActiveRevision(vmName.Name, server.RevisionNone)
 		if err != nil {
