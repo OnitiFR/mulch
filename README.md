@@ -103,6 +103,8 @@ simple shell scripts. Each script is run as a specific user, either `admin` (wit
 privileges) or `app` (who host the application). Script are downloaded from an URL. Mulch
 provides a few sample scripts, but you're supposed to create and host your own specific scripts.
 
+Supported schemes: `http://`, `https://`, `file://` and GIT with `ssh://` (see [sample file](https://raw.github.com/OnitiFR/mulch/master/vm-samples/sample-vm-full.toml) for syntax)
+
 Here, a few comfort settings will be applied to the VM: installing
 tools we like (powerline, Midnight Commander, …), creating a few command aliases, adding a nice motd, …
 

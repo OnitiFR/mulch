@@ -1,11 +1,8 @@
 package server
 
 import (
-	"fmt"
-	"io"
 	"math/rand"
-	"net/http"
-	"os"
+	"net/url"
 	"regexp"
 )
 
@@ -37,26 +34,11 @@ func RandString(n int, rand *rand.Rand) string {
 	return string(b)
 }
 
-// GetContentFromURL returns a ReadCloser to the file at the given URL
-// Caller must Close() the returned value.
-func GetContentFromURL(url string) (io.ReadCloser, error) {
-	if len(url) > 7 && url[:7] == "file://" {
-		filename := url[7:]
-		file, err := os.Open(filename)
-		if err != nil {
-			return nil, err
-		}
-		return file, nil
-	}
-
-	resp, err := http.Get(url)
+// GetURLScheme returns the scheme of the given URL
+func GetURLScheme(urlStr string) (string, error) {
+	u, err := url.Parse(urlStr)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("response was %s (%v)", resp.Status, resp.StatusCode)
-	}
-
-	return resp.Body, nil
+	return u.Scheme, nil
 }

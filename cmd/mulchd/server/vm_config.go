@@ -5,7 +5,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 
@@ -151,9 +150,9 @@ func vmConfigGetScript(tScript string, prefixURL string) (*VMConfigScript, error
 
 	var scriptURL string
 
-	_, errParse := url.ParseRequestURI(scriptName)
+	scheme, _ := GetURLScheme(scriptName)
 
-	if errParse == nil {
+	if scheme != "" {
 		scriptURL = scriptName
 	} else {
 		scriptURL = prefixURL + scriptName

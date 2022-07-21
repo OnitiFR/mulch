@@ -95,13 +95,18 @@ auto_rebuild = "weekly"
 
 # If all prepare scripts share the same base URL, you can use prepare_prefix_url.
 # Otherwise, use absolute URL in 'prepare': admin@https://server/script.sh
-# Note: you can use file:// scheme for files on mulchd FS (ex: local git repo)
+# It supports the following schemes:
+# - file:// for local files on mulchd FS (ex: local git repo)
+# - http:// and https://
+# - ssh:// for GIT repositories
 prepare_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/prepare/"
 prepare = [
     # user@script
     "admin@deb-comfort.sh",
     "admin@test-warn.sh",
     "admin@deb-lamp.sh",
+    # "admin@file:///tmp/test.sh",
+    # "admin@ssh://git@mysrv.com/user/myrepo.git/master/dir/test.sh",
 ]
 
 # Install (done after prepare, and not replayed on VM rebuild)
