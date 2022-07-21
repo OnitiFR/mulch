@@ -99,6 +99,8 @@ auto_rebuild = "weekly"
 # - file:// for local files on mulchd FS (ex: local git repo)
 # - http:// and https://
 # - ssh:// for GIT repositories
+#   - git@github.com:OnitiFR/gauto-refresh.git becomes ssh://git@github.com/OnitiFR/gauto-refresh.git/main/…
+#   - see https://git-scm.com/docs/git-clone#_git_urls for more informations
 prepare_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/prepare/"
 prepare = [
     # user@script
