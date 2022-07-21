@@ -93,14 +93,14 @@ backup_compress = true
 # You must have backup and restore scripts to enable auto-rebuild.
 auto_rebuild = "weekly"
 
+# Lifecyle scripts
+
 # If all prepare scripts share the same base URL, you can use prepare_prefix_url.
 # Otherwise, use absolute URL in 'prepare': admin@https://server/script.sh
-# It supports the following schemes:
-# - file:// for local files on mulchd FS (ex: local git repo)
-# - http:// and https://
-# - ssh:// for GIT repositories
-#   - git@github.com:OnitiFR/gauto-refresh.git becomes ssh://git@github.com/OnitiFR/gauto-refresh.git/main/…
-#   - see https://git-scm.com/docs/git-clone#_git_urls for more informations
+# It supports the following schemes: file://, http://, https://
+
+# You can also use 'origins', allowing GIT repositories and a cleaner syntax (see mulchd.toml)
+# ex: admin@{mulch}/prepare/deb-comfort.sh
 prepare_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/prepare/"
 prepare = [
     # user@script
@@ -108,7 +108,6 @@ prepare = [
     "admin@test-warn.sh",
     "admin@deb-lamp.sh",
     # "admin@file:///tmp/test.sh",
-    # "admin@ssh://git@mysrv.com/user/myrepo.git/master/dir/test.sh",
 ]
 
 # Install (done after prepare, and not replayed on VM rebuild)

@@ -23,6 +23,7 @@ Short term:
 - clean multipart temp files after upload?
 - explore recent IO slowdowns for libvirt storage on some systems (vm disk create, seed storage, etc)  (starts at 30MB/s, ends at 5)
 - vm info: show ports?
+- status: show origins?
 - mulch client port forwarding (via SSH)?
 - README: add image for vm migration?
 - vm console? (/dev/pts/xx, rolling buffer always-on?)

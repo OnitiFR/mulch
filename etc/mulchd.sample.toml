@@ -1,5 +1,5 @@
 # Sample configuration file for Mulch server (mulchd)
-# Values here are defaults (except for seeds)
+# Values here are defaults (except for seeds and origins)
 
 # Listen address of Mulchd API server (no IP = all interfaces)
 listen = ":8686"
@@ -128,3 +128,23 @@ url = "http://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64-
 #name = "server2"
 #url = "https://server2.mydomain.tld:8686"
 #key = "K8OpSluPnUzcL2XipfPwt14WBT79aegqe4lZikObMIsiErqgxxco0iptr5MliQCY"
+
+# This origin can be used for any script in VM TOMLs: "admin@{mulch}/prepare/deb-comfort.sh"
+[[origin]]
+name = "mulch"
+type = "http"
+path = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/"
+
+# [[origin]]
+# name = "foo"
+# type = "git"
+# path = "git@github.com:OnitiFR/mulch.git"
+# dir = "scripts"
+# branch = "master"
+# ssh_key = ".ssh/id_rsa"
+# ssh_agent = false
+
+# [[origin]]
+# name = "bar"
+# type = "file"
+# path = "/home/mulch/mulch-scripts"

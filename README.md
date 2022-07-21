@@ -88,8 +88,7 @@ Shell scripts are used at various stages of VM's lifecycle, let's have a
 look at the *prepare* step.
 
 ```toml
-# If all prepare scripts share the same base URL, you can use prepare_prefix_url.
-# Otherwise, use absolute URL in 'prepare': admin@https://server/script.sh
+# All scripts share the same base URL, so we use prepare_prefix_url:
 prepare_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/prepare/"
 prepare = [
     # user@script
@@ -103,13 +102,14 @@ simple shell scripts. Each script is run as a specific user, either `admin` (wit
 privileges) or `app` (who host the application). Script are downloaded from an URL. Mulch
 provides a few sample scripts, but you're supposed to create and host your own specific scripts.
 
-Supported schemes: `http://`, `https://`, `file://` and GIT with `ssh://` (see [sample file](https://raw.github.com/OnitiFR/mulch/master/vm-samples/sample-vm-full.toml) for syntax)
-
 Here, a few comfort settings will be applied to the VM: installing
 tools we like (powerline, Midnight Commander, …), creating a few command aliases, adding a nice motd, …
 
 The other script will install and configure Apache, PHP and MariaDB, providing a ready-to-use
 LAMP system. Environment variables are created with DB connection settings, htdocs directory, etc.
+
+See [sample file](https://raw.github.com/OnitiFR/mulch/master/vm-samples/sample-vm-full.toml)
+for more examples: origins, GIT support, etc.
 
 #### Environment variables
 
