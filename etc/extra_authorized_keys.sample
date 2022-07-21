@@ -17,3 +17,5 @@
 
 # You don't need to reload Mulchd when this file is modified.
 # File mode must be 0600.
+
+# Enable with proxy_ssh_extra_keys_file = "…" in mulchd.toml
