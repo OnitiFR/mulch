@@ -230,13 +230,13 @@ func (db *SeedDatabase) RefreshSeeder(seed *Seed, force bool) error {
 		return err
 	}
 
-	stream, err := GetContentFromURL(seed.Seeder)
+	stream, err := db.app.Origins.GetContent(seed.Seeder)
 	if err != nil {
 		return err
 	}
 	defer stream.Close()
 
-	conf, err := NewVMConfigFromTomlReader(stream)
+	conf, err := NewVMConfigFromTomlReader(stream, db.app.Origins)
 	if err != nil {
 		return fmt.Errorf("decoding config: %s", err)
 	}

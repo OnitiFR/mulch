@@ -111,9 +111,9 @@ type tomlVMDoAction struct {
 	Description string
 }
 
-func vmCheckScriptURL(scriptURL string) error {
+func vmCheckScriptURL(scriptURL string, origins *Origins) error {
 	// test readability
-	stream, errG := GetContentFromURL(scriptURL)
+	stream, errG := origins.GetContent(scriptURL)
 	if errG != nil {
 		return fmt.Errorf("unable to get script '%s': %s", scriptURL, errG)
 	}
@@ -132,7 +132,7 @@ func vmCheckScriptURL(scriptURL string) error {
 	return nil
 }
 
-func vmConfigGetScript(tScript string, prefixURL string) (*VMConfigScript, error) {
+func vmConfigGetScript(tScript string, prefixURL string, origins *Origins) (*VMConfigScript, error) {
 	script := &VMConfigScript{}
 
 	sepPlace := strings.Index(tScript, "@")
@@ -158,7 +158,7 @@ func vmConfigGetScript(tScript string, prefixURL string) (*VMConfigScript, error
 		scriptURL = prefixURL + scriptName
 	}
 
-	if err := vmCheckScriptURL(scriptURL); err != nil {
+	if err := vmCheckScriptURL(scriptURL, origins); err != nil {
 		return nil, err
 	}
 
@@ -166,7 +166,7 @@ func vmConfigGetScript(tScript string, prefixURL string) (*VMConfigScript, error
 	return script, nil
 }
 
-func vmConfigGetDoAction(tDoAction *tomlVMDoAction) (*VMDoAction, error) {
+func vmConfigGetDoAction(tDoAction *tomlVMDoAction, origin *Origins) (*VMDoAction, error) {
 	doAction := &VMDoAction{}
 
 	if tDoAction.Name == "" || !IsValidWord(tDoAction.Name) {
@@ -175,7 +175,7 @@ func vmConfigGetDoAction(tDoAction *tomlVMDoAction) (*VMDoAction, error) {
 
 	scriptURL := tDoAction.Script
 
-	if err := vmCheckScriptURL(scriptURL); err != nil {
+	if err := vmCheckScriptURL(scriptURL, origin); err != nil {
 		return nil, err
 	}
 
@@ -190,7 +190,7 @@ func vmConfigGetDoAction(tDoAction *tomlVMDoAction) (*VMDoAction, error) {
 
 // NewVMConfigFromTomlReader cretes a new VMConfig instance from
 // a io.Reader containing VM configuration description
-func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
+func NewVMConfigFromTomlReader(configIn io.Reader, origins *Origins) (*VMConfig, error) {
 	content, err := ioutil.ReadAll(configIn)
 	if err != nil {
 		return nil, err
@@ -389,7 +389,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 	vmConfig.BackupCompress = tConfig.BackupCompress
 
 	for _, tScript := range tConfig.Prepare {
-		script, err := vmConfigGetScript(tScript, tConfig.PreparePrefixURL)
+		script, err := vmConfigGetScript(tScript, tConfig.PreparePrefixURL, origins)
 		if err != nil {
 			return nil, err
 		}
@@ -397,7 +397,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 	}
 
 	for _, tScript := range tConfig.Install {
-		script, err := vmConfigGetScript(tScript, tConfig.InstallPrefixURL)
+		script, err := vmConfigGetScript(tScript, tConfig.InstallPrefixURL, origins)
 		if err != nil {
 			return nil, err
 		}
@@ -405,7 +405,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 	}
 
 	for _, tScript := range tConfig.Backup {
-		script, err := vmConfigGetScript(tScript, tConfig.BackupPrefixURL)
+		script, err := vmConfigGetScript(tScript, tConfig.BackupPrefixURL, origins)
 		if err != nil {
 			return nil, err
 		}
@@ -413,7 +413,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 	}
 
 	for _, tScript := range tConfig.Restore {
-		script, err := vmConfigGetScript(tScript, tConfig.RestorePrefixURL)
+		script, err := vmConfigGetScript(tScript, tConfig.RestorePrefixURL, origins)
 		if err != nil {
 			return nil, err
 		}
@@ -430,7 +430,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader) (*VMConfig, error) {
 	var actions []*VMDoAction
 
 	for _, tDoAction := range tConfig.DoActions {
-		doAction, err := vmConfigGetDoAction(&tDoAction)
+		doAction, err := vmConfigGetDoAction(&tDoAction, origins)
 		if err != nil {
 			return nil, err
 		}

@@ -428,7 +428,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	log.Infof("running 'prepare' scripts")
 	tasks := []*RunTask{}
 	for _, confTask := range vm.Config.Prepare {
-		stream, errG := GetContentFromURL(confTask.ScriptURL)
+		stream, errG := app.Origins.GetContent(confTask.ScriptURL)
 		if errG != nil {
 			return nil, nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 		}
@@ -483,7 +483,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 				vmDoAction.Name = value
 			}
 			if isVar, value = common.StringIsVariable(line, "_MULCH_ACTION_SCRIPT"); isVar {
-				stream, errG := GetContentFromURL(value)
+				stream, errG := app.Origins.GetContent(value)
 				if errG != nil {
 					errDoAction = fmt.Errorf("unable to get script '%s': %s", value, errG)
 					return
@@ -556,7 +556,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		log.Infof("running 'install' scripts")
 		tasks := []*RunTask{}
 		for _, confTask := range vm.Config.Install {
-			stream, errG := GetContentFromURL(confTask.ScriptURL)
+			stream, errG := app.Origins.GetContent(confTask.ScriptURL)
 			if errG != nil {
 				return nil, nil, fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 			}
@@ -1116,7 +1116,7 @@ func VMBackup(vmName *VMName, authorKey string, app *App, log *Log, compressAllo
 	})
 
 	for _, confTask := range vm.Config.Backup {
-		stream, errG := GetContentFromURL(confTask.ScriptURL)
+		stream, errG := app.Origins.GetContent(confTask.ScriptURL)
 		if errG != nil {
 			return "", fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 		}
@@ -1256,7 +1256,7 @@ func VMRestoreNoChecks(vm *VM, vmName *VMName, backup *Backup, app *App, log *Lo
 	})
 
 	for _, confTask := range vm.Config.Restore {
-		stream, errG := GetContentFromURL(confTask.ScriptURL)
+		stream, errG := app.Origins.GetContent(confTask.ScriptURL)
 		if errG != nil {
 			return fmt.Errorf("unable to get script '%s': %s", confTask.ScriptURL, errG)
 		}
@@ -1466,7 +1466,7 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 
 	configFile := vm.Config.FileContent
 
-	conf, err := NewVMConfigFromTomlReader(strings.NewReader(configFile))
+	conf, err := NewVMConfigFromTomlReader(strings.NewReader(configFile), app.Origins)
 	if err != nil {
 		return fmt.Errorf("decoding config: %s", err)
 	}

@@ -62,7 +62,7 @@ func VMControllerConfigCheck(req *server.Request) (*server.VMConfig, string, err
 	}
 	filename := header.Filename
 
-	conf, err := server.NewVMConfigFromTomlReader(configFile)
+	conf, err := server.NewVMConfigFromTomlReader(configFile, req.App.Origins)
 	if err != nil {
 		return nil, "", fmt.Errorf("decoding config: %s", err)
 	}
@@ -572,7 +572,7 @@ func DoActionVM(req *server.Request, vm *server.VM, vmName *server.VMName) error
 		return errors.New("VM should be up and running")
 	}
 
-	stream, errG := server.GetContentFromURL(action.ScriptURL)
+	stream, errG := req.App.Origins.GetContent(action.ScriptURL)
 	if errG != nil {
 		return fmt.Errorf("unable to get script '%s': %s", action.ScriptURL, errG)
 	}
@@ -843,7 +843,7 @@ func RedefineVM(req *server.Request, vm *server.VM, active bool) error {
 	}
 	req.Stream.Tracef("reading '%s' config file", header.Filename)
 
-	conf, err := server.NewVMConfigFromTomlReader(configFile)
+	conf, err := server.NewVMConfigFromTomlReader(configFile, req.App.Origins)
 	if err != nil {
 		return fmt.Errorf("decoding config: %s", err)
 	}

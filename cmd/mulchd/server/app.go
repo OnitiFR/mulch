@@ -55,6 +55,7 @@ type App struct {
 	APIKeysDB      *APIKeyDatabase
 	AlertSender    *AlertSender
 	Seeder         *SeedDatabase
+	Origins        *Origins
 	routesInternal map[string][]*Route
 	routesAPI      map[string][]*Route
 	sshClients     *sshServerClients
@@ -158,6 +159,8 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	app.Origins = NewOrigins(app)
 
 	app.Operations = NewOperationList(app.Rand)
 

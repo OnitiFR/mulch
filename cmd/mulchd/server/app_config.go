@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/OnitiFR/mulch/common"
 )
 
 // Reverse Proxy Chaining modes
@@ -14,6 +15,12 @@ const (
 	ProxyChainModeNone   = 0
 	ProxyChainModeChild  = 1
 	ProxyChainModeParent = 2
+)
+
+const (
+	OriginTypeHTTP = 1
+	OriginTypeGIT  = 2
+	OriginTypeFile = 3
 )
 
 // AppConfig describes the general configuration of an App
@@ -78,6 +85,9 @@ type AppConfig struct {
 	// Peers
 	Peers map[string]ConfigPeer
 
+	// Origins
+	Origins map[string]*ConfigOrigin
+
 	// global mulchd configuration path
 	configPath string
 }
@@ -92,6 +102,16 @@ type ConfigPeer struct {
 	Name string
 	URL  string
 	Key  string
+}
+
+type ConfigOrigin struct {
+	Name       string
+	Type       int
+	Path       string
+	Dir        string
+	Branch     string
+	SSHKeyFile string
+	SSHAgent   bool
 }
 
 type tomlAppConfig struct {
@@ -114,6 +134,7 @@ type tomlAppConfig struct {
 	AutoRebuildTime       string `toml:"auto_rebuild_time"`
 	Seed                  []tomlConfigSeed
 	Peer                  []tomlConfigPeer
+	Origin                []tomlConfigOrigin
 }
 
 type tomlConfigSeed struct {
@@ -128,6 +149,16 @@ type tomlConfigPeer struct {
 	Key  string
 }
 
+type tomlConfigOrigin struct {
+	Name       string
+	Type       string
+	Path       string
+	Dir        string
+	Branch     string
+	SSHKeyFile string `toml:"ssh_key_file"`
+	SSHAgent   bool   `toml:"ssh_agent"`
+}
+
 // NewAppConfigFromTomlFile return a AppConfig using
 // mulchd.toml config file in the given configPath
 func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
@@ -138,6 +169,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		configPath: configPath,
 		Seeds:      make(map[string]ConfigSeed),
 		Peers:      make(map[string]ConfigPeer),
+		Origins:    make(map[string]*ConfigOrigin),
 	}
 
 	// defaults (if not in the file)
@@ -278,6 +310,74 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		// IDEA: test URL + key and show warning in case of failure?
 
 		appConfig.Peers[peer.Name] = ConfigPeer(peer)
+	}
+
+	for _, origin := range tConfig.Origin {
+		if origin.Name == "" {
+			return nil, fmt.Errorf("origin 'name' not defined")
+		}
+
+		if !IsValidName(origin.Name) {
+			return nil, fmt.Errorf("'%s' is not a valid origin name", origin.Name)
+		}
+
+		_, exists := appConfig.Origins[origin.Name]
+		if exists {
+			return nil, fmt.Errorf("duplicate origin '%s'", origin.Name)
+		}
+
+		if origin.Path == "" {
+			return nil, fmt.Errorf("origin 'path' not defined")
+		}
+
+		origConf := ConfigOrigin{
+			Name: origin.Name,
+			Path: origin.Path,
+		}
+
+		switch origin.Type {
+		case "http":
+			origConf.Type = OriginTypeHTTP
+		case "git":
+			origConf.Type = OriginTypeGIT
+		case "file":
+			origConf.Type = OriginTypeFile
+		default:
+			return nil, fmt.Errorf("origin '%s': unknown type '%s'", origin.Name, origin.Type)
+		}
+
+		if origConf.Type != OriginTypeGIT {
+			if origin.Dir != "" {
+				return nil, fmt.Errorf("origin '%s': 'dir' parameter is only valid for 'git' type", origin.Name)
+			}
+			if origin.Branch != "" {
+				return nil, fmt.Errorf("origin '%s': 'branch' parameter is only valid for 'git' type", origin.Name)
+			}
+			if origin.SSHKeyFile != "" {
+				return nil, fmt.Errorf("origin '%s': 'ssh_key_file' parameter is only valid for 'git' type", origin.Name)
+			}
+		} else {
+			if origin.Branch == "" {
+				return nil, fmt.Errorf("origin '%s': 'branch' parameter is required for 'git' type", origin.Name)
+			}
+			if origin.SSHKeyFile == "" && !origin.SSHAgent {
+				return nil, fmt.Errorf("origin '%s': 'ssh_key_file' or 'ssh_agent = true' parameter is required for 'git' type", origin.Name)
+			}
+			if origin.SSHKeyFile != "" && origin.SSHAgent {
+				return nil, fmt.Errorf("origin '%s': 'ssh_key_file' and 'ssh_agent = true' parameters are mutually exclusive", origin.Name)
+			}
+			if origin.SSHKeyFile != "" {
+				if !common.PathExist(origin.SSHKeyFile) {
+					return nil, fmt.Errorf("origin '%s': SSH key '%s' does not exist", origin.Name, origin.SSHKeyFile)
+				}
+			}
+
+			origConf.Branch = origin.Branch
+			origConf.SSHKeyFile = origin.SSHKeyFile
+			origConf.SSHAgent = origin.SSHAgent
+		}
+
+		appConfig.Origins[origin.Name] = &origConf
 	}
 
 	return appConfig, nil

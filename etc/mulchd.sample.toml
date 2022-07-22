@@ -141,7 +141,7 @@ path = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/"
 # path = "git@github.com:OnitiFR/mulch.git"
 # dir = "scripts"
 # branch = "master"
-# ssh_key = ".ssh/id_rsa"
+# ssh_key_file = ".ssh/id_rsa" # or: ssh_agent = true
 # ssh_agent = false
 
 # [[origin]]
