@@ -1,9 +1,9 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -13,8 +13,11 @@ import (
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/go-git/go-git/v5/storage/memory"
 )
+
+// TODO: add a cache system (for GIT at least)
 
 type Origins struct {
 	Config map[string]*ConfigOrigin
@@ -26,8 +29,8 @@ func NewOrigins(app *App) *Origins {
 	}
 }
 
-//GetContent returns a ReadCloser to the file at the given URL/path
-// Caller must Close() the returned value.
+// GetContent returns a ReadCloser to the file at the given URL/path
+// - caller must Close() the returned value
 func (o *Origins) GetContent(path string) (io.ReadCloser, error) {
 	scheme, err := GetURLScheme(path)
 
@@ -36,7 +39,7 @@ func (o *Origins) GetContent(path string) (io.ReadCloser, error) {
 	}
 
 	if scheme == "" {
-		origin, subpath, err := o.getOriginFromPath(path)
+		origin, subpath, err := o.GetOriginFromPath(path)
 		if err != nil {
 			return nil, err
 		}
@@ -53,21 +56,14 @@ func (o *Origins) GetContent(path string) (io.ReadCloser, error) {
 		return getContentFromHttpURL(path)
 	case "file":
 		return getContentFromFileURL(path)
-	// TODO: delete this, should only be available with an origin
-	case "ssh":
-		dotGitPos := strings.Index(path, ".git")
-		if dotGitPos == -1 {
-			return nil, fmt.Errorf("%s : only git ssh protocol is currently implemented", path)
-		}
-		return getContentFromGithubURL(path)
 	default:
-		return nil, fmt.Errorf("unsupported protocol %s", scheme)
+		return nil, fmt.Errorf("unsupported protocol '%s'", scheme)
 	}
 }
 
-// getOriginFromPath returns the origin, the subpath and an error if any
-// If the path does not use an origin, it returns an empty origin and no error
-func (o *Origins) getOriginFromPath(path string) (string, string, error) {
+// GetOriginFromPath returns the origin, the subpath and an error if any
+// - if the path does not use an origin, it returns an empty origin and no error
+func (o *Origins) GetOriginFromPath(path string) (string, string, error) {
 	if len(path) < 1 || path[0] != '{' {
 		return "", "", nil
 	}
@@ -109,9 +105,11 @@ func (*Origins) getContentFromOrigin(origin *ConfigOrigin, pathStr string) (io.R
 		}
 		u.Path = path.Join(u.Path, pathStr)
 		return getContentFromFileURL(u.String())
+	case OriginTypeGIT:
+		return getContentFromGitOrigin(origin, pathStr)
+	default:
+		return nil, fmt.Errorf("origin type '%s' not implemented", origin.Type)
 	}
-
-	return nil, fmt.Errorf("origin type %d not implemented, origin %s, path %s", origin.Type, origin.Name, pathStr)
 }
 
 // file:// protocol (also accepts file paths: /home/user/file.txt)
@@ -141,36 +139,41 @@ func getContentFromHttpURL(url string) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
-// git ssh:// protocol (git:// is a basic non-authenticated protocol)
-func getContentFromGithubURL(urlStr string) (io.ReadCloser, error) {
-	dotGitPos := strings.Index(urlStr, ".git")
-	host := urlStr[:dotGitPos+4]
-	uri := urlStr[dotGitPos+4:]
-
-	parts := strings.Split(uri, "/")
-
-	if len(parts) < 3 {
-		return nil, errors.New("invalid github url, ex: ssh://git@github.com/user/repo.git/master/test.sh")
-	}
-
-	branch := parts[1]
-	file := "/" + strings.Join(parts[2:], "/")
-
-	fs := memfs.New()
-	_, err := git.Clone(memory.NewStorage(), fs, &git.CloneOptions{
-		URL:           host,
+// returns a content using a git origin
+func getContentFromGitOrigin(origin *ConfigOrigin, pathStr string) (io.ReadCloser, error) {
+	options := &git.CloneOptions{
+		URL:           origin.Path,
 		Depth:         1,
 		SingleBranch:  true,
-		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
-	})
+		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", origin.Branch)),
+	}
 
+	// go-git default is to use ssh-agent
+	if origin.SSHKeyFile != "" {
+		sshKey, err := ioutil.ReadFile(origin.SSHKeyFile)
+		if err != nil {
+			return nil, err
+		}
+
+		publicKey, keyError := ssh.NewPublicKeys("git", []byte(sshKey), "")
+		if keyError != nil {
+			return nil, keyError
+		}
+		options.Auth = publicKey
+	}
+
+	fs := memfs.New()
+
+	fmt.Println("Cloning", origin.Path, "to", origin.Branch)
+	_, err := git.Clone(memory.NewStorage(), fs, options)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Cloned")
 
-	fp, err := fs.Open(file)
+	fp, err := fs.Open(pathStr)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	return fp, nil

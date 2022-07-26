@@ -18,9 +18,9 @@ const (
 )
 
 const (
-	OriginTypeHTTP = 1
-	OriginTypeGIT  = 2
-	OriginTypeFile = 3
+	OriginTypeHTTP = "http"
+	OriginTypeGIT  = "git"
+	OriginTypeFile = "file"
 )
 
 // AppConfig describes the general configuration of an App
@@ -106,7 +106,7 @@ type ConfigPeer struct {
 
 type ConfigOrigin struct {
 	Name       string
-	Type       int
+	Type       string
 	Path       string
 	Dir        string
 	Branch     string

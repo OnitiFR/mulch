@@ -148,14 +148,15 @@ func vmConfigGetScript(tScript string, prefixURL string, origins *Origins) (*VMC
 	}
 	script.As = as
 
-	var scriptURL string
+	scriptURL := scriptName
 
 	scheme, _ := GetURLScheme(scriptName)
-
-	if scheme != "" {
-		scriptURL = scriptName
-	} else {
-		scriptURL = prefixURL + scriptName
+	if scheme == "" {
+		origin, _, _ := origins.GetOriginFromPath(scriptName)
+		if origin == "" {
+			// no scheme, no origin? let's use the prefixURL
+			scriptURL = prefixURL + scriptName
+		}
 	}
 
 	if err := vmCheckScriptURL(scriptURL, origins); err != nil {

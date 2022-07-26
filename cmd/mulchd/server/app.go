@@ -649,6 +649,14 @@ func (app *App) Status() (*common.APIStatus, error) {
 		})
 	}
 
+	for _, origin := range app.Config.Origins {
+		ret.Origins = append(ret.Origins, common.APIOrigin{
+			Name: origin.Name,
+			Type: origin.Type,
+			Path: origin.Path,
+		})
+	}
+
 	ret.StartTime = app.StartTime
 	ret.VMs = vmTotal
 	ret.ActiveVMs = vmActiveTotal

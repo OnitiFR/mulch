@@ -39,7 +39,7 @@ func statusDisplay(reader io.Reader, headers http.Header) {
 	for i := 0; i < v.NumField(); i++ {
 		key := typeOfT.Field(i).Name
 		val := common.InterfaceValueToString(v.Field(i).Interface())
-		if key != "SSHConnections" && key != "Operations" {
+		if key != "SSHConnections" && key != "Operations" && key != "Origins" {
 			fmt.Printf("%s: %s\n", key, val)
 		}
 	}
@@ -50,6 +50,11 @@ func statusDisplay(reader io.Reader, headers http.Header) {
 		if err == nil {
 			referenceTime = date
 		}
+	}
+
+	fmt.Printf("Origins: %d\n", len(data.Origins))
+	for _, origin := range data.Origins {
+		fmt.Printf("  %s: %s (%s)\n", origin.Name, origin.Path, origin.Type)
 	}
 
 	fmt.Printf("SSHConnections: %d\n", len(data.SSHConnections))

@@ -20,6 +20,12 @@ type APIOperation struct {
 	StartTime     time.Time
 }
 
+type APIOrigin struct {
+	Name string
+	Type string
+	Path string
+}
+
 // APIStatus describes host status
 type APIStatus struct {
 	StartTime          time.Time
@@ -35,6 +41,7 @@ type APIStatus struct {
 	FreeBackupMB       int
 	ProvisionedDisksMB int
 	AllocatedDisksMB   int
+	Origins            []APIOrigin
 	SSHConnections     []APISSHConnection
 	Operations         []APIOperation
 }
