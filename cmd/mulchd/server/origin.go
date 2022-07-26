@@ -9,7 +9,9 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
+	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -17,15 +19,42 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 )
 
-// TODO: add a cache system (for GIT at least)
+const (
+	// git cache expires 30 seconds after last use
+	OriginGitCacheExpiration = 30 * time.Second
+
+	// maximum git cache life
+	OriginGitCacheMaxLife = 10 * time.Minute
+)
 
 type Origins struct {
-	Config map[string]*ConfigOrigin
+	Origins map[string]*Origin
 }
 
+type Origin struct {
+	Log      *Log
+	Config   *ConfigOrigin
+	gitCache *OriginGitCache
+}
+
+type OriginGitCache struct {
+	createdDate  time.Time
+	lastUsedDate time.Time
+	fs           billy.Filesystem
+}
+
+// NewOrigins creates a new Origin list
 func NewOrigins(app *App) *Origins {
+	origins := make(map[string]*Origin)
+	for name, origin := range app.Config.Origins {
+		origins[name] = &Origin{
+			Config: origin,
+			Log:    app.Log,
+		}
+	}
+
 	return &Origins{
-		Config: app.Config.Origins,
+		Origins: origins,
 	}
 }
 
@@ -45,7 +74,7 @@ func (o *Origins) GetContent(path string) (io.ReadCloser, error) {
 		}
 
 		if origin != "" {
-			return o.getContentFromOrigin(o.Config[origin], subpath)
+			return o.getContentFromOrigin(o.Origins[origin], subpath)
 		} else {
 			return nil, fmt.Errorf("invalid path %s (no scheme, no origin)", path)
 		}
@@ -80,7 +109,7 @@ func (o *Origins) GetOriginFromPath(path string) (string, string, error) {
 
 	origin := part0[1 : len(part0)-1]
 
-	if _, exists := o.Config[origin]; !exists {
+	if _, exists := o.Origins[origin]; !exists {
 		return "", "", fmt.Errorf("origin %s not found", origin)
 	}
 
@@ -88,18 +117,18 @@ func (o *Origins) GetOriginFromPath(path string) (string, string, error) {
 }
 
 // getContentFromOrigin returns a ReadCloser thru the provided origin
-func (*Origins) getContentFromOrigin(origin *ConfigOrigin, pathStr string) (io.ReadCloser, error) {
+func (*Origins) getContentFromOrigin(origin *Origin, pathStr string) (io.ReadCloser, error) {
 
-	switch origin.Type {
+	switch origin.Config.Type {
 	case OriginTypeHTTP:
-		u, err := url.Parse(origin.Path)
+		u, err := url.Parse(origin.Config.Path)
 		if err != nil {
 			return nil, err
 		}
 		u.Path = path.Join(u.Path, pathStr)
 		return getContentFromHttpURL(u.String())
 	case OriginTypeFile:
-		u, err := url.Parse(origin.Path)
+		u, err := url.Parse(origin.Config.Path)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +137,7 @@ func (*Origins) getContentFromOrigin(origin *ConfigOrigin, pathStr string) (io.R
 	case OriginTypeGIT:
 		return getContentFromGitOrigin(origin, pathStr)
 	default:
-		return nil, fmt.Errorf("origin type '%s' not implemented", origin.Type)
+		return nil, fmt.Errorf("origin type '%s' not implemented", origin.Config.Type)
 	}
 }
 
@@ -140,38 +169,61 @@ func getContentFromHttpURL(url string) (io.ReadCloser, error) {
 }
 
 // returns a content using a git origin
-func getContentFromGitOrigin(origin *ConfigOrigin, pathStr string) (io.ReadCloser, error) {
-	options := &git.CloneOptions{
-		URL:           origin.Path,
-		Depth:         1,
-		SingleBranch:  true,
-		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", origin.Branch)),
+func getContentFromGitOrigin(origin *Origin, pathStr string) (io.ReadCloser, error) {
+	originConf := origin.Config
+
+	if origin.gitCache != nil {
+		// check if the git cache has expired
+		if origin.gitCache.lastUsedDate.Add(OriginGitCacheExpiration).Before(time.Now()) ||
+			origin.gitCache.createdDate.Add(OriginGitCacheMaxLife).Before(time.Now()) {
+			// thread safe: opened file handles are not closed
+			origin.gitCache = nil
+			origin.Log.Tracef("git cache invalidated for origin '%s'", originConf.Name)
+		}
 	}
 
-	// go-git default is to use ssh-agent
-	if origin.SSHKeyFile != "" {
-		sshKey, err := ioutil.ReadFile(origin.SSHKeyFile)
+	// no cache? let's create one
+	// thread safe: worst case, the cache is created twice and one expires directly
+	if origin.gitCache == nil {
+		options := &git.CloneOptions{
+			URL:           originConf.Path,
+			Depth:         1,
+			SingleBranch:  true,
+			ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", originConf.Branch)),
+		}
+
+		// go-git default is to use ssh-agent
+		if originConf.SSHKeyFile != "" {
+			sshKey, err := ioutil.ReadFile(originConf.SSHKeyFile)
+			if err != nil {
+				return nil, err
+			}
+
+			publicKey, keyError := ssh.NewPublicKeys("git", []byte(sshKey), "")
+			if keyError != nil {
+				return nil, keyError
+			}
+			options.Auth = publicKey
+		}
+
+		fs := memfs.New()
+
+		start := time.Now()
+		_, err := git.Clone(memory.NewStorage(), fs, options)
 		if err != nil {
 			return nil, err
 		}
+		origin.Log.Tracef("git cache created for origin '%s', cloned in %s", originConf.Name, time.Since(start))
 
-		publicKey, keyError := ssh.NewPublicKeys("git", []byte(sshKey), "")
-		if keyError != nil {
-			return nil, keyError
+		origin.gitCache = &OriginGitCache{
+			createdDate: time.Now(),
+			fs:          fs,
 		}
-		options.Auth = publicKey
 	}
 
-	fs := memfs.New()
+	origin.gitCache.lastUsedDate = time.Now()
 
-	fmt.Println("Cloning", origin.Path, "to", origin.Branch)
-	_, err := git.Clone(memory.NewStorage(), fs, options)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("Cloned")
-
-	fp, err := fs.Open(pathStr)
+	fp, err := origin.gitCache.fs.Open(pathStr)
 	if err != nil {
 		return nil, err
 	}
