@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -142,7 +141,6 @@ func watchProxies(ddb *DomainDatabase, selfUrl url.URL, log *Log) {
 		// remove port from selfUrl (we want to contact our proxy server, not the API)
 		selfUrl.Host = selfUrl.Hostname()
 
-		fmt.Println(selfUrl.String())
 		err := watchProxy(selfUrl.String(), log)
 		if err != nil {
 			log.Error(err.Error())
