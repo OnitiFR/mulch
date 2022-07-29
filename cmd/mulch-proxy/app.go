@@ -120,7 +120,7 @@ func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 	}
 
 	if app.Config.ChainMode == ChainModeParent {
-		InstallChildrenWatchdog(ddb, app.Log)
+		InstallWatchdog(ddb, app.Config.ChainParentURL, app.Log)
 	}
 
 	return app, nil

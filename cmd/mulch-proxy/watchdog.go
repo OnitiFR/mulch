@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -35,6 +36,10 @@ import (
 	the whole proccess. Systemd (or whatever service manager) will instantly
 	restart the proxy, causing a short downtime every two weeks or so. Better
 	than a full lock of a child :(
+
+	Since then a new symptom appeared, where the front itself is fully locked.
+	(dump is full of Lock() calls). We extend the watchdog to also check
+	the front itself.
 */
 
 // dialTest will attempt a TCP connection to host in the urlIn,
@@ -73,15 +78,15 @@ func dialTest(urlIn string, timeout time.Duration) error {
 	return errors.New("no error, but no connection either")
 }
 
-func watchChild(url string, log *Log) error {
-	// check if we get a TCP connection to this child
+func watchProxy(url string, log *Log) error {
+	// check if we get a TCP connection to this proxy
 	err := dialTest(url, 5*time.Second)
 	if err != nil {
-		log.Errorf("watchdog: child %s seems down (%s)", url, err)
+		log.Errorf("watchdog: proxy %s seems down (%s)", url, err)
 		return nil
 	}
 
-	// -- child seems up, so let's see we can get an HTTP2 response
+	// -- proxy seems up, so let's see if we can get an HTTP2 response
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Errorf("watchdog: %s", err.Error())
@@ -96,7 +101,7 @@ func watchChild(url string, log *Log) error {
 	response2, err := http2Client.Do(req)
 	if err != nil {
 		if err, ok := err.(net.Error); ok && err.Timeout() { // is timeout?
-			// OK, we have a REAL problem with this child, here!
+			// OK, we have a REAL problem with this proxy, here!
 			return err
 		}
 		log.Errorf("watchdog: HTTP2: %s (%s)", err.Error(), url) // another error
@@ -111,20 +116,20 @@ func watchChild(url string, log *Log) error {
 		return nil
 	}
 
-	// everything is OK for this child
+	// everything is OK for this proxy
 	return nil
 }
 
-func watchChildren(ddb *DomainDatabase, log *Log) {
+func watchProxies(ddb *DomainDatabase, selfUrl url.URL, log *Log) {
 	// find all children proxies configured with HTTPS
 	children := ddb.GetChildren()
 
-	log.Tracef("watchdog: checking children (%d)", len(children))
+	log.Tracef("watchdog: checking children (%d) + ourself", len(children))
 
 	for _, childURL := range children {
 		urlObj, _ := url.Parse(childURL)
 		if urlObj.Scheme == ProtoHTTPS {
-			err := watchChild(childURL, log)
+			err := watchProxy(childURL, log)
 			if err != nil {
 				log.Error(err.Error())
 				log.Errorf("FATAL: watchdog unable to contact child using HTTP2 while child seems up, possible chain deadlock! Exiting process for force restart.")
@@ -133,16 +138,30 @@ func watchChildren(ddb *DomainDatabase, log *Log) {
 		}
 	}
 
+	if selfUrl.Scheme == ProtoHTTPS {
+		// remove port from selfUrl (we want to contact our proxy server, not the API)
+		selfUrl.Host = selfUrl.Hostname()
+
+		fmt.Println(selfUrl.String())
+		err := watchProxy(selfUrl.String(), log)
+		if err != nil {
+			log.Error(err.Error())
+			log.Errorf("FATAL: watchdog unable to contact ourself using HTTP2, possible deadlock! Exiting process for force restart.")
+			os.Exit(200)
+		}
+	}
+
 	log.Trace("watchdog: end")
 }
 
-// InstallChildrenWatchdog will check HTTP2 links to our children (as a parent proxy) every minute
+// InstallWatchdog will check HTTP2 links to our children (as a parent proxy)
+// and ourself every minute.
 // (we may lower this value later, let's see if we have false postives)
-func InstallChildrenWatchdog(ddb *DomainDatabase, log *Log) {
+func InstallWatchdog(ddb *DomainDatabase, selfUrl *url.URL, log *Log) {
 	go func() {
 		for {
 			time.Sleep(1 * time.Minute)
-			watchChildren(ddb, log)
+			watchProxies(ddb, *selfUrl, log)
 		}
 	}()
 }
