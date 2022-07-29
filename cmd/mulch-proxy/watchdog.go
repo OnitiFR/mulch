@@ -127,7 +127,7 @@ func watchChildren(ddb *DomainDatabase, log *Log) {
 			err := watchChild(childURL, log)
 			if err != nil {
 				log.Error(err.Error())
-				log.Errorf("FATAL: watchdog unable to contact contact child using HTTP2 while child seems up, possible chain deadlock! Exiting process for force restart.")
+				log.Errorf("FATAL: watchdog unable to contact child using HTTP2 while child seems up, possible chain deadlock! Exiting process for force restart.")
 				os.Exit(200)
 			}
 		}
