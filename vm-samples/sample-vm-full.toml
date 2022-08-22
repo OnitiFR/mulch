@@ -100,7 +100,7 @@ auto_rebuild = "weekly"
 # It supports the following schemes: file://, http://, https://
 
 # You can also use 'origins', allowing GIT repositories and a cleaner syntax (see mulchd.toml)
-# ex: admin@{mulch}/prepare/deb-comfort.sh
+# ex: admin@{core}/prepare/deb-comfort.sh
 prepare_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/prepare/"
 prepare = [
     # user@script

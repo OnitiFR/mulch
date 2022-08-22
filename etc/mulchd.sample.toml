@@ -129,9 +129,9 @@ url = "http://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64-
 #url = "https://server2.mydomain.tld:8686"
 #key = "K8OpSluPnUzcL2XipfPwt14WBT79aegqe4lZikObMIsiErqgxxco0iptr5MliQCY"
 
-# This origin can be used for any script in VM TOMLs: "admin@{mulch}/prepare/deb-comfort.sh"
+# This origin can be used for any script in VM TOMLs: "admin@{core}/prepare/deb-comfort.sh"
 [[origin]]
-name = "mulch"
+name = "core"
 type = "http"
 path = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/"
 
