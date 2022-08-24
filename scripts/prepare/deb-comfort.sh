@@ -39,6 +39,7 @@ EOS
 sudo bash -c "cat > /etc/profile.d/mulch.sh" <<- EOS
 if ! shopt -oq posix; then
   alias $sualias="sudo -iu $_APP_USER"
+  alias root="sudo -i"
   alias e="mcedit"
   alias ll="ls -la --color"
   alias l="ls"
