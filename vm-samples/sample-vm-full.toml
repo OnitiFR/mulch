@@ -139,7 +139,8 @@ restore = [
 # Do actions can also be added via 'prepare' scripts
 # Print the following lines:
 # _MULCH_ACTION_NAME=open
-# _MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/open.sh
+# _MULCH_ACTION_SCRIPT={core}/actions/open.sh
+# or _MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/open.sh
 # _MULCH_ACTION_USER=app
 # _MULCH_ACTION_DESCRIPTION=Open VM first domain in the browser
 # _MULCH_ACTION=commit
