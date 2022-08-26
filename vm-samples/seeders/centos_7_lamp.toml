@@ -9,8 +9,7 @@ cpu_count = 1
 
 auto_rebuild = "daily"
 
-prepare_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/prepare/"
 prepare = [
-    "admin@seeders/rh-comfort.sh",
-    "admin@seeders/rh-lamp.sh",
+    "admin@{core}/prepare/seeders/rh-comfort.sh",
+    "admin@{core}/prepare/seeders/rh-lamp.sh",
 ]

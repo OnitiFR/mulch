@@ -119,6 +119,7 @@ url = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64
 #[[seed]]
 #name = "ubuntu_2204_lamp"
 #seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2204_lamp.toml"
+# Seeders can also use origins: {core}/../vm-samples/seeders/ubuntu_2204_lamp.toml
 
 # Peers, allowing inter-mulchd VM migrations
 # (it's suggested to create a dedicated API key on the remote server)

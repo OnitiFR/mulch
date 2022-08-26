@@ -9,9 +9,8 @@ cpu_count = 1
 
 auto_rebuild = "daily"
 
-prepare_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/prepare/"
 prepare = [
-    "admin@seeders/deb-comfort.sh",
-    "admin@seeders/deb-lamp.sh",
-    "app@wp-cli.sh",
+    "admin@{core}/prepare/seeders/deb-comfort.sh",
+    "admin@{core}/prepare/seeders/deb-lamp.sh",
+    "app@{core}/prepare/wp-cli.sh",
 ]

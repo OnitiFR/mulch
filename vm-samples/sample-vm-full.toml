@@ -110,29 +110,28 @@ prepare = [
     # "admin@file:///tmp/test.sh",
 ]
 
+# from this point, we use {origins} instead of prefixes
+
 # Install (done after prepare, and not replayed on VM rebuild)
-install_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/install/"
 install = [
-    "app@deb-wordpress.sh",
+    "app@{core}/install/deb-wordpress.sh",
 ]
 
 # Backup
-backup_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/backup/"
 backup = [
-    "app@lamp.sh",
+    "app@{core}/backup/lamp.sh",
 ]
 
 # Restore
-restore_prefix_url = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/restore/"
 restore = [
-    "app@wordpress.sh",
+    "app@{core}/restore/wordpress.sh",
 ]
 
 # Scripts for usual tasks on the VM
 # example : mulch do myvm open
 #[[do-actions]]
 #name = "open"
-#script = "https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/open.sh"
+#script = "{core}/actions/open.sh"
 #user = "app"
 #description = "Open VM first domain in the browser"
 
@@ -140,7 +139,7 @@ restore = [
 # Print the following lines:
 # _MULCH_ACTION_NAME=open
 # _MULCH_ACTION_SCRIPT={core}/actions/open.sh
-# or _MULCH_ACTION_SCRIPT=https://raw.githubusercontent.com/OnitiFR/mulch/master/scripts/actions/open.sh
+# or _MULCH_ACTION_SCRIPT={core}/actions/open.sh
 # _MULCH_ACTION_USER=app
 # _MULCH_ACTION_DESCRIPTION=Open VM first domain in the browser
 # _MULCH_ACTION=commit
