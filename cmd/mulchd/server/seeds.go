@@ -8,7 +8,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -225,11 +224,6 @@ func (db *SeedDatabase) runStepSeeders() {
 func (db *SeedDatabase) RefreshSeeder(seed *Seed, force bool) error {
 	log := NewLog(seed.Name, db.app.Hub, db.app.LogHistory)
 
-	_, err := url.ParseRequestURI(seed.Seeder)
-	if err != nil {
-		return err
-	}
-
 	stream, err := db.app.Origins.GetContent(seed.Seeder)
 	if err != nil {
 		return err
@@ -251,6 +245,7 @@ func (db *SeedDatabase) RefreshSeeder(seed *Seed, force bool) error {
 	}
 
 	db.app.Log.Infof("rebuilding seed '%s'", seed.Name)
+	seed.UpdateStatus("rebuilding")
 
 	operation := db.app.Operations.Add(&Operation{
 		Origin:        "[seeder]",
@@ -385,6 +380,7 @@ func (db *SeedDatabase) RefreshSeed(seed *Seed, force bool) error {
 	}
 	if seed.LastModified != t || force {
 		log.Infof("downloading seed '%s'", name)
+		seed.UpdateStatus("downloading")
 
 		before := time.Now()
 		tmpFile, err := db.seedDownload(seed, db.app.Config.TempPath)
