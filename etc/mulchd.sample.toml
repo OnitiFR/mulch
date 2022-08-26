@@ -102,25 +102,23 @@ url = "https://cloud.debian.org/images/cloud/bullseye/latest/debian-11-genericcl
 
 [[seed]]
 name = "centos_7"
-# image are now "versioned" by CentOS, let's use Oniti service to get the lastest URL
-#url = "http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
-url = "https://files.oniti.fr/seeds/centos/7/x86_64"
+url = "http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2"
 
 [[seed]]
 name = "rocky_8"
-url = "https://files.oniti.fr/seeds/rocky/8/x86_64"
-
-[[seed]]
-name = "ubuntu_1804"
-url = "http://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img"
+url = "http://dl.rockylinux.org/pub/rocky/8/images/Rocky-8-GenericCloud.latest.x86_64.qcow2"
 
 [[seed]]
 name = "ubuntu_2004"
 url = "http://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64-disk-kvm.img"
 
+[[seed]]
+name = "ubuntu_2204"
+url = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64-disk-kvm.img"
+
 #[[seed]]
-#name = "ubuntu_2004_lamp"
-#seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2004_lamp.toml"
+#name = "ubuntu_2204_lamp"
+#seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2204_lamp.toml"
 
 # Peers, allowing inter-mulchd VM migrations
 # (it's suggested to create a dedicated API key on the remote server)
