@@ -198,7 +198,7 @@ func NewVMController(req *server.Request) (*server.VM, error) {
 		}
 		backup, err := server.VMBackup(entry.Name, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressDisable, server.BackupNoExpiration)
 		if err != nil {
-			msg := fmt.Sprintf("Cannot backup: %s", err)
+			msg := fmt.Sprintf("Cannot backup %s: %s", restoreVM, err)
 			req.Stream.Failuref(msg)
 			return nil, errors.New(msg)
 		}

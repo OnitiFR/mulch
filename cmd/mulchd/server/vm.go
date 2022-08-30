@@ -1202,8 +1202,8 @@ func VMRestoreNoChecks(vm *VM, vmName *VMName, backup *Backup, app *App, log *Lo
 	vm.SetOperation(VMOperationRestore)
 	defer vm.SetOperation(VMOperationNone)
 
-	if len(vm.Config.Backup) == 0 {
-		return errors.New("no backup script defined for this VM")
+	if len(vm.Config.Restore) == 0 {
+		return errors.New("no restore script defined for this VM")
 	}
 
 	// 6 - restore
