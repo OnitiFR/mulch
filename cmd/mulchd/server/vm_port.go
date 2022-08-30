@@ -130,7 +130,7 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 			return nil, fmt.Errorf("source and destination port ranges sizes are not the same in '%s'", line)
 		}
 
-		rangeSize := srcEnd - srcStart
+		rangeSize := srcEnd - srcStart + 1
 
 		if rangeSize > VMPortMaxRangeSize {
 			return nil, fmt.Errorf("port range is too big in '%s' (maximum: %d ports)", line, VMPortMaxRangeSize)
