@@ -23,12 +23,19 @@ Resource leaks:
 
 Short term:
 - clean multipart temp files after upload?
-- explore recent IO slowdowns for libvirt storage on some systems (vm disk create, seed storage, etc)  (starts at 30MB/s, ends at 5)
+  - issue only exists for http2 (so not on a local dev env)
+  - should be fixed with Go 1.20 : https://github.com/golang/go/issues/20253
+  - can be done by hand with req.MultipartForm.RemoveAll()
+- explore recent IO slowdowns for libvirt storage on some systems
+  - vm disk create, seed storage, backup uploads, etc
+  - starts at 30MB/s, ends at 5
+  - libvirt 100% CPU
 - vm info: show ports?
 - mulch client port forwarding (via SSH)?
 - README: add image for vm migration?
 - vm console? (/dev/pts/xx, rolling buffer always-on?)
 - allow "direct string" env declaration? env_str=''' … '''
+- human readable "mulch status" (keep current output with a -b?)
 - explore vm migration possible edge case:
   // migration of active VM ok → local vm deletion → an existing
 	// "lower" inactive VM is activated (unharmful error if source was active?)
