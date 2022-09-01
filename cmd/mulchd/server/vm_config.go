@@ -11,6 +11,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/c2h5oh/datasize"
+	"github.com/joho/godotenv"
 )
 
 // auto_rebuild setting values
@@ -85,6 +86,7 @@ type tomlVMConfig struct {
 	RedirectToHTTPS bool `toml:"redirect_to_https"`
 	Redirects       [][]string
 	Env             [][]string
+	EnvRaw          string `toml:"env_raw"`
 	Ports           []string
 	BackupDiskSize  datasize.ByteSize `toml:"backup_disk_size"`
 	BackupCompress  bool              `toml:"backup_compress"`
@@ -354,6 +356,17 @@ func NewVMConfigFromTomlReader(configIn io.Reader, origins *Origins) (*VMConfig,
 			vmConfig.Hostname = parts[0]
 		} else {
 			vmConfig.Hostname = "localhost.localdomain"
+		}
+	}
+
+	if tConfig.EnvRaw != "" {
+		var env map[string]string
+		env, err := godotenv.Unmarshal(tConfig.EnvRaw)
+		if err != nil {
+			return nil, fmt.Errorf("can't parse env_raw: %s", err)
+		}
+		for key, val := range env {
+			vmConfig.Env[key] = val
 		}
 	}
 
