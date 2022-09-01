@@ -34,7 +34,7 @@ Short term:
 - mulch client port forwarding (via SSH)?
 - README: add image for vm migration?
 - vm console? (/dev/pts/xx, rolling buffer always-on?)
-- allow "direct string" env declaration? env_str=''' … '''
+  - rw needs libvirt-qemu (vs libvirt), let's use libvirt API
 - human readable "mulch status" (keep current output with a -b?)
 - explore vm migration possible edge case:
   // migration of active VM ok → local vm deletion → an existing
