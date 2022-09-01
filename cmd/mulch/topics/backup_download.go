@@ -12,7 +12,12 @@ import (
 var backupDownloadCmd = &cobra.Command{
 	Use:   "download <disk-name>",
 	Short: "Download a backup to client disk",
-	// Long: ``,
+	Long: `Download a backup to client disk.
+
+You can monitor progress with external tools like:
+progress -mc mulch
+(progress is cool ;)
+	`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		backupName := args[0]

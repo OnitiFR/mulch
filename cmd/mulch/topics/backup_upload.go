@@ -11,7 +11,12 @@ import (
 var backupUploadCmd = &cobra.Command{
 	Use:   "upload <file.qcow2>",
 	Short: "Upload a backup to server storage",
-	// Long: ``,
+	Long: `Upload a backup to server storage.
+
+You can monitor progress with external tools like:
+progress -mc mulch
+(progress is cool ;)
+	`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		expire, _ := cmd.Flags().GetString("expire")
