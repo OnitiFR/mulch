@@ -122,6 +122,12 @@ env = [
     ["TEST1", "foo"],
     ["TEST2", "bar"],
 ]
+
+# This syntax also works:
+env_raw = '''
+TEST3=foo
+TEST4="regular .env format"
+'''
 ```
 
 How does it works exactly?
