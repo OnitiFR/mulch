@@ -128,9 +128,12 @@ func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 	}
 
 	proxy.HTTPS = &http.Server{
-		Handler:     handler,
-		Addr:        config.ListenHTTPS,
-		TLSConfig:   &tls.Config{GetCertificate: manager.GetCertificate},
+		Handler: handler,
+		Addr:    config.ListenHTTPS,
+		TLSConfig: &tls.Config{
+			GetCertificate: manager.GetCertificate,
+			MinVersion:     tls.VersionTLS12,
+		},
 		IdleTimeout: IdleTimeout,
 	}
 
