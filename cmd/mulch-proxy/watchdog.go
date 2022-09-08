@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -111,8 +112,9 @@ func watchProxy(url string, log *Log) error {
 	// drain response
 	_, err = ioutil.ReadAll(response2.Body)
 	if err != nil {
-		log.Errorf("watchdog: HTTP2 drain: %s", err.Error())
-		return nil
+		// we've also seen timeout related issues* thru this drain, so we consider this as a fatal failure
+		// * "context deadline exceeded (Client.Timeout or context cancellation while reading body)"
+		return fmt.Errorf("HTTP2 drain: %s", err.Error())
 	}
 
 	// everything is OK for this proxy
@@ -130,7 +132,7 @@ func watchProxies(ddb *DomainDatabase, selfUrl url.URL, log *Log) {
 		if urlObj.Scheme == ProtoHTTPS {
 			err := watchProxy(childURL, log)
 			if err != nil {
-				log.Error(err.Error())
+				log.Errorf("watchdog: %s", err.Error())
 				log.Errorf("FATAL: watchdog unable to contact child using HTTP2 while child seems up, possible chain deadlock! Exiting process for force restart.")
 				os.Exit(200)
 			}
