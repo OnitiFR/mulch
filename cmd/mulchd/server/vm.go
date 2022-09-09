@@ -393,6 +393,11 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		log.Infof("console: %s", console)
 	}
 
+	err = app.ConsoleManager.AddReader(vmName.ID())
+	if err != nil {
+		return nil, nil, err
+	}
+
 	phone := app.PhoneHome.Register(secretUUID.String())
 	defer phone.Unregister()
 
@@ -720,6 +725,11 @@ func VMStartByName(name *VMName, secretUUID string, app *App, log *Log) error {
 	defer phone.Unregister()
 
 	err = domain.Create()
+	if err != nil {
+		return err
+	}
+
+	err = app.ConsoleManager.AddReader(name.ID())
 	if err != nil {
 		return err
 	}

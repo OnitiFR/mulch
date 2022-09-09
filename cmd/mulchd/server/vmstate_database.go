@@ -114,12 +114,27 @@ func (vmsdb *VMStateDatabase) Update() error {
 	return vmsdb.save()
 }
 
+// Get returns the state of all VMs
+func (vmsdb *VMStateDatabase) Get() map[string]string {
+	vmsdb.mutex.Lock()
+	defer vmsdb.mutex.Unlock()
+
+	res := make(map[string]string, len(vmsdb.db))
+	for k, v := range vmsdb.db {
+		res[k] = v
+	}
+
+	return res
+}
+
 // Run the VM state monitoring loop
 func (vmsdb *VMStateDatabase) Run() error {
 	// small cooldown (app init)
 	time.Sleep(1 * time.Second)
 
 	vmsdb.restoreStates()
+	vmsdb.Update()
+
 	vmsdb.restored = true
 
 	for {
