@@ -27,6 +27,7 @@ require (
 	github.com/rivo/uniseg v0.3.4 // indirect
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/sergi/go-diff v1.2.0 // indirect
+	github.com/smallnest/ringbuffer v0.0.0-20210227121335-0a58434b36f2 // indirect
 	github.com/spf13/cobra v1.5.0
 	github.com/xanzy/ssh-agent v0.3.2 // indirect
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90
