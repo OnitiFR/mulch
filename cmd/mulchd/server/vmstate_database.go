@@ -21,6 +21,7 @@ type VMStateDatabase struct {
 	mutex    sync.Mutex
 	app      *App
 	restored bool
+	cycles   uint64
 }
 
 // NewVMStateDatabase instanciates a new VMStateDatabase
@@ -30,6 +31,7 @@ func NewVMStateDatabase(filename string, app *App) (*VMStateDatabase, error) {
 		db:       make(map[string]string),
 		app:      app,
 		restored: false,
+		cycles:   0,
 	}
 
 	// if the file exists, load it
@@ -88,6 +90,8 @@ func (vmsdb *VMStateDatabase) Update() error {
 	vmsdb.mutex.Lock()
 	defer vmsdb.mutex.Unlock()
 
+	vmsdb.cycles++
+
 	// loop over VM and get state
 	newStates := make(map[string]string)
 	for _, vmName := range vmsdb.app.VMDB.GetNames() {
@@ -125,6 +129,14 @@ func (vmsdb *VMStateDatabase) Get() map[string]string {
 	}
 
 	return res
+}
+
+// Cycles returns the number of cycles
+func (vmsdb *VMStateDatabase) Cycles() uint64 {
+	vmsdb.mutex.Lock()
+	defer vmsdb.mutex.Unlock()
+
+	return vmsdb.cycles
 }
 
 // Run the VM state monitoring loop

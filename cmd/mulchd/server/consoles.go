@@ -13,9 +13,10 @@ const (
 
 // ConsoleManager will read a VM console
 type ConsoleReader struct {
-	buffer   *OverflowBuffer
-	vmNameID string
-	app      *App
+	buffer     *OverflowBuffer
+	vmNameID   string
+	app        *App
+	startCycle uint64
 }
 
 // ConsoleManager manages console readers
@@ -37,6 +38,7 @@ func NewConsoleManager(app *App) *ConsoleManager {
 	return cm
 }
 
+// ScheduleManager will continuously update the readers list
 func (cm *ConsoleManager) ScheduleManager() {
 	// we wait VM state restore, since vmStateDB is not updated before
 	cm.app.VMStateDB.WaitRestore()
@@ -57,9 +59,10 @@ func (cm *ConsoleManager) addReader(vmNameID string) error {
 	cm.app.Log.Tracef("creating a new console reader for VM %s", vmNameID)
 
 	cr := &ConsoleReader{
-		buffer:   NewOverflowBuffer(ConsoleRingBufferSize),
-		vmNameID: vmNameID,
-		app:      cm.app,
+		buffer:     NewOverflowBuffer(ConsoleRingBufferSize),
+		vmNameID:   vmNameID,
+		app:        cm.app,
+		startCycle: cm.app.VMStateDB.Cycles(),
 	}
 
 	err := cr.Start()
@@ -116,9 +119,14 @@ func (cm *ConsoleManager) update() {
 			}
 		} else {
 			if _, ok := cm.readers[vmName]; ok {
-				err := cm.removeReader(vmName)
-				if err != nil {
-					cm.app.Log.Errorf("can't remove console reader for VM %s: %s", vmName, err)
+				currentCycle := cm.app.VMStateDB.Cycles()
+				if currentCycle > cm.readers[vmName].startCycle {
+					err := cm.removeReader(vmName)
+					if err != nil {
+						cm.app.Log.Errorf("can't remove console reader for VM %s: %s", vmName, err)
+					}
+				} else {
+					cm.app.Log.Tracef("VMStateDB was not updated yet, we keep %s reader for now", vmName)
 				}
 			}
 		}
@@ -160,12 +168,13 @@ func (cr *ConsoleReader) Start() error {
 	go func() {
 		defer stream.Free() // Abort?
 		for {
-			buf := make([]byte, 128)
+			buf := make([]byte, ConsoleReaderSize)
 			n, err := stream.Recv(buf)
 			if err != nil {
 				cr.app.Log.Warningf("console: %s (n=%d) - exit", err, n)
 				return
 			} else {
+				cr.buffer.Write(buf[:n])
 				cr.app.Log.Infof("console: %s", string(buf[:n]))
 			}
 		}
@@ -174,7 +183,9 @@ func (cr *ConsoleReader) Start() error {
 	return nil
 }
 
-// conflict between early AddReader() and update()
-// restart readers when they have exited?
-// - should not happend and/or see conflict with vm stop / start commands
-// add mulch vm console cmd? (if so: lock our DB!)
+// think about buffer sizes
+// remove a bit of trace/log
+// add mulch vm console cmd?
+// - "single access locked reader"?
+// - log will be flushed
+// - we should not use the Hub and directly writes the console binary stream to the client
