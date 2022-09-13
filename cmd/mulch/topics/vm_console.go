@@ -18,7 +18,7 @@ Useful to see the boot process, debug a VM, output specialized streams, etc.
 A rolling buffer stores latest console output. This command will flush
 this buffer to your standard output. Flushed content is lost.
 
-Only one user can see the console at a time.
+Warning: only one client should read the console at a time.
 `,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

@@ -798,7 +798,7 @@ func GetVMConsoleController(req *server.Request) {
 
 	_, err = server.CopyHttpFlush(req.Response, r)
 	if err != nil {
-		req.App.Log.Error(err.Error())
+		req.App.Log.Errorf("console read error: %s", err.Error())
 		return
 	}
 }

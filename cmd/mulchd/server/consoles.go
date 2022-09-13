@@ -3,13 +3,16 @@ package server
 import (
 	"context"
 	"fmt"
-	"io"
 	"sync"
 	"time"
 )
 
+// FUTURE: implement a real blocking read in ConsoleReader.Read()
+// FUTURE: only allow one client at a time to read a console (warning, the
+// underlying ConsoleReader may change over time)
+
 const (
-	ConsoleRingBufferSize = 256 * 1024
+	ConsoleRingBufferSize = 256 * 1024 // history size
 	ConsoleReaderSize     = 1024
 )
 
@@ -25,9 +28,10 @@ type ConsoleReader struct {
 // ConsolePersitentReader allows a consumer to read the console output
 // even if the underlying ConsoleReader changes
 type ConsolePersitentReader struct {
-	manager  *ConsoleManager
-	vmNameID string
-	ctx      context.Context
+	manager     *ConsoleManager
+	vmNameID    string
+	ctx         context.Context
+	emptyCycles uint64
 }
 
 // ConsoleManager manages console readers
@@ -171,21 +175,38 @@ func (pr *ConsolePersitentReader) Read(p []byte) (n int, err error) {
 	pr.manager.mutex.Lock()
 	defer pr.manager.mutex.Unlock()
 
-	r, ok := pr.manager.readers[pr.vmNameID]
-
-	if !ok {
-		// TODO: stay connected during a "stop-start" cycle?
-		return 0, io.EOF
-	}
-
 	if pr.ctx.Err() != nil {
 		return 0, pr.ctx.Err()
 	}
 
-	if r.buffer.IsEmpty() {
+	dataAvailable := true
+
+	r, ok := pr.manager.readers[pr.vmNameID]
+	if !ok {
+		// this VM may come back soon ;) (ex: stop-wait-start cycle)
+		dataAvailable = false
+	} else {
+		if r.buffer.IsEmpty() {
+			dataAvailable = false
+		}
+	}
+
+	if !dataAvailable {
+		// for this situation, a cooldown is prefered to a sync.Cond or sync.Mutex
+		// because there's tricky edge cases.
+		wait := time.Duration(pr.emptyCycles*10) * time.Millisecond
+		if wait > 2*time.Second {
+			wait = 2 * time.Second
+		}
+
+		pr.emptyCycles++
+		// pr.manager.app.Log.Tracef("no data available for VM %s, waiting %s", pr.vmNameID, wait)
+		time.Sleep(wait)
+
 		return 0, nil
 	}
 
+	pr.emptyCycles = 0
 	return r.buffer.Read(p)
 }
 
@@ -238,11 +259,3 @@ func (cr *ConsoleReader) Start() error {
 
 	return nil
 }
-
-// remove "VM state database update cycle" trace
-// think about buffer sizes
-// context-abort the copy!
-// block on empty (chan? - yeah, but we've an issue when we switch the underlying buffer)
-// … actually, we currently already break continuity on restart
-// mulch vm console
-// - "single access locked reader"?
