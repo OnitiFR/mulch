@@ -7,13 +7,13 @@ import (
 	"time"
 )
 
-// FUTURE: implement a real blocking read in ConsoleReader.Read()
-// FUTURE: only allow one client at a time to read a console (warning, the
-// underlying ConsoleReader may change over time)
+// FUTURE: implement a real blocking read in ConsoleReader.Read() (caution, it's tricky ;)
+// FUTURE: only allow one client at a time to read a console
 
 const (
 	ConsoleRingBufferSize = 256 * 1024 // history size
 	ConsoleReaderSize     = 1024
+	CooldownMaxWait       = 2 * time.Second
 )
 
 // ConsoleManager will read and store output of VM's console
@@ -192,11 +192,14 @@ func (pr *ConsolePersitentReader) Read(p []byte) (n int, err error) {
 	}
 
 	if !dataAvailable {
-		// for this situation, a cooldown is prefered to a sync.Cond or sync.Mutex
-		// because there's tricky edge cases.
+		// For this situation, a cooldown is prefered to a sync.Cond or sync.Mutex
+		// because there's tricky edge cases, particularly when the
+		// underlying ConsoleReader changes. It may lead to slighly higher CPU usage
+		// when a "vm console" is pending, but it's way more reliable.
+
 		wait := time.Duration(pr.emptyCycles*10) * time.Millisecond
-		if wait > 2*time.Second {
-			wait = 2 * time.Second
+		if wait > CooldownMaxWait {
+			wait = CooldownMaxWait
 		}
 
 		pr.emptyCycles++
