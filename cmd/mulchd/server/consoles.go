@@ -1,23 +1,33 @@
 package server
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 )
 
 const (
-	ConsoleRingBufferSize = 1024 * 1024
+	ConsoleRingBufferSize = 256 * 1024
 	ConsoleReaderSize     = 1024
 )
 
-// ConsoleManager will read a VM console
+// ConsoleManager will read and store output of VM's console
 type ConsoleReader struct {
 	buffer     *OverflowBuffer
 	vmNameID   string
 	app        *App
 	startCycle uint64
 	terminated bool
+}
+
+// ConsolePersitentReader allows a consumer to read the console output
+// even if the underlying ConsoleReader changes
+type ConsolePersitentReader struct {
+	manager  *ConsoleManager
+	vmNameID string
+	ctx      context.Context
 }
 
 // ConsoleManager manages console readers
@@ -48,6 +58,24 @@ func (cm *ConsoleManager) ScheduleManager() {
 		cm.update()
 		time.Sleep(5 * time.Second)
 	}
+}
+
+// NewPersitentReader returns a ConsolePersitentReader for a VM
+func (cm *ConsoleManager) NewPersitentReader(name *VMName, ctx context.Context) (*ConsolePersitentReader, error) {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+
+	vmNameID := name.ID()
+
+	if _, ok := cm.readers[vmNameID]; ok {
+		return &ConsolePersitentReader{
+			manager:  cm,
+			vmNameID: vmNameID,
+			ctx:      ctx,
+		}, nil
+	}
+
+	return nil, fmt.Errorf("unable to find a console reader for VM %s", vmNameID)
 }
 
 // addReader adds a new console reader, without mutex lock
@@ -138,6 +166,29 @@ func (cm *ConsoleManager) update() {
 	}
 }
 
+// Read implements io.Reader interface
+func (pr *ConsolePersitentReader) Read(p []byte) (n int, err error) {
+	pr.manager.mutex.Lock()
+	defer pr.manager.mutex.Unlock()
+
+	r, ok := pr.manager.readers[pr.vmNameID]
+
+	if !ok {
+		// TODO: stay connected during a "stop-start" cycle?
+		return 0, io.EOF
+	}
+
+	if pr.ctx.Err() != nil {
+		return 0, pr.ctx.Err()
+	}
+
+	if r.buffer.IsEmpty() {
+		return 0, nil
+	}
+
+	return r.buffer.Read(p)
+}
+
 // Start reading data from a console and store it in a ring buffer
 func (cr *ConsoleReader) Start() error {
 	connect, err := cr.app.Libvirt.GetConnection()
@@ -168,7 +219,7 @@ func (cr *ConsoleReader) Start() error {
 		return fmt.Errorf("can't open console: %s", err)
 	}
 
-	cr.app.Log.Infof("console %s opened", domainName)
+	// cr.app.Log.Infof("console %s opened", domainName)
 
 	go func() {
 		defer stream.Free() // Abort?
@@ -177,12 +228,10 @@ func (cr *ConsoleReader) Start() error {
 			n, err := stream.Recv(buf)
 			if err != nil {
 				cr.terminated = true
-				cr.app.Log.Warningf("console: %s (n=%d) - exit", err, n)
+				// cr.app.Log.Warningf("console: %s (n=%d) - exit", err, n)
 				return
 			} else {
 				cr.buffer.Write(buf[:n])
-				// cr.app.Log.Tracef("console: %s", string(buf[:n]))
-				// cr.app.Log.Tracef("console: %d bytes", len(string(buf[:n])))
 			}
 		}
 	}()
@@ -190,8 +239,10 @@ func (cr *ConsoleReader) Start() error {
 	return nil
 }
 
+// remove "VM state database update cycle" trace
 // think about buffer sizes
-// add mulch vm console cmd?
+// context-abort the copy!
+// block on empty (chan? - yeah, but we've an issue when we switch the underlying buffer)
+// … actually, we currently already break continuity on restart
+// mulch vm console
 // - "single access locked reader"?
-// - log will be flushed
-// - we should not use the Hub and directly writes the console binary stream to the client

@@ -76,6 +76,12 @@ func AddRoutes(app *server.App) {
 	}, server.RouteAPI)
 
 	app.AddRoute(&server.Route{
+		Route:   "GET /vm/console/*",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.GetVMConsoleController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
 		Route:   "POST /vm",
 		Type:    server.RouteTypeStream,
 		Handler: controllers.NewVMSyncController,

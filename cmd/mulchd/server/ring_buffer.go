@@ -14,7 +14,7 @@ func NewOverflowBuffer(size int) *OverflowBuffer {
 	}
 }
 
-// Write writes data to the buffer
+// Write writes data to the buffer (non blocking [overwrites])
 func (ob *OverflowBuffer) Write(data []byte) (n int, err error) {
 	if ob.rb.Free() < len(data) {
 		// TODO: we should really *drop* data :( (but it would require a custom ringbuffer)
@@ -28,4 +28,9 @@ func (ob *OverflowBuffer) Write(data []byte) (n int, err error) {
 // Read reads data from the buffer
 func (ob *OverflowBuffer) Read(data []byte) (n int, err error) {
 	return ob.rb.Read(data)
+}
+
+// IsEmpty returns true if the buffer is empty
+func (ob *OverflowBuffer) IsEmpty() bool {
+	return ob.rb.IsEmpty()
 }

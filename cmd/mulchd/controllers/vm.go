@@ -768,6 +768,41 @@ func GetVMDoActionsController(req *server.Request) {
 	}
 }
 
+// GetVMConsoleController reads VM console buffer
+func GetVMConsoleController(req *server.Request) {
+	vmName := req.SubPath
+
+	if vmName == "" {
+		msg := "no VM name given"
+		req.App.Log.Error(msg)
+		http.Error(req.Response, msg, 400)
+		return
+	}
+
+	entry, err := getEntryFromRequest(vmName, req)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 404)
+		return
+	}
+
+	name := entry.Name
+	r, err := req.App.ConsoleManager.NewPersitentReader(name, req.HTTP.Context())
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
+	req.Response.Header().Set("Content-Type", "application/octet-stream")
+
+	_, err = server.CopyHttpFlush(req.Response, r)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		return
+	}
+}
+
 // BackupVM launch the backup process
 func BackupVM(req *server.Request, vmName *server.VMName) (string, error) {
 	allowCompress := server.BackupCompressAllow
