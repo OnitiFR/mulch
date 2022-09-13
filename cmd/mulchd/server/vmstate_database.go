@@ -91,6 +91,7 @@ func (vmsdb *VMStateDatabase) Update() error {
 	defer vmsdb.mutex.Unlock()
 
 	vmsdb.cycles++
+	vmsdb.app.Log.Tracef("VM state database update cycle #%d", vmsdb.cycles)
 
 	// loop over VM and get state
 	newStates := make(map[string]string)

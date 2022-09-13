@@ -17,6 +17,7 @@ type ConsoleReader struct {
 	vmNameID   string
 	app        *App
 	startCycle uint64
+	terminated bool
 }
 
 // ConsoleManager manages console readers
@@ -51,9 +52,13 @@ func (cm *ConsoleManager) ScheduleManager() {
 
 // addReader adds a new console reader, without mutex lock
 func (cm *ConsoleManager) addReader(vmNameID string) error {
-	if _, ok := cm.readers[vmNameID]; ok {
-		cm.app.Log.Tracef("console reader for VM %s already exists", vmNameID)
-		return nil
+	if r, ok := cm.readers[vmNameID]; ok {
+		if !r.terminated {
+			cm.app.Log.Tracef("console reader for VM %s already exists", vmNameID)
+			return nil
+		} else {
+			cm.app.Log.Tracef("replacing terminated console reader for VM %s", vmNameID)
+		}
 	}
 
 	cm.app.Log.Tracef("creating a new console reader for VM %s", vmNameID)
@@ -171,11 +176,13 @@ func (cr *ConsoleReader) Start() error {
 			buf := make([]byte, ConsoleReaderSize)
 			n, err := stream.Recv(buf)
 			if err != nil {
+				cr.terminated = true
 				cr.app.Log.Warningf("console: %s (n=%d) - exit", err, n)
 				return
 			} else {
 				cr.buffer.Write(buf[:n])
-				cr.app.Log.Infof("console: %s", string(buf[:n]))
+				// cr.app.Log.Tracef("console: %s", string(buf[:n]))
+				// cr.app.Log.Tracef("console: %d bytes", len(string(buf[:n])))
 			}
 		}
 	}()
@@ -184,7 +191,6 @@ func (cr *ConsoleReader) Start() error {
 }
 
 // think about buffer sizes
-// remove a bit of trace/log
 // add mulch vm console cmd?
 // - "single access locked reader"?
 // - log will be flushed
