@@ -247,8 +247,8 @@ func (cr *ConsoleReader) Start() error {
 
 	go func() {
 		defer stream.Free() // Abort?
+		buf := make([]byte, ConsoleReaderSize)
 		for {
-			buf := make([]byte, ConsoleReaderSize)
 			n, err := stream.Recv(buf)
 			if err != nil {
 				cr.terminated = true
