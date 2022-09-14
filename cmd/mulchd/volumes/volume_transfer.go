@@ -56,7 +56,8 @@ func (v *VolumeTransfert) Copy() (written int64, err error) {
 	defer v.streamSrc.Free()
 	defer v.streamDst.Free()
 
-	written, err = io.Copy(v, v)
+	buf := make([]byte, 10*1024*1024)
+	written, err = io.CopyBuffer(v, v, buf)
 
 	if err != nil {
 		v.streamSrc.Abort()
