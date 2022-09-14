@@ -44,10 +44,10 @@ func PhoneController(req *server.Request) {
 	if err != nil {
 		req.App.Log.Errorf("no VM found (yet?) in database with this instance_id (%s)", instanceAnon)
 	} else {
-		_, err := req.App.VMDB.GetMaternityEntryByName(entry.Name)
+		_, err := req.App.VMDB.GetGreenhouseEntryByName(entry.Name)
 		if err == nil {
-			// found in maternity, it's still a baby, we do nothing yet
-			req.App.Log.Trace("this is still a baby VM")
+			// found in greenhouse, it's still a sprout, we do nothing yet
+			req.App.Log.Trace("this is still a sprout VM")
 		} else {
 			vm := entry.VM
 

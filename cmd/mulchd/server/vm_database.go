@@ -27,7 +27,7 @@ type VMDatabaseEntry struct {
 
 // VMDatabase describes a persistent DataBase of VMs structures
 // ---
-// It includes a maternity, where all the baby VM (= currently building)
+// It includes a greenhouse, where all new VM (= currently building)
 // are stored. This transient database is not stored on disk.
 // (this DB is used by GetBySecretUUID, for instance)
 type VMDatabase struct {
@@ -35,7 +35,7 @@ type VMDatabase struct {
 	domainFilename string
 	portFilename   string
 	db             map[string]*VMDatabaseEntry
-	maternityDB    map[string]*VMDatabaseEntry
+	greenhouseDB   map[string]*VMDatabaseEntry
 	mutex          sync.Mutex
 	onUpdate       updateCallback
 	app            *App
@@ -48,7 +48,7 @@ func NewVMDatabase(filename string, domainFilename string, portFilename string, 
 		domainFilename: domainFilename,
 		portFilename:   portFilename,
 		db:             make(map[string]*VMDatabaseEntry),
-		maternityDB:    make(map[string]*VMDatabaseEntry),
+		greenhouseDB:   make(map[string]*VMDatabaseEntry),
 		onUpdate:       onUpdate,
 		app:            app,
 	}
@@ -115,7 +115,7 @@ func (vmdb *VMDatabase) genPortsDB() error {
 	var vmEntries []*VMDatabaseEntry
 	exportedPortMap := make(map[string]*VM)
 
-	for _, entry := range vmdb.maternityDB {
+	for _, entry := range vmdb.greenhouseDB {
 		vmEntries = append(vmEntries, entry)
 	}
 	for _, entry := range vmdb.db {
@@ -395,28 +395,28 @@ func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 	return nil
 }
 
-// DeleteFromMaternity the VM from the maternity database using its name
-func (vmdb *VMDatabase) DeleteFromMaternity(name *VMName) error {
+// DeleteFromGreenhouse the VM from the greenhouse database using its name
+func (vmdb *VMDatabase) DeleteFromGreenhouse(name *VMName) error {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
-	_, exists := vmdb.maternityDB[name.ID()]
+	_, exists := vmdb.greenhouseDB[name.ID()]
 	if !exists {
-		return fmt.Errorf("VM '%s' was not found in maternity database", name.ID())
+		return fmt.Errorf("VM '%s' was not found in greenhouse database", name.ID())
 	}
 
-	delete(vmdb.maternityDB, name.ID())
+	delete(vmdb.greenhouseDB, name.ID())
 
 	return nil
 }
 
-// AddToMaternity a new VM in the maternity database
-func (vmdb *VMDatabase) AddToMaternity(vm *VM, name *VMName) error {
+// AddToGreenhouse a new VM in the greenhouse database
+func (vmdb *VMDatabase) AddToGreenhouse(vm *VM, name *VMName) error {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
-	if _, exists := vmdb.maternityDB[name.ID()]; exists {
-		return fmt.Errorf("VM %s already exists in maternity database", name)
+	if _, exists := vmdb.greenhouseDB[name.ID()]; exists {
+		return fmt.Errorf("VM %s already exists in greenhouse database", name)
 	}
 
 	entry := &VMDatabaseEntry{
@@ -425,7 +425,7 @@ func (vmdb *VMDatabase) AddToMaternity(vm *VM, name *VMName) error {
 		Active: false,
 	}
 
-	vmdb.maternityDB[name.ID()] = entry
+	vmdb.greenhouseDB[name.ID()] = entry
 	err := vmdb.save()
 	if err != nil {
 		return err
@@ -508,20 +508,20 @@ func (vmdb *VMDatabase) GetActiveByName(name string) (*VM, error) {
 	return entry.VM, nil
 }
 
-// GetMaternityEntryByName lookups a VMDatabaseEntry in maternityDB entry by its name
-func (vmdb *VMDatabase) GetMaternityEntryByName(name *VMName) (*VMDatabaseEntry, error) {
+// GetGreenhouseEntryByName lookups a VMDatabaseEntry in greenhouseDB entry by its name
+func (vmdb *VMDatabase) GetGreenhouseEntryByName(name *VMName) (*VMDatabaseEntry, error) {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
 
-	entry, exists := vmdb.maternityDB[name.ID()]
+	entry, exists := vmdb.greenhouseDB[name.ID()]
 	if !exists {
-		return nil, fmt.Errorf("VM %s not found in maternity database", name)
+		return nil, fmt.Errorf("VM %s not found in greenhouse database", name)
 	}
 	return entry, nil
 }
 
 // GetEntryBySecretUUID lookups a VMName by its secretUUID
-// Note: this function also search in maternityDB
+// Note: this function also search in greenhouseDB
 func (vmdb *VMDatabase) GetEntryBySecretUUID(uuid string) (*VMDatabaseEntry, error) {
 	vmdb.mutex.Lock()
 	defer vmdb.mutex.Unlock()
@@ -537,7 +537,7 @@ func (vmdb *VMDatabase) GetEntryBySecretUUID(uuid string) (*VMDatabaseEntry, err
 		}
 	}
 
-	for _, entry := range vmdb.maternityDB {
+	for _, entry := range vmdb.greenhouseDB {
 		if entry.VM.SecretUUID == uuid {
 			return entry, nil
 		}
@@ -547,7 +547,7 @@ func (vmdb *VMDatabase) GetEntryBySecretUUID(uuid string) (*VMDatabaseEntry, err
 }
 
 // GetBySecretUUID lookups a VM by its secretUUID
-// Note: this function also search in maternityDB
+// Note: this function also search in greenhouseDB
 func (vmdb *VMDatabase) GetBySecretUUID(uuid string) (*VM, error) {
 	entry, err := vmdb.GetEntryBySecretUUID(uuid)
 	if err != nil {

@@ -168,8 +168,8 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		return nil, nil, err
 	}
 
-	app.VMDB.AddToMaternity(vm, vmName)
-	defer app.VMDB.DeleteFromMaternity(vmName)
+	app.VMDB.AddToGreenhouse(vm, vmName)
+	defer app.VMDB.DeleteFromGreenhouse(vmName)
 
 	diskName := vmGenDiskName(vmName)
 
