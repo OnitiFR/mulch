@@ -21,7 +21,6 @@ type ConsoleReader struct {
 	buffer     *OverflowBuffer
 	vmNameID   string
 	app        *App
-	startCycle uint64
 	terminated bool
 }
 
@@ -36,9 +35,10 @@ type ConsolePersitentReader struct {
 
 // ConsoleManager manages console readers
 type ConsoleManager struct {
-	app     *App
-	readers map[string]*ConsoleReader
-	mutex   sync.Mutex
+	app       *App
+	readers   map[string]*ConsoleReader
+	mutex     sync.Mutex
+	lastCycle uint64
 }
 
 // NewConsoleManager creates a new ConsoleManager
@@ -96,10 +96,9 @@ func (cm *ConsoleManager) addReader(vmNameID string) error {
 	cm.app.Log.Tracef("creating a new console reader for VM %s", vmNameID)
 
 	cr := &ConsoleReader{
-		buffer:     NewOverflowBuffer(ConsoleRingBufferSize),
-		vmNameID:   vmNameID,
-		app:        cm.app,
-		startCycle: cm.app.VMStateDB.Cycles(),
+		buffer:   NewOverflowBuffer(ConsoleRingBufferSize),
+		vmNameID: vmNameID,
+		app:      cm.app,
 	}
 
 	err := cr.Start()
@@ -140,34 +139,34 @@ func (cm *ConsoleManager) RemoveReader(vmNameID string) error {
 	return cm.removeReader(vmNameID)
 }
 
-// update internal database, looking for new VMs and expired ones
+// update internal database, looking for new VMs and expired readers
 func (cm *ConsoleManager) update() {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	states := cm.app.VMStateDB.Get()
-	for vmName, state := range states {
-		if state == VMStateUp {
-			if _, ok := cm.readers[vmName]; !ok {
-				err := cm.addReader(vmName)
-				if err != nil {
-					cm.app.Log.Errorf("can't add console reader for VM %s: %s", vmName, err)
-				}
-			}
-		} else {
-			if _, ok := cm.readers[vmName]; ok {
-				currentCycle := cm.app.VMStateDB.Cycles()
-				if currentCycle > cm.readers[vmName].startCycle {
-					err := cm.removeReader(vmName)
+	cycle := cm.app.VMStateDB.Cycles()
+	if cycle > cm.lastCycle {
+		cm.lastCycle = cycle
+
+		states := cm.app.VMStateDB.Get()
+		for vmName, state := range states {
+			if state == VMStateUp {
+				if _, ok := cm.readers[vmName]; !ok {
+					err := cm.addReader(vmName)
 					if err != nil {
-						cm.app.Log.Errorf("can't remove console reader for VM %s: %s", vmName, err)
+						cm.app.Log.Errorf("can't add console reader for VM %s: %s", vmName, err)
 					}
-				} else {
-					cm.app.Log.Tracef("VMStateDB was not updated yet, we keep %s reader for now", vmName)
 				}
 			}
 		}
 	}
+
+	for vmName, cr := range cm.readers {
+		if cr.terminated {
+			cm.removeReader(vmName)
+		}
+	}
+
 }
 
 // Read implements io.Reader interface
@@ -239,14 +238,14 @@ func (cr *ConsoleReader) Start() error {
 
 	err = domain.OpenConsole("", stream, 0)
 	if err != nil {
-		stream.Abort() // Free?
+		stream.Abort()
 		return fmt.Errorf("can't open console: %s", err)
 	}
 
 	// cr.app.Log.Infof("console %s opened", domainName)
 
 	go func() {
-		defer stream.Free() // Abort?
+		defer stream.Free()
 		buf := make([]byte, ConsoleReaderSize)
 		for {
 			n, err := stream.Recv(buf)

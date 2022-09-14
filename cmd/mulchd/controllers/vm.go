@@ -39,9 +39,13 @@ func getEntryFromRequest(vmName string, req *server.Request) (*server.VMDatabase
 		if err != nil {
 			return nil, err
 		}
-		entry, err = req.App.VMDB.GetEntryByName(server.NewVMName(vmName, revision))
+		name := server.NewVMName(vmName, revision)
+		entry, err = req.App.VMDB.GetEntryByName(name)
+		if entry == nil {
+			entry, err = req.App.VMDB.GetGreenhouseEntryByName(name)
+		}
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("VM %s not found in databases", name)
 		}
 	} else {
 		entry, err = req.App.VMDB.GetActiveEntryByName(vmName)
