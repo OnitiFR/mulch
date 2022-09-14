@@ -37,9 +37,6 @@ Short term:
 - mulch client port forwarding (via SSH)?
 - README: add image for vm migration?
 - human readable "mulch status" (keep current output with a -b?)
-- vm console for greenhouse VMs
-  - reader is already attached, see controller?
-  - a failed creation leave a pending reader, it seems (use terminated? check addReader, then)
 - explore vm migration possible edge case:
   // migration of active VM ok → local vm deletion → an existing
 	// "lower" inactive VM is activated (unharmful error if source was active?)
