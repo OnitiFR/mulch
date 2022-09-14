@@ -16,13 +16,13 @@ Resource leaks:
 - still some hanging SSH shown in status (try with a client reboot?)
     - scheduleSSHKeepAlives() does its job, the issue's upper in the stack (runChannels never ends?)
     - added goroutine pprof profile to help
-- mulchd long-term memory usage (10+GB)
+- mulchd long-term memory usage (10+GB, seen 43 GB recently after one night!)
   - normal for Go 1.12 → 1.15 runtimes, memory is released to the kernel if
     it needs it (MADV_FREE), but but RSS does not capture this information
   - test with Go 1.16 (strange that we see this issue on our most memory pressured host [m2])
   - made a change in VolumeTransfert.Copy to use a single buffer, having a huge impact on VmRSS
-    - why the GC do not work here with Copy? Recv vs Read?
-    - need to check if it fix the issue in the long term
+    - why the GC do not work here with Copy? Recv vs Read? RSS is not the right metric?
+    - check if it fixes the issue in the long term
 
 Short term:
 - clean multipart temp files after upload?
