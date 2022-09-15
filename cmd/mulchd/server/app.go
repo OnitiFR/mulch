@@ -470,14 +470,14 @@ func (app *App) initSigQUITHandler() {
 			ts := time.Now().Format("20060102-150405")
 			rnd := strconv.Itoa(app.Rand.Int())
 
-			pathHeap := path.Clean(os.TempDir() + "/" + "mulchd-heap" + ts + "-" + rnd + ".prof")
+			pathHeap := path.Clean(os.TempDir() + "/" + "mulchd-heap-" + ts + "-" + rnd + ".prof")
 			app.Log.Infof("writing %s", pathHeap)
 			err := writePprofProfile("heap", pathHeap)
 			if err != nil {
 				app.Log.Error(err.Error())
 			}
 
-			pathGoroutine := path.Clean(os.TempDir() + "/" + "mulchd-goroutine" + ts + "-" + rnd + ".prof")
+			pathGoroutine := path.Clean(os.TempDir() + "/" + "mulchd-goroutine-" + ts + "-" + rnd + ".prof")
 			app.Log.Infof("writing %s", pathGoroutine)
 			err = writePprofProfile("goroutine", pathGoroutine)
 			if err != nil {
