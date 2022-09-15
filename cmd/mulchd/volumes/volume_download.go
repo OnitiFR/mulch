@@ -52,7 +52,8 @@ func (v VolumeDownload) Read(p []byte) (n int, e error) {
 func (v *VolumeDownload) Copy() (written int64, err error) {
 	defer v.streamSrc.Free()
 
-	written, err = io.Copy(v.streamDst, v)
+	buf := make([]byte, VolumeCopyBufferSize)
+	written, err = io.CopyBuffer(v.streamDst, v, buf)
 
 	if err != nil {
 		v.streamSrc.Abort()

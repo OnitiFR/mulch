@@ -41,7 +41,8 @@ func (v VolumeUpload) Write(p []byte) (n int, e error) {
 func (v *VolumeUpload) Copy() (written int64, err error) {
 	defer v.streamDst.Free()
 
-	written, err = io.Copy(v, v.streamSrc)
+	buf := make([]byte, VolumeCopyBufferSize)
+	written, err = io.CopyBuffer(v, v.streamSrc, buf)
 
 	if err != nil {
 		v.streamSrc.Close()
