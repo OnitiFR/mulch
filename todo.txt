@@ -16,13 +16,12 @@ Resource leaks:
 - still some hanging SSH shown in status (try with a client reboot?)
     - scheduleSSHKeepAlives() does its job, the issue's upper in the stack (runChannels never ends?)
     - added goroutine pprof profile to help
-- mulchd long-term memory usage (10+GB, seen 43 GB recently after one night!)
+- mulchd memory usage (10+GB)
   - normal for Go 1.12 → 1.15 runtimes, memory is released to the kernel if
     it needs it (MADV_FREE), but but RSS does not capture this information
-  - test with Go 1.16 (strange that we see this issue on our most memory pressured host [m2])
-  - made a change in VolumeTransfert.Copy to use a single buffer, having a huge impact on VmRSS
-    - why the GC do not work here with Copy? Recv vs Read? RSS is not the right metric?
-    - check if it fixes the issue in the long term
+  - Go 1.16 reverted to MADV_DONTNEED, so this is not a MADV_FREE false positive
+  - heap profile show a very small memory consumption, comparatively
+  - seems libvirt related! (Streams & Volume transfert) - anonymous allocations
 
 Short term:
 - clean multipart temp files after upload?
@@ -43,7 +42,7 @@ Short term:
 - systemd CapabilityBoundingSet/AmbientCapabilities = CAP_NET_BIND_SERVICE (+NoNewPrivileges=true) [systemd v229+]
 - make backup available at "prepare" stage during a restore?
 - allow to globally disable auto-rebuild?
-- add timeout on VM creation scripts OR at least allow VM deletion
+- add timeout on VM creation scripts OR at least allow "greenhouse" VMs deletion
   - note: for deletion, shutting down is not a good option when scripts started, I think
     - need to find cases where it fails, all tests OK for now
 - rights: limit SSH to a specific VM? (check a fake vm=… header in the SSH proxy?)
