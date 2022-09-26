@@ -349,8 +349,7 @@ How do I install the client?
 
 Install go (sometimes named "golang") and then:
 ```sh
-go install github.com/OnitiFR/mulch/cmd/mulch@latest (Go 1.16+)
-go get -u github.com/OnitiFR/mulch/cmd/mulch (Go 1.15-)
+go install github.com/OnitiFR/mulch/cmd/mulch@latest
 ```
 Usual Go requirements : check you have go/golang installed and `~/go/bin/` is in your `PATH` (or copy/link binary in one of your `PATH` directories; use `sudo ln -s /home/$USER/go/bin/mulch /usr/local/bin` if you have no idea about how to do this).
 
@@ -397,8 +396,7 @@ sudo setfacl -m g:qemu:x /home/USER/
 
 ### Install:
 As a user:
- - `go install github.com/OnitiFR/mulch/cmd/...@latest` (Go 1.16 and more)
- - `go get -u github.com/OnitiFR/mulch/cmd/...` (Go 1.15 and less)
+ - `go install github.com/OnitiFR/mulch/cmd/...@latest`
  - `cd go/src/github.com/OnitiFR/mulch`
  - `./install.sh --help` (see sample install section)
 
