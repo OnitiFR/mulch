@@ -221,7 +221,7 @@ func (app *App) initSSHPairDB() error {
 func (app *App) initVMDB() error {
 	dbPath := app.Config.DataPath + "/mulch-vm-v2.db"
 	domainDbPath := app.Config.DataPath + "/mulch-proxy-domains.db"
-	portsDbPath := app.Config.DataPath + "/mulch-proxy-ports.db"
+	portsDbPath := app.Config.DataPath + "/mulch-proxy-ports-v2.db"
 
 	dbPathV1 := app.Config.DataPath + "/mulch-vm.db"
 	if common.PathExist(dbPathV1) && !common.PathExist(dbPath) {

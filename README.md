@@ -332,6 +332,19 @@ ports = [
 ]
 ```
 
+The TCP-proxy also supports [PROXY protocol](http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt),
+so you can preserve original IP address of the client if needed:
+
+```toml
+# export our port 22 as public port 2222
+ports = [
+    "22/tcp->@PUBLIC:2222 (PROXY)",
+]
+```
+
+See `deb-proxy-proto.sh` "prepare" script to add transparent original IP forwarding
+in your VMs even if your services don't support PROXY protocol natively.
+
 #### More…
 You can lock a VM, so no "big" operation, like delete or rebuild can be done until the VM
 is unlocked. Useful for production VMs.

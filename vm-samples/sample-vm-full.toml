@@ -84,6 +84,11 @@ ports = [
     # Port ranges are available, too
     "8080-8090/tcp->@PUBLIC",
     "9080-9090/tcp->@PUBLIC:4000-4010",
+
+    # PROXY protocol is supported, see deb-proxy-proto.sh prepare script
+    # for transparent client IP forwarding
+    "8081/tcp->@PUBLIC (PROXY)", # default PROXY protocol server port is 8443
+    "8082/tcp->@PUBLIC (PROXY:8888)", # … but you can change it
 ]
 
 backup_disk_size = "2G"

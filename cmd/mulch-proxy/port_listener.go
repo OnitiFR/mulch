@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"sync"
+
+	"github.com/OnitiFR/mulch/common"
 )
 
 // PortListener is a TCP listener holder
@@ -13,7 +15,7 @@ type PortListener struct {
 	listener        *net.TCPListener
 	port            uint16
 	public          bool
-	forwardMap      map[string]*net.TCPAddr
+	forwardMap      map[string]*common.TCPForwarder
 	closeChannels   map[string]chan bool
 	log             *Log
 	closed          bool
@@ -22,7 +24,7 @@ type PortListener struct {
 }
 
 // NewPortListener will listen on port and forward clients
-func NewPortListener(listenAddr *net.TCPAddr, forwardMap map[string]*net.TCPAddr, version int, log *Log) (*PortListener, error) {
+func NewPortListener(listenAddr *net.TCPAddr, forwardMap map[string]*common.TCPForwarder, version int, log *Log) (*PortListener, error) {
 	var err error
 
 	listener := &PortListener{
@@ -67,13 +69,23 @@ func (pl *PortListener) Listen() {
 
 		sourceIP := conn.RemoteAddr().(*net.TCPAddr).IP.String()
 
-		var forwardTo *net.TCPAddr
+		var forwarder *common.TCPForwarder
+		var forwardTo net.TCPAddr
 		var existsF bool
 
 		if pl.public {
-			forwardTo, existsF = pl.forwardMap["*"]
+			forwarder, existsF = pl.forwardMap["*"]
+			if existsF {
+				forwardTo = *forwarder.Dest
+				if forwarder.PROXYProtoPort != 0 {
+					forwardTo.Port = int(forwarder.PROXYProtoPort)
+				}
+			}
 		} else {
-			forwardTo, existsF = pl.forwardMap[sourceIP]
+			forwarder, existsF = pl.forwardMap[sourceIP]
+			if existsF {
+				forwardTo = *forwarder.Dest
+			}
 		}
 
 		key := "???"
@@ -89,7 +101,15 @@ func (pl *PortListener) Listen() {
 
 		if existsF && existsC {
 			pl.log.Tracef("+ TCP %s->%s:%d", sourceIP, forwardTo.IP.String(), pl.port)
-			go NewPortForward(conn, forwardTo, closeChan, pl.log, &pl.ConnectionCount)
+
+			var toPrelude []byte
+			if forwarder.PROXYProtoPort != 0 {
+				// inject PROXY protocol header (v1)
+				p := fmt.Sprintf("PROXY TCP4 %s %s %d %d\r\n", sourceIP, "127.0.0.1", conn.RemoteAddr().(*net.TCPAddr).Port, forwarder.Dest.Port)
+				toPrelude = []byte(p)
+			}
+
+			go NewPortForward(conn, &forwardTo, closeChan, pl.log, &pl.ConnectionCount, toPrelude)
 		} else {
 			conn.Close()
 		}
@@ -116,13 +136,13 @@ func (pl *PortListener) Close() error {
 }
 
 // UpdateForwardMap will update our forwarding config
-func (pl *PortListener) UpdateForwardMap(forwardMap map[string]*net.TCPAddr) error {
+func (pl *PortListener) UpdateForwardMap(forwardMap map[string]*common.TCPForwarder) error {
 	pl.mutex.Lock()
 	defer pl.mutex.Unlock()
 
 	allowedForwards := make(map[string]bool)
 	for srcIP, forward := range forwardMap {
-		key := fmt.Sprintf("%s->%s", srcIP, forward.IP.String())
+		key := fmt.Sprintf("%s->%s", srcIP, forward.Dest.IP.String())
 		allowedForwards[key] = true
 	}
 

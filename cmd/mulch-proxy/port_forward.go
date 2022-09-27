@@ -17,7 +17,7 @@ type PortForward struct {
 }
 
 // NewPortForward will connect to remote host and forward connection
-func NewPortForward(fromConn io.ReadWriteCloser, toAddr *net.TCPAddr, closeChanExternal chan bool, log *Log, connectionCount *int32) {
+func NewPortForward(fromConn io.ReadWriteCloser, toAddr *net.TCPAddr, closeChanExternal chan bool, log *Log, connectionCount *int32, toPrelude []byte) {
 	defer func() {
 		err := fromConn.Close()
 		if err != nil {
@@ -47,6 +47,10 @@ func NewPortForward(fromConn io.ReadWriteCloser, toAddr *net.TCPAddr, closeChanE
 			pf.log.Errorf("remote close error: %s", err)
 		}
 	}()
+
+	if toPrelude != nil {
+		pf.toConn.Write(toPrelude)
+	}
 
 	atomic.AddInt32(connectionCount, 1)
 

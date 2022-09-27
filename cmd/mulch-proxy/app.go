@@ -94,7 +94,7 @@ func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 
 	app.ProxyServer.RefreshReverseProxies()
 
-	portDBFile := path.Clean(app.Config.DataPath + "/mulch-proxy-ports.db")
+	portDBFile := path.Clean(app.Config.DataPath + "/mulch-proxy-ports-v2.db")
 	app.PortServer, err = NewPortServer(portDBFile, app.Log)
 	if err != nil {
 		return nil, err

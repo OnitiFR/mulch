@@ -27,6 +27,10 @@ const VMPortBaseForward uint16 = 9001
 // This value is currently very arbitrary, we'll see.
 const VMPortMaxRangeSize = 20
 
+// VMPortProxyProtocolDefault is the default port where the PROXY protocol
+// server is available in the VM
+const VMPortProxyProtocoDefault = 8443
+
 // VMPort is a network port inside a VM
 type VMPort struct {
 	Port       uint16
@@ -35,6 +39,7 @@ type VMPort struct {
 	Index      int // position in the direction (ex: 2nd exported port), 0 indexed
 	Group      string
 	PublicPort uint16 // exported PUBLIC port (0 = private)
+	ProxyPort  uint16 // "PROXY protocol" port (0 = no proxy)
 }
 
 // String version of the VMPort (Index is not part of the string)
@@ -83,11 +88,13 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 	// 2000-2010/tcp -> @xxx:3000-3010
 	isRange := regexp.MustCompile(`^(\d+)-(\d+)/(tcp) *(<-|->) *(@[A-Za-z0-9_]+)(:(\d+)(-(\d+))?)?$`)
 
-	for _, line := range strPorts {
+	for _, lineOrg := range strPorts {
+		line, comment := portExtractComment(lineOrg)
+
 		line = strings.TrimSpace(line)
 		match := isRange.MatchString(line)
 		if !match {
-			strPortsAll = append(strPortsAll, line)
+			strPortsAll = append(strPortsAll, lineOrg)
 			continue
 		}
 
@@ -142,17 +149,27 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 
 		for i := 0; i < rangeSize; i++ {
 			if srcStart == dstStart {
-				strPortsAll = append(strPortsAll, fmt.Sprintf("%d/%s %s %s", srcStart+i, proto, direction, group))
+				str := fmt.Sprintf("%d/%s %s %s", srcStart+i, proto, direction, group)
+				if comment != "" {
+					str += fmt.Sprintf(" (%s)", comment)
+				}
+				strPortsAll = append(strPortsAll, str)
 			} else {
-				strPortsAll = append(strPortsAll, fmt.Sprintf("%d/%s %s %s:%d", srcStart+i, proto, direction, group, dstStart+i))
+				str := fmt.Sprintf("%d/%s %s %s:%d", srcStart+i, proto, direction, group, dstStart+i)
+				if comment != "" {
+					str += fmt.Sprintf(" (%s)", comment)
+				}
+				strPortsAll = append(strPortsAll, str)
 			}
 		}
 	}
 
 	// 2 --- parse ports
-	for _, line := range strPortsAll {
+	for _, orgLine := range strPortsAll {
 		var port VMPort
 		var sep string
+
+		line, comment := portExtractComment(orgLine)
 
 		if strings.Contains(line, "->") {
 			sep = "->"
@@ -230,6 +247,19 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 			default:
 				return nil, fmt.Errorf("invalid public group '%s' (ex: PUBLIC:8080)", group)
 			}
+
+			// check if we found a PROXY comment
+			parts := strings.Split(comment, ":")
+			if len(parts) > 0 && parts[0] == "PROXY" {
+				port.ProxyPort = VMPortProxyProtocoDefault
+				if len(parts) == 2 {
+					p, err := strconv.Atoi(parts[1])
+					if err != nil {
+						return nil, fmt.Errorf("cannot parse PROXY port as an integer in '%s'", parts[1])
+					}
+					port.ProxyPort = uint16(p)
+				}
+			}
 		}
 
 		// check duplicates
@@ -297,4 +327,16 @@ func CheckPortsConflicts(db *VMDatabase, ports []*VMPort, excludeVM string, log 
 	}
 
 	return nil
+}
+
+// portExtractComment extracts the (comment) from a port string
+func portExtractComment(line string) (port string, comment string) {
+	re := regexp.MustCompile(`^(.*) (\((.*)\))?$`)
+	matches := re.FindStringSubmatch(line)
+
+	if len(matches) != 4 {
+		return line, ""
+	}
+
+	return matches[1], matches[3]
 }

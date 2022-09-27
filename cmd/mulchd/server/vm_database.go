@@ -171,7 +171,7 @@ func (vmdb *VMDatabase) genPortsDB() error {
 				}
 				listener = &common.TCPPortListener{
 					ListenAddr: listenAddr,
-					Forwards:   make(map[string]*net.TCPAddr),
+					Forwards:   make(map[string]*common.TCPForwarder),
 				}
 				listeners[listenPort] = listener
 			}
@@ -181,7 +181,9 @@ func (vmdb *VMDatabase) genPortsDB() error {
 			if err != nil {
 				return err
 			}
-			listener.Forwards[vm.AssignedIPv4] = forwardAddr
+			listener.Forwards[vm.AssignedIPv4] = &common.TCPForwarder{
+				Dest: forwardAddr,
+			}
 		}
 	}
 
@@ -200,7 +202,7 @@ func (vmdb *VMDatabase) genPortsDB() error {
 				}
 				listener := &common.TCPPortListener{
 					ListenAddr: listenAddr,
-					Forwards:   make(map[string]*net.TCPAddr),
+					Forwards:   make(map[string]*common.TCPForwarder),
 				}
 
 				_, exists := listeners[p.PublicPort]
@@ -214,7 +216,10 @@ func (vmdb *VMDatabase) genPortsDB() error {
 				if err != nil {
 					return err
 				}
-				listener.Forwards["*"] = forwardAddr
+				listener.Forwards["*"] = &common.TCPForwarder{
+					Dest:           forwardAddr,
+					PROXYProtoPort: p.ProxyPort,
+				}
 			}
 		}
 	}
