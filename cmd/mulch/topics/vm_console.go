@@ -18,6 +18,9 @@ Useful to see the boot process, debug a VM, output specialized streams, etc.
 A rolling buffer stores latest console output. This command will flush
 this buffer to your standard output. Flushed content is lost.
 
+You can see "greenhouse" (currently in creation) VM's console using the
+--revision flag. (brand new VMs have revision 0)
+
 Warning: only one client should read the console at a time.
 `,
 	Args: cobra.ExactArgs(1),
