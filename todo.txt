@@ -24,6 +24,11 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transfert) - anonymous allocations
 
 Short term:
+- secret TOML parsing
+- secret injection
+- secret sync between peers
+- secret update: inform impacted VMs
+- secret delete: check VM usage
 - create rh-proxy-proto.sh
 - test and update install script for 22.04!
 - clean multipart temp files after upload?

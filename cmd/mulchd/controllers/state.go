@@ -97,12 +97,24 @@ func GetStateZipController(req *server.Request) {
 	}
 
 	// add CSV file to the ZIP
-	zipFile, err := zipWriter.Create("_states.csv")
+	csvFile, err := zipWriter.Create("_states.csv")
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)
 	}
-	_, err = zipFile.Write(csvBuffer.Bytes())
+	_, err = csvFile.Write(csvBuffer.Bytes())
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+	}
+
+	// add the encrypted secrets to the ZIP
+	secretsFile, err := zipWriter.Create("_mulch-secrets.db")
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+	}
+	err = req.App.SecretsDB.SaveToWriter(secretsFile)
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)

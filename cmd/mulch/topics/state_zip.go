@@ -12,7 +12,7 @@ import (
 // stateZipCmd represents the "state zip" command
 var stateZipCmd = &cobra.Command{
 	Use:   "zip",
-	Short: "Download a zip file with VMs configs and states",
+	Short: "Download a zip file with VMs configs, states and encrypted secrets",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, _ []string) {
 		path, _ := cmd.Flags().GetString("path")

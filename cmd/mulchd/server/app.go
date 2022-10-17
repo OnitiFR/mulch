@@ -49,6 +49,7 @@ type App struct {
 	MuxAPI         *http.ServeMux
 	Rand           *rand.Rand
 	SSHPairDB      *SSHPairDatabase
+	SecretsDB      *SecretDatabase
 	VMDB           *VMDatabase
 	VMStateDB      *VMStateDatabase
 	BackupsDB      *BackupDatabase
@@ -114,6 +115,11 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	}
 
 	err = app.initSSHPairDB()
+	if err != nil {
+		return nil, err
+	}
+
+	err = app.initSecretDB()
 	if err != nil {
 		return nil, err
 	}
@@ -215,6 +221,20 @@ func (app *App) initSSHPairDB() error {
 	app.SSHPairDB = pairdb
 
 	app.Log.Infof("found %d SSH pair(s) in database %s", app.SSHPairDB.Count(), dbPath)
+	return nil
+}
+
+func (app *App) initSecretDB() error {
+	dbPath := app.Config.DataPath + "/mulch-secrets.db"
+	passPath := app.Config.DataPath + "/secrets.key"
+
+	db, err := NewSecretDatabase(dbPath, passPath, app)
+	if err != nil {
+		return err
+	}
+
+	app.SecretsDB = db
+
 	return nil
 }
 

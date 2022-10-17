@@ -84,6 +84,15 @@ __internal_list_peers() {
     fi
 }
 
+__internal_list_secrets() {
+    local mulch_output out
+    __mulch_get_server
+    if mulch_output=$(mulch --server $__mulch_current_server secret list --basic 2>/dev/null); then
+        out=($(echo "${mulch_output}"))
+        COMPREPLY=( $( compgen -W "${out[*]}" -- "$cur" ) )
+    fi
+}
+
 __mulch_get_servers() {
     local out servers
     servers=$(egrep '^[[:blank:]]*name[[:blank:]]*=' ~/.mulch.toml | awk -F= '{print $2}')
@@ -132,6 +141,10 @@ __mulch_custom_func() {
             ;;
         mulch_key_right_list | mulch_key_right_add | mulch_key_right_remove)
             __internal_list_keys
+            return
+            ;;
+        mulch_secret_set | mulch_secret_get | mulch_secret_delete)
+            __internal_list_secrets
             return
             ;;
         *)

@@ -212,4 +212,29 @@ func AddRoutes(app *server.App) {
 		Type:    server.RouteTypeCustom,
 		Handler: controllers.ListPeersController,
 	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "GET /secret",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.ListSecretsController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "GET /secret/*",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.GetSecretController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "POST /secret/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.SetSecretController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "DELETE /secret/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.DeleteSecretController,
+	}, server.RouteAPI)
+
 }
