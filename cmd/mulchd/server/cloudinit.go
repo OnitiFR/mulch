@@ -114,7 +114,8 @@ func CloudInitDataGen(vm *VM, vmName *VMName, app *App) (string, string, error) 
 	for _, keyPath := range vm.Config.Secrets {
 		secret, err := app.SecretsDB.Get(keyPath)
 		if err != nil {
-			app.Log.Errorf("error with secret '%s' for VM '%s': %s", keyPath, vmName, err)
+			app.Log.Errorf("error with secret '%s' for %s: %s", keyPath, vmName, err)
+			continue
 		}
 		key := filepath.Base(keyPath)
 
