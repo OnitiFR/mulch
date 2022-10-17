@@ -21,14 +21,14 @@ Resource leaks:
     it needs it (MADV_FREE), but but RSS does not capture this information
   - Go 1.16 reverted to MADV_DONTNEED, so this is not a MADV_FREE false positive
   - heap profile show a very small memory consumption, comparatively
-  - seems libvirt related! (Streams & Volume transfert) - anonymous allocations
+  - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Short term:
-- secret TOML parsing
-- secret injection
-- secret sync between peers
 - secret update: inform impacted VMs
 - secret delete: check VM usage
+- secrets: sync between peers (warning with deleted entries - delete log?)
+- secrets: doc / sample
+- secrets: check migration?
 - create rh-proxy-proto.sh
 - test and update install script for 22.04!
 - clean multipart temp files after upload?

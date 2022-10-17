@@ -83,6 +83,29 @@ func (vm *VM) SetOperation(op VMOperation) {
 	vm.WIP = op
 }
 
+// GetSecretsMap returns a map of secrets for a VM
+// The map contains all existing secrets, even if err is not nil
+func (vm *VM) GetSecretsMap() (map[string]string, error) {
+	res := make(map[string]string)
+
+	missing := make([]string, 0)
+
+	for _, secret := range vm.Config.Secrets {
+		secretValue, err := vm.App.SecretsDB.Get(secret)
+		if err != nil {
+			missing = append(missing, secret)
+		} else {
+			res[secret] = secretValue.Value
+		}
+	}
+
+	if len(missing) > 0 {
+		return res, fmt.Errorf("missing secrets: %s", strings.Join(missing, ", "))
+	}
+
+	return res, nil
+}
+
 // small helper to generate main disk name
 func vmGenDiskName(vmName *VMName) string {
 	diskName := vmName.ID() + ".qcow2"
@@ -192,6 +215,12 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		if err != nil {
 			return nil, nil, err
 		}
+	}
+
+	// quick check for missing secrets
+	_, err = vm.GetSecretsMap()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// check if backup exists (if a restore was requested)
@@ -1476,7 +1505,7 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 
 	configFile := vm.Config.FileContent
 
-	conf, err := NewVMConfigFromTomlReader(strings.NewReader(configFile), app.Origins)
+	conf, err := NewVMConfigFromTomlReader(strings.NewReader(configFile), app)
 	if err != nil {
 		return fmt.Errorf("decoding config: %s", err)
 	}

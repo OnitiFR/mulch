@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -103,8 +104,25 @@ func CloudInitDataGen(vm *VM, vmName *VMName, app *App) (string, string, error) 
 		}
 	}
 
+	// build extra env map
+	extraMap := make(map[string]string)
+
+	for key, val := range vm.Config.Env {
+		extraMap[key] = val
+	}
+
+	for _, keyPath := range vm.Config.Secrets {
+		secret, err := app.SecretsDB.Get(keyPath)
+		if err != nil {
+			app.Log.Errorf("error with secret '%s' for VM '%s': %s", keyPath, vmName, err)
+		}
+		key := filepath.Base(keyPath)
+
+		extraMap[key] = secret.Value
+	}
+
 	userDataVariables["__MAIN_ENV"] = cloudInitGenExports(mainEnv)
-	userDataVariables["__EXTRA_ENV"] = cloudInitGenExports(common.MapStringToInterface(vm.Config.Env))
+	userDataVariables["__EXTRA_ENV"] = cloudInitGenExports(common.MapStringToInterface(extraMap))
 
 	userData, err := cloudInitUserData(userDataTemplate, userDataVariables)
 	if err != nil {

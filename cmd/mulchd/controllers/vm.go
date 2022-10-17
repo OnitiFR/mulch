@@ -66,7 +66,7 @@ func VMControllerConfigCheck(req *server.Request) (*server.VMConfig, string, err
 	}
 	filename := header.Filename
 
-	conf, err := server.NewVMConfigFromTomlReader(configFile, req.App.Origins)
+	conf, err := server.NewVMConfigFromTomlReader(configFile, req.App)
 	if err != nil {
 		return nil, "", fmt.Errorf("decoding config: %s", err)
 	}
@@ -882,7 +882,7 @@ func RedefineVM(req *server.Request, vm *server.VM, active bool) error {
 	}
 	req.Stream.Tracef("reading '%s' config file", header.Filename)
 
-	conf, err := server.NewVMConfigFromTomlReader(configFile, req.App.Origins)
+	conf, err := server.NewVMConfigFromTomlReader(configFile, req.App)
 	if err != nil {
 		return fmt.Errorf("decoding config: %s", err)
 	}

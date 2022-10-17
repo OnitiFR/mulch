@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -42,6 +43,7 @@ type VMConfig struct {
 	CPUCount       int
 	Domains        []*common.Domain
 	Env            map[string]string
+	Secrets        []string
 	Ports          []*VMPort
 	BackupDiskSize uint64
 	BackupCompress bool
@@ -86,6 +88,7 @@ type tomlVMConfig struct {
 	RedirectToHTTPS bool `toml:"redirect_to_https"`
 	Redirects       [][]string
 	Env             [][]string
+	Secrets         []string
 	EnvRaw          string `toml:"env_raw"`
 	Ports           []string
 	BackupDiskSize  datasize.ByteSize `toml:"backup_disk_size"`
@@ -193,7 +196,9 @@ func vmConfigGetDoAction(tDoAction *tomlVMDoAction, origin *Origins) (*VMDoActio
 
 // NewVMConfigFromTomlReader cretes a new VMConfig instance from
 // a io.Reader containing VM configuration description
-func NewVMConfigFromTomlReader(configIn io.Reader, origins *Origins) (*VMConfig, error) {
+func NewVMConfigFromTomlReader(configIn io.Reader, app *App) (*VMConfig, error) {
+	origins := app.Origins
+
 	content, err := ioutil.ReadAll(configIn)
 	if err != nil {
 		return nil, err
@@ -390,6 +395,29 @@ func NewVMConfigFromTomlReader(configIn io.Reader, origins *Origins) (*VMConfig,
 
 		vmConfig.Env[key] = val
 	}
+
+	secrets := make(map[string]bool)
+	for _, keyPath := range tConfig.Secrets {
+		key := filepath.Base(keyPath)
+
+		_, exists := secrets[key]
+		if exists {
+			return nil, fmt.Errorf("duplicated secret '%s'", key)
+		}
+
+		_, exists = vmConfig.Env[key]
+		if exists {
+			return nil, fmt.Errorf("conflict with secret and environment variable named '%s'", key)
+		}
+
+		_, err := app.SecretsDB.Get(keyPath)
+		if err != nil {
+			return nil, fmt.Errorf("secret error: %s", err)
+		}
+		secrets[key] = true
+	}
+
+	vmConfig.Secrets = tConfig.Secrets
 
 	vmConfig.Ports, err = NewVMPortArray(tConfig.Ports)
 	if err != nil {

@@ -230,7 +230,7 @@ func (db *SeedDatabase) RefreshSeeder(seed *Seed, force bool) error {
 	}
 	defer stream.Close()
 
-	conf, err := NewVMConfigFromTomlReader(stream, db.app.Origins)
+	conf, err := NewVMConfigFromTomlReader(stream, db.app)
 	if err != nil {
 		return fmt.Errorf("decoding config: %s", err)
 	}
