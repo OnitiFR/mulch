@@ -121,7 +121,11 @@ func (db *SecretDatabase) Set(key string, value string, authorKey string) error 
 		return err
 	}
 
-	return db.SyncPeers()
+	if err = db.SyncPeers(); err != nil {
+		db.app.Log.Errorf(err.Error())
+	}
+
+	return nil
 }
 
 // delete a secret (low-level)
@@ -153,7 +157,11 @@ func (db *SecretDatabase) Delete(key string, authorKey string) error {
 		return err
 	}
 
-	return db.SyncPeers()
+	if err = db.SyncPeers(); err != nil {
+		db.app.Log.Error(err.Error())
+	}
+
+	return nil
 }
 
 // CleanKey returns a cleaned key path, if possible
@@ -277,8 +285,6 @@ func (db *SecretDatabase) load() error {
 		return fmt.Errorf("%s: only the owner should be able to read/write this file (mode 0600)", db.dbFilename)
 	}
 
-	// TODO: decode data with the passphrase
-
 	// read file in a buffer
 	buf, err := io.ReadAll(f)
 	if err != nil {
@@ -288,7 +294,7 @@ func (db *SecretDatabase) load() error {
 	// decrypt the JSON data
 	data, err := db.decrypt(buf)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to decrypt database %s: %s, check that the secret key is correct (%s)", db.dbFilename, err, db.passFilename)
 	}
 
 	err = json.Unmarshal(data, &db.db)
@@ -466,6 +472,7 @@ func (db *SecretDatabase) SyncPeer(peer ConfigPeer) error {
 				return err
 			}
 
+			// merge the newer entries into our database
 			_, err := db.SyncWithDatabase(newer)
 			if err != nil {
 				return err
@@ -482,37 +489,40 @@ func (db *SecretDatabase) SyncPeer(peer ConfigPeer) error {
 	return nil
 }
 
-// SyncWithDatabase syncs the secret database with another database (ex: from another peer)
-// returns entries that were added or updated later than the in the other database (so the other
-// peer can update its database too)
+// SyncWithDatabase syncs our secret database with another database (ex: from another peer)
+// It returns (our) "newer" entries so the remote peer can merge them into its own database.
 func (db *SecretDatabase) SyncWithDatabase(other SecretDatabaseEntries) (SecretDatabaseEntries, error) {
-	fmt.Println("syncing databases")
+	db.app.Log.Tracef("syncing with database, %d entries in", len(other))
 
-	// deadlock with Get/Delete :/
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
 	// build a map of our existing keys
-	existingKey := make(map[string]bool)
+	responseKeys := make(map[string]bool)
 	for key := range db.db {
-		existingKey[key] = true
+		responseKeys[key] = true
 	}
-
-	newer := make(SecretDatabaseEntries)
 
 	for _, entry := range other {
 		my, exists := db.db[entry.Key]
 		if !exists || entry.Modified.After(my.Modified) {
 			db.db[entry.Key] = entry
-		} else {
-			delete(existingKey, entry.Key)
+			delete(responseKeys, entry.Key)
+		}
+
+		if exists && !my.Modified.After(entry.Modified) {
+			delete(responseKeys, entry.Key)
 		}
 	}
 
+	newer := make(SecretDatabaseEntries)
+
 	// add all entries that were not in the other database, or that were older.
-	for key := range existingKey {
+	for key := range responseKeys {
 		newer[key] = db.db[key]
 	}
+
+	db.app.Log.Tracef("syncing with database, %d entries out", len(newer))
 
 	return newer, db.save()
 }

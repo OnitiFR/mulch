@@ -226,7 +226,7 @@ func (app *App) initSSHPairDB() error {
 
 func (app *App) initSecretDB() error {
 	dbPath := app.Config.DataPath + "/mulch-secrets.db"
-	passPath := app.Config.DataPath + "/secrets.key"
+	passPath := app.Config.DataPath + "/mulch-secrets.key"
 
 	db, err := NewSecretDatabase(dbPath, passPath, app)
 	if err != nil {
