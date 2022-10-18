@@ -479,10 +479,6 @@ func (db *SecretDatabase) SyncPeer(peer ConfigPeer) error {
 		return err
 	}
 
-	// receive the peer's newer secrets
-	// merge the secrets
-	// save the database
-
 	return nil
 }
 
@@ -513,8 +509,7 @@ func (db *SecretDatabase) SyncWithDatabase(other SecretDatabaseEntries) (SecretD
 		}
 	}
 
-	// add all entries that were not in the other database, or that were
-	// older.
+	// add all entries that were not in the other database, or that were older.
 	for key := range existingKey {
 		newer[key] = db.db[key]
 	}
