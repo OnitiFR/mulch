@@ -526,3 +526,84 @@ func (db *SecretDatabase) SyncWithDatabase(other SecretDatabaseEntries) (SecretD
 
 	return newer, db.save()
 }
+
+// GetVMsUsingSecret returns a list of VMs that use a given secret,
+// including other peers.
+func (db *SecretDatabase) GetVMsUsingSecret(key string) ([]string, error) {
+	res := make([]string, 0)
+
+	vmNames := db.app.VMDB.GetNames()
+	for _, vmName := range vmNames {
+		vm, err := db.app.VMDB.GetByName(vmName)
+		if err != nil {
+			return nil, fmt.Errorf("VM '%s': %s", vmName, err)
+		}
+		for _, secret := range vm.Config.Secrets {
+			if secret == key {
+				res = append(res, vmName.ID())
+			}
+		}
+	}
+
+	return res, nil
+}
+
+// GetPeersVMsUsingSecret returns a list of VMs that use a given secret on
+// all our peers.
+func (db *SecretDatabase) GetPeersVMsUsingSecret(key string) ([]string, error) {
+	res := make([]string, 0)
+
+	for _, peer := range db.app.Config.Peers {
+		if !peer.SyncSecrets {
+			continue
+		}
+
+		call := &PeerCall{
+			Peer:   peer,
+			Method: "GET",
+			Path:   "/vm/with-secret/" + key,
+			Args:   map[string]string{},
+			Log:    db.app.Log,
+			JSONCallback: func(reader io.Reader, _ http.Header) error {
+				var vms []string
+				dec := json.NewDecoder(reader)
+				err := dec.Decode(&vms)
+				if err != nil {
+					return err
+				}
+
+				for _, vm := range vms {
+					res = append(res, vm+"@"+peer.Name)
+				}
+
+				return nil
+			},
+		}
+
+		err := call.Do()
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	return res, nil
+}
+
+// GetAllVMsUsingSecret returns a list of VMs that use a given secret,
+// including on other peers.
+func (db *SecretDatabase) GetAllVMsUsingSecret(key string) ([]string, error) {
+	res, err := db.GetVMsUsingSecret(key)
+	if err != nil {
+		return nil, err
+	}
+
+	peers, err := db.GetPeersVMsUsingSecret(key)
+	if err != nil {
+		return nil, err
+	}
+
+	res = append(res, peers...)
+
+	return res, nil
+}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
 	"github.com/OnitiFR/mulch/common"
@@ -30,6 +31,16 @@ func SetSecretController(req *server.Request) {
 		return
 	}
 
+	vms, err := req.App.SecretsDB.GetAllVMsUsingSecret(key)
+	if err != nil {
+		req.Stream.Failure(err.Error())
+		return
+	}
+
+	if len(vms) > 0 {
+		req.Stream.Warningf("the following VMs will need a rebuild: %s", strings.Join(vms, ", "))
+	}
+
 	req.Stream.Successf("Secret '%s' defined", key)
 }
 
@@ -37,7 +48,12 @@ func SetSecretController(req *server.Request) {
 func GetSecretController(req *server.Request) {
 	req.Response.Header().Set("Content-Type", "text/plain")
 
-	key := req.SubPath
+	orgKey := req.SubPath
+	key, err := req.App.SecretsDB.CleanKey(orgKey)
+	if err != nil {
+		req.Stream.Failuref("Invalid key: %s", err)
+		return
+	}
 
 	secret, err := req.App.SecretsDB.Get(key)
 	if err != nil {
@@ -88,9 +104,25 @@ func ListSecretsController(req *server.Request) {
 func DeleteSecretController(req *server.Request) {
 	req.StartStream()
 
-	key := req.SubPath
+	orgKey := req.SubPath
+	key, err := req.App.SecretsDB.CleanKey(orgKey)
+	if err != nil {
+		req.Stream.Failuref("Invalid key: %s", err)
+		return
+	}
 
-	err := req.App.SecretsDB.Delete(key, req.APIKey.Comment)
+	vms, err := req.App.SecretsDB.GetAllVMsUsingSecret(key)
+	if err != nil {
+		req.Stream.Failure(err.Error())
+		return
+	}
+
+	if len(vms) > 0 {
+		req.Stream.Failuref("Cannot delete secret, it's used by the following VMs: %s", strings.Join(vms, ", "))
+		return
+	}
+
+	err = req.App.SecretsDB.Delete(key, req.APIKey.Comment)
 	if err != nil {
 		req.Stream.Failuref("Cannot delete secret: %s", err)
 		return
@@ -128,6 +160,31 @@ func SyncSecretsController(req *server.Request) {
 
 	enc := json.NewEncoder(req.Response)
 	err = enc.Encode(newer)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+	}
+}
+
+// GetVMsUsingSecretsController returns a list of VMs using a secret
+func GetVMsUsingSecretsController(req *server.Request) {
+	req.Response.Header().Set("Content-Type", "application/json")
+
+	orgKey := req.SubPath
+	key, err := req.App.SecretsDB.CleanKey(orgKey)
+	if err != nil {
+		req.Stream.Failuref("Invalid key: %s", err)
+		return
+	}
+
+	vms, err := req.App.SecretsDB.GetVMsUsingSecret(key)
+	if err != nil {
+		req.Stream.Failure(err.Error())
+		return
+	}
+
+	enc := json.NewEncoder(req.Response)
+	err = enc.Encode(vms)
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)
