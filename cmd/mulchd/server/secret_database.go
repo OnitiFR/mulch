@@ -84,27 +84,6 @@ func NewSecretDatabase(dbFilename string, passFilename string, app *App) (*Secre
 	return db, nil
 }
 
-// Set a secret value
-func (db *SecretDatabase) Set(key string, value string, authorKey string) error {
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
-
-	db.db[key] = &Secret{
-		Key:       key,
-		Value:     value,
-		Modified:  time.Now(),
-		AuthorKey: authorKey,
-		Deleted:   false,
-	}
-
-	err := db.save()
-	if err != nil {
-		return err
-	}
-
-	return db.SyncPeers()
-}
-
 // Get a secret value
 func (db *SecretDatabase) Get(key string) (*Secret, error) {
 	db.mutex.Lock()
@@ -118,8 +97,35 @@ func (db *SecretDatabase) Get(key string) (*Secret, error) {
 	return secret, nil
 }
 
-// Delete a secret value
-func (db *SecretDatabase) Delete(key string) error {
+// set a secret value (low-level)
+func (db *SecretDatabase) set(key string, value string, authorKey string, deleted bool) {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	db.db[key] = &Secret{
+		Key:       key,
+		Value:     value,
+		Modified:  time.Now(),
+		AuthorKey: authorKey,
+		Deleted:   false,
+	}
+}
+
+// Set a secret value
+func (db *SecretDatabase) Set(key string, value string, authorKey string) error {
+
+	db.set(key, value, authorKey, false)
+
+	err := db.Save()
+	if err != nil {
+		return err
+	}
+
+	return db.SyncPeers()
+}
+
+// delete a secret (low-level)
+func (db *SecretDatabase) delete(key string, authorKey string) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -128,10 +134,21 @@ func (db *SecretDatabase) Delete(key string) error {
 		return fmt.Errorf("secret '%s' not found", key)
 	}
 
+	secret.Value = ""
 	secret.Deleted = true
 	secret.Modified = time.Now()
 
-	err := db.save()
+	return nil
+}
+
+// Delete a secret value
+func (db *SecretDatabase) Delete(key string, authorKey string) error {
+	err := db.delete(key, authorKey)
+	if err != nil {
+		return err
+	}
+
+	err = db.Save()
 	if err != nil {
 		return err
 	}

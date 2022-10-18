@@ -90,7 +90,7 @@ func DeleteSecretController(req *server.Request) {
 
 	key := req.SubPath
 
-	err := req.App.SecretsDB.Delete(key)
+	err := req.App.SecretsDB.Delete(key, req.APIKey.Comment)
 	if err != nil {
 		req.Stream.Failuref("Cannot delete secret: %s", err)
 		return
