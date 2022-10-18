@@ -111,10 +111,10 @@ LAMP system. Environment variables are created with DB connection settings, htdo
 See [sample file](https://raw.github.com/OnitiFR/mulch/master/vm-samples/sample-vm-full.toml)
 for more examples: origins, GIT support, etc.
 
-#### Environment variables
+#### Environment variables and secrets
 
 It's also possible to define your own environment variables, providing various
-settings and secrets to your application.
+settings to your application.
 
 ```toml
 # Define system-wide environment variables
@@ -129,6 +129,19 @@ TEST3=foo
 TEST4="regular .env format"
 '''
 ```
+
+For secrets (API keys, passwords, …), you can use the `secrets` section:
+
+```toml
+# will inject OUR_API_KEY, SMTP_PASSWORD and ACCESS_KEY environment variables in the VM
+secrets = [
+    "OUR_API_KEY",
+    "customer1/mail/SMTP_PASSWORD",
+    "customer1/aws/ACCESS_KEY",
+]
+```
+
+To define secrets, use the client : `mulch secret set customer1/mail/SMTP_PASSWORD mysecretvalue`
 
 How does it works exactly?
 ---
@@ -276,7 +289,7 @@ proxy_chain_psk = "MySecretPreShareKey123"
 
 And that's it.
 
-#### VM migration
+#### VM migration and secret sharing
 In `mulchd.conf` config file, you can declare some other mulchd servers ("peers"), like so:
 ```toml
 [[peer]]
@@ -288,6 +301,12 @@ You can then move a VM from a server to another with minimal downtime :
 ```
 mulch vm migrate my_vm server2
 ```
+
+Peering also allow secret sharing between mulchd servers. Enable this feature
+with `sync_secrets = true` in the peer section.
+
+**It must be done in a bidirectional way: each server must declare the other
+as a peer and enable secret sharing.**
 
 #### Inter-VM communication
 By default, network traffic is not allowed between VMs, but you can choose to

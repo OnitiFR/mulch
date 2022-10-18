@@ -26,8 +26,6 @@ Resource leaks:
 Short term:
 - secret update: inform impacted VMs
 - secret delete: check VM usage
-- secrets: sync between peers (warning with deleted entries - delete log?)
-- secrets: doc / sample
 - secrets: check migration?
 - create rh-proxy-proto.sh
 - test and update install script for 22.04!

@@ -121,12 +121,13 @@ url = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64
 #seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2204_lamp.toml"
 # Seeders can also use origins: {core}/../vm-samples/seeders/ubuntu_2204_lamp.toml
 
-# Peers, allowing inter-mulchd VM migrations
+# Peers, allowing inter-mulchd VM migrations and secret sharing
 # (it's suggested to create a dedicated API key on the remote server)
 #[[peer]]
 #name = "server2"
 #url = "https://server2.mydomain.tld:8686"
 #key = "K8OpSluPnUzcL2XipfPwt14WBT79aegqe4lZikObMIsiErqgxxco0iptr5MliQCY"
+#sync_secrets = true # server2 must do the same with us
 
 # This origin can be used for any script in VM TOMLs: "admin@{core}/prepare/deb-comfort.sh"
 [[origin]]
