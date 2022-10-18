@@ -237,4 +237,9 @@ func AddRoutes(app *server.App) {
 		Handler: controllers.DeleteSecretController,
 	}, server.RouteAPI)
 
+	app.AddRoute(&server.Route{
+		Route:   "POST /secret-sync",
+		Handler: controllers.SyncSecretsController,
+	}, server.RouteAPI)
+
 }

@@ -27,6 +27,7 @@ type PeerCall struct {
 	UploadVolume      *PeerCallLibvirtFile
 	UploadString      *PeerCallStringFile
 	TextCallback      func(body []byte) error
+	JSONCallback      func(io.Reader, http.Header) error
 	HTTPErrorCallback func(code int, body []byte, httpError error) error
 	MessageCallback   func(m *common.Message) error
 
@@ -106,12 +107,14 @@ func (call *PeerCall) do() error {
 					errM := multipartWriter.WriteField(fieldname, value[0])
 					if errM != nil {
 						uploadErrChan <- errM
+						return
 					}
 				}
 
 				ff, errM := multipartWriter.CreateFormFile(strFile.FieldName, strFile.FileName)
 				if errM != nil {
 					uploadErrChan <- errM
+					return
 				}
 
 				ff.Write([]byte(strFile.Content))
@@ -119,6 +122,7 @@ func (call *PeerCall) do() error {
 				errM = multipartWriter.Close()
 				if errM != nil {
 					uploadErrChan <- errM
+					return
 				}
 
 				close(uploadErrChan)
@@ -252,12 +256,23 @@ func (call *PeerCall) do() error {
 
 		if call.TextCallback == nil {
 			return errors.New("unsupported text plain response")
-		} else {
-			err := call.TextCallback(body)
-			if err != nil {
-				return err
-			}
 		}
+
+		err = call.TextCallback(body)
+		if err != nil {
+			return err
+		}
+
+	case "application/json":
+		if call.JSONCallback == nil {
+			return errors.New("unsupported JSON response")
+		}
+
+		err := call.JSONCallback(resp.Body, resp.Header)
+		if err != nil {
+			return err
+		}
+
 	default:
 		return fmt.Errorf("unsupported content type '%s'", mime)
 	}

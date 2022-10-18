@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
 	"os"
 	"path"
 	"strconv"
@@ -17,9 +18,11 @@ import (
 	"time"
 )
 
+type SecretDatabaseEntries map[string]*Secret
+
 type SecretDatabase struct {
 	dbFilename   string
-	db           map[string]*Secret
+	db           SecretDatabaseEntries
 	passphrase   []byte
 	passFilename string
 	mutex        sync.Mutex
@@ -31,6 +34,7 @@ type Secret struct {
 	Value     string
 	Modified  time.Time
 	AuthorKey string
+	Deleted   bool
 }
 
 // NewSecretDatabase instanciates a new SecretDatabase, creating a new
@@ -38,7 +42,7 @@ type Secret struct {
 func NewSecretDatabase(dbFilename string, passFilename string, app *App) (*SecretDatabase, error) {
 	db := &SecretDatabase{
 		dbFilename:   dbFilename,
-		db:           make(map[string]*Secret),
+		db:           make(SecretDatabaseEntries),
 		passFilename: passFilename,
 		app:          app,
 	}
@@ -90,9 +94,15 @@ func (db *SecretDatabase) Set(key string, value string, authorKey string) error 
 		Value:     value,
 		Modified:  time.Now(),
 		AuthorKey: authorKey,
+		Deleted:   false,
 	}
 
-	return db.save()
+	err := db.save()
+	if err != nil {
+		return err
+	}
+
+	return db.SyncPeers()
 }
 
 // Get a secret value
@@ -101,7 +111,7 @@ func (db *SecretDatabase) Get(key string) (*Secret, error) {
 	defer db.mutex.Unlock()
 
 	secret, exists := db.db[key]
-	if !exists {
+	if !exists || secret.Deleted {
 		return nil, fmt.Errorf("secret '%s' not found", key)
 	}
 
@@ -113,14 +123,20 @@ func (db *SecretDatabase) Delete(key string) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	_, exists := db.db[key]
-	if !exists {
+	secret, exists := db.db[key]
+	if !exists || secret.Deleted {
 		return fmt.Errorf("secret '%s' not found", key)
 	}
 
-	delete(db.db, key)
+	secret.Deleted = true
+	secret.Modified = time.Now()
 
-	return db.save()
+	err := db.save()
+	if err != nil {
+		return err
+	}
+
+	return db.SyncPeers()
 }
 
 // CleanKey returns a cleaned key path, if possible
@@ -165,8 +181,10 @@ func (db *SecretDatabase) GetKeys() []string {
 	defer db.mutex.Unlock()
 
 	keys := make([]string, 0, len(db.db))
-	for key := range db.db {
-		keys = append(keys, key)
+	for key, secret := range db.db {
+		if !secret.Deleted {
+			keys = append(keys, key)
+		}
 	}
 
 	return keys
@@ -373,4 +391,116 @@ func (db *SecretDatabase) decrypt(data []byte) ([]byte, error) {
 	}
 
 	return decrypted, nil
+}
+
+// SyncPeers syncs the secret database with peers
+func (db *SecretDatabase) SyncPeers() error {
+	errors := make([]string, 0)
+
+	for _, peer := range db.app.Config.Peers {
+		if !peer.SyncSecrets {
+			continue
+		}
+
+		err := db.SyncPeer(peer)
+		if err != nil {
+			str := fmt.Sprintf("peer %s: %s", peer.Name, err)
+			errors = append(errors, str)
+		}
+	}
+
+	if len(errors) > 0 {
+		msg := strings.Join(errors, ", ")
+		return fmt.Errorf("failed to sync secrets: %s", msg)
+	}
+
+	return nil
+}
+
+// SyncPeer syncs the secret database with a peer
+func (db *SecretDatabase) SyncPeer(peer ConfigPeer) error {
+	db.app.Log.Tracef("syncing secrets with peer %s", peer.Name)
+
+	// get our db as a JSON string
+	buf, err := json.Marshal(db.db)
+	if err != nil {
+		return err
+	}
+
+	call := &PeerCall{
+		Peer:   peer,
+		Method: "POST",
+		Path:   "/secret-sync",
+		Args:   map[string]string{},
+		UploadString: &PeerCallStringFile{
+			FieldName: "db",
+			FileName:  "db.json",
+			Content:   string(buf),
+		},
+		Log: db.app.Log,
+		JSONCallback: func(reader io.Reader, _ http.Header) error {
+			// the response is a JSON string including all newer entries
+			// from the remote peer
+
+			newer := make(SecretDatabaseEntries)
+			dec := json.NewDecoder(reader)
+			err = dec.Decode(&newer)
+			if err != nil {
+				return err
+			}
+
+			_, err := db.SyncWithDatabase(newer)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
+	err = call.Do()
+	if err != nil {
+		return err
+	}
+
+	// receive the peer's newer secrets
+	// merge the secrets
+	// save the database
+
+	return nil
+}
+
+// SyncWithDatabase syncs the secret database with another database (ex: from another peer)
+// returns entries that were added or updated later than the in the other database (so the other
+// peer can update its database too)
+func (db *SecretDatabase) SyncWithDatabase(other SecretDatabaseEntries) (SecretDatabaseEntries, error) {
+	fmt.Println("syncing databases")
+
+	// deadlock with Get/Delete :/
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	// build a map of our existing keys
+	existingKey := make(map[string]bool)
+	for key := range db.db {
+		existingKey[key] = true
+	}
+
+	newer := make(SecretDatabaseEntries)
+
+	for _, entry := range other {
+		my, exists := db.db[entry.Key]
+		if !exists || entry.Modified.After(my.Modified) {
+			db.db[entry.Key] = entry
+		} else {
+			delete(existingKey, entry.Key)
+		}
+	}
+
+	// add all entries that were not in the other database, or that were
+	// older.
+	for key := range existingKey {
+		newer[key] = db.db[key]
+	}
+
+	return newer, db.save()
 }

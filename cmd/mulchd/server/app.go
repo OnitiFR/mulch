@@ -235,6 +235,11 @@ func (app *App) initSecretDB() error {
 
 	app.SecretsDB = db
 
+	err = app.SecretsDB.SyncPeers()
+	if err != nil {
+		app.Log.Errorf("error syncing secrets with peers: %s", err)
+	}
+
 	return nil
 }
 

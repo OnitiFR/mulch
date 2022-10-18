@@ -98,12 +98,15 @@ type ConfigSeed struct {
 	Seeder string
 }
 
+// ConfigPeer describes a peer
 type ConfigPeer struct {
-	Name string
-	URL  string
-	Key  string
+	Name        string
+	URL         string
+	Key         string
+	SyncSecrets bool
 }
 
+// ConfigOrigin describes an origin for scripts
 type ConfigOrigin struct {
 	Name       string
 	Type       string
@@ -144,9 +147,10 @@ type tomlConfigSeed struct {
 }
 
 type tomlConfigPeer struct {
-	Name string
-	URL  string
-	Key  string
+	Name        string
+	URL         string
+	Key         string
+	SyncSecrets bool `toml:"sync_secrets"`
 }
 
 type tomlConfigOrigin struct {

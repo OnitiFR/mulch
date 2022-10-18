@@ -35,7 +35,7 @@ mulch_super_user = "admin"
 
 # If you need to use a new SSH key for upcoming VMs, change this (generated on mulchd startup)
 # Leave this alone if you don't know what you're doing ;)
-mulch_super_user_ssh_key= "mulch_super_user"
+mulch_super_user_ssh_key = "mulch_super_user"
 
 # Listen address for SSH proxy
 proxy_listen_ssh = ":8022"

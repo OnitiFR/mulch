@@ -98,3 +98,38 @@ func DeleteSecretController(req *server.Request) {
 
 	req.Stream.Successf("Secret '%s' deleted", key)
 }
+
+// SyncSecretsController syncs secrets with another peer
+func SyncSecretsController(req *server.Request) {
+	req.Response.Header().Set("Content-Type", "application/json")
+
+	jsonFile, _, err := req.HTTP.FormFile("db")
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
+	db := make(server.SecretDatabaseEntries)
+	dec := json.NewDecoder(jsonFile)
+	err = dec.Decode(&db)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
+	newer, err := req.App.SecretsDB.SyncWithDatabase(db)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
+	enc := json.NewEncoder(req.Response)
+	err = enc.Encode(newer)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+	}
+}
