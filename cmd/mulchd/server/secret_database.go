@@ -251,7 +251,7 @@ func (db *SecretDatabase) saveToWriter(writer io.Writer) error {
 	}
 
 	// encrypt the JSON data
-	data, err := db.encrypt(buf)
+	data, err := db.Encrypt(buf)
 	if err != nil {
 		return err
 	}
@@ -292,7 +292,7 @@ func (db *SecretDatabase) load() error {
 	}
 
 	// decrypt the JSON data
-	data, err := db.decrypt(buf)
+	data, err := db.Decrypt(buf)
 	if err != nil {
 		return fmt.Errorf("failed to decrypt database %s: %s, check that the secret key is correct (%s)", db.dbFilename, err, db.passFilename)
 	}
@@ -373,7 +373,7 @@ func (db *SecretDatabase) generatePassphrase() error {
 }
 
 // encrypt data with the passphrase using AES and GCM
-func (db *SecretDatabase) encrypt(data []byte) ([]byte, error) {
+func (db *SecretDatabase) Encrypt(data []byte) ([]byte, error) {
 	block, err := aes.NewCipher(db.passphrase)
 	if err != nil {
 		return nil, err
@@ -395,7 +395,7 @@ func (db *SecretDatabase) encrypt(data []byte) ([]byte, error) {
 }
 
 // decrypt data with the passphrase using AES and GCM
-func (db *SecretDatabase) decrypt(data []byte) ([]byte, error) {
+func (db *SecretDatabase) Decrypt(data []byte) ([]byte, error) {
 	bloc, err := aes.NewCipher(db.passphrase)
 	if err != nil {
 		return nil, err
@@ -450,6 +450,12 @@ func (db *SecretDatabase) SyncPeer(peer ConfigPeer) error {
 		return err
 	}
 
+	// encrypt the JSON data
+	data, err := db.Encrypt(buf)
+	if err != nil {
+		return err
+	}
+
 	call := &PeerCall{
 		Peer:   peer,
 		Method: "POST",
@@ -457,23 +463,35 @@ func (db *SecretDatabase) SyncPeer(peer ConfigPeer) error {
 		Args:   map[string]string{},
 		UploadString: &PeerCallStringFile{
 			FieldName: "db",
-			FileName:  "db.json",
-			Content:   string(buf),
+			FileName:  "db.bin",
+			Content:   string(data),
 		},
 		Log: db.app.Log,
-		JSONCallback: func(reader io.Reader, _ http.Header) error {
-			// the response is a JSON string including all newer entries
-			// from the remote peer
-
-			newer := make(SecretDatabaseEntries)
-			dec := json.NewDecoder(reader)
-			err = dec.Decode(&newer)
+		BinaryCallback: func(reader io.Reader, _ http.Header) error {
+			// read the response
+			buf, err := io.ReadAll(reader)
 			if err != nil {
 				return err
 			}
 
+			// decrypt the JSON data
+			data, err := db.Decrypt(buf)
+			if err != nil {
+				return err
+			}
+
+			// unmarshal the JSON data
+			newer := make(SecretDatabaseEntries)
+			err = json.Unmarshal(data, &newer)
+			if err != nil {
+				return err
+			}
+
+			// the decrypted response is a JSON string including all newer entries
+			// from the remote peer
+
 			// merge the newer entries into our database
-			_, err := db.SyncWithDatabase(newer)
+			_, err = db.SyncWithDatabase(newer)
 			if err != nil {
 				return err
 			}

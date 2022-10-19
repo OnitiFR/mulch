@@ -305,8 +305,9 @@ mulch vm migrate my_vm server2
 Peering also allow secret sharing between mulchd servers. Enable this feature
 with `sync_secrets = true` in the peer section.
 
-**It must be done in a bidirectional way: each server must declare the other
-as a peer and enable secret sharing.**
+**It must be done in a bidirectional way:**
+ - each server must declare the all the others as peers, with `sync_secrets`
+ - all servers mush share the same encryption key (`mulch-secrets.key`)
 
 #### Inter-VM communication
 By default, network traffic is not allowed between VMs, but you can choose to

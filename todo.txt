@@ -24,9 +24,7 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Short term:
-- secrets: use encrypted DB for secret sync
-- secrets: update doc for "all other peers" vs "the other peer" + share same secret file info
-- secrets: check migration?
+- secrets: check/test migration?
 - create rh-proxy-proto.sh
 - test and update install script for 22.04!
 - clean multipart temp files after upload?

@@ -28,6 +28,7 @@ type PeerCall struct {
 	UploadString      *PeerCallStringFile
 	TextCallback      func(body []byte) error
 	JSONCallback      func(io.Reader, http.Header) error
+	BinaryCallback    func(io.Reader, http.Header) error
 	HTTPErrorCallback func(code int, body []byte, httpError error) error
 	MessageCallback   func(m *common.Message) error
 
@@ -269,6 +270,16 @@ func (call *PeerCall) do() error {
 		}
 
 		err := call.JSONCallback(resp.Body, resp.Header)
+		if err != nil {
+			return err
+		}
+
+	case "application/octet-stream":
+		if call.BinaryCallback == nil {
+			return errors.New("unsupported binary response")
+		}
+
+		err := call.BinaryCallback(resp.Body, resp.Header)
 		if err != nil {
 			return err
 		}

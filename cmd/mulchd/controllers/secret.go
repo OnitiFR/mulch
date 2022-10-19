@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"sort"
 	"strings"
@@ -133,24 +134,42 @@ func DeleteSecretController(req *server.Request) {
 
 // SyncSecretsController syncs secrets with another peer
 func SyncSecretsController(req *server.Request) {
-	req.Response.Header().Set("Content-Type", "application/json")
+	req.Response.Header().Set("Content-Type", "application/octet-stream ")
 
-	jsonFile, _, err := req.HTTP.FormFile("db")
+	// read content
+	content, _, err := req.HTTP.FormFile("db")
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)
 		return
 	}
 
+	buff, err := io.ReadAll(content)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
+	// decrypt
+	jsonFile, err := req.App.SecretsDB.Decrypt(buff)
+	if err != nil {
+		msg := fmt.Sprintf("Cannot decrypt secrets (%s), check that secret key matches both hosts", err)
+		req.App.Log.Error(msg)
+		http.Error(req.Response, msg, 500)
+		return
+	}
+
+	// unmarshal
 	db := make(server.SecretDatabaseEntries)
-	dec := json.NewDecoder(jsonFile)
-	err = dec.Decode(&db)
+	err = json.Unmarshal(jsonFile, &db)
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)
 		return
 	}
 
+	// sync
 	newer, err := req.App.SecretsDB.SyncWithDatabase(db)
 	if err != nil {
 		req.App.Log.Error(err.Error())
@@ -158,8 +177,24 @@ func SyncSecretsController(req *server.Request) {
 		return
 	}
 
-	enc := json.NewEncoder(req.Response)
-	err = enc.Encode(newer)
+	// marshal response (to []byte)
+	buff, err = json.Marshal(newer)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
+	// encrypt response
+	encrypted, err := req.App.SecretsDB.Encrypt(buff)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
+	// write response
+	_, err = req.Response.Write(encrypted)
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)
