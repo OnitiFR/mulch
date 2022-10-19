@@ -35,6 +35,7 @@ Short term:
   - vm disk create, seed storage, backup uploads, etc
   - starts at 30MB/s, ends at 5
   - libvirt 100% CPU
+  - seems better now? (fedora update? new "volume copy" sytem?)
 - vm info: show ports?
 - mulch client port forwarding (via SSH)?
 - README: add image for vm migration?
@@ -68,6 +69,7 @@ Short term:
   - must be available BEFORE the backup even exists (ex: rebuild)
 
 Long term:
+- purge old secrets (warning with long time disconnected peers)
 - full async API?
 - write API public documentation
 - continue tests on snapshots (see branch "snapshots")
