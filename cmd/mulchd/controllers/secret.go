@@ -134,7 +134,7 @@ func DeleteSecretController(req *server.Request) {
 
 // SyncSecretsController syncs secrets with another peer
 func SyncSecretsController(req *server.Request) {
-	req.Response.Header().Set("Content-Type", "application/octet-stream ")
+	req.Response.Header().Set("Content-Type", "application/octet-stream")
 
 	// read content
 	content, _, err := req.HTTP.FormFile("db")
