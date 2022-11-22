@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # -- Run with sudo privileges
-# For: Debian 9+ (Ubuntu 22.04 will probably fail)
+# For: Debian 9+ 
+# Ubuntu 22.04 will fail: kernel NFS server module is removed from cloud image!
 
 # You must define the exported path with NFS4_EXPORT.
 # This directory will be created by the script.
