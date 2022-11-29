@@ -120,6 +120,7 @@ sudo a2enmod rewrite expires || exit $?
 sudo sed -i 's/^disable_functions = \(.*\)/disable_functions = \1phpinfo,/' /etc/php/*/apache2/php.ini || exit $?
 
 # Adminer
+echo "downloading Adminer…"
 adminer_url="https://www.adminer.org/latest.php"
 sudo mkdir -p /usr/share/adminer || exit $?
 sudo wget -q -O /usr/share/adminer/adminer.php "$adminer_url" || exit $?
