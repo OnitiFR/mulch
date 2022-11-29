@@ -1216,7 +1216,7 @@ func MigrateVM(req *server.Request, vm *server.VM, vmName *server.VMName) error 
 		req.Stream.Error(err.Error())
 	}
 
-	if !keepSourceActive {
+	if keepSourceActive {
 		log.Infof("downtime: none (kept source active)")
 	} else {
 		if sourceActive {
