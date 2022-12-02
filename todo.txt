@@ -24,9 +24,8 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Short term:
-- secrets: check/test migration?
 - create rh-proxy-proto.sh
-- test and update install script for 22.04!
+- test and update install script for 22.04/22.10
 - clean multipart temp files after upload?
   - issue only exists for http2 (so not on a local dev env)
   - should be fixed with Go 1.20 : https://github.com/golang/go/issues/20253
@@ -39,10 +38,11 @@ Short term:
 - vm info: show ports?
 - mulch client port forwarding (via SSH)?
 - README: add image for vm migration?
+- rewrite README, with "public release" in mind?
 - human readable "mulch status" (keep current output with a -b?)
 - explore vm migration possible edge case:
   // migration of active VM ok → local vm deletion → an existing
-	// "lower" inactive VM is activated (unharmful error if source was active?)
+  // "lower" inactive VM is activated (unharmful error if source was active?)
 - systemd CapabilityBoundingSet/AmbientCapabilities = CAP_NET_BIND_SERVICE (+NoNewPrivileges=true) [systemd v229+]
 - make backup available at "prepare" stage during a restore?
 - allow to globally disable auto-rebuild?
@@ -64,7 +64,6 @@ Short term:
 - on redefine, show what's instantaneous and what's needing a rebuild?
 - allow a cron-style syntax for auto_rebuild
 - like restore_backup, allow to restore from a VM (ex: autorebuild from prod)
-- backup expiration?
 - "meta" informations for restore? (ex: gitlab version)
   - must be available BEFORE the backup even exists (ex: rebuild)
 
@@ -78,6 +77,7 @@ Long term:
   - (dhcp/dnsmasq? ebtables? mulch-network restart?)
 - libvirtd watchdog + alert (ex: timeout in VMStateDatabase?)
 - clean VM XML template (ex: no display device [serial console])
+- remove libvirt? (direct use of QEMU/KVM)
 - create a nice and shiny website for Mulch project
 - have a look at ansible? (for sample scripts)
 - remove the need to supply the VM name for redefine command?
@@ -87,6 +87,7 @@ Long term:
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
 - check for missing response.Body.Close() (or things like that)
 - check for io.Reader bad usages ("they must record the number of bytes read into the buffer, reslice the buffer, process that data, and only then, consult the error." https://dave.cheney.net/2019/09/05/dont-force-allocations-on-the-callers-of-your-api)
+- "hidden multi-server support"? (with a "proxy mulchd" routing requests to the correct real mulchd)
 
 - change HTTP code from 200 to 4XX in controllers when things fails (ex: req.Stream.Failure)
   - in client, make the non-200 error message silent in stream mode?
