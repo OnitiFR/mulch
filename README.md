@@ -410,12 +410,13 @@ How do I install the server? (mulchd and mulch-proxy)
 
 ### Requirements:
 
-#### Ubuntu (19.04 / 18.10 / 18.04 / 20.04) / Debian (10)
+#### Ubuntu (22.04)
 ```
 sudo apt install golang-go
 sudo apt install ebtables gawk libxml2-utils libcap2-bin dnsmasq libvirt-daemon-system libvirt-dev
 sudo apt install git pkg-config build-essential qemu-kvm
 sudo usermod -aG libvirt USER # replace USER by the user running mulchd
+sudo setfacl -m g:libvirt-qemu:x /home/USER
 ```
 
 #### Fedora:

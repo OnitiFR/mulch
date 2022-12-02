@@ -106,7 +106,7 @@ url = "http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow
 
 [[seed]]
 name = "rocky_8"
-url = "http://dl.rockylinux.org/pub/rocky/8/images/Rocky-8-GenericCloud.latest.x86_64.qcow2"
+url = "https://dl.rockylinux.org/pub/rocky/8/images/x86_64/Rocky-8-GenericCloud.latest.x86_64.qcow2"
 
 [[seed]]
 name = "ubuntu_2004"

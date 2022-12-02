@@ -1,11 +1,13 @@
 #!/bin/bash
 
+# Note: only Ubuntu 22.04+ is supported currently, since Go 1.18+ is needed
+
 # Debian 10: git, pkg-config, build-essential, qemu-kvm
 
 echo "This is a Mulch server install script for Ubuntu."
 echo "It was tested on: (default server install)"
-echo " - Ubuntu 18.04 to 20.04"
-echo " - Debian 10"
+echo " - Ubuntu 22.04"
+#echo " - Debian 10"
 echo "It's intended to be used for a quick demo install, since most settings are left to default values."
 echo ""
 echo "This script will install packages, services, create users, etc. IT MAY BUTCHER YOUR SYSTEM!"
@@ -23,6 +25,7 @@ if [ "$uid" -ne 0 ]; then
 fi
 
 # 1st line is Debian (10) specific
+apt update || exit $?
 apt -y -qq install \
     git pkg-config build-essential qemu-kvm \
     golang-go \
@@ -34,11 +37,15 @@ if [ ! -d /home/mulch ]; then
     useradd mulch -s /bin/bash -m -G libvirt || exit $?
 fi
 
-echo "Updating Go ACME client… (needed for Let's Encrypt ACMEv2)"
-go get -u golang.org/x/crypto/acme/autocert || exit $?
+setfacl -m g:libvirt-qemu:x /home/mulch/ || exit $?
+
+#echo "Updating Go ACME client… (needed for Let's Encrypt ACMEv2)"
+#go get -u golang.org/x/crypto/acme/autocert || exit $?
 
 echo "Compiling and installing mulch…"
-sudo -iu mulch go get -u github.com/OnitiFR/mulch/cmd/... || exit $?
+sudo -iu mulch mkdir -p /home/mulch/go/src/github.com/OnitiFR/mulch || exit $?
+sudo -iu mulch git clone https://github.com/OnitiFR/mulch.git /home/mulch/go/src/github.com/OnitiFR/mulch || exit $?
+sudo -iu mulch sh -c "cd /home/mulch/go/src/github.com/OnitiFR/mulch && go install ./cmd/..." || exit $?
 sudo -iu mulch mkdir -p /home/mulch/mulch/etc /home/mulch/mulch/data /home/mulch/mulch/storage || exit $?
 cd /home/mulch/go/src/github.com/OnitiFR/mulch || exit $?
 sudo -iu mulch /home/mulch/go/src/github.com/OnitiFR/mulch/install.sh --etc /home/mulch/mulch/etc/ --data /home/mulch/mulch/data/ --storage /home/mulch/mulch/storage/ || exit $?
