@@ -121,7 +121,10 @@ sudo sed -i 's/^disable_functions = \(.*\)/disable_functions = \1phpinfo,/' /etc
 
 # Adminer
 echo "downloading Adminer…"
-adminer_url="https://www.adminer.org/latest.php"
+# TLS cert is currently half-expired on adminer.org
+#adminer_url="https://www.adminer.org/latest.php"
+adminer_url="https://github.com/vrana/adminer/releases/download/v4.8.1/adminer-4.8.1.php"
+
 sudo mkdir -p /usr/share/adminer || exit $?
 sudo wget -q -O /usr/share/adminer/adminer.php "$adminer_url" || exit $?
 
