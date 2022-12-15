@@ -24,6 +24,14 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Short term:
+Dec 07 23:33:42 mulch2 mulchd[3986836]: INFO(vm1): VM locked
+Dec 07 23:33:42 mulch2 mulchd[3986836]: INFO(vm1): downtime: 2m35.083687403s
+Dec 07 23:33:43 mulch2 mulchd[3986836]: INFO(): HUP signal sent to mulch-proxy
+Dec 07 23:33:44 mulch2 mulchd[3986836]: INFO(vm1): auto-rebuild successful for 'vm1' (rev 109)
+Dec 07 23:33:44 mulch2 mulchd[3986836]: INFO(vm2): auto-rebuilding 'vm2' (rev 56)
+Dec 07 23:33:44 mulch2 mulchd[3986836]: INFO(vm2): creating new VM 'vm2'
+Dec 07 23:33:44 mulch2 mulchd[3986836]: INFO(vm2): creating VM disk 'vm2-r57.qcow2'
+Dec 07 23:33:45 mulch2 mulchd[3986836]: INFO(): HUP signal sent to mulch-proxy (probably delayed)
 Dec 07 23:33:45 mulch2 mulchd[3986836]: panic: runtime error: invalid memory address or nil pointer dereference
 Dec 07 23:33:45 mulch2 mulchd[3986836]: [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x7518c7]
 Dec 07 23:33:45 mulch2 mulchd[3986836]: goroutine 87 [running]:
