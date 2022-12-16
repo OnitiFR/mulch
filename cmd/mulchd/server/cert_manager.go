@@ -9,7 +9,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -86,7 +85,7 @@ func (cm *CertManager) GetAPICertificate(hello *tls.ClientHelloInfo) (*tls.Certi
 	}
 
 	cm.Log.Trace("reading API TLS cert from disk")
-	content, err := ioutil.ReadFile(certPath)
+	content, err := os.ReadFile(certPath)
 	if err != nil {
 		return nil, fmt.Errorf("reading '%s': %s", certPath, err)
 	}

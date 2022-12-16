@@ -45,7 +45,7 @@ type AppConfig struct {
 	// TODO: create path if needed on startup
 	DataPath string
 
-	// temporary files path (ioutil.TempFile)
+	// temporary files path
 	TempPath string
 
 	// prefix for VM names (in libvirt)

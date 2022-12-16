@@ -3,7 +3,6 @@ package client
 import (
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
@@ -71,12 +70,12 @@ func WriteSSHPair(reader io.Reader) (string, string, error) {
 	privFilePath := GetSSHPath(MulchSSHSubDir + SSHKeyPrefix + GlobalConfig.Server.Name)
 	pubFilePath := privFilePath + ".pub"
 
-	err = ioutil.WriteFile(privFilePath, []byte(data.Private), 0600)
+	err = os.WriteFile(privFilePath, []byte(data.Private), 0600)
 	if err != nil {
 		return "", "", err
 	}
 
-	err = ioutil.WriteFile(pubFilePath, []byte(data.Public), 0644)
+	err = os.WriteFile(pubFilePath, []byte(data.Public), 0644)
 	if err != nil {
 		return "", "", err
 	}

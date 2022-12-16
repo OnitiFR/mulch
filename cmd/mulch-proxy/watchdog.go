@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -110,7 +110,7 @@ func watchProxy(url string, log *Log) error {
 	defer response2.Body.Close()
 
 	// drain response
-	_, err = ioutil.ReadAll(response2.Body)
+	_, err = io.ReadAll(response2.Body)
 	if err != nil {
 		// we've also seen timeout related issues* thru this drain, so we consider this as a fatal failure
 		// * "context deadline exceeded (Client.Timeout or context cancellation while reading body)"

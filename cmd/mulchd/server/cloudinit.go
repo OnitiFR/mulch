@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -21,7 +21,7 @@ func cloudInitMetaData(id string, hostname string) []byte {
 }
 
 func cloudInitUserData(templateFile string, variables map[string]interface{}) ([]byte, error) {
-	data, err := ioutil.ReadFile(templateFile)
+	data, err := os.ReadFile(templateFile)
 	if err != nil {
 		return nil, err
 	}

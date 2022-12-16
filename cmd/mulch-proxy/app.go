@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -132,7 +131,7 @@ func (app *App) checkDataPath() error {
 	}
 	lastPidFilename := path.Clean(app.Config.DataPath + "/mulch-proxy-last.pid")
 	pid := os.Getpid()
-	ioutil.WriteFile(lastPidFilename, []byte(strconv.Itoa(pid)), 0644)
+	os.WriteFile(lastPidFilename, []byte(strconv.Itoa(pid)), 0644)
 	return nil
 }
 

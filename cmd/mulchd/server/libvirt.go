@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -121,7 +120,7 @@ func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, temp
 		if virtErr.Domain == libvirt.FROM_STORAGE && virtErr.Code == libvirt.ERR_NO_STORAGE_POOL {
 			log.Info(fmt.Sprintf("storage pool '%s' not found, let's create it", poolName))
 
-			xml, err := ioutil.ReadFile(templateFile)
+			xml, err := os.ReadFile(templateFile)
 			if err != nil {
 				return nil, nil, fmt.Errorf("GetOrCreateStoragePool: %s: %s", templateFile, err)
 			}
@@ -204,7 +203,7 @@ func (lv *Libvirt) GetOrCreateNetwork(networkName string, templateFile string, l
 		if virtErr.Domain == libvirt.FROM_NETWORK && virtErr.Code == libvirt.ERR_NO_NETWORK {
 			log.Info(fmt.Sprintf("network '%s' not found, it's OK, let's create it", networkName))
 
-			xml, err := ioutil.ReadFile(templateFile)
+			xml, err := os.ReadFile(templateFile)
 			if err != nil {
 				return nil, nil, fmt.Errorf("GetOrCreateNetwork: %s: %s", templateFile, err)
 			}
@@ -259,7 +258,7 @@ func (lv *Libvirt) GetOrCreateNWFilter(filterName string, templateFile string, l
 		if virtErr.Domain == libvirt.FROM_NWFILTER && virtErr.Code == libvirt.ERR_NO_NWFILTER {
 			log.Info(fmt.Sprintf("nwfilter '%s' not found, it's OK, let's create it", filterName))
 
-			xml, err := ioutil.ReadFile(templateFile)
+			xml, err := os.ReadFile(templateFile)
 			if err != nil {
 				return nil, fmt.Errorf("GetOrCreateNWFilter: %s: %s", templateFile, err)
 			}
@@ -296,7 +295,7 @@ func (lv *Libvirt) CloneVolume(srcVolName string, srcPool *libvirt.StoragePool, 
 	defer volSrc.Free()
 
 	// create dest volume
-	xml, err := ioutil.ReadFile(volumeTemplateFile)
+	xml, err := os.ReadFile(volumeTemplateFile)
 	if err != nil {
 		return err
 	}
@@ -348,7 +347,7 @@ func (lv *Libvirt) UploadFileToLibvirtFromReader(pool *libvirt.StoragePool, pool
 	}
 
 	// create dest volume
-	xml, err := ioutil.ReadFile(template)
+	xml, err := os.ReadFile(template)
 	if err != nil {
 		return err
 	}
@@ -538,14 +537,14 @@ func (lv *Libvirt) BackupCompress(volName string, template string, tmpPath strin
 		return nil
 	}
 
-	tmpfileUncomp, err := ioutil.TempFile(tmpPath, "mulch-backup-uncomp")
+	tmpfileUncomp, err := os.CreateTemp(tmpPath, "mulch-backup-uncomp")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(tmpfileUncomp.Name())
 	tmpfileUncomp.Close()
 
-	tmpfileComp, err := ioutil.TempFile(tmpPath, "mulch-backup-comp")
+	tmpfileComp, err := os.CreateTemp(tmpPath, "mulch-backup-comp")
 	if err != nil {
 		return err
 	}

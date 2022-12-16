@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -199,7 +198,7 @@ func vmConfigGetDoAction(tDoAction *tomlVMDoAction, origin *Origins) (*VMDoActio
 func NewVMConfigFromTomlReader(configIn io.Reader, app *App) (*VMConfig, error) {
 	origins := app.Origins
 
-	content, err := ioutil.ReadAll(configIn)
+	content, err := io.ReadAll(configIn)
 	if err != nil {
 		return nil, err
 	}

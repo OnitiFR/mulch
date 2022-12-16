@@ -2,7 +2,6 @@ package common
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"strconv"
@@ -112,7 +111,7 @@ func StringExpandVariables(str string, variables map[string]interface{}) string 
 
 // FileContains returns true if file contain text
 func FileContains(filepath string, text string) (bool, error) {
-	data, err := ioutil.ReadFile(filepath)
+	data, err := os.ReadFile(filepath)
 	if err != nil {
 		return false, err
 	}

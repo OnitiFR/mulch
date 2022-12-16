@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -426,7 +425,7 @@ func (db *SeedDatabase) RefreshSeed(seed *Seed, force bool) error {
 }
 
 func (db *SeedDatabase) seedDownload(seed *Seed, tmpPath string) (string, error) {
-	tmpfile, err := ioutil.TempFile(tmpPath, "mulch-seed-image")
+	tmpfile, err := os.CreateTemp(tmpPath, "mulch-seed-image")
 	if err != nil {
 		return "", err
 	}

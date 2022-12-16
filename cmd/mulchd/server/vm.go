@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
@@ -288,7 +287,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 
 	// 3 - define domain
 	log.Infof("defining vm domain (%s)", domainName)
-	xml, err := ioutil.ReadFile(app.Config.GetTemplateFilepath("vm.xml"))
+	xml, err := os.ReadFile(app.Config.GetTemplateFilepath("vm.xml"))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -952,7 +951,7 @@ func VMAttachBackup(vmName *VMName, volName string, app *App) error {
 	}
 	defer dom.Free()
 
-	xml, err := ioutil.ReadFile(app.Config.GetTemplateFilepath("disk.xml"))
+	xml, err := os.ReadFile(app.Config.GetTemplateFilepath("disk.xml"))
 	if err != nil {
 		return err
 	}

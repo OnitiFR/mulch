@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -23,7 +22,7 @@ type sshConfigCmdDataStruct struct {
 
 var sshConfigCmdData sshConfigCmdDataStruct
 
-//  sshConfigCmd represents the "ssh-config" command
+// sshConfigCmd represents the "ssh-config" command
 var sshConfigCmd = &cobra.Command{
 	Use:   "ssh-config",
 	Short: "Update local SSH config",
@@ -74,12 +73,12 @@ func sshConfigCmdPairCB(reader io.Reader, _ http.Header) {
 	pubFilePath := privFilePath + ".pub"
 	sshConfigCmdData.privKeyPath = privFilePath
 
-	err = ioutil.WriteFile(privFilePath, []byte(data.Private), 0600)
+	err = os.WriteFile(privFilePath, []byte(data.Private), 0600)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	err = ioutil.WriteFile(pubFilePath, []byte(data.Public), 0644)
+	err = os.WriteFile(pubFilePath, []byte(data.Public), 0644)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -180,7 +179,7 @@ Host *
 	includeIsHere, _ := common.FileContains(configPath, includeString)
 	if !includeIsHere {
 		if !common.PathExist(configPath) {
-			err := ioutil.WriteFile(configPath, []byte(sampleContent), 0600)
+			err := os.WriteFile(configPath, []byte(sampleContent), 0600)
 			if err != nil {
 				log.Fatal(err.Error())
 			}

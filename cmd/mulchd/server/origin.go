@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -194,7 +193,7 @@ func getContentFromGitOrigin(origin *Origin, pathStr string) (io.ReadCloser, err
 
 		// go-git default is to use ssh-agent
 		if originConf.SSHKeyFile != "" {
-			sshKey, err := ioutil.ReadFile(originConf.SSHKeyFile)
+			sshKey, err := os.ReadFile(originConf.SSHKeyFile)
 			if err != nil {
 				return nil, err
 			}

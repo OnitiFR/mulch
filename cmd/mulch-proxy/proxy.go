@@ -5,11 +5,12 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -80,7 +81,7 @@ func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 		}
 		return &http.Response{
 			StatusCode:    http.StatusBadGateway,
-			Body:          ioutil.NopCloser(bytes.NewBufferString(body)),
+			Body:          io.NopCloser(bytes.NewBufferString(body)),
 			ContentLength: int64(len(body)),
 			Request:       req,
 			Header:        make(http.Header),
@@ -141,7 +142,7 @@ func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 }
 
 func (proxy *ProxyServer) genErrorPage(code int, message string) (string, error) {
-	htmlBytes, err := ioutil.ReadFile(proxy.config.ErrorHTMLTemplateFile)
+	htmlBytes, err := os.ReadFile(proxy.config.ErrorHTMLTemplateFile)
 	if err != nil {
 		return err.Error(), err
 	}

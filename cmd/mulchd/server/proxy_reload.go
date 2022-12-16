@@ -1,7 +1,6 @@
 package server
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
@@ -48,7 +47,7 @@ func (pr *ProxyReloader) sendProxyReloadSignal() {
 	app := pr.app
 
 	lastPidFilename := path.Clean(app.Config.DataPath + "/mulch-proxy-last.pid")
-	data, err := ioutil.ReadFile(lastPidFilename)
+	data, err := os.ReadFile(lastPidFilename)
 	if err != nil {
 		app.Log.Errorf("reloading mulch-proxy config: %s", err)
 		return

@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 
@@ -62,7 +61,7 @@ func SearchSSHAuthorizedKey(searchedPubKey ssh.PublicKey, authorizedKeysFile str
 		return nil, "", fmt.Errorf("%s: only the owner should be able to read/write this file (chmod 0600 %s)", authorizedKeysFile, authorizedKeysFile)
 	}
 
-	authorizedKeysBytes, err := ioutil.ReadFile(authorizedKeysFile)
+	authorizedKeysBytes, err := os.ReadFile(authorizedKeysFile)
 	if err != nil {
 		return nil, "", err
 	}

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -102,7 +101,7 @@ func (connection *SSHConnection) Connect() error {
 
 // PublicKeyFile returns an AuthMethod using a private key file
 func PublicKeyFile(file string) ssh.AuthMethod {
-	buffer, err := ioutil.ReadFile(file)
+	buffer, err := os.ReadFile(file)
 	if err != nil {
 		return nil
 	}
@@ -132,7 +131,7 @@ func SSHAgent(pubkeyFile string, log *Log) (ssh.AuthMethod, error) {
 			return nil, fmt.Errorf("requesting SSH agent key/signer list: %s", err)
 		}
 
-		buffer, err := ioutil.ReadFile(pubkeyFile)
+		buffer, err := os.ReadFile(pubkeyFile)
 		if err != nil {
 			return nil, fmt.Errorf("reading public key '%s': %s", pubkeyFile, err)
 		}
