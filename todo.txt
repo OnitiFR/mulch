@@ -24,7 +24,6 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Short term:
-- test and update install script for 22.04/22.10
 - clean multipart temp files after upload?
   - issue only exists for http2 (so not on a local dev env)
   - should be fixed with Go 1.20 : https://github.com/golang/go/issues/20253
