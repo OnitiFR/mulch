@@ -24,7 +24,6 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Short term:
-- create rh-proxy-proto.sh
 - test and update install script for 22.04/22.10
 - clean multipart temp files after upload?
   - issue only exists for http2 (so not on a local dev env)
