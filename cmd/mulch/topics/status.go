@@ -80,17 +80,20 @@ func statusDisplay(reader io.Reader, headers http.Header) {
 
 	// support for mulchd < 1.37.6
 	if data.TotalStorageMB == 0 || data.TotalBackupMB == 0 {
-		data.TotalStorageMB = 1
-		data.TotalBackupMB = 1
-		color.Red("WARNING: mulchd < 1.37.6 detected, disk stats are broken")
+		color.Red("WARNING: mulchd < 1.37.6 detected, only basic disk stats available")
+		fmt.Printf("Host free disk storage: %s\n", (datasize.ByteSize(data.FreeStorageMB) * datasize.MB).HR())
+		fmt.Printf("Host free backup storage: %s\n", (datasize.ByteSize(data.FreeBackupMB) * datasize.MB).HR())
+		fmt.Printf("Provisioned VM storage: %s\n", (datasize.ByteSize(data.ProvisionedDisksMB) * datasize.MB).HR())
+		fmt.Printf("Allocated VM storage: %s\n", (datasize.ByteSize(data.AllocatedDisksMB) * datasize.MB).HR())
+	} else {
+		s = em("%s free", (datasize.ByteSize(data.FreeStorageMB) * datasize.MB).HR())
+		s2 := em("%d%% used", 100-(data.FreeStorageMB*100/data.TotalStorageMB))
+		fmt.Printf("Host disk storage: %s available, %s (%s)\n", (datasize.ByteSize(data.TotalStorageMB) * datasize.MB).HR(), s, s2)
+		fmt.Printf("Backup storage: %s available, %s free (%d%% used)\n", (datasize.ByteSize(data.TotalBackupMB) * datasize.MB).HR(), (datasize.ByteSize(data.FreeBackupMB) * datasize.MB).HR(), 100-(data.FreeBackupMB*100/data.TotalBackupMB))
+		s = em("%d%% of host storage", data.ProvisionedDisksMB*100/data.TotalStorageMB)
+		fmt.Printf("Provisioned VM storage: %s (%s)\n", (datasize.ByteSize(data.ProvisionedDisksMB) * datasize.MB).HR(), s)
+		fmt.Printf("Allocated VM storage: %s (%d%% of storage, %d%% of provisioned)\n", (datasize.ByteSize(data.AllocatedDisksMB) * datasize.MB).HR(), data.AllocatedDisksMB*100/data.TotalStorageMB, data.AllocatedDisksMB*100/data.ProvisionedDisksMB)
 	}
-	s = em("%s free", (datasize.ByteSize(data.FreeStorageMB) * datasize.MB).HR())
-	s2 := em("%d%% used", 100-(data.FreeStorageMB*100/data.TotalStorageMB))
-	fmt.Printf("Host disk storage: %s available, %s (%s)\n", (datasize.ByteSize(data.TotalStorageMB) * datasize.MB).HR(), s, s2)
-	fmt.Printf("Backup storage: %s available, %s free (%d%% used)\n", (datasize.ByteSize(data.TotalBackupMB) * datasize.MB).HR(), (datasize.ByteSize(data.FreeBackupMB) * datasize.MB).HR(), 100-(data.FreeBackupMB*100/data.TotalBackupMB))
-	s = em("%d%% of host storage", data.ProvisionedDisksMB*100/data.TotalStorageMB)
-	fmt.Printf("Provisioned VM storage: %s (%s)\n", (datasize.ByteSize(data.ProvisionedDisksMB) * datasize.MB).HR(), s)
-	fmt.Printf("Allocated VM storage: %s (%d%% of storage, %d%% of provisioned)\n", (datasize.ByteSize(data.AllocatedDisksMB) * datasize.MB).HR(), data.AllocatedDisksMB*100/data.TotalStorageMB, data.AllocatedDisksMB*100/data.ProvisionedDisksMB)
 
 	fmt.Println("---")
 
