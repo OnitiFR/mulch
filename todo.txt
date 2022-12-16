@@ -37,7 +37,6 @@ Short term:
 - mulch client port forwarding (via SSH)?
 - README: add image for vm migration?
 - rewrite README, with "public release" in mind?
-- human readable "mulch status" (keep current output with a -b?)
 - explore vm migration possible edge case:
   // migration of active VM ok → local vm deletion → an existing
   // "lower" inactive VM is activated (unharmful error if source was active?)
