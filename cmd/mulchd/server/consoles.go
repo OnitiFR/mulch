@@ -236,6 +236,27 @@ func (cr *ConsoleReader) Start() error {
 		return err
 	}
 
+	/* seen a strange case (Dec 07 2022):
+	23:33:44 mulch2 mulchd: INFO(vm): creating VM disk 'vm-r57.qcow2'
+	23:33:45 mulch2 mulchd: INFO(): HUP signal sent to mulch-proxy
+	23:33:45 mulch2 mulchd: panic: runtime error: invalid memory address or nil pointer dereference
+	23:33:45 mulch2 mulchd: [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x7518c7]
+	23:33:45 mulch2 mulchd: goroutine 87 [running]:
+	23:33:45 mulch2 mulchd: libvirt.org/go/libvirt.(*Domain).OpenConsole.func2(0xc00015dcb8?, 0x42c527?, 0x8?, 0x0, 0xc000e5e801?)
+	23:33:45 mulch2 mulchd:         go/pkg/mod/libvirt.org/go/libvirt@v1.8006.0/domain.go:4628 +0x27
+	23:33:45 mulch2 mulchd: libvirt.org/go/libvirt.(*Domain).OpenConsole(0xc0030c00a8?, {0x0?, 0x0}, 0xc000101000?, 0xc000658090?)
+	23:33:45 mulch2 mulchd:         go/pkg/mod/libvirt.org/go/libvirt@v1.8006.0/domain.go:4628 +0xc6
+	23:33:45 mulch2 mulchd: github.com/OnitiFR/mulch/cmd/mulchd/server.(*ConsoleReader).Start(0xc000658090)
+	23:33:45 mulch2 mulchd:         go/src/github.com/OnitiFR/mulch/cmd/mulchd/server/consoles.go:239 +0xc6
+	23:33:45 mulch2 mulchd: github.com/OnitiFR/mulch/cmd/mulchd/server.(*ConsoleManager).addReader(0xc0000ac000, {0xc001a623e4, 0xa})
+	23:33:45 mulch2 mulchd:         go/src/github.com/OnitiFR/mulch/cmd/mulchd/server/consoles.go:104 +0x27d
+	23:33:45 mulch2 mulchd: github.com/OnitiFR/mulch/cmd/mulchd/server.(*ConsoleManager).update(0xc0000ac000)
+	23:33:45 mulch2 mulchd:         go/src/github.com/OnitiFR/mulch/cmd/mulchd/server/consoles.go:155 +0x187
+	*/
+	if stream == nil {
+		return fmt.Errorf("strange empty stream with no error (%s)", cr.vmNameID)
+	}
+
 	err = domain.OpenConsole("", stream, 0)
 	if err != nil {
 		stream.Abort()
