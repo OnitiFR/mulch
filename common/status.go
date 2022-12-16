@@ -37,8 +37,10 @@ type APIStatus struct {
 	HostMemoryTotalMB  int
 	VMMemMB            int
 	VMActiveMemMB      int
+	TotalStorageMB     int
 	FreeStorageMB      int
 	FreeBackupMB       int
+	TotalBackupMB      int
 	ProvisionedDisksMB int
 	AllocatedDisksMB   int
 	Origins            []APIOrigin

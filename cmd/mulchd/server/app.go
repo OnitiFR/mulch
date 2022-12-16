@@ -694,7 +694,9 @@ func (app *App) Status() (*common.APIStatus, error) {
 	ret.VMActiveCPUs = vmActiveCPUs
 	ret.VMMemMB = vmMem
 	ret.VMActiveMemMB = vmActiveMem
+	ret.TotalStorageMB = int(disksInfos.Capacity / 1024 / 1024)
 	ret.FreeStorageMB = int(disksInfos.Available / 1024 / 1024)
+	ret.TotalBackupMB = int(backupsInfos.Capacity / 1024 / 1024)
 	ret.FreeBackupMB = int(backupsInfos.Available / 1024 / 1024)
 	ret.ProvisionedDisksMB = provisionedDisks
 	ret.AllocatedDisksMB = allocatedDisks
