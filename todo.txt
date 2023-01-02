@@ -41,7 +41,6 @@ Short term:
   // migration of active VM ok → local vm deletion → an existing
   // "lower" inactive VM is activated (unharmful error if source was active?)
 - systemd CapabilityBoundingSet/AmbientCapabilities = CAP_NET_BIND_SERVICE (+NoNewPrivileges=true) [systemd v229+]
-- make backup available at "prepare" stage during a restore?
 - allow to globally disable auto-rebuild?
 - add timeout on VM creation scripts OR at least allow "greenhouse" VMs deletion
   - note: for deletion, shutting down is not a good option when scripts started, I think
@@ -58,14 +57,15 @@ Short term:
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - add a SSH keepalive for Run.SSHConn?
 - fix completion when using a non-default (-c) config file (see barry: __barry_get_config)
-- on redefine, show what's instantaneous and what's needing a rebuild?
+- on redefine, show what's instantaneous and what's needing a rebuild? a reboot?
 - allow a cron-style syntax for auto_rebuild
 - like restore_backup, allow to restore from a VM (ex: autorebuild from prod)
-- "meta" informations for restore? (ex: gitlab version)
+- backup available at "prepare" stage during a restore? / "meta" informations for restore? (ex: gitlab version)
   - must be available BEFORE the backup even exists (ex: rebuild)
+- dynamic env? (reboot instead of rebuild)
 
 Long term:
-- purge old secrets (warning with long time disconnected peers)
+- purge old secrets (caution with long time disconnected peers)
 - full async API?
 - write API public documentation
 - continue tests on snapshots (see branch "snapshots")
@@ -78,8 +78,8 @@ Long term:
 - create a nice and shiny website for Mulch project
 - have a look at ansible? (for sample scripts)
 - remove the need to supply the VM name for redefine command?
-  - pro-keep: sanity check for a dangerous op, but looks confusing to the user
-  - con-remove: change controller logic
+  - keep: sanity check for a dangerous op, but looks confusing to the user
+  - remove: change controller logic
 - shortcut for "do action" (ex: mulch open xyz) with completion?
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
 - check for missing response.Body.Close() (or things like that)
