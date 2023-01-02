@@ -73,7 +73,6 @@ Long term:
 - investigate why we seem to lose contact with (some) VMs when killing/restarting libvirtd
   - (dhcp/dnsmasq? ebtables? mulch-network restart?)
 - libvirtd watchdog + alert (ex: timeout in VMStateDatabase?)
-- clean VM XML template (ex: no display device [serial console])
 - remove libvirt? (direct use of QEMU/KVM) - warning: network
 - create a nice and shiny website for Mulch project
 - have a look at ansible? (for sample scripts)
