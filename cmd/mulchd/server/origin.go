@@ -205,6 +205,8 @@ func getContentFromGitOrigin(origin *Origin, pathStr string) (io.ReadCloser, err
 			options.Auth = publicKey
 		}
 
+		origin.Log.Tracef("creating git cache for origin '%s'", originConf.Name)
+
 		fs := memfs.New()
 
 		start := time.Now()
