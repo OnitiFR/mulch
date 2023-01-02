@@ -51,16 +51,8 @@ cd /home/mulch/go/src/github.com/OnitiFR/mulch || exit $?
 sudo -iu mulch /home/mulch/go/src/github.com/OnitiFR/mulch/install.sh --etc /home/mulch/mulch/etc/ --data /home/mulch/mulch/data/ --storage /home/mulch/mulch/storage/ || exit $?
 echo "-- OK, let me do most of this setup for you…"
 
-setcap 'cap_net_bind_service=+ep' /home/mulch/go/bin/mulch-proxy || exit $?
 cp mulchd.service mulch-proxy.service /etc/systemd/system/ || exit $?
 systemctl daemon-reload || exit $?
-
-model=$(virsh capabilities | xmllint  --xpath 'string(/capabilities/host/cpu/model)' -)
-if [ $? -ne 0 ]; then
-    echo "Error detecting CPU capabilities"
-    exit $?
-fi
-sudo -iu mulch sed -i'' "s|<model fallback='allow'>.*</model>|<model fallback='allow'>$model</model>|" /home/mulch/mulch/etc/templates/vm.xml || exit $?
 
 sudo -iu mulch sed -i'' "s|^proxy_acme_email =.*|proxy_acme_email = \"mulch-testing@oniti.fr\"|" /home/mulch/mulch/etc/mulchd.toml
 

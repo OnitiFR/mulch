@@ -26,18 +26,21 @@
     <apic/>
     <vmport state='off'/>
   </features>
-  <!-- You may want to adjust that.
+  <!--
+    We now use a full passthrough CPU model by default, but you can
+    use a custom one.
 
-    If your real CPU is newer, you may miss some performances.
-    If your real CPU is old, you may get a 'CPU is incompatible with host CPU'
-    error while creating a new VM.
+    Example for a custom CPU model:
+    <cpu mode='custom' match='exact' check='partial'>
+      <model fallback='allow'>Broadwell-noTSX-IBRS</model>
+    </cpu>
 
     Use "virsh capabilities | grep model" for current CPU model as seen by
     libvirt (warning: for live migration, models must match)
   -->
-  <cpu mode='custom' match='exact' check='partial'>
-    <!-- <model fallback='allow'>Haswell-noTSX</model> -->
-    <model fallback='allow'>Broadwell-noTSX-IBRS</model>
+  <cpu mode='host-passthrough' migratable='off'>
+    <cache mode='passthrough'/>
+    <maxphysaddr mode='passthrough'/>
   </cpu>
   <clock offset='utc'>
     <timer name='rtc' tickpolicy='catchup'/>
@@ -52,9 +55,8 @@
     <suspend-to-disk enabled='no'/>
   </pm>
   <devices>
-    <!-- OK for Fedora 33, may be different for you -->
-    <!-- ex: Ubuntu 20.04: /usr/bin/kvm -->
-    <emulator>/usr/bin/qemu-kvm</emulator>
+    <!-- let's use default emulator (see "virsh capabilities | grep emulator")-->
+    <!-- <emulator>/usr/bin/qemu-kvm</emulator> -->
 
     <disk type='file' device='disk'>
       <!-- the alias 'ua-mulch-disk' is required by Mulch-->

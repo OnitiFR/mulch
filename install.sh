@@ -25,7 +25,6 @@ function main() {
     check_noroot # show warning if UID 0
 
     check_libvirt_access
-    search_kvm_binary
 
     is_dir_writable "$ETC"
     is_dir_writable "$VAR_DATA"
@@ -151,30 +150,11 @@ function check_libvirt_access() {
     check $ret
 }
 
-function search_kvm_binary() {
-    # Fedora
-    if [ -x /usr/bin/qemu-kvm ]; then
-        kvm_path="/usr/bin/qemu-kvm"
-        return 0
-    fi
-    # Ubuntu / Debian
-    if [ -x /usr/bin/kvm ]; then
-        kvm_path="/usr/bin/kvm"
-        return 0
-    fi
-    echo "error: unable to find kvm / qemu-kvm binary"
-    exit 10
-}
-
 function update_config_path() {
     sed -i'' "s|^data_path =.*|data_path = \"$VAR_DATA\"|" "$ETC/mulchd.toml"
     check $?
     sed -i'' "s|^storage_path =.*|storage_path = \"$VAR_STORAGE\"|" "$ETC/mulchd.toml"
     check $?
-    sed -i'' "s|<emulator>.*</emulator>|<emulator>$kvm_path</emulator>|" "$ETC/templates/vm.xml"
-    check $?
-    echo "using kvm binary: $kvm_path"
-    echo "please, check CPU details in $ETC/templates/vm.xml"
 }
 
 function infos_next() {
