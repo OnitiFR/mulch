@@ -24,6 +24,7 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Short term:
+- remove SSH proxy close delay
 - clean multipart temp files after upload?
   - issue only exists for http2 (so not on a local dev env)
   - should be fixed with Go 1.20 : https://github.com/golang/go/issues/20253
