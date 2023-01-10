@@ -84,6 +84,7 @@ func autoRebuildVM(vmName *VMName, app *App) error {
 
 	// log on VM target
 	if errR != nil {
+		log.Error(err.Error())
 		log.Errorf("auto-rebuild failed for %s", vmName)
 	} else {
 		log.Infof("auto-rebuild successful for %s", vmName)
