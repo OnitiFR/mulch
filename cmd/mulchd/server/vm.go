@@ -978,27 +978,17 @@ func VMAttachBackup(vmName *VMName, volName string, app *App) error {
 	return nil
 }
 
-// VMDetachBackup detach the backup volume from the VM
-func VMDetachBackup(vmName *VMName, app *App) error {
-	dom, err := app.Libvirt.GetDomainByName(vmName.LibvirtDomainName(app))
-	if err != nil {
-		return err
-	}
-	if dom == nil {
-		return fmt.Errorf("can't find domain for %s", vmName)
-	}
-	defer dom.Free()
-
+func vmFindBackupDisk(dom *libvirt.Domain) (*libvirtxml.DomainDisk, error) {
 	// get disk from domain XML
 	xmldoc, err := dom.GetXMLDesc(0)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	domcfg := &libvirtxml.Domain{}
 	err = domcfg.Unmarshal(xmldoc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	diskcfg := &libvirtxml.DomainDisk{}
@@ -1011,6 +1001,29 @@ func VMDetachBackup(vmName *VMName, app *App) error {
 	}
 
 	if !found {
+		return nil, nil
+	}
+
+	return diskcfg, nil
+}
+
+// VMDetachBackup detach the backup volume from the VM
+func VMDetachBackup(vmName *VMName, app *App) error {
+	dom, err := app.Libvirt.GetDomainByName(vmName.LibvirtDomainName(app))
+	if err != nil {
+		return err
+	}
+	if dom == nil {
+		return fmt.Errorf("can't find domain for %s", vmName)
+	}
+	defer dom.Free()
+
+	diskcfg, err := vmFindBackupDisk(dom)
+	if err != nil {
+		return err
+	}
+
+	if diskcfg == nil {
 		return errors.New("can't find backup disk")
 	}
 
@@ -1022,6 +1035,20 @@ func VMDetachBackup(vmName *VMName, app *App) error {
 	err = dom.DetachDeviceFlags(xml2, libvirt.DOMAIN_DEVICE_MODIFY_CURRENT)
 	if err != nil {
 		return err
+	}
+
+	// loop until we still see the disk (DetachDeviceFlags may be asynchronous)
+	// see https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainDetachDeviceFlags
+	for {
+		diskcfg, err = vmFindBackupDisk(dom)
+		if err != nil {
+			return err
+		}
+		if diskcfg == nil {
+			break
+		}
+		time.Sleep(1 * time.Second)
+		app.Log.Tracef("%s: waiting for backup disk to be detached", vmName)
 	}
 
 	return nil
