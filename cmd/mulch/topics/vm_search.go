@@ -43,7 +43,7 @@ List of functions:
  - like(string) bool
  - env(string) bool
  - has_domain(string) bool
- - has_script(string, string) bool (arg1: install/prepare/backup/restore)
+ - has_script(string, string) bool (arg1: install|prepare|backup|restore, arg2: script base name)
  - has_action(string) bool
  - has_tag(string) bool
 
