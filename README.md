@@ -438,7 +438,7 @@ The install script will give you details about installation: destination, rights
 
 
 ### Quick demo install:
-For a quick demo installation on a **blank** Ubuntu or Debian system, you may also use this standalone
+For a quick demo installation on a **blank** Ubuntu 22.04+ system, you may also use this standalone
 auto-install script (with root privileges):
 ```
 wget https://raw.github.com/OnitiFR/mulch/master/install/deb_ubuntu_autoinstall.sh
