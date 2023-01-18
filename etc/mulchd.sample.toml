@@ -29,7 +29,7 @@ temp_path = ""
 # some existing VMs)
 vm_prefix = "mulch-"
 
-# This user will be created with VMs as a sudoers, and used for
+# This user will be created inside VMs, as a sudoer, and used for
 # control and command of the VM by Mulch
 mulch_super_user = "admin"
 
