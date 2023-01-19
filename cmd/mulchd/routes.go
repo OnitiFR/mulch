@@ -32,6 +32,14 @@ func AddRoutes(app *server.App) {
 		Handler:      controllers.CloudInitController,
 	}, server.RouteInternal)
 
+	app.AddRoute(&server.Route{
+		Route:        "GET /env",
+		Type:         server.RouteTypeCustom,
+		Public:       true,
+		NoProtoCheck: true,
+		Handler:      controllers.EnvController,
+	}, server.RouteInternal)
+
 	// API routes
 	app.AddRoute(&server.Route{
 		Route:   "GET /log/history",

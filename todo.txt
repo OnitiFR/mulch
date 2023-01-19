@@ -64,6 +64,9 @@ Short term:
 - backup available at "prepare" stage during a restore? / "meta" informations for restore? (ex: gitlab version)
   - must be available BEFORE the backup even exists (ex: rebuild)
 - dynamic env? (reboot instead of rebuild)
+  - test service priorities with fake sleep
+  - change a few messages (rebuild → restart) (ex: "the following VMs will need a rebuild")
+  - add restart command ?
 
 Long term:
 - purge old secrets (caution with long time disconnected peers)

@@ -105,6 +105,81 @@ func (vm *VM) GetSecretsMap() (map[string]string, error) {
 	return res, nil
 }
 
+func (vm *VM) GetEnvMap(vmName *VMName) (map[string]string, error) {
+	res := make(map[string]string)
+	conflict := make([]string, 0)
+
+	app := vm.App
+
+	mulchIP := app.Libvirt.NetworkXML.IPs[0].Address
+
+	var domains []string
+	var firstDomain string
+	for index, domain := range vm.Config.Domains {
+		if index == 0 {
+			firstDomain = domain.Name
+		}
+		domains = append(domains, domain.Name)
+	}
+
+	res["_MULCH_SUPER_USER"] = app.Config.MulchSuperUser
+	res["_BACKUP"] = "/mnt/backup"
+	res["_APP_USER"] = vm.Config.AppUser
+	res["_VM_NAME"] = vmName.Name
+	res["_VM_REVISION"] = strconv.Itoa(vmName.Revision)
+	res["_KEY_DESC"] = vm.AuthorKey
+	res["_MULCH_VERSION"] = Version
+	res["_VM_INIT_DATE"] = vm.InitDate.Format(time.RFC3339)
+	res["_DOMAINS"] = strings.Join(domains, ",")
+	res["_DOMAIN_FIRST"] = firstDomain
+	res["_MULCH_PROXY_IP"] = mulchIP
+	res["_PORT1"] = fmt.Sprintf("%d", VMPortBaseForward+0)
+	res["_PORT2"] = fmt.Sprintf("%d", VMPortBaseForward+1)
+	res["_PORT3"] = fmt.Sprintf("%d", VMPortBaseForward+2)
+	res["_PORT4"] = fmt.Sprintf("%d", VMPortBaseForward+3)
+	res["_PORT5"] = fmt.Sprintf("%d", VMPortBaseForward+4)
+	for _, port := range vm.Config.Ports {
+		if port.Direction == VMPortDirectionImport {
+			name := fmt.Sprintf("_%d_%s", port.Port, "TCP")
+			_, exists := res[name]
+			if exists {
+				conflict = append(conflict, name)
+				// name conflict, force the user to use _PORTx
+				res[name] = "CONFLICT"
+				continue
+			}
+			res[name] = fmt.Sprintf("%d", VMPortBaseForward+uint16(port.Index))
+		}
+	}
+
+	for key, val := range vm.Config.Env {
+		if _, exists := res[key]; exists {
+			conflict = append(conflict, key)
+			continue
+		}
+		res[key] = val
+	}
+
+	secrets, err := vm.GetSecretsMap()
+	if err != nil {
+		return res, err
+	}
+
+	for key, val := range secrets {
+		if _, exists := res[key]; exists {
+			conflict = append(conflict, key)
+			continue
+		}
+		res[key] = val
+	}
+
+	if len(conflict) > 0 {
+		return res, fmt.Errorf("conflicting env keys: %s", strings.Join(conflict, ", "))
+	}
+
+	return res, nil
+}
+
 // small helper to generate main disk name
 func vmGenDiskName(vmName *VMName) string {
 	diskName := vmName.ID() + ".qcow2"

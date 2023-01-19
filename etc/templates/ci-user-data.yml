@@ -58,6 +58,25 @@ write_files:
     path: /etc/systemd/system/phone_home.service
 
   - content: |
+      [Unit]
+      Description=Get env on boot
+      DefaultDependencies=no
+      Wants=cloud-init.service
+      After=cloud-init.service
+      Before=network-online.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/env_refresh
+      RemainAfterExit=yes
+      TimeoutSec=0
+
+      [Install]
+      WantedBy=multi-user.target
+    owner: root:root
+    path: /etc/systemd/system/get_env.service
+
+  - content: |
       #!/bin/bash
       id=$(cat /var/lib/cloud/data/instance-id)
       # will dump config on stdout
@@ -75,9 +94,15 @@ write_files:
     path: /usr/local/bin/is_locked
 
   - content: |
-      # Created by Mulch, erased on rebuild (see env option in TOML file to add yours)
-      $__MAIN_ENV
-      $__EXTRA_ENV
+      #!/bin/bash
+      id=$(cat /var/lib/cloud/data/instance-id)
+      out=$(/usr/bin/curl -fs $_HOME_URL/env?instance_id=$id) && echo "$out" > /etc/mulch.env
+    owner: root:root
+    permissions: '0755'
+    path: /usr/local/bin/env_refresh
+
+  - content: |
+      # Will be generated later during boot.
     owner: root:root
     permissions: '0644'
     path: /etc/mulch.env
@@ -90,6 +115,7 @@ write_files:
 
 runcmd:
   - [ systemctl, enable, phone_home ]
+  - [ systemctl, enable, --now, get_env ]
 
 #locale:
 timezone: $_TIMEZONE

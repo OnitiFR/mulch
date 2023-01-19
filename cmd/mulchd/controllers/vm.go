@@ -417,6 +417,19 @@ func ActionVMController(req *server.Request) {
 		} else {
 			req.Stream.Successf("VM %s is now down", entry.Name)
 		}
+	case "restart":
+		req.Stream.Infof("restarting %s", vmName)
+		err := server.VMStopByName(entry.Name, req.App, req.Stream)
+		if err != nil {
+			req.Stream.Failuref("unable to stop %s: %s", entry.Name, err)
+		}
+		req.Stream.Info("stopped, restarting…")
+		err = server.VMStartByName(entry.Name, vm.SecretUUID, req.App, req.Stream)
+		if err != nil {
+			req.Stream.Failuref("unable to start %s: %s", entry.Name, err)
+		} else {
+			req.Stream.Successf("VM %s is now up and running", entry.Name)
+		}
 	case "exec":
 		err := ExecScriptVM(req, vm, entry.Name)
 		if err != nil {
