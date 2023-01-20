@@ -14,14 +14,15 @@ var vmRedefineCmd = &cobra.Command{
 	Short: "Redefine a VM",
 	Long: `Redefine ("update") an existing VM with a new configuration file.
 
-The VM will use its new configuration on next rebuild. Domain names are
-immediately updated, though.
+The VM will use its new configuration on next rebuild, with a few exceptions:
+  * domain names and ports are immediately updated
+  * environment variables and secrets only require a VM restart
 
-WARNING: consider this command as dangerous! Your new backup scripts may
+WARNING: consider this command dangerous! Your new backup scripts may
 not match your old content, for instance.
 
 Remember: you can get current VM configuration file using "vm config <vm-name>",
-it's an easy way to modify config before VM redefinition.
+it's an easy way to get and modify config before VM redefinition.
 `,
 	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {

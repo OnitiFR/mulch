@@ -37,6 +37,10 @@ func EnvController(req *server.Request) {
 	req.Response.Header().Set("Content-Type", "text/plain")
 	req.Response.Write([]byte("# Created by Mulch, erased during boot (see TOML to add yours)\n\n"))
 
+	if err != nil {
+		req.Response.Write([]byte("# ERROR while getting env: " + err.Error() + "\n\n"))
+	}
+
 	keys := make([]string, 0, len(env))
 	for k := range env {
 		keys = append(keys, k)

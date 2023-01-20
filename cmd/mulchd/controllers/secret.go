@@ -39,7 +39,7 @@ func SetSecretController(req *server.Request) {
 	}
 
 	if len(vms) > 0 {
-		req.Stream.Warningf("the following VMs will need a rebuild: %s", strings.Join(vms, ", "))
+		req.Stream.Warningf("the following VMs will need a restart (or rebuild): %s", strings.Join(vms, ", "))
 	}
 
 	req.Stream.Successf("Secret '%s' defined", key)
