@@ -94,7 +94,8 @@ func (vm *VM) GetSecretsMap() (map[string]string, error) {
 		if err != nil {
 			missing = append(missing, secret)
 		} else {
-			res[secret] = secretValue.Value
+			base := path.Base(secret)
+			res[base] = secretValue.Value
 		}
 	}
 
