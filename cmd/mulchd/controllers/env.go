@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"sort"
 
@@ -49,6 +50,7 @@ func EnvController(req *server.Request) {
 
 	for _, key := range keys {
 		val := env[key]
-		req.Response.Write([]byte("export " + key + "=" + val + "\n"))
+		str := fmt.Sprintf("export %s=\"%s\"\n", key, val)
+		req.Response.Write([]byte(str))
 	}
 }
