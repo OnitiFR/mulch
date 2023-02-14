@@ -54,27 +54,34 @@ func statusDisplay(reader io.Reader, headers http.Header) {
 	}
 
 	em := color.New(color.Bold, color.FgMagenta).SprintfFunc()
+	var s string
 
 	fmt.Printf("Started since: %s (%s)\n", referenceTime.Sub(data.StartTime), data.StartTime)
 
 	fmt.Println("---")
 
 	fmt.Printf("VMs: %d\n", data.VMs)
-	fmt.Printf("VMs running: %d (%d%%)\n", data.ActiveVMs, data.ActiveVMs*100/data.VMs)
+	if data.VMs > 0 {
+		fmt.Printf("VMs running: %d (%d%%)\n", data.ActiveVMs, data.ActiveVMs*100/data.VMs)
+	}
 
 	fmt.Println("---")
 
 	fmt.Printf("Host CPUs: %d\n", data.HostCPUs)
-	fmt.Printf("VM CPUs: %d (%d%%)\n", data.VMCPUs, data.VMCPUs*100/data.HostCPUs)
-	s := em("%d%% of host CPUs", data.VMActiveCPUs*100/data.HostCPUs)
-	fmt.Printf("VM active CPUs: %d (%s, %d%% of VM CPUs)\n", data.VMActiveCPUs, s, data.VMActiveCPUs*100/data.VMCPUs)
+	if data.VMs > 0 {
+		fmt.Printf("VM CPUs: %d (%d%%)\n", data.VMCPUs, data.VMCPUs*100/data.HostCPUs)
+		s = em("%d%% of host CPUs", data.VMActiveCPUs*100/data.HostCPUs)
+		fmt.Printf("VM active CPUs: %d (%s, %d%% of VM CPUs)\n", data.VMActiveCPUs, s, data.VMActiveCPUs*100/data.VMCPUs)
+	}
 
 	fmt.Println("---")
 
 	fmt.Printf("Host memory: %s\n", (datasize.ByteSize(data.HostMemoryTotalMB) * datasize.MB).HR())
-	fmt.Printf("VM memory: %s (%d%%)\n", (datasize.ByteSize(data.VMMemMB) * datasize.MB).HR(), data.VMMemMB*100/data.HostMemoryTotalMB)
-	s = em("%d%% of host memory", data.VMActiveMemMB*100/data.HostMemoryTotalMB)
-	fmt.Printf("VM active memory: %s (%s, %d%% of VM memory)\n", (datasize.ByteSize(data.VMActiveMemMB) * datasize.MB).HR(), s, data.VMActiveMemMB*100/data.VMMemMB)
+	if data.VMs > 0 {
+		fmt.Printf("VM memory: %s (%d%%)\n", (datasize.ByteSize(data.VMMemMB) * datasize.MB).HR(), data.VMMemMB*100/data.HostMemoryTotalMB)
+		s = em("%d%% of host memory", data.VMActiveMemMB*100/data.HostMemoryTotalMB)
+		fmt.Printf("VM active memory: %s (%s, %d%% of VM memory)\n", (datasize.ByteSize(data.VMActiveMemMB) * datasize.MB).HR(), s, data.VMActiveMemMB*100/data.VMMemMB)
+	}
 
 	fmt.Println("---")
 
@@ -90,9 +97,11 @@ func statusDisplay(reader io.Reader, headers http.Header) {
 		s2 := em("%d%% used", 100-(data.FreeStorageMB*100/data.TotalStorageMB))
 		fmt.Printf("Host disk storage: %s available, %s (%s)\n", (datasize.ByteSize(data.TotalStorageMB) * datasize.MB).HR(), s, s2)
 		fmt.Printf("Backup storage: %s available, %s free (%d%% used)\n", (datasize.ByteSize(data.TotalBackupMB) * datasize.MB).HR(), (datasize.ByteSize(data.FreeBackupMB) * datasize.MB).HR(), 100-(data.FreeBackupMB*100/data.TotalBackupMB))
-		s = em("%d%% of host storage", data.ProvisionedDisksMB*100/data.TotalStorageMB)
-		fmt.Printf("Provisioned VM storage: %s (%s)\n", (datasize.ByteSize(data.ProvisionedDisksMB) * datasize.MB).HR(), s)
-		fmt.Printf("Allocated VM storage: %s (%d%% of storage, %d%% of provisioned)\n", (datasize.ByteSize(data.AllocatedDisksMB) * datasize.MB).HR(), data.AllocatedDisksMB*100/data.TotalStorageMB, data.AllocatedDisksMB*100/data.ProvisionedDisksMB)
+		if data.VMs > 0 {
+			s = em("%d%% of host storage", data.ProvisionedDisksMB*100/data.TotalStorageMB)
+			fmt.Printf("Provisioned VM storage: %s (%s)\n", (datasize.ByteSize(data.ProvisionedDisksMB) * datasize.MB).HR(), s)
+			fmt.Printf("Allocated VM storage: %s (%d%% of storage, %d%% of provisioned)\n", (datasize.ByteSize(data.AllocatedDisksMB) * datasize.MB).HR(), data.AllocatedDisksMB*100/data.TotalStorageMB, data.AllocatedDisksMB*100/data.ProvisionedDisksMB)
+		}
 	}
 
 	fmt.Println("---")
