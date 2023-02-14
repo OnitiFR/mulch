@@ -23,8 +23,22 @@ Resource leaks:
   - heap profile show a very small memory consumption, comparatively
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
+Current:
+- add timeout on VM creation scripts OR at least allow "greenhouse" VMs deletion
+  - note: for deletion, shutting down is not a good option when scripts started, I think
+    - need to find cases where it fails, all tests OK for now
+    - that's why: looong timeout!
+      - ERROR  : wait: remote command exited without exit status or exit signal
+      - FAILURE: error: cannot create VM: wait: remote command exited without exit status or exit signal
+      - add SSH keepalives? (see below)
+  - add completion (using "mulch greenhouse list" hidden command)
+    - force -b currently?
+
 Short term:
+- add a SSH keepalive for Run.SSHConn?
+- look for multiple "time.After()" in for loops
 - remove SSH proxy close delay
+- better error message in case of a double creation?
 - clean multipart temp files after upload?
   - issue only exists for http2 (so not on a local dev env)
   - should be fixed with Go 1.20 : https://github.com/golang/go/issues/20253
@@ -43,9 +57,6 @@ Short term:
   // "lower" inactive VM is activated (unharmful error if source was active?)
 - systemd CapabilityBoundingSet/AmbientCapabilities = CAP_NET_BIND_SERVICE (+NoNewPrivileges=true) [systemd v229+]
 - allow to globally disable auto-rebuild?
-- add timeout on VM creation scripts OR at least allow "greenhouse" VMs deletion
-  - note: for deletion, shutting down is not a good option when scripts started, I think
-    - need to find cases where it fails, all tests OK for now
 - rights: limit SSH to a specific VM? (check a fake vm=… header in the SSH proxy?)
 - rights: logs may expose sensitive data (which ones?)
 - rights: add predefined right groups for common usages?
@@ -56,7 +67,6 @@ Short term:
 - check domains validity on VM create, PS: domain name validation is HARD :(
 - add comments to backups (and other objects?)
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
-- add a SSH keepalive for Run.SSHConn?
 - fix completion when using a non-default (-c) config file (see barry: __barry_get_config)
 - on redefine, show what's instantaneous and what's needing a rebuild? a reboot?
 - allow a cron-style syntax for auto_rebuild

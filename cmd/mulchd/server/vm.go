@@ -55,6 +55,14 @@ const (
 	VMAllowScriptFailure  = true
 )
 
+// How to stop a VM ("shutdown" vs "destroy")
+const (
+	VMStopNormal = false
+	VMStopForce  = true
+)
+
+const VMStopDefaultTimeout = 5 * time.Minute
+
 // BackupBlankRestore disables *install* scripts during a
 // a VM creation (so we can restore backup a bit later)
 const BackupBlankRestore = "-"
@@ -754,7 +762,7 @@ func VMGetDiskName(name *VMName, app *App) (string, error) {
 }
 
 // VMStopByName stops a VM using its name and waits until the VM is down. (or timeouts)
-func VMStopByName(name *VMName, app *App, log *Log) error {
+func VMStopByName(name *VMName, force bool, timeout time.Duration, app *App, log *Log) error {
 	domain, err := app.Libvirt.GetDomainByName(name.LibvirtDomainName(app))
 	if err != nil {
 		return err
@@ -773,20 +781,35 @@ func VMStopByName(name *VMName, app *App, log *Log) error {
 		return errors.New("VM is not up")
 	}
 
-	// shutdown
-	errS := domain.Shutdown()
-	if errS != nil {
-		return errS
+	if !force {
+		// shutdown
+		errS := domain.Shutdown()
+		if errS != nil {
+			return errS
+		}
+		log.Tracef("shutdown sent")
+	} else {
+		// force shutdown
+		errD := domain.Destroy()
+		if errD != nil {
+			return errD
+		}
+		log.Tracef("destroy sent")
 	}
 
+	log.Tracef("waiting for shutdown (timeout: %s)", timeout)
+
 	// wait shutoff state
+	tm := time.After(timeout)
 	for done := false; !done; {
 		select {
-		case <-time.After(5 * time.Minute):
+		case <-tm:
+			log.Tracef("timeout (%s) reached", timeout)
 			return errors.New("vm shutdown is too long")
 		case <-time.After(1 * time.Second):
 			log.Trace("checking vm state")
 			state, _, errG := domain.GetState()
+			log.Tracef("state: %s", LibvirtDomainStateToString(state))
 			if errG != nil {
 				return errG
 			}

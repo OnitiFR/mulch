@@ -450,6 +450,18 @@ func (vmdb *VMDatabase) GetNames() []*VMName {
 	return names
 }
 
+// GetGreenhouseNames return all VMs in the greenhouse database
+func (vmdb *VMDatabase) GetGreenhouseNames() []*VMName {
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
+	names := make([]*VMName, 0, len(vmdb.greenhouseDB))
+	for _, entry := range vmdb.greenhouseDB {
+		names = append(names, entry.Name)
+	}
+	return names
+}
+
 // GetEntryByName lookups a VMDatabaseEntry entry by its name
 func (vmdb *VMDatabase) GetEntryByName(name *VMName) (*VMDatabaseEntry, error) {
 	vmdb.mutex.Lock()
@@ -523,6 +535,20 @@ func (vmdb *VMDatabase) GetGreenhouseEntryByName(name *VMName) (*VMDatabaseEntry
 		return nil, fmt.Errorf("VM %s not found in greenhouse database", name)
 	}
 	return entry, nil
+}
+
+// SearchGreenhouseEntries lists all VMs in the greenhouse matching the specified name
+func (vmdb *VMDatabase) SearchGreenhouseEntries(name string) []*VMDatabaseEntry {
+	vmdb.mutex.Lock()
+	defer vmdb.mutex.Unlock()
+
+	entries := make([]*VMDatabaseEntry, 0)
+	for _, entry := range vmdb.greenhouseDB {
+		if entry.Name.Name == name {
+			entries = append(entries, entry)
+		}
+	}
+	return entries
 }
 
 // GetEntryBySecretUUID lookups a VMName by its secretUUID

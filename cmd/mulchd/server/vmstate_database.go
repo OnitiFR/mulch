@@ -195,7 +195,7 @@ func (vmsdb *VMStateDatabase) restoreStates() {
 			wg.Add(1)
 			vmsdb.app.Log.Infof("restore state: stopping %s", entry.Name)
 			go func() {
-				err := VMStopByName(entry.Name, vmsdb.app, vmsdb.app.Log)
+				err := VMStopByName(entry.Name, VMStopNormal, VMStopDefaultTimeout, vmsdb.app, vmsdb.app.Log)
 				if err != nil {
 					vmsdb.app.Log.Error(err.Error())
 				}

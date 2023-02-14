@@ -309,7 +309,7 @@ func (db *SeedDatabase) RefreshSeeder(seed *Seed, force bool) error {
 		return err
 	}
 
-	err = VMStopByName(vmName, db.app, log)
+	err = VMStopByName(vmName, VMStopNormal, VMStopDefaultTimeout, db.app, log)
 	if err != nil {
 		return err
 	}

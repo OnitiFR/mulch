@@ -255,4 +255,16 @@ func AddRoutes(app *server.App) {
 		Handler: controllers.GetVMsUsingSecretsController,
 	}, server.RouteAPI)
 
+	app.AddRoute(&server.Route{
+		Route:   "GET /greenhouse",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.ListGreenhouseVMsController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "DELETE /greenhouse/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.AbordGreenhouseVMController,
+	}, server.RouteAPI)
+
 }

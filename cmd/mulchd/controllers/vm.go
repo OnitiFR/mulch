@@ -411,7 +411,7 @@ func ActionVMController(req *server.Request) {
 		}
 	case "stop":
 		req.Stream.Infof("stopping %s", vmName)
-		err := server.VMStopByName(entry.Name, req.App, req.Stream)
+		err := server.VMStopByName(entry.Name, server.VMStopNormal, server.VMStopDefaultTimeout, req.App, req.Stream)
 		if err != nil {
 			req.Stream.Failuref("unable to stop %s: %s", entry.Name, err)
 		} else {
@@ -419,7 +419,7 @@ func ActionVMController(req *server.Request) {
 		}
 	case "restart":
 		req.Stream.Infof("restarting %s", vmName)
-		err := server.VMStopByName(entry.Name, req.App, req.Stream)
+		err := server.VMStopByName(entry.Name, server.VMStopNormal, server.VMStopDefaultTimeout, req.App, req.Stream)
 		if err != nil {
 			req.Stream.Failuref("unable to stop %s: %s", entry.Name, err)
 		}
