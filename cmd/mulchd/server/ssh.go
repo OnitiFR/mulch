@@ -3,10 +3,12 @@ package server
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -165,4 +167,24 @@ func SSHAgent(pubkeyFile string, log *Log) (ssh.AuthMethod, error) {
 		return nil, fmt.Errorf("can't find '%s' key in the SSH agent", pubkeyFile)
 	}
 	return nil, fmt.Errorf("SSH agent: %v (check SSH_AUTH_SOCK?)", errd)
+}
+
+// SSHSendKeepAlive sends a keepalive request using a timeout
+func SSHSendKeepAlive(sshConn ssh.Conn, timeout time.Duration) error {
+	errChannel := make(chan error, 2)
+	if timeout > 0 {
+		time.AfterFunc(timeout, func() {
+			// we will always timeout, but if we had a response, this new
+			// error will go nowhere, so… no error.
+			errChannel <- errors.New("[timeout]")
+		})
+	}
+
+	go func() {
+		_, _, err := sshConn.SendRequest("keepalive@golang.org", true, nil)
+		errChannel <- err
+	}()
+
+	err := <-errChannel
+	return err
 }

@@ -99,14 +99,14 @@ func AbordGreenhouseVMController(req *server.Request) {
 	/* Notes :
 	- sometimes (depending on activity?) VMs does not respond to a graceful stop ("shutdown")
 	- we've seen false failures with graceful stops (during a "sleep", for example, where VM goes away too fast and get-state fails)
-	- … so we use a force stop
+	- … so we use a force stop (with the help of SSH keep-alives to quickly detect shutdown)
 	*/
 
 	err := server.VMStopByName(entry.Name, server.VMStopForce, 10*time.Second, req.App, req.Stream)
 	if err != nil {
-		req.Stream.Failuref("unable to abort VM %s: %s", entry.Name, err)
+		req.Stream.Failuref("unable to abort: %s", err)
 		return
 	}
 
-	req.Stream.Successf("%s abort started (it can take up to a few minutes)", entry.Name)
+	req.Stream.Successf("%s abort procedure started", entry.Name)
 }

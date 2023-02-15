@@ -54,6 +54,8 @@ func (run *Run) Go(ctx context.Context) error {
 		run.SSHConn.Close()
 	}()
 
+	go run.scheduleSSHKeepAlives()
+
 	if err := run.SSHConn.Session.Run(bootstrap); err != nil {
 		return err
 	}
@@ -66,5 +68,24 @@ func (run *Run) Go(ctx context.Context) error {
 		return err
 	case <-time.After(1 * time.Second):
 		return errors.New("timeout after waiting stderr errorChan")
+	}
+}
+
+// Send sparses keepalives to detect dead connections, a failed SendRequest
+// will set channels to nil, closing the connection (and we use a timeout as well)
+// We use low timeouts, since we're inside our own virtual network
+func (run *Run) scheduleSSHKeepAlives() {
+	sshConn := run.SSHConn.Client.Conn
+
+	t := time.NewTicker(5 * time.Second)
+	defer t.Stop()
+	for range t.C {
+		run.Log.Tracef("[run %s] send SSH keepalive", run.Caption)
+		err := SSHSendKeepAlive(sshConn, 2*time.Second)
+		if err != nil {
+			run.Log.Tracef("[run %s] ssh keepalive error: %s, closing", run.Caption, err)
+			run.SSHConn.Close()
+			return
+		}
 	}
 }

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -74,26 +73,6 @@ func sshProxyCopyChan(dst ssh.Channel, src ssh.Channel, way string, wgChannels *
 	wgChannels.Done()
 }
 
-// sendSshKeepAlive sends a keepalive request using a timeout
-func sendSSHKeepAlive(sshConn ssh.Conn, timeout time.Duration) error {
-	errChannel := make(chan error, 2)
-	if timeout > 0 {
-		time.AfterFunc(timeout, func() {
-			// we will always timeout, but if we had a response, this new
-			// error will go nowhere, so… no error.
-			errChannel <- errors.New("[timeout]")
-		})
-	}
-
-	go func() {
-		_, _, err := sshConn.SendRequest("keepalive@golang.org", true, nil)
-		errChannel <- err
-	}()
-
-	err := <-errChannel
-	return err
-}
-
 // Send sparses keepalives to detect dead connections, a failed SendRequest
 // will set channels to nil, closing the connections (and we use a timeout as well)
 // In case of failure, we close both connections (up & down)
@@ -102,7 +81,7 @@ func (proxy *SSHProxy) scheduleSSHKeepAlives(sshConn ssh.Conn, name string) {
 	defer t.Stop()
 	for range t.C {
 		proxy.log.Tracef("send SSH keepalive (%s, %s)", name, sshConn.RemoteAddr())
-		err := sendSSHKeepAlive(sshConn, 10*time.Second)
+		err := SSHSendKeepAlive(sshConn, 10*time.Second)
 		if err != nil {
 			proxy.log.Tracef("ssh (%s) keepalive error: %s, closing", name, err)
 			sshConn.Close()

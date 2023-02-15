@@ -24,18 +24,10 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Current:
-- add timeout on VM creation scripts OR at least allow "greenhouse" VMs deletion
-  - note: for deletion, shutting down is not a good option when scripts started, I think
-    - need to find cases where it fails, all tests OK for now
-    - that's why: looong timeout!
-      - ERROR  : wait: remote command exited without exit status or exit signal
-      - FAILURE: error: cannot create VM: wait: remote command exited without exit status or exit signal
-      - add SSH keepalives? (see below)
-  - add completion (using "mulch greenhouse list" hidden command)
-    - force -b currently?
+- add 'vm abort' completion (using "mulch greenhouse list" hidden command)
+  - force -b currently?
 
 Short term:
-- add a SSH keepalive for Run.SSHConn?
 - look for multiple "time.After()" in for loops
 - remove SSH proxy close delay
 - better error message in case of a double creation?

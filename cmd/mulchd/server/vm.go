@@ -787,17 +787,15 @@ func VMStopByName(name *VMName, force bool, timeout time.Duration, app *App, log
 		if errS != nil {
 			return errS
 		}
-		log.Tracef("shutdown sent")
+		log.Tracef("waiting for shutdown (timeout: %s)", timeout)
 	} else {
 		// force shutdown
 		errD := domain.Destroy()
 		if errD != nil {
 			return errD
 		}
-		log.Tracef("destroy sent")
+		log.Tracef("waiting for forced shutdown (timeout: %s)", timeout)
 	}
-
-	log.Tracef("waiting for shutdown (timeout: %s)", timeout)
 
 	// wait shutoff state
 	tm := time.After(timeout)
@@ -807,10 +805,15 @@ func VMStopByName(name *VMName, force bool, timeout time.Duration, app *App, log
 			log.Tracef("timeout (%s) reached", timeout)
 			return errors.New("vm shutdown is too long")
 		case <-time.After(1 * time.Second):
-			log.Trace("checking vm state")
 			state, _, errG := domain.GetState()
 			log.Tracef("state: %s", LibvirtDomainStateToString(state))
 			if errG != nil {
+				virtErr := errG.(libvirt.Error)
+				if virtErr.Code == libvirt.ERR_NO_DOMAIN {
+					// domain does not exists anymore, so it's stopped (in a way :)
+					return nil
+				}
+
 				return errG
 			}
 			if state == libvirt.DOMAIN_CRASHED {
