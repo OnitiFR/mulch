@@ -22,7 +22,7 @@ It aims people and organizations who don't want to (or can't) invest too much ti
 private cloud, but want a simple solution with great performance.
 
 It features a client-server architecture using a REST API. It's written in Go and use shell scripts to drive VM
-configuration and application installation.
+configuration and application installations.
 
 Mulch relies on libvirt API (KVM) and can share an existing libvirt server or use a dedicated one. No libvirt
 configuration (or knowledge) is required, Mulch will create and manage needed resources (storage, network).
@@ -305,7 +305,7 @@ mulch vm migrate my_vm server2
 Peering also allow secret sharing between mulchd servers. Enable this feature
 with `sync_secrets = true` in the peer section.
 
-**It must be done in a bidirectional way:**
+Secret sharing **must** be done in a bidirectional way:
  - each server must declare the all the others as peers, with `sync_secrets`
  - all servers mush share the same encryption key (`mulch-secrets.key`)
 
@@ -333,7 +333,7 @@ Then, inside the VM, connect to `$_MULCH_PROXY_IP:$_5432_TCP`
 Ports are dynamic, they're affected immediately by commands like `vm redefine` and `vm active`, no rebuild is needed. See sample TOML file for more informations.
 
 #### Port forwarding
-The TCP-proxy can also be used to expose a VM network port to the outside using the special `PUBLIC` group:
+The TCP-proxy can also be used to expose a VM network port to the outside world using the special `PUBLIC` group:
 
 ```toml
 # expose IRC server of this VM to the outside world
@@ -384,7 +384,7 @@ Install go (sometimes named "golang") and then:
 ```sh
 go install github.com/OnitiFR/mulch/cmd/mulch@latest
 ```
-Usual Go requirements : check you have go/golang installed and `~/go/bin/` is in your `PATH` (or copy/link binary in one of your `PATH` directories; use `sudo ln -s /home/$USER/go/bin/mulch /usr/local/bin` if you have no idea about how to do this).
+Usual Go requirements : check you have go/golang installed and `~/go/bin/` is in your `PATH` (or use `sudo ln -s /home/$USER/go/bin/mulch /usr/local/bin` if you have no idea about how to do this).
 
 That's it, you can now run `mulch` command. It will show you a sample configuration file (`~/.mulch.toml`):
 ```toml
@@ -430,15 +430,15 @@ sudo setfacl -m g:qemu:x /home/USER/
 
 ### Install:
 As a user:
- - `go install github.com/OnitiFR/mulch/cmd/...@latest`
- - `cd go/src/github.com/OnitiFR/mulch`
+ - `git clone https://github.com/OnitiFR/mulch.git`
+ - `cd mulch`
+ - `go install ./cmd/...`
  - `./install.sh --help` (see sample install section)
 
 The install script will give you details about installation: destination, rights, services, …
 
-
-### Quick demo install:
-For a quick demo installation on a **blank** Ubuntu 22.04+ system, you may also use this standalone
+### Quick install:
+For a quick installation on a **blank** Ubuntu 22.04+ system, you may also use this standalone
 auto-install script (with root privileges):
 ```
 wget https://raw.github.com/OnitiFR/mulch/master/install/deb_ubuntu_autoinstall.sh
