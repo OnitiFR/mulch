@@ -283,7 +283,7 @@ And here's the corresponding configuration for children:
 ```toml
 proxy_chain_mode = "child"
 proxy_chain_parent_url = "https://api.mydomain.tld:8787"
-proxy_chain_child_url = "https://forward.mymulchd.tld"
+proxy_chain_child_url = "https://forward.server1.tld"
 proxy_chain_psk = "MySecretPreShareKey123"
 ```
 
