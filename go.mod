@@ -28,9 +28,9 @@ require (
 	github.com/smallnest/ringbuffer v0.0.0-20210227121335-0a58434b36f2
 	github.com/spf13/cobra v1.6.1
 	golang.org/x/crypto v0.4.0
-	golang.org/x/net v0.4.0 // indirect
-	golang.org/x/term v0.3.0
-	golang.org/x/text v0.5.0
+	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/term v0.5.0
+	golang.org/x/text v0.7.0
 	golang.org/x/tools v0.4.0 // indirect
 	libvirt.org/go/libvirt v1.8010.0
 	libvirt.org/go/libvirtxml v1.8009.0
