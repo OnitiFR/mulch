@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
+	"github.com/alessio/shellescape"
 )
 
 // EnvController returns a text file with exported environment
@@ -50,7 +51,7 @@ func EnvController(req *server.Request) {
 
 	for _, key := range keys {
 		val := env[key]
-		str := fmt.Sprintf("export %s=\"%s\"\n", key, val)
+		str := fmt.Sprintf("export %s=%s\n", key, shellescape.Quote(val))
 		req.Response.Write([]byte(str))
 	}
 }

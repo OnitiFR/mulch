@@ -6,6 +6,7 @@ require (
 	github.com/BurntSushi/toml v1.2.1
 	github.com/Knetic/govaluate v3.0.0+incompatible
 	github.com/Microsoft/go-winio v0.6.0 // indirect
+	github.com/alessio/shellescape v1.4.1
 	github.com/blang/semver/v4 v4.0.0
 	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/cloudflare/circl v1.3.0 // indirect
