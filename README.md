@@ -186,6 +186,8 @@ Here's the result of the previously linked `sample-vm-full.toml` configuration, 
 
 ![mulch-proxy HTTPS Let's Encrypt certificates](https://raw.github.com/OnitiFR/mulch/master/doc/images/https_le.png)
 
+You can of course provide your own certificates if needed.
+
 #### SSH
 Mulch allow easy SSH connection from mulch client with `mulch ssh` command. No configuration
 is required and the client will retrieve your very own SSH key pair. You may select another user using

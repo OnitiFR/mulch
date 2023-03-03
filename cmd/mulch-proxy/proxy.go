@@ -45,6 +45,7 @@ type ProxyServerParams struct {
 	ListenHTTPS           string
 	DirectoryURL          string
 	DomainDB              *DomainDatabase
+	ExtraCertsDB          *ExtraCertsDB
 	ErrorHTMLTemplateFile string
 	MulchdHTTPSDomain     string // (for mulchd)
 	ChainMode             int
@@ -132,8 +133,17 @@ func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 		Handler: handler,
 		Addr:    config.ListenHTTPS,
 		TLSConfig: &tls.Config{
-			GetCertificate: manager.GetCertificate,
-			MinVersion:     tls.VersionTLS12,
+			GetCertificate: func(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				// any custom exra cert for this domain?
+				cer := proxy.config.ExtraCertsDB.Get(info.ServerName)
+				if cer == nil {
+					// no, use autocert
+					return manager.GetCertificate(info)
+				} else {
+					return &cer.Cert, nil
+				}
+			},
+			MinVersion: tls.VersionTLS12,
 		},
 		IdleTimeout: IdleTimeout,
 	}

@@ -1,0 +1,11 @@
+# Here, you can define extra "manual" certificates for mulch-proxy
+# (remove "sample" from the filename to enable)
+#
+# - any change to this file (or any certificate) is automatically loaded within seconds.
+# - add as many [[certificate]] blocks as needed
+# - certificate files must be readable by the user running mulch-proxy (including private key)
+
+[[certificate]]
+domains = ["example.com", "www.example.com"]
+certfile = "/etc/ssl/certs/example.com.crt"
+keyfile = "/etc/ssl/private/example.com.key"

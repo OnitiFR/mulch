@@ -1,4 +1,5 @@
 # Extra (limited) SSH pub keys, in usual "authorized_keys" format.
+# (remove "sample" from the filename to enable)
 
 # The "comment" defines the SSH destination, ex:
 # ssh-rsa ABC…12== me@my-vm
@@ -11,7 +12,7 @@
 
 # A specific VM revision can be targeted, if needed: app@my-vm-r30
 
-# In all cases, the /home/me/.ssh/authorized_keys must contain *MUCLH* pub key.
+# In all cases, the /home/me/.ssh/authorized_keys must contain *MULCH* pub key.
 # (since connection is relayed by the SSH proxy using its own key).
 # You can find it in /home/admin/.ssh/authorized_keys
 

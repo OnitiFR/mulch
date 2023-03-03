@@ -64,6 +64,14 @@ func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 		return nil, err
 	}
 
+	extraCertsDB, err := NewExtraCertsDB(
+		path.Clean(app.Config.configPath+"/extra_certs.toml"),
+		app.Log,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	chainDomain := ""
 	switch app.Config.ChainMode {
 	case ChainModeParent:
@@ -79,6 +87,7 @@ func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 		ListenHTTPS:           app.Config.HTTPSAddress,
 		DirectoryURL:          app.Config.AcmeURL,
 		DomainDB:              ddb,
+		ExtraCertsDB:          extraCertsDB,
 		ErrorHTMLTemplateFile: path.Clean(app.Config.configPath + "/templates/error_page.html"),
 		MulchdHTTPSDomain:     app.Config.ListenHTTPSDomain,
 		ChainMode:             app.Config.ChainMode,
