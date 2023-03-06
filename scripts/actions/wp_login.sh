@@ -26,7 +26,8 @@ mkdir -p auth/ || exit $?
 
 cat > $fullname <<- EOS
 <?php
-require_once("../wp-load.php");
+require_once("../wp-config.php");
+require_once(ABSPATH . "/wp-load.php");
 
 \$user = get_userdatabylogin('${user_login}');
 if (!\$user) {
