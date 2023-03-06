@@ -36,7 +36,7 @@ if (!\$user) {
 
 wp_set_auth_cookie(\$user->ID);
 unlink(__FILE__);
-header('Location: /wp-admin/');
+header('Location: ' . parse_url(get_admin_url(), PHP_URL_PATH));
 EOS
 [ $? -eq 0 ] || exit $?
 
