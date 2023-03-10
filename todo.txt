@@ -28,8 +28,6 @@ Current:
   - force -b currently?
 
 Short term:
-- look for multiple "time.After()" in for loops
-- allow "manual" certificates (and their refresh?) - proxy.go, manager.GetCertificate
 - remove SSH proxy close delay
 - better error message in case of a double creation?
 - clean multipart temp files after upload?

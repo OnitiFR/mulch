@@ -513,9 +513,10 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	phone := app.PhoneHome.Register(secretUUID.String())
 	defer phone.Unregister()
 
+	timeout := time.After(10 * time.Minute)
 	for done := false; !done; {
 		select {
-		case <-time.After(10 * time.Minute):
+		case <-timeout:
 			return nil, nil, errors.New("vm init is too long, something probably went wrong")
 		case call := <-phone.PhoneCalls:
 			// seeders already have phone call service, let's filter it out
@@ -866,14 +867,11 @@ func VMStartByName(name *VMName, secretUUID string, app *App, log *Log) error {
 
 	log.Infof("started, waiting phone call from %s", name)
 
-	for done := false; !done; {
-		select {
-		case <-time.After(10 * time.Minute):
-			return fmt.Errorf("vm is too long to start, something probably went wrong (%s)", name)
-		case <-phone.PhoneCalls:
-			done = true
-			log.Infof("vm %s phoned home", name)
-		}
+	select {
+	case <-time.After(10 * time.Minute):
+		return fmt.Errorf("vm is too long to start, something probably went wrong (%s)", name)
+	case <-phone.PhoneCalls:
+		log.Infof("vm %s phoned home", name)
 	}
 
 	return nil
