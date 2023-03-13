@@ -236,23 +236,43 @@ func (cr *ConsoleReader) Start() error {
 		return err
 	}
 
-	/* seen a strange case (Dec 07 2022):
-	23:33:44 mulch2 mulchd: INFO(vm): creating VM disk 'vm-r57.qcow2'
-	23:33:45 mulch2 mulchd: INFO(): HUP signal sent to mulch-proxy
-	23:33:45 mulch2 mulchd: panic: runtime error: invalid memory address or nil pointer dereference
-	23:33:45 mulch2 mulchd: [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x7518c7]
-	23:33:45 mulch2 mulchd: goroutine 87 [running]:
-	23:33:45 mulch2 mulchd: libvirt.org/go/libvirt.(*Domain).OpenConsole.func2(0xc00015dcb8?, 0x42c527?, 0x8?, 0x0, 0xc000e5e801?)
-	23:33:45 mulch2 mulchd:         go/pkg/mod/libvirt.org/go/libvirt@v1.8006.0/domain.go:4628 +0x27
-	23:33:45 mulch2 mulchd: libvirt.org/go/libvirt.(*Domain).OpenConsole(0xc0030c00a8?, {0x0?, 0x0}, 0xc000101000?, 0xc000658090?)
-	23:33:45 mulch2 mulchd:         go/pkg/mod/libvirt.org/go/libvirt@v1.8006.0/domain.go:4628 +0xc6
-	23:33:45 mulch2 mulchd: github.com/OnitiFR/mulch/cmd/mulchd/server.(*ConsoleReader).Start(0xc000658090)
-	23:33:45 mulch2 mulchd:         go/src/github.com/OnitiFR/mulch/cmd/mulchd/server/consoles.go:239 +0xc6
-	23:33:45 mulch2 mulchd: github.com/OnitiFR/mulch/cmd/mulchd/server.(*ConsoleManager).addReader(0xc0000ac000, {0xc001a623e4, 0xa})
-	23:33:45 mulch2 mulchd:         go/src/github.com/OnitiFR/mulch/cmd/mulchd/server/consoles.go:104 +0x27d
-	23:33:45 mulch2 mulchd: github.com/OnitiFR/mulch/cmd/mulchd/server.(*ConsoleManager).update(0xc0000ac000)
-	23:33:45 mulch2 mulchd:         go/src/github.com/OnitiFR/mulch/cmd/mulchd/server/consoles.go:155 +0x187
+	/* seen strange cases : Dec 07 2022 (23:33:44), Mar 06 2023 (11:57:50)
+
+	mulchd: INFO(vm): creating VM disk 'vm-r57.qcow2'
+	mulchd: INFO(): HUP signal sent to mulch-proxy
+	mulchd: panic: runtime error: invalid memory address or nil pointer dereference
+	mulchd: [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x7518c7]
+	mulchd: goroutine 87 [running]:
+	mulchd: libvirt.org/go/libvirt.(*Domain).OpenConsole.func2(0xc00015dcb8?, 0x42c527?, 0x8?, 0x0, 0xc000e5e801?)
+	mulchd:         go/pkg/mod/libvirt.org/go/libvirt@v1.8006.0/domain.go:4628 +0x27
+	mulchd: libvirt.org/go/libvirt.(*Domain).OpenConsole(0xc0030c00a8?, {0x0?, 0x0}, 0xc000101000?, 0xc000658090?)
+	mulchd:         go/pkg/mod/libvirt.org/go/libvirt@v1.8006.0/domain.go:4628 +0xc6
+	mulchd: github.com/OnitiFR/mulch/cmd/mulchd/server.(*ConsoleReader).Start(0xc000658090)
+	mulchd:         go/src/github.com/OnitiFR/mulch/cmd/mulchd/server/consoles.go:239 +0xc6
+	mulchd: github.com/OnitiFR/mulch/cmd/mulchd/server.(*ConsoleManager).addReader(0xc0000ac000, {0xc001a623e4, 0xa})
+	mulchd:         go/src/github.com/OnitiFR/mulch/cmd/mulchd/server/consoles.go:104 +0x27d
+	mulchd: github.com/OnitiFR/mulch/cmd/mulchd/server.(*ConsoleManager).update(0xc0000ac000)
+	mulchd:         go/src/github.com/OnitiFR/mulch/cmd/mulchd/server/consoles.go:155 +0x187
+
+	mulchd: [signal SIGSEGV: segmentation violation code=0x1 addr=0x0 pc=0x755c27]
+	mulchd: goroutine 77 [running]:
+	mulchd: libvirt.org/go/libvirt.(*Domain).OpenConsole.func2(0xc0004b5cb8?, 0x42d6e7?, 0x8?, 0x0, 0xc00171ab01?)
+	mulchd:         /home/mulch/go/pkg/mod/libvirt.org/go/libvirt@v1.8010.0/domain.go:4562 +0x27
+	mulchd: libvirt.org/go/libvirt.(*Domain).OpenConsole(0xc0050a0ee8?, {0x0?, 0x0}, 0xc00058e400?, 0xc0038fc2a0?)
+	mulchd:         /home/mulch/go/pkg/mod/libvirt.org/go/libvirt@v1.8010.0/domain.go:4562 +0xc6
+	mulchd: github.com/OnitiFR/mulch/cmd/mulchd/server.(*ConsoleReader).Start(0xc0038fc2a0)
+	mulchd:         /home/mulch/go/pkg/mod/github.com/!oniti!f!r/mulch@v0.0.0-20230302103019-2e88b7ce0bb9/cmd/mulchd/server/consoles.go:260 +0xcf
+	mulchd: github.com/OnitiFR/mulch/cmd/mulchd/server.(*ConsoleManager).addReader(0xc000525d40, {0xc0050a0ee8, 0x10})
+	mulchd:         /home/mulch/go/pkg/mod/github.com/!oniti!f!r/mulch@v0.0.0-20230302103019-2e88b7ce0bb9/cmd/mulchd/server/consoles.go:104 +0x27d
+	mulchd: github.com/OnitiFR/mulch/cmd/mulchd/server.(*ConsoleManager).update(0xc000525d40)
+	mulchd:         /home/mulch/go/pkg/mod/github.com/!oniti!f!r/mulch@v0.0.0-20230302103019-2e88b7ce0bb9/cmd/mulchd/server/consoles.go:155 +0x187
+	mulchd: github.com/OnitiFR/mulch/cmd/mulchd/server.(*ConsoleManager).ScheduleManager(0xc000525d40)
+	mulchd:         /home/mulch/go/pkg/mod/github.com/!oniti!f!r/mulch@v0.0.0-20230302103019-2e88b7ce0bb9/cmd/mulchd/server/consoles.go:62 +0x47
+	mulchd: created by github.com/OnitiFR/mulch/cmd/mulchd/server.NewConsoleManager
+	mulchd:         /home/mulch/go/pkg/mod/github.com/!oniti!f!r/mulch@v0.0.0-20230302103019-2e88b7ce0bb9/cmd/mulchd/server/consoles.go:51 +0xb6
 	*/
+
+	// turns out that this is not the correct fix, we had another crash
 	if stream == nil {
 		return fmt.Errorf("strange empty stream with no error (%s)", cr.vmNameID)
 	}

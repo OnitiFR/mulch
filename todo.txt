@@ -24,12 +24,10 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Current:
-- add 'vm abort' completion (using "mulch greenhouse list" hidden command)
-  - force -b currently?
 
 Short term:
+- SIGSEGV edge case in ConsoleReader.Start()
 - look for multiple "time.After()" in for loops
-- allow "manual" certificates (and their refresh?) - proxy.go, manager.GetCertificate
 - remove SSH proxy close delay
 - better error message in case of a double creation?
 - clean multipart temp files after upload?
