@@ -1,10 +1,10 @@
 package topics
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
-	"syscall"
 
 	"github.com/OnitiFR/mulch/common"
 	"github.com/spf13/cobra"
@@ -40,7 +40,6 @@ Warning: use 'mulch backup umount' command, not the system's 'umount'.
 			log.Fatalf("mount point '%s' does not exists", mountPoint)
 		}
 
-		// launch 'ssh' command
 		cmdArgs := []string{
 			"guestmount",
 			"-a", backupFile,
@@ -48,8 +47,21 @@ Warning: use 'mulch backup umount' command, not the system's 'umount'.
 			mountPoint,
 		}
 
-		err = syscall.Exec(guestmountPath, cmdArgs, os.Environ())
-		log.Fatal(err.Error())
+		cmd := exec.Command(guestmountPath, cmdArgs...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
+		err = cmd.Run()
+		if err != nil {
+			fmt.Println(err.Error())
+			fmt.Println("---")
+			fmt.Println("mulch hint: on some systems, access to kernel images is denied for users.")
+			fmt.Println("If the error is related to this issue, you can reset access as a workaround:")
+			fmt.Println("  sudo chmod 644", "/boot/vmlinuz-$(uname -r)")
+			fmt.Println("This is supposedly (and arguably) a dangerous fix, but see by yourself:")
+			fmt.Println("https://bugs.launchpad.net/fuel/+bug/1467579")
+			os.Exit(1)
+		}
 	},
 }
 
