@@ -95,6 +95,13 @@ func watchProxy(url string, log *Log) error {
 	req.Header.Set(WatchDogHeaderName, "true")
 
 	http2Client := &http.Client{
+		// create our own transport, since we also want to test the default one
+		Transport: &http.Transport{
+			MaxIdleConns:          1,
+			IdleConnTimeout:       5 * time.Second,
+			TLSHandshakeTimeout:   2 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
 		Timeout: time.Duration(5 * time.Second),
 	}
 
@@ -155,12 +162,11 @@ func watchProxies(ddb *DomainDatabase, selfUrl url.URL, log *Log) {
 }
 
 // InstallWatchdog will check HTTP2 links to our children (as a parent proxy)
-// and ourself every minute.
-// (we may lower this value later, let's see if we have false postives)
+// and to ourself (we may increase frequency later)
 func InstallWatchdog(ddb *DomainDatabase, selfUrl *url.URL, log *Log) {
 	go func() {
 		for {
-			time.Sleep(1 * time.Minute)
+			time.Sleep(30 * time.Second)
 			watchProxies(ddb, *selfUrl, log)
 		}
 	}()
