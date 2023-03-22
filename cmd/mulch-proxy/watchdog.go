@@ -101,9 +101,10 @@ func watchProxy(url string, log *Log) error {
 			IdleConnTimeout:       11 * time.Second,
 			TLSHandshakeTimeout:   5 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
+			DisableKeepAlives:     true,
 		},
 		// was 5, but we've seen some timeouts (up to a few times per day)
-		Timeout: time.Duration(10 * time.Second),
+		Timeout: time.Duration(5 * time.Second),
 	}
 
 	start := time.Now()
