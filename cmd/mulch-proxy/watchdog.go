@@ -95,16 +95,12 @@ func watchProxy(url string, log *Log) error {
 	req.Header.Set(WatchDogHeaderName, "true")
 
 	http2Client := &http.Client{
-		// create our own transport, since we also want to test the default one
+		// create our own connection
 		Transport: &http.Transport{
-			MaxIdleConns:          1,
-			IdleConnTimeout:       11 * time.Second,
-			TLSHandshakeTimeout:   5 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			DisableKeepAlives:     true,
+			DisableKeepAlives: true,
 		},
-		// was 5, but we've seen some timeouts (up to a few times per day)
-		Timeout: time.Duration(5 * time.Second),
+		// was 5, but we've seen some timeouts (up to a few times per day), let's investigate
+		Timeout: time.Duration(10 * time.Second),
 	}
 
 	start := time.Now()
