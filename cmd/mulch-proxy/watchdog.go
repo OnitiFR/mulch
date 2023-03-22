@@ -98,17 +98,20 @@ func watchProxy(url string, log *Log) error {
 		// create our own transport, since we also want to test the default one
 		Transport: &http.Transport{
 			MaxIdleConns:          1,
-			IdleConnTimeout:       5 * time.Second,
-			TLSHandshakeTimeout:   2 * time.Second,
+			IdleConnTimeout:       11 * time.Second,
+			TLSHandshakeTimeout:   5 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
 		},
-		Timeout: time.Duration(5 * time.Second),
+		// was 5, but we've seen some timeouts (up to a few times per day)
+		Timeout: time.Duration(10 * time.Second),
 	}
 
+	start := time.Now()
 	response2, err := http2Client.Do(req)
 	if err != nil {
 		if err, ok := err.(net.Error); ok && err.Timeout() { // is timeout?
 			// OK, we have a REAL problem with this proxy, here!
+			log.Infof("watchdog: HTTP2 timeout (%s) for %s", time.Since(start), url)
 			return err
 		}
 		log.Errorf("watchdog: HTTP2: %s (%s)", err.Error(), url) // another error
@@ -140,7 +143,7 @@ func watchProxies(ddb *DomainDatabase, selfUrl url.URL, log *Log) {
 			err := watchProxy(childURL, log)
 			if err != nil {
 				log.Errorf("watchdog: %s", err.Error())
-				log.Errorf("FATAL: watchdog unable to contact child using HTTP2 while child seems up, possible chain deadlock! Exiting process for force restart.")
+				log.Errorf("FATAL: watchdog unable to contact child using HTTP2 while child seems up, possible chain deadlock! Exiting process for a forced restart.")
 				os.Exit(200)
 			}
 		}
@@ -153,7 +156,7 @@ func watchProxies(ddb *DomainDatabase, selfUrl url.URL, log *Log) {
 		err := watchProxy(selfUrl.String(), log)
 		if err != nil {
 			log.Error(err.Error())
-			log.Errorf("FATAL: watchdog unable to contact ourself using HTTP2, possible deadlock! Exiting process for force restart.")
+			log.Errorf("FATAL: watchdog unable to contact ourself using HTTP2, possible deadlock! Exiting process for a forced restart.")
 			os.Exit(200)
 		}
 	}
