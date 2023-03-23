@@ -116,6 +116,9 @@ func watchProxy(url string, log *Log) error {
 	}
 	defer response2.Body.Close()
 
+	// (might remove this trace in the future, it's here to investigate 5s timeouts)
+	log.Tracef("watchdog: HTTP2 response for %s in %s", url, time.Since(start))
+
 	// drain response
 	_, err = io.ReadAll(response2.Body)
 	if err != nil {
