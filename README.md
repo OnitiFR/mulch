@@ -226,8 +226,8 @@ See the following example ([ubuntu_2204_lamp.toml](https://raw.githubusercontent
 
 ```toml
 [[seed]]
-name = "ubuntu_2004_lamp"
-seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2004_lamp.toml"
+name = "ubuntu_2204_lamp"
+seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2204_lamp.toml"
 ```
 Seeds are automatically rebuild, so everything is kept up to date (base seed, packages, …).
 
