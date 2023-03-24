@@ -309,7 +309,7 @@ with `sync_secrets = true` in the peer section.
 
 Secret sharing **must** be done in a bidirectional way:
  - each server must declare the all the others as peers, with `sync_secrets`
- - all servers mush share the same encryption key (`mulch-secrets.key`)
+ - all servers must share the same encryption key (`mulch-secrets.key`)
 
 #### Inter-VM communication
 By default, network traffic is not allowed between VMs, but you can choose to
