@@ -32,13 +32,13 @@ type AppConfig struct {
 	// (do not change if any VM was already built!)
 	InternalServerPort int
 
-	// API server HTTPS domain name (HTTP otherwise)
+	// API server HTTPS domain name (fallbacks to HTTP if not set)
 	ListenHTTPSDomain string
 
 	// URI to libvirtd (qemu only, currently)
 	LibVirtURI string
 
-	// translated to a absolute local path (so libvirtd shound run next to us, currently)
+	// local path (so libvirtd shound run next to us, currently)
 	StoragePath string
 
 	// persistent storage (ex: VM database)
@@ -54,38 +54,38 @@ type AppConfig struct {
 	// SSH proxy listen address
 	ProxyListenSSH string
 
-	// Extra (limited) SSH keys
+	// extra (limited) SSH keys
 	ProxySSHExtraKeysFile string
 
-	// Reverse Proxy Chaining mode
+	// reverse Proxy Chaining mode
 	ProxyChainMode int
 
-	// if parent: listing API URL
+	// if parent: listening API URL
 	// if child: parent API URL
 	ProxyChainParentURL string
 
 	// child only: URL we will register to parent
 	ProxyChainChildURL string
 
-	// Pre-Shared key for the chain
+	// pre-shared key for the chain
 	ProxyChainPSK string
 
-	// User (sudoer) created by Mulch in VMs
+	// user (sudoer) created by Mulch in VMs
 	MulchSuperUser string
 
-	// Name of the SSH key in SSHPairDatabase for this sudoer
+	// name of the SSH key in SSHPairDatabase for this sudoer
 	MulchSuperUserSSHKey string
 
-	// Everyday VM auto-rebuild time ("HH:MM")
+	// everyday VM auto-rebuild time ("HH:MM")
 	AutoRebuildTime string
 
-	// Seeds
+	// seeds
 	Seeds map[string]ConfigSeed
 
-	// Peers
+	// peers
 	Peers map[string]ConfigPeer
 
-	// Origins
+	// origins
 	Origins map[string]*ConfigOrigin
 
 	// global mulchd configuration path
