@@ -270,6 +270,9 @@ func (cr *ConsoleReader) Start() error {
 	mulchd:         /home/mulch/go/pkg/mod/github.com/!oniti!f!r/mulch@v0.0.0-20230302103019-2e88b7ce0bb9/cmd/mulchd/server/consoles.go:62 +0x47
 	mulchd: created by github.com/OnitiFR/mulch/cmd/mulchd/server.NewConsoleManager
 	mulchd:         /home/mulch/go/pkg/mod/github.com/!oniti!f!r/mulch@v0.0.0-20230302103019-2e88b7ce0bb9/cmd/mulchd/server/consoles.go:51 +0xb6
+
+	another one *at the end* of a seed rebuild (?!) (more or less during database save)
+	issue specific to seeds?
 	*/
 
 	// turns out that this is not the correct fix, we had another crash

@@ -254,6 +254,7 @@ func (vmdb *VMDatabase) save() error {
 	if err != nil {
 		return err
 	}
+	f.Sync()
 
 	err = vmdb.genDomainsDB()
 	if err != nil {
