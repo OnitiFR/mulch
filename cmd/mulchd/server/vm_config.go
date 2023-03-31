@@ -279,9 +279,10 @@ func NewVMConfigFromTomlReader(configIn io.Reader, app *App) (*VMConfig, error) 
 		hostName := strings.TrimSpace(strings.ToLower(parts[0]))
 		portNum := 80
 		if len(parts) == 2 {
-			portNum, err = strconv.Atoi(parts[1])
+			p := strings.TrimSpace(parts[1])
+			portNum, err = strconv.Atoi(p)
 			if err != nil {
-				return nil, fmt.Errorf("invalid port number '%s'", parts[1])
+				return nil, fmt.Errorf("invalid port number '%s'", p)
 			}
 		}
 		domain := common.Domain{
