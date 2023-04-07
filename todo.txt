@@ -27,6 +27,7 @@ Current:
 
 Short term:
 - SIGSEGV edge case in ConsoleReader.Start()
+  - attach reader only on-demand (must work on "abort + another create", then)
 - remove SSH proxy close delay
 - better error message in case of a double creation?
 - clean multipart temp files after upload?
