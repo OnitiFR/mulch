@@ -804,16 +804,19 @@ func GetVMConsoleController(req *server.Request) {
 	}
 
 	name := entry.Name
-	r, err := req.App.ConsoleManager.NewPersitentReader(name, req.HTTP.Context())
+
+	r, err := server.GetConsoleStream(name, req.App)
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)
 		return
 	}
 
+	defer r.Abort()
+
 	req.Response.Header().Set("Content-Type", "application/octet-stream")
 
-	_, err = server.CopyHttpFlush(req.Response, r)
+	_, err = server.CopyStreamFlush(req.Response, r, req.HTTP.Context())
 	if err != nil {
 		req.App.Log.Errorf("console read error: %s", err.Error())
 		return

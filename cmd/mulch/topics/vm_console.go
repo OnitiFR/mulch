@@ -15,8 +15,8 @@ var vmConsoleCmd = &cobra.Command{
 
 Useful to see the boot process, debug a VM, output specialized streams, etc.
 
-A rolling buffer stores latest console output. This command will flush
-this buffer to your standard output. Flushed content is lost.
+Show VM live console output. Previous output is lost, start the command
+soon enough if you want to see the whole boot process.
 
 You can see "greenhouse" (currently in creation) VM's console using the
 --revision flag. (brand new VMs have revision 0)

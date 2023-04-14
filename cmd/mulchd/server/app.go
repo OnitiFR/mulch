@@ -57,7 +57,6 @@ type App struct {
 	AlertSender    *AlertSender
 	Seeder         *SeedDatabase
 	Origins        *Origins
-	ConsoleManager *ConsoleManager
 	routesInternal map[string][]*Route
 	routesAPI      map[string][]*Route
 	sshClients     *sshServerClients
@@ -166,8 +165,6 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	app.ConsoleManager = NewConsoleManager(app)
 
 	app.Origins = NewOrigins(app)
 
