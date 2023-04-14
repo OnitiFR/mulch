@@ -41,7 +41,6 @@ Warning: use 'mulch backup umount' command, not the system's 'umount'.
 		}
 
 		cmdArgs := []string{
-			"guestmount",
 			"-a", backupFile,
 			"-m", "/dev/sda",
 			mountPoint,
