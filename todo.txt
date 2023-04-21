@@ -40,7 +40,6 @@ Short term:
 - explore vm migration possible edge case:
   // migration of active VM ok → local vm deletion → an existing
   // "lower" inactive VM is activated (unharmful error if source was active?)
-- systemd CapabilityBoundingSet/AmbientCapabilities = CAP_NET_BIND_SERVICE (+NoNewPrivileges=true) [systemd v229+]
 - allow to globally disable auto-rebuild?
 - rights: limit SSH to a specific VM? (check a fake vm=… header in the SSH proxy?)
 - rights: logs may expose sensitive data (which ones?)
