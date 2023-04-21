@@ -60,6 +60,7 @@ Short term:
 - backup encryption? https://libvirt.org/formatstorageencryption.html#examples
 - purge old secrets (caution with long time disconnected peers)
 - better "secret list" command, to explore secret "tree"
+- show unused secrets?
 
 Long term:
 - full async API?
