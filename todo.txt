@@ -28,10 +28,6 @@ Current:
 Short term:
 - remove SSH proxy close delay
 - better error message in case of a double creation?
-- clean multipart temp files after upload?
-  - issue only exists for http2 (so not on a local dev env)
-  - should be fixed with Go 1.20 : https://github.com/golang/go/issues/20253
-  - can be done by hand with req.MultipartForm.RemoveAll()
 - explore recent IO slowdowns for libvirt storage on some systems
   - vm disk create, seed storage, backup uploads, etc
   - starts at 30MB/s, ends at 5
