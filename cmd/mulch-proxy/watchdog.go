@@ -99,7 +99,8 @@ func watchProxy(url string, log *Log) error {
 		Transport: &http.Transport{
 			DisableKeepAlives: true,
 		},
-		// was 5, but we've seen some timeouts (up to a few times per day), let's investigate
+		// up to a few times per day, anwser needs ~5.01s (for unknown reasons yet)
+		// so we set a 10s timeout
 		Timeout: time.Duration(10 * time.Second),
 	}
 
