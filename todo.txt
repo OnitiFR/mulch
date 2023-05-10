@@ -54,6 +54,7 @@ Short term:
 - fix completion when using a non-default (-c) config file (see barry: __barry_get_config)
 - on redefine, show what's instantaneous and what's needing a rebuild? a reboot?
 - allow a cron-style syntax for auto_rebuild
+- allow to set a manual rebuild ("at" style?)
 - like restore_backup, allow to restore from a VM (ex: autorebuild from prod)
 - backup available at "prepare" stage during a restore? / "meta" informations for restore? (ex: gitlab version)
   - must be available BEFORE the backup even exists (ex: rebuild)
