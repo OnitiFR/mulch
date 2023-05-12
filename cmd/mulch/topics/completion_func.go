@@ -104,7 +104,7 @@ __internal_list_greenhouse_vms() {
 
 __mulch_get_servers() {
     local out servers
-    servers=$(egrep '^[[:blank:]]*name[[:blank:]]*=' ~/.mulch.toml | awk -F= '{print $2}')
+    servers=$(grep -E '^[[:blank:]]*name[[:blank:]]*=' ~/.mulch.toml | awk -F= '{print $2}')
     out=($(echo $servers))
     COMPREPLY=( $( compgen -W "${out[*]}" -- "$cur" ) )
 }
