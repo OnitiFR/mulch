@@ -61,6 +61,7 @@ Short term:
 - backup encryption? https://libvirt.org/formatstorageencryption.html#examples
 - purge old secrets (caution with long time disconnected peers)
 - better "secret list" command, to explore secret "tree"
+- "mulch secret get" error code is 0 event when secret does not exist, fix?
 - show unused secrets?
 
 Long term:
