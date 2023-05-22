@@ -5,18 +5,13 @@
 
 . ~/env
 
-# https://wordpress.org/download/releases/ (tar.gz)
-WORDPRESS_VERSION="6.2.1"
-WORDPRESS_SHA1="802914e642da79b1910bdffaee16665a499bc867"
-
 mkdir -p tmp || exit $?
-echo "downloading Wordpress $WORDPRESS_VERSION ($WORDPRESS_SHA1)"
+echo "downloading latest Wordpress"
 
-curl -so wordpress.tar.gz -fSL "https://wordpress.org/wordpress-${WORDPRESS_VERSION}.tar.gz" || exit $?
-echo "$WORDPRESS_SHA1 *wordpress.tar.gz" | sha1sum -c - || exit $?
+curl -so wordpress.tar.gz -fSL "https://wordpress.org/wordpress-latest.tar.gz" || exit $?
 
 echo "extracting Wordpress"
-# upstream tarballs include ./wordpress/
+# upstream tarballs includes everything in ./wordpress/
 tar -xzf wordpress.tar.gz -C tmp || exit $?
 rm wordpress.tar.gz || exit $?
 rm -rf $HTML_DIR # !!!
