@@ -60,8 +60,8 @@ Short term:
   - must be available BEFORE the backup even exists (ex: rebuild)
 - backup encryption? https://libvirt.org/formatstorageencryption.html#examples
 - purge old secrets (caution with long time disconnected peers)
-- better "secret list" command, to explore secret "tree"
-- show unused secrets?
+- even better "secret list" command (closer to the usual FS experience)
+- show unused secrets? (request peers too!)
 
 Long term:
 - full async API?

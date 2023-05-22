@@ -73,9 +73,15 @@ func GetSecretController(req *server.Request) {
 func ListSecretsController(req *server.Request) {
 	req.Response.Header().Set("Content-Type", "application/json")
 
+	path := req.HTTP.FormValue("path")
+
 	var retData common.APISecretListEntries
 
 	for _, name := range req.App.SecretsDB.GetKeys() {
+		if path != "" && !strings.HasPrefix(name, path) {
+			continue
+		}
+
 		secret, err := req.App.SecretsDB.Get(name)
 		if err != nil {
 			msg := fmt.Sprintf("Secret '%s': %s", name, err)

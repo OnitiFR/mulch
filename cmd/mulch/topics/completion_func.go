@@ -156,7 +156,7 @@ __mulch_custom_func() {
             __internal_list_keys
             return
             ;;
-        mulch_secret_set | mulch_secret_get | mulch_secret_delete)
+        mulch_secret_set | mulch_secret_get | mulch_secret_delete | mulch_secret_list)
             __internal_list_secrets
             return
             ;;

@@ -19,16 +19,23 @@ var secretListFlagBasic bool
 
 // secretListCmd represents the "secret list" command
 var secretListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   "list [path]",
 	Short: "List all secrets",
-	Args:  cobra.NoArgs,
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		secretListFlagBasic, _ = cmd.Flags().GetBool("basic")
 		if keyListFlagBasic {
 			client.GetExitMessage().Disable()
 		}
 
-		call := client.GlobalAPI.NewCall("GET", "/secret", map[string]string{})
+		path := ""
+		if len(args) > 0 {
+			path = args[0]
+		}
+
+		call := client.GlobalAPI.NewCall("GET", "/secret", map[string]string{
+			"path": path,
+		})
 		call.JSONCallback = secretListCB
 		call.Do()
 	},
