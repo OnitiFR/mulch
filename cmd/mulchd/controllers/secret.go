@@ -52,7 +52,9 @@ func GetSecretController(req *server.Request) {
 	orgKey := req.SubPath
 	key, err := req.App.SecretsDB.CleanKey(orgKey)
 	if err != nil {
-		req.Stream.Failuref("Invalid key: %s", err)
+		errI := fmt.Errorf("invalid key: %s", err)
+		req.App.Log.Error(errI.Error())
+		http.Error(req.Response, errI.Error(), 400)
 		return
 	}
 
