@@ -163,6 +163,7 @@ func UploadBackupController(req *server.Request) {
 		req.Stream.Failuref("error with 'file' field: %s (not enough temp space?)", err)
 		return
 	}
+	defer file.Close()
 
 	expireStr := req.HTTP.FormValue("expire")
 	expire := time.Duration(0)

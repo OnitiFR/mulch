@@ -64,6 +64,8 @@ func VMControllerConfigCheck(req *server.Request) (*server.VMConfig, string, err
 	if err != nil {
 		return nil, "", fmt.Errorf("'config' file field: %s", err)
 	}
+	defer configFile.Close()
+
 	filename := header.Filename
 
 	conf, err := server.NewVMConfigFromTomlReader(configFile, req.App)
@@ -532,6 +534,7 @@ func ExecScriptVM(req *server.Request, vm *server.VM, vmName *server.VMName) err
 	if err != nil {
 		return fmt.Errorf("'script' field: %s", err)
 	}
+	defer script.Close()
 
 	running, _ := server.VMIsRunning(vmName, req.App)
 	if !running {
@@ -896,6 +899,7 @@ func RedefineVM(req *server.Request, vm *server.VM, active bool) error {
 	if err != nil {
 		return fmt.Errorf("'config' file field: %s", err)
 	}
+	defer configFile.Close()
 	req.Stream.Tracef("reading '%s' config file", header.Filename)
 
 	conf, err := server.NewVMConfigFromTomlReader(configFile, req.App)

@@ -151,6 +151,7 @@ func SyncSecretsController(req *server.Request) {
 		http.Error(req.Response, err.Error(), 500)
 		return
 	}
+	defer content.Close()
 
 	buff, err := io.ReadAll(content)
 	if err != nil {
