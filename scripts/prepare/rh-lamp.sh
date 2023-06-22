@@ -130,6 +130,7 @@ EOS
 sudo chgrp $_APP_USER /var/lib/php/session/ || exit $?
 
 sudo sed -i 's/^disable_functions \(.\+\)$/disable_functions = phpinfo/' /etc/php.ini || exit $?
+sudo sed -i 's/^expose_php\(.\+\)$/expose_php = Off/' /etc/php.ini || exit $?
 
 if [ ! -f ~/.my.cnf ]; then
   root_pwd=$(genpasswd)
