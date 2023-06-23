@@ -6,6 +6,9 @@
 export DEBIAN_FRONTEND="noninteractive"
 sudo -E apt-get -y -qq install progress mc powerline locate man || exit $?
 
+# Debian 12+: apt is not installed by default
+apt-get install --no-install-recommends cron || exit $?
+
 # powerline-gitstatus for Ubuntu >= 18.10
 available=$(sudo apt-cache search --names-only '^powerline-gitstatus$' | wc -l)
 if [ $available -gt 0 ]; then
