@@ -92,6 +92,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 
 	app.initSigQUITHandler()
 
+	app.Log.Tracef("connecting to libvirt… (%s)", config.LibVirtURI)
 	app.Libvirt, err = NewLibvirt(config.LibVirtURI)
 	if err != nil {
 		return nil, err
