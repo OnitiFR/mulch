@@ -60,6 +60,7 @@ Short term:
   - must be available BEFORE the backup even exists (ex: rebuild)
 - backup encryption? https://libvirt.org/formatstorageencryption.html#examples
 - purge old secrets (caution with long time disconnected peers)
+- allow a centralized secret share (useful with many hosts)
 - even better "secret list" command (closer to the usual FS experience)
 - show unused secrets? (request peers too!)
 
