@@ -36,6 +36,7 @@ Short term:
 - vm info: show ports?
 - mulch client port forwarding (via SSH)?
 - README: add image for vm migration?
+- output seems mixed when multiple migrations are targeting the same hosts?
 - rewrite README, with "public release" in mind?
 - explore vm migration possible edge case:
   // migration of active VM ok → local vm deletion → an existing
