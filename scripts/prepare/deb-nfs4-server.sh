@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # -- Run with sudo privileges
-# For: Debian 9+ 
+# For: Debian 9+
 # Ubuntu 22.04 will fail: kernel NFS server module is removed from cloud image!
 
 # You must define the exported path with NFS4_EXPORT.
@@ -43,7 +43,8 @@ RPCNFSDOPTS="--no-nfs-version 2 --no-nfs-version 3 --nfs-version 4 --no-udp"
 EOS
 [ $? -eq 0 ] || exit $?
 
-sudo systemctl disable --now rpcbind.service rpcbind.socket || exit $?
-sudo systemctl mask rpcbind.service rpcbind.socket || exit $?
+# rpcbind is not needed for NFSv4, but Debian 12 will fail to start nfs-server without it
+#sudo systemctl disable --now rpcbind.service rpcbind.socket || exit $?
+#sudo systemctl mask rpcbind.service rpcbind.socket || exit $?
 
 sudo systemctl restart nfs-server || exit $?
