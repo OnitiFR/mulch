@@ -23,7 +23,7 @@ rm "$tmpfile"
 # now tries to create a new XFS instead of resizing the existing
 # template ext2 FS. It's way faster on large volumes and do not implies
 # big qcow2 files as a result.
-which mkfs.xfs > /dev/null
+sudo which mkfs.xfs > /dev/null
 if [ $? -ne 0 ]; then
   echo "resizing FS on $part…"
   sudo resize2fs "$part" > "$tmpfile" 2>&1
