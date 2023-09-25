@@ -46,6 +46,12 @@ cat <<'EOS' > $HOME/bin/nfs-monitor.sh
 cd $HOME
 . /etc/mulch.env
 
+if ! grep -q "$NFS4_MOUNT" /proc/mounts; then
+    logger "NFS4 mount is not present, trying to mount"
+    sudo mount -a > /dev/null
+    exit 0
+fi
+
 sudo stat -t "$NFS4_MOUNT" > /dev/null
 if [ $? -ne 0 ]; then
     logger "NFS4 mount is not available, trying to remount"
