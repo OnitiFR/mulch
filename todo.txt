@@ -27,6 +27,7 @@ Resource leaks:
 Current:
 
 Short term:
+- keep mulch/mulch.env in backup? (with secrets?)
 - remove SSH proxy close delay
 - better error message in case of a double creation?
 - explore recent IO slowdowns for libvirt storage on some systems
