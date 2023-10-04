@@ -7,6 +7,8 @@
 # You must define the exported path with NFS4_EXPORT.
 # This directory will be created by the script.
 
+# Optional: NFS4_MODE=ro (default: rw)
+
 # You can then export port 2049 to a group:
 # ports = [
 #    "2049/tcp->@group",
@@ -15,6 +17,10 @@
 if [ -z "$NFS4_EXPORT" ]; then
     >&2 echo "need NFS4_EXPORT env var (exported path)"
     exit 1
+fi
+
+if [ -z "$NFS4_MODE" ]; then
+    NFS4_MODE="rw"
 fi
 
 export DEBIAN_FRONTEND="noninteractive"
@@ -31,7 +37,7 @@ sudo bash -c "cat >> /etc/exports" <<- EOS
 
 # (added by deb-nfs4-server.sh)
 # exportfs -arv
-$NFS4_EXPORT *(rw,sync,fsid=0,crossmnt,no_subtree_check,sec=sys,insecure,anonuid=$app_uid,anongid=$app_gid)
+$NFS4_EXPORT *($NFS4_MODE,sync,fsid=0,crossmnt,no_subtree_check,sec=sys,insecure,anonuid=$app_uid,anongid=$app_gid)
 EOS
 [ $? -eq 0 ] || exit $?
 
