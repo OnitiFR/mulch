@@ -193,6 +193,8 @@ sudo bash -c "cat > /usr/local/lib/phpMyAdmin/config.inc.php" <<- 'EOS'
 <?php
 # fix for :80 with this (old) phpMyAdmin release
 $cfg['PmaAbsoluteUri'] = "https://" . getenv('_DOMAIN_FIRST') . "/_sql/";
+$cfg['LoginCookieValidity'] = 86400;
+ini_set('session.gc_maxlifetime', '86400');
 EOS
 [ $? -eq 0 ] || exit $?
 
