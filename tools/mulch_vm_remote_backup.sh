@@ -6,6 +6,12 @@
 
 # This script remove local backups older than 10 days.
 
+# Required key rights:
+# GET /vm/infos/*
+# POST /vm/* action=backup
+# GET /backup/*
+# DELETE /backup/*
+
 if [ -z "$2" ]; then
     (>&2 echo "ERROR: give vm-name and destination backup-dir")
     (>&2 echo "Usage example: $0 my-vm /home/backups/data")
