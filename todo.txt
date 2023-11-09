@@ -66,6 +66,7 @@ Short term:
 - allow a centralized secret share (useful with many hosts)
 - even better "secret list" command (closer to the usual FS experience)
 - show unused secrets? (request peers too!)
+- investigate Let's Encrypt throttling issues
 
 Long term:
 - full async API?
