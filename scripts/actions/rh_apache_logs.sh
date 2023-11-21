@@ -2,4 +2,23 @@
 
 # Run as admin user
 
-sudo tail -f /var/log/httpd/access_log /var/log/httpd/error_log
+arg1="$1"
+
+if [ "$arg1" == "help" || "$arg1" == "--help" || "$arg1" == "-h" ]; then
+  echo "Usage: $0 [access|error]"
+  exit 0
+fi
+
+case "$arg1" in
+  "access")
+    sudo tail -f /var/log/httpd/access_log
+    exit 0
+    ;;
+  "error")
+    sudo tail -f /var/log/httpd/error_log
+    exit 0
+    ;;
+  *)
+    sudo tail -f /var/log/httpd/access_log /var/log/httpd/error_log
+    ;;
+esac
