@@ -4,7 +4,7 @@
 
 arg1="$1"
 
-if [ "$arg1" == "help" || "$arg1" == "--help" || "$arg1" == "-h" ]; then
+if [ "$arg1" == "help" ] || [ "$arg1" == "--help" ] || [ "$arg1" == "-h" ]; then
   echo "Usage: $0 [access|error]"
   exit 0
 fi
