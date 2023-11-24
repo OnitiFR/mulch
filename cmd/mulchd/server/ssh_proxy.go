@@ -48,7 +48,7 @@ func (proxy *SSHProxy) ForwardRequestsToClient(in <-chan *ssh.Request, client *s
 	}
 }
 
-func sshProxyCopyChan(dst ssh.Channel, src ssh.Channel, way string, wgChannels *sync.WaitGroup, log *Log) {
+func sshProxyCopyChan(dst ssh.Channel, src ssh.Channel, way string, wgChannels *sync.WaitGroup, wgClosed *sync.WaitGroup, log *Log) {
 	_, err := io.Copy(dst, src)
 	if err != nil {
 		log.Tracef("SSH: %s Copy error: %s", way, err)
@@ -61,11 +61,23 @@ func sshProxyCopyChan(dst ssh.Channel, src ssh.Channel, way string, wgChannels *
 	dst.CloseWrite()
 	log.Tracef("SSH: %s EOF sent", way)
 
-	// This is it: we wait for the other copy and exit-status request writing.
-	// (if the request is not written, the ssh/scp/… client will return its own error code)
-	// Interestingly, higher latencies seems to mitigate the issue.
-	time.Sleep(500 * time.Millisecond)
+	// -- Wait for the other copy and exit-status request writing.
+	// Notes:
+	// 	- if the request is not written, the ssh/scp/… client will return its own error code
+	//  - interestingly, higher latencies seems to mitigate the issue
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wgClosed.Wait()
+	}()
+	select {
+	case <-c:
+	case <-time.After(1 * time.Second):
+		// this is not supposed to happen, but let's be paranoid
+		log.Tracef("SSH: WARNING: %s timeout waiting for other chan (possible goroutine leak)", way)
+	}
 
+	// -- Close channels for real
 	src.Close()
 	dst.Close()
 	log.Tracef("SSH: %s finished", way)
@@ -122,6 +134,9 @@ func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Con
 		// requests + two Copy
 		wgChannels.Add(3)
 
+		var wgClosed sync.WaitGroup
+		wgClosed.Add(1)
+
 		// connect requests
 		go func() {
 			proxy.log.Trace("SSH: waiting for request")
@@ -143,6 +158,7 @@ func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Con
 				if req == nil {
 					proxy.log.Trace("SSH: req is nil, both chan closed")
 					wgChannels.Done()
+					wgClosed.Done()
 					break
 				}
 
@@ -162,8 +178,8 @@ func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Con
 
 		proxy.log.Trace("SSH: Connecting channels")
 
-		go sshProxyCopyChan(upChannel, downChannel, "down->up", &wgChannels, proxy.log)
-		go sshProxyCopyChan(downChannel, upChannel, "up->down", &wgChannels, proxy.log)
+		go sshProxyCopyChan(upChannel, downChannel, "down->up", &wgChannels, &wgClosed, proxy.log)
+		go sshProxyCopyChan(downChannel, upChannel, "up->down", &wgChannels, &wgClosed, proxy.log)
 	}
 
 	// Wait io.Copies (we have defered Closes in this function)
