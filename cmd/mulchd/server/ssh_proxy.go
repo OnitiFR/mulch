@@ -61,9 +61,9 @@ func sshProxyCopyChan(dst ssh.Channel, src ssh.Channel, way string, wgChannels *
 	dst.CloseWrite()
 	log.Tracef("SSH: %s EOF sent", way)
 
-	// This is it: we wait for the other copy and last requests…
-	// If connection latency is greater, the "exit-status" request
-	// is missed, and the ssh/scp/… client will return its own error code.
+	// This is it: we wait for the other copy and exit-status request writing.
+	// (if the request is not written, the ssh/scp/… client will return its own error code)
+	// Interestingly, higher latencies seems to mitigate the issue.
 	time.Sleep(500 * time.Millisecond)
 
 	src.Close()
