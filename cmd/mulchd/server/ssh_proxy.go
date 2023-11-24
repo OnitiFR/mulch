@@ -74,7 +74,7 @@ func sshProxyCopyChan(dst ssh.Channel, src ssh.Channel, way string, wgChannels *
 	case <-c:
 	case <-time.After(1 * time.Second):
 		// this is not supposed to happen, but let's be paranoid
-		log.Tracef("SSH: WARNING: %s timeout waiting for other chan (possible goroutine leak)", way)
+		log.Warningf("SSH: %s timeout waiting for other chan (possible goroutine leak)", way)
 	}
 
 	// -- Close channels for real
