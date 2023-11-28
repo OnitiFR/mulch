@@ -165,6 +165,10 @@ func UploadBackupController(req *server.Request) {
 	}
 	defer file.Close()
 
+	// should be called automatically, but is not for HTTP2
+	// supposed to be fixed: https://github.com/golang/go/issues/20253  but still present to date
+	defer req.HTTP.MultipartForm.RemoveAll()
+
 	expireStr := req.HTTP.FormValue("expire")
 	expire := time.Duration(0)
 	if expireStr != "" {
