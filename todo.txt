@@ -28,7 +28,6 @@ Current:
 
 Short term:
 - keep mulch/mulch.env in backup? (with secrets?)
-- remove SSH proxy close delay
 - better error message in case of a double creation?
 - explore recent IO slowdowns for libvirt storage on some systems
   - vm disk create, seed storage, backup uploads, etc
@@ -61,14 +60,14 @@ Short term:
 - like restore_backup, allow to restore from a VM (ex: autorebuild from prod)
 - backup available at "prepare" stage during a restore? / "meta" informations for restore? (ex: gitlab version)
   - must be available BEFORE the backup even exists (ex: rebuild)
-- backup encryption? https://libvirt.org/formatstorageencryption.html#examples
 - purge old secrets (caution with long time disconnected peers)
-- allow a centralized secret share (useful with many hosts)
 - even better "secret list" command (closer to the usual FS experience)
 - show unused secrets? (request peers too!)
 - investigate Let's Encrypt throttling issues
 
 Long term:
+- allow a centralized secret share (useful with many hosts)
+- "hidden multi-server support"? (with a "proxy mulchd" routing requests to the correct real mulchd)
 - full async API?
 - write API public documentation
 - continue tests on snapshots (see branch "snapshots")
@@ -86,7 +85,6 @@ Long term:
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
 - check for missing response.Body.Close() (or things like that)
 - check for io.Reader bad usages ("they must record the number of bytes read into the buffer, reslice the buffer, process that data, and only then, consult the error." https://dave.cheney.net/2019/09/05/dont-force-allocations-on-the-callers-of-your-api)
-- "hidden multi-server support"? (with a "proxy mulchd" routing requests to the correct real mulchd)
 
 - change HTTP code from 200 to 4XX in controllers when things fails (ex: req.Stream.Failure)
   - in client, make the non-200 error message silent in stream mode?
