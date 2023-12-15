@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/OnitiFR/mulch/common"
@@ -48,6 +49,7 @@ type VMConfig struct {
 	BackupCompress bool
 	RestoreBackup  string
 	AutoRebuild    string
+	BuildTimeout   time.Duration
 
 	Prepare []*VMConfigScript
 	Install []*VMConfigScript
@@ -94,6 +96,7 @@ type tomlVMConfig struct {
 	BackupCompress  bool              `toml:"backup_compress"`
 	RestoreBackup   string            `toml:"restore_backup"`
 	AutoRebuild     string            `toml:"auto_rebuild"`
+	BuildTimeout    string            `toml:"build_timeout"`
 
 	PreparePrefixURL string `toml:"prepare_prefix_url"`
 	Prepare          []string
@@ -217,6 +220,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader, app *App) (*VMConfig, error) 
 		RedirectToHTTPS: true,
 		BackupDiskSize:  2 * datasize.GB,
 		BackupCompress:  true,
+		BuildTimeout:    "10m",
 	}
 
 	meta, err := toml.Decode(vmConfig.FileContent, tConfig)
@@ -468,6 +472,17 @@ func NewVMConfigFromTomlReader(configIn io.Reader, app *App) (*VMConfig, error) 
 		return nil, fmt.Errorf("'%s' is not a correct value for auto_rebuild setting", tConfig.AutoRebuild)
 	}
 	vmConfig.AutoRebuild = tConfig.AutoRebuild
+
+	if tConfig.BuildTimeout != "" {
+		duration, err := time.ParseDuration(tConfig.BuildTimeout)
+		if err != nil {
+			return nil, fmt.Errorf("invalid build_timeout value '%s'", tConfig.BuildTimeout)
+		}
+		if duration < 15*time.Second {
+			return nil, fmt.Errorf("build_timeout value '%s' is too small", tConfig.BuildTimeout)
+		}
+		vmConfig.BuildTimeout = duration
+	}
 
 	var actions []*VMDoAction
 

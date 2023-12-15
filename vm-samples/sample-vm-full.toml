@@ -102,6 +102,10 @@ backup_compress = true
 # You must have backup and restore scripts to enable auto-rebuild.
 auto_rebuild = "weekly"
 
+# Maximum time allowed for a VM creation / rebuild (not including backup/restore)
+# (see https://pkg.go.dev/time#ParseDuration for syntax)
+build_timeout = "10m"
+
 # Lifecyle scripts
 
 # If all prepare scripts share the same base URL, you can use prepare_prefix_url.

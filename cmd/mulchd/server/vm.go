@@ -508,7 +508,8 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	phone := app.PhoneHome.Register(secretUUID.String())
 	defer phone.Unregister()
 
-	timeout := time.After(10 * time.Minute)
+	log.Tracef("waiting for phone call (timeout: %s)", vm.Config.BuildTimeout)
+	timeout := time.After(vm.Config.BuildTimeout)
 	for done := false; !done; {
 		select {
 		case <-timeout:

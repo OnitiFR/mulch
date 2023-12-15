@@ -33,7 +33,7 @@ Short term:
   - vm disk create, seed storage, backup uploads, etc
   - starts at 30MB/s, ends at 5
   - libvirt 100% CPU
-  - seems better now? (fedora update? new "volume copy" sytem?)
+  - seems better now? (fedora update? new "volume copy" system?)
 - vm info: show ports?
 - mulch client port forwarding (via SSH)?
 - README: add image for vm migration?
