@@ -27,6 +27,7 @@ Resource leaks:
 Current:
 
 Short term:
+- add "ipv4 only" option for seed downloads?
 - keep mulch/mulch.env in backup? (with secrets?)
 - better error message in case of a double creation?
 - explore recent IO slowdowns for libvirt storage on some systems
