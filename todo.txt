@@ -17,7 +17,7 @@ Resource leaks:
     - scheduleSSHKeepAlives() does its job, the issue's upper in the stack (runChannels never ends?)
     - added goroutine pprof profile to help
     - seen recently during a "foreach-vm ssh loop" script when mashing CTRL+c!
-        - also when restarting nosee?
+        - also when restarting nosee? (but in this case, "ss" showed real tcp connections)
 - mulchd memory usage (10+GB)
   - normal for Go 1.12 → 1.15 runtimes, memory is released to the kernel if
     it needs it (MADV_FREE), but but RSS does not capture this information
