@@ -9,7 +9,7 @@ import (
 
 var configPath = flag.String("path", "./etc/", "configuration path")
 var configTrace = flag.Bool("trace", false, "show trace messages and request log")
-var configDebug = flag.Bool("debug", false, "debug requests/responses (implies -trace)")
+var configDebug = flag.Bool("debug", false, "show responses in trace, dump current requests (implies -trace)")
 var configVersion = flag.Bool("version", false, "show version")
 
 func main() {
