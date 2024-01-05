@@ -3,6 +3,7 @@ package topics
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 
 	"github.com/BurntSushi/toml"
@@ -43,13 +44,15 @@ func NewRootConfig(filename string) (*client.RootConfig, error) {
 
 	if stat, err := os.Stat(filename); err == nil {
 
-		requiredMode, err := strconv.ParseInt("0600", 8, 32)
-		if err != nil {
-			return nil, err
-		}
+		if runtime.GOOS != "windows" {
+			requiredMode, err := strconv.ParseInt("0600", 8, 32)
+			if err != nil {
+				return nil, err
+			}
 
-		if stat.Mode() != os.FileMode(requiredMode) {
-			return nil, fmt.Errorf("%s: only the owner should be able to read/write this file (chmod 0600 %s)", filename, filename)
+			if stat.Mode() != os.FileMode(requiredMode) {
+				return nil, fmt.Errorf("%s: only the owner should be able to read/write this file (chmod 0600 %s)", filename, filename)
+			}
 		}
 
 		meta, err := toml.DecodeFile(filename, tConfig)

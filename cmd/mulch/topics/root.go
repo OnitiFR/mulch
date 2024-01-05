@@ -16,7 +16,7 @@ var rootCmd = &cobra.Command{
 	Use:   "mulch",
 	Short: "Mulch CLI client",
 	Long: `Mulch is a light and practical virtual machine manager, using
-libvirt API. This is the client.`,
+libvirt API. This is the client.` + " (version " + client.Version + ")",
 	Run: func(cmd *cobra.Command, _ []string) {
 		fmt.Printf("%s\n\n", cmd.Short)
 		fmt.Printf("%s\n\n", cmd.Long)
