@@ -67,7 +67,7 @@ Short term:
   - must be available BEFORE the backup even exists (ex: rebuild)
 - purge old secrets (caution with long time disconnected peers)
 - even better "secret list" command (closer to the usual FS experience)
-- show unused secrets? (request peers too!)
+- show unused secrets? (request peers too!) - or reverse idea: secret usage count
 - investigate Let's Encrypt throttling issues
 
 Long term:
