@@ -21,7 +21,7 @@ var sshCmdUser string
 var sshCmdAsAdmin bool
 var sshCmdWithRevision bool
 
-//  sshCmd represents the "ssh" command
+// sshCmd represents the "ssh" command
 var sshCmd = &cobra.Command{
 	Use:   "ssh <vm-name>",
 	Short: "Open a SSH session",
