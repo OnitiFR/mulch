@@ -29,6 +29,7 @@ Resource leaks:
 Current:
 
 Short term:
+- syscall.Exec alternative in cmd/mulch/topics/ssh.go for win compat?
 - add "ipv4 only" option for seed downloads?
 - [win, client] config file permission
 - get vm load? (useful when VM is 100% KO)
