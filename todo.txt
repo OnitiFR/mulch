@@ -29,9 +29,9 @@ Resource leaks:
 Current:
 
 Short term:
+- emergency restart? (no existing timeout? check this)
 - syscall.Exec alternative in cmd/mulch/topics/ssh.go for win compat?
 - add "ipv4 only" option for seed downloads?
-- [win, client] config file permission
 - get vm load? (useful when VM is 100% KO)
 - keep mulch/mulch.env in backup? (with secrets?)
 - better error message in case of a double creation?
