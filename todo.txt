@@ -29,7 +29,7 @@ Resource leaks:
 Current:
 
 Short term:
-- emergency restart? (no existing timeout? check this)
+- emergency restart? (there's already a timeout aborting stop, force?)
 - syscall.Exec alternative in cmd/mulch/topics/ssh.go for win compat?
 - add "ipv4 only" option for seed downloads?
 - get vm load? (useful when VM is 100% KO)
