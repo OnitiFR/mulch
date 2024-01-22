@@ -78,6 +78,12 @@ func AddRoutes(app *server.App) {
 	}, server.RouteAPI)
 
 	app.AddRoute(&server.Route{
+		Route:   "GET /vm/load/*",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.GetVMLoadController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
 		Route:   "GET /vm/do-actions/*",
 		Type:    server.RouteTypeCustom,
 		Handler: controllers.GetVMDoActionsController,

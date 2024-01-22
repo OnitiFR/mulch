@@ -1000,6 +1000,55 @@ func VMIsRunning(vmName *VMName, app *App) (bool, error) {
 	return false, nil
 }
 
+// VMLoadGet returns the VM's load (in percentage)
+func VMLoadGet(vmName *VMName, app *App, sampleDuration time.Duration) (float64, error) {
+	dom, err := app.Libvirt.GetDomainByName(vmName.LibvirtDomainName(app))
+	if err != nil {
+		return 0, err
+	}
+	if dom == nil {
+		return 0, fmt.Errorf("can't find domain for %s", vmName)
+	}
+	defer dom.Free()
+
+	state, _, err := dom.GetState()
+	if err != nil {
+		return 0, err
+	}
+
+	if state != libvirt.DOMAIN_RUNNING {
+		return 0, nil
+	}
+
+	// WARNING: might be some issues with CPU hotplugging here
+	statsNumCpu, err := dom.GetMaxVcpus()
+	if err != nil {
+		return 0, err
+	}
+
+	stats0, err := dom.GetCPUStats(-1, 1, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	time.Sleep(sampleDuration)
+
+	stats1, err := dom.GetCPUStats(-1, 1, 0)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(stats0) != 1 || len(stats1) != 1 {
+		return 0, errors.New("unexpected number of CPU stats")
+	}
+
+	// stats values are in nanoseconds, so let's divide by ns/100(%)
+	// to reduce floating point precision issues with a small divisor
+	divisor := sampleDuration.Nanoseconds() / 100
+	load := float64(stats1[0].CpuTime-stats0[0].CpuTime) / float64(divisor) / float64(statsNumCpu)
+	return load, nil
+}
+
 // VMCreateBackupDisk create a new backup volume
 // TODO: make this function transactional: remove disk if we fail in last steps
 func VMCreateBackupDisk(vmName *VMName, volName string, volSize uint64, app *App, log *Log) error {

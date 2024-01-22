@@ -13,27 +13,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// vmInfosCmd represents the "vm infos" command
-var vmInfosCmd = &cobra.Command{
-	Use:   "infos <vm-name>",
-	Short: "Get informations about a VM",
-	Long: `Return VM informations (IP, CPU, RAM, etc) about a VM.
+// vmLoadCmd represents the "vm load" command
+var vmLoadCmd = &cobra.Command{
+	Use:   "load <vm-name>",
+	Short: "Get CPU load of a VM",
+	Long: `Return CPU load of a VM in percent (across all CPUs).
 
 See 'vm list' for VM Names.
 `,
-	Args:    cobra.ExactArgs(1),
-	Aliases: []string{"info"},
+	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		revision, _ := cmd.Flags().GetString("revision")
-		call := client.GlobalAPI.NewCall("GET", "/vm/infos/"+args[0], map[string]string{
+		call := client.GlobalAPI.NewCall("GET", "/vm/load/"+args[0], map[string]string{
 			"revision": revision,
 		})
-		call.JSONCallback = vmInfosDisplay
+		call.JSONCallback = vmLoadDisplay
 		call.Do()
 	},
 }
 
-func vmInfosDisplay(reader io.Reader, _ http.Header) {
+func vmLoadDisplay(reader io.Reader, _ http.Header) {
 	var data common.APIVMInfos
 	dec := json.NewDecoder(reader)
 	err := dec.Decode(&data)
@@ -51,6 +50,6 @@ func vmInfosDisplay(reader io.Reader, _ http.Header) {
 }
 
 func init() {
-	vmCmd.AddCommand(vmInfosCmd)
-	vmInfosCmd.Flags().StringP("revision", "r", "", "revision number")
+	vmCmd.AddCommand(vmLoadCmd)
+	vmLoadCmd.Flags().StringP("revision", "r", "", "revision number")
 }

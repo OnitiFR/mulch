@@ -758,6 +758,35 @@ func GetVMInfosController(req *server.Request) {
 	}
 }
 
+// GetVMLoadController return VM load
+func GetVMLoadController(req *server.Request) {
+	vmName := req.SubPath
+
+	if vmName == "" {
+		msg := "no VM name given"
+		req.App.Log.Error(msg)
+		http.Error(req.Response, msg, 400)
+		return
+	}
+
+	entry, err := getEntryFromRequest(vmName, req)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 404)
+		return
+	}
+
+	load, err := server.VMLoadGet(entry.Name, req.App, 500*time.Millisecond)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
+	req.Response.Header().Set("Content-Type", "text/plain")
+	req.Printf("load: %.2f%%\n", load)
+}
+
 // GetVMDoActionsController return VM do-action list
 func GetVMDoActionsController(req *server.Request) {
 	req.Response.Header().Set("Content-Type", "application/json")

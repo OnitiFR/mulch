@@ -30,7 +30,6 @@ Current:
 
 Short term:
 - syscall.Exec alternative in cmd/mulch/topics/ssh.go for win compat?
-- get vm load? (useful when VM is 100% KO)
 - keep mulch/mulch.env in backup? (with secrets?)
 - better error message in case of a double creation?
 - vm info: show ports?
