@@ -29,9 +29,7 @@ Resource leaks:
 Current:
 
 Short term:
-- emergency restart? (there's already a timeout aborting stop, force?)
 - syscall.Exec alternative in cmd/mulch/topics/ssh.go for win compat?
-- add "ipv4 only" option for seed downloads?
 - get vm load? (useful when VM is 100% KO)
 - keep mulch/mulch.env in backup? (with secrets?)
 - better error message in case of a double creation?
@@ -65,6 +63,7 @@ Short term:
 - even better "secret list" command (closer to the usual FS experience)
 - show unused secrets? (request peers too!) - or reverse idea: secret usage count
 - investigate Let's Encrypt throttling issues
+- add "ipv4 only" option for seed downloads?
 
 Long term:
 - allow a centralized secret share (useful with many hosts)
