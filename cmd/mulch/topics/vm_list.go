@@ -20,8 +20,9 @@ var vmListFlagBasic bool
 
 // vmListCmd represents the "vm list" command
 var vmListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List all VMs",
+	Use:     "list",
+	Short:   "List all VMs",
+	Aliases: []string{"ls"},
 	// Long: ``,
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, _ []string) {
