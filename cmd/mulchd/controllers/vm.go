@@ -416,6 +416,21 @@ func ActionVMController(req *server.Request) {
 		err := server.VMStopByName(entry.Name, server.VMStopNormal, server.VMStopDefaultTimeout, req.App, req.Stream)
 		if err != nil {
 			req.Stream.Failuref("unable to stop %s: %s", entry.Name, err)
+
+			force := req.HTTP.FormValue("force")
+			if force != common.TrueStr {
+				req.Stream.Failuref("aborting operation (see --force)")
+				return
+			}
+
+			req.Stream.Infof("force stopping %s", vmName)
+			err = server.VMStopByName(entry.Name, server.VMStopForce, server.VMStopDefaultTimeout, req.App, req.Stream)
+			if err != nil {
+				req.Stream.Failuref("unable to force stop %s: %s (aborting)", entry.Name, err)
+				return
+			}
+
+			req.Stream.Successf("VM %s is now down (forced)", entry.Name)
 		} else {
 			req.Stream.Successf("VM %s is now down", entry.Name)
 		}
@@ -427,7 +442,7 @@ func ActionVMController(req *server.Request) {
 
 			force := req.HTTP.FormValue("force")
 			if force != common.TrueStr {
-				req.Stream.Failuref("aborting (see --force)")
+				req.Stream.Failuref("aborting operation (see --force)")
 				return
 			}
 

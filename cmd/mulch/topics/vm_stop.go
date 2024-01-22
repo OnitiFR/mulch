@@ -1,6 +1,8 @@
 package topics
 
 import (
+	"strconv"
+
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 )
@@ -16,8 +18,10 @@ See 'vm list' for VM Names.
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		revision, _ := cmd.Flags().GetString("revision")
+		force, _ := cmd.Flags().GetBool("force")
 		call := client.GlobalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
 			"action":   "stop",
+			"force":    strconv.FormatBool(force),
 			"revision": revision,
 		})
 		call.Do()
@@ -27,4 +31,5 @@ See 'vm list' for VM Names.
 func init() {
 	vmCmd.AddCommand(vmStopCmd)
 	vmStopCmd.Flags().StringP("revision", "r", "", "revision number")
+	vmStopCmd.Flags().BoolP("force", "f", false, "allow to force stop (may corrupt data)")
 }

@@ -31,5 +31,5 @@ See 'vm list' for VM Names.
 func init() {
 	vmCmd.AddCommand(vmRestartCmd)
 	vmRestartCmd.Flags().StringP("revision", "r", "", "revision number")
-	vmRestartCmd.Flags().BoolP("force", "f", false, "force restart if graceful restart fails")
+	vmRestartCmd.Flags().BoolP("force", "f", false, "allow to force stop (may corrupt data)")
 }
