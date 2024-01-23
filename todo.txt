@@ -40,7 +40,6 @@ Short term:
 - explore vm migration possible edge case:
   // migration of active VM ok → local vm deletion → an existing
   // "lower" inactive VM is activated (unharmful error if source was active?)
-- allow to globally disable auto-rebuild?
 - rights: limit SSH to a specific VM? (check a fake vm=… header in the SSH proxy?)
 - rights: logs may expose sensitive data (which ones?)
 - rights: add predefined right groups for common usages?
@@ -53,6 +52,7 @@ Short term:
 - test "pre-allocated" backup disks on backup duration for "big VMs"?
 - fix completion when using a non-default (-c) config file (see barry: __barry_get_config)
 - on redefine, show what's instantaneous and what's needing a rebuild? a reboot?
+- allow to globally disable auto-rebuild?
 - allow a cron-style syntax for auto_rebuild
 - allow to set a manual rebuild ("at" style?)
 - like restore_backup, allow to restore from a VM (ex: autorebuild from prod)
