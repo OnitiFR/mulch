@@ -29,6 +29,7 @@ Resource leaks:
 Current:
 
 Short term:
+- investigate the case where a mulch-secrets.db was erased (0 bytes) during and update + restart
 - allow to export a port to a different number? (only possible for @PUBLIC now, if the sample file is correct)
 - syscall.Exec alternative in cmd/mulch/topics/ssh.go for win compat?
 - keep mulch/mulch.env in backup? (with secrets?)
