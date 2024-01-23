@@ -18,11 +18,13 @@ See 'vm list' for VM Names.
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		revision, _ := cmd.Flags().GetString("revision")
+		emergency, _ := cmd.Flags().GetBool("emergency")
 		force, _ := cmd.Flags().GetBool("force")
 		call := client.GlobalAPI.NewCall("POST", "/vm/"+args[0], map[string]string{
-			"action":   "restart",
-			"force":    strconv.FormatBool(force),
-			"revision": revision,
+			"action":    "restart",
+			"emergency": strconv.FormatBool(emergency),
+			"force":     strconv.FormatBool(force),
+			"revision":  revision,
 		})
 		call.Do()
 	},
@@ -31,5 +33,6 @@ See 'vm list' for VM Names.
 func init() {
 	vmCmd.AddCommand(vmRestartCmd)
 	vmRestartCmd.Flags().StringP("revision", "r", "", "revision number")
-	vmRestartCmd.Flags().BoolP("force", "f", false, "allow to force stop (may corrupt data)")
+	vmRestartCmd.Flags().BoolP("emergency", "e", false, "allow to emergency stop (may corrupt data)")
+	vmRestartCmd.Flags().BoolP("force", "f", false, "force restart a locked VM")
 }

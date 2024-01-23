@@ -412,55 +412,9 @@ func ActionVMController(req *server.Request) {
 			req.Stream.Successf("VM %s is now up and running", entry.Name)
 		}
 	case "stop":
-		req.Stream.Infof("stopping %s", vmName)
-		err := server.VMStopByName(entry.Name, server.VMStopNormal, server.VMStopDefaultTimeout, req.App, req.Stream)
-		if err != nil {
-			req.Stream.Failuref("unable to stop %s: %s", entry.Name, err)
-
-			force := req.HTTP.FormValue("force")
-			if force != common.TrueStr {
-				req.Stream.Failuref("aborting operation (see --force)")
-				return
-			}
-
-			req.Stream.Infof("force stopping %s", vmName)
-			err = server.VMStopByName(entry.Name, server.VMStopForce, server.VMStopDefaultTimeout, req.App, req.Stream)
-			if err != nil {
-				req.Stream.Failuref("unable to force stop %s: %s (aborting)", entry.Name, err)
-				return
-			}
-
-			req.Stream.Successf("VM %s is now down (forced)", entry.Name)
-		} else {
-			req.Stream.Successf("VM %s is now down", entry.Name)
-		}
+		StopVM(req, vm, entry)
 	case "restart":
-		req.Stream.Infof("restarting %s", vmName)
-		err := server.VMStopByName(entry.Name, server.VMStopNormal, server.VMStopDefaultTimeout, req.App, req.Stream)
-		if err != nil {
-			req.Stream.Failuref("unable to stop %s: %s", entry.Name, err)
-
-			force := req.HTTP.FormValue("force")
-			if force != common.TrueStr {
-				req.Stream.Failuref("aborting operation (see --force)")
-				return
-			}
-
-			req.Stream.Infof("force stopping %s", vmName)
-			err = server.VMStopByName(entry.Name, server.VMStopForce, server.VMStopDefaultTimeout, req.App, req.Stream)
-			if err != nil {
-				req.Stream.Failuref("unable to force stop %s: %s (aborting)", entry.Name, err)
-				return
-			}
-		}
-
-		req.Stream.Info("stopped, restarting…")
-		err = server.VMStartByName(entry.Name, vm.SecretUUID, req.App, req.Stream)
-		if err != nil {
-			req.Stream.Failuref("unable to start %s: %s", entry.Name, err)
-		} else {
-			req.Stream.Successf("VM %s is now up and running", entry.Name)
-		}
+		RestartVM(req, vm, entry)
 	case "exec":
 		err := ExecScriptVM(req, vm, entry.Name)
 		if err != nil {
@@ -502,16 +456,7 @@ func ActionVMController(req *server.Request) {
 			req.Stream.Successf("VM %s redefined (may the sysadmin gods be with you)", entry.Name)
 		}
 	case "activate":
-		err := req.App.VMDB.SetActiveRevision(entry.Name.Name, entry.Name.Revision)
-		if err != nil {
-			req.Stream.Failuref("error: %s", err)
-		} else {
-			if entry.Name.Revision != server.RevisionNone {
-				req.Stream.Successf("VM %s is now active", entry.Name)
-			} else {
-				req.Stream.Successf("VM %s is now inactive", entry.Name.Name)
-			}
-		}
+		ActivateVM(req, vm, entry)
 	case "migrate":
 		before := time.Now()
 		err := MigrateVM(req, vm, entry.Name)
@@ -881,6 +826,97 @@ func GetVMConsoleController(req *server.Request) {
 	if err != nil {
 		req.App.Log.Errorf("console read error: %s", err.Error())
 		return
+	}
+}
+
+// StopVM stop a VM (deals with failure and success by itself)
+func StopVM(req *server.Request, vm *server.VM, entry *server.VMDatabaseEntry) {
+	req.Stream.Infof("stopping %s", entry.Name)
+
+	if vm.Locked && req.HTTP.FormValue("force") != common.TrueStr {
+		req.Stream.Failuref("VM is locked (see --force)")
+		return
+	}
+
+	err := server.VMStopByName(entry.Name, server.VMStopNormal, server.VMStopDefaultTimeout, req.App, req.Stream)
+	if err != nil {
+		req.Stream.Failuref("unable to stop %s: %s", entry.Name, err)
+
+		emergency := req.HTTP.FormValue("emergency")
+		if emergency != common.TrueStr {
+			req.Stream.Failuref("aborting operation (see --emergency)")
+			return
+		}
+
+		req.Stream.Infof("emergency stopping %s", entry.Name)
+		err = server.VMStopByName(entry.Name, server.VMStopForce, server.VMStopDefaultTimeout, req.App, req.Stream)
+		if err != nil {
+			req.Stream.Failuref("unable to emergency stop %s: %s (aborting)", entry.Name, err)
+			return
+		}
+
+		req.Stream.Successf("VM %s is now down (emergency)", entry.Name)
+	} else {
+		req.Stream.Successf("VM %s is now down", entry.Name)
+	}
+}
+
+// RestartVM restart a VM (deals with failure and success by itself)
+func RestartVM(req *server.Request, vm *server.VM, entry *server.VMDatabaseEntry) {
+	req.Stream.Infof("restarting %s", entry.Name)
+
+	if vm.Locked && req.HTTP.FormValue("force") != common.TrueStr {
+		req.Stream.Failuref("VM is locked (see --force)")
+		return
+	}
+
+	err := server.VMStopByName(entry.Name, server.VMStopNormal, server.VMStopDefaultTimeout, req.App, req.Stream)
+	if err != nil {
+		req.Stream.Failuref("unable to stop %s: %s", entry.Name, err)
+
+		emergency := req.HTTP.FormValue("emergency")
+		if emergency != common.TrueStr {
+			req.Stream.Failuref("aborting operation (see --emergency)")
+			return
+		}
+
+		req.Stream.Infof("emergency stopping %s", entry.Name)
+		err = server.VMStopByName(entry.Name, server.VMStopForce, server.VMStopDefaultTimeout, req.App, req.Stream)
+		if err != nil {
+			req.Stream.Failuref("unable to emergency stop %s: %s (aborting)", entry.Name, err)
+			return
+		}
+	}
+
+	req.Stream.Info("stopped, restarting…")
+	err = server.VMStartByName(entry.Name, vm.SecretUUID, req.App, req.Stream)
+	if err != nil {
+		req.Stream.Failuref("unable to start %s: %s", entry.Name, err)
+	} else {
+		req.Stream.Successf("VM %s is now up and running", entry.Name)
+	}
+}
+
+// ActivateVM activate (or deactivate) a VM (deals with failure and success by itself)
+func ActivateVM(req *server.Request, vm *server.VM, entry *server.VMDatabaseEntry) {
+	// let's check if the current active VM is locked
+	if req.HTTP.FormValue("force") != common.TrueStr {
+		vm, _ := req.App.VMDB.GetActiveEntryByName(entry.Name.Name)
+		if vm != nil && vm.VM.Locked {
+			req.Stream.Failuref("current active VM is locked (see --force)")
+			return
+		}
+	}
+
+	err := req.App.VMDB.SetActiveRevision(entry.Name.Name, entry.Name.Revision)
+	if err != nil {
+		req.Stream.Failuref("error: %s", err)
+	} else {
+		if entry.Name.Revision != server.RevisionNone {
+			req.Stream.Successf("VM %s is now active", entry.Name)
+		} else {
+			req.Stream.Successf("VM %s is now inactive", entry.Name.Name)
+		}
 	}
 }
 
