@@ -1,6 +1,6 @@
 Always:
 - keep direct dependencies up to date
-  - go list -m -u all
+  - (go list -m -u all)
   - go get -u ./... && go mod tidy
 - follow new libvirt.org/go/libvirt major releases, see :
   - https://libvirt.org/news.html
