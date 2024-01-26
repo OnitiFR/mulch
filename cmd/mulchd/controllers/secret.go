@@ -234,3 +234,29 @@ func GetVMsUsingSecretsController(req *server.Request) {
 		http.Error(req.Response, err.Error(), 500)
 	}
 }
+
+// ListSecretsUsageController returns a list of secrets with their usage count
+func ListSecretsUsageController(req *server.Request) {
+	req.Response.Header().Set("Content-Type", "application/json")
+
+	withPeersStr := req.HTTP.FormValue("with-peers")
+	withPeers := false
+	if withPeersStr == common.TrueStr {
+		withPeers = true
+	}
+
+	retData, err := req.App.SecretsDB.GetSecretsUsage(withPeers)
+
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
+	enc := json.NewEncoder(req.Response)
+	err = enc.Encode(retData)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+	}
+}

@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/OnitiFR/mulch/common"
 )
 
 type SecretDatabaseEntries map[string]*Secret
@@ -622,6 +624,83 @@ func (db *SecretDatabase) GetAllVMsUsingSecret(key string) ([]string, error) {
 	}
 
 	res = append(res, peers...)
+
+	return res, nil
+}
+
+// GetSecretsUsage returns a list of secrets and the number of VMs using them
+func (db *SecretDatabase) GetSecretsUsage(with_peers bool) (common.APISecretUsageEntries, error) {
+	// create a temporary map of secrets, it will be faster
+	secrets := make(map[string]*common.APISecretUsageEntry)
+
+	// get our secrets
+	keys := db.GetKeys()
+	for _, key := range keys {
+		secret, err := db.Get(key)
+		if err != nil {
+			return nil, err
+		}
+
+		vms, err := db.GetVMsUsingSecret(key)
+		if err != nil {
+			return nil, err
+		}
+
+		entry := common.APISecretUsageEntry{
+			Key:         secret.Key,
+			LocalCount:  len(vms),
+			RemoteCount: 0,
+		}
+
+		secrets[key] = &entry
+	}
+
+	// get peers secrets
+	if with_peers {
+		for _, peer := range db.app.Config.Peers {
+			if !peer.SyncSecrets {
+				continue
+			}
+
+			call := &PeerCall{
+				Peer:   peer,
+				Method: "GET",
+				Path:   "/secret-usage",
+				Args:   map[string]string{},
+				Log:    db.app.Log,
+				JSONCallback: func(reader io.Reader, _ http.Header) error {
+					var remoteSecrets common.APISecretUsageEntries
+					dec := json.NewDecoder(reader)
+					err := dec.Decode(&remoteSecrets)
+					if err != nil {
+						return err
+					}
+
+					for _, entry := range remoteSecrets {
+						_, exists := secrets[entry.Key]
+						if !exists {
+							secrets[entry.Key] = &entry
+						} else {
+							secrets[entry.Key].RemoteCount += entry.LocalCount
+						}
+					}
+
+					return nil
+				},
+			}
+
+			err := call.Do()
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	// convert the map to a slice
+	res := make(common.APISecretUsageEntries, 0, len(secrets))
+	for _, entry := range secrets {
+		res = append(res, *entry)
+	}
 
 	return res, nil
 }

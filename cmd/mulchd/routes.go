@@ -257,6 +257,11 @@ func AddRoutes(app *server.App) {
 	}, server.RouteAPI)
 
 	app.AddRoute(&server.Route{
+		Route:   "GET /secret-usage",
+		Handler: controllers.ListSecretsUsageController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
 		Route:   "GET /vm/with-secret/*",
 		Handler: controllers.GetVMsUsingSecretsController,
 	}, server.RouteAPI)
