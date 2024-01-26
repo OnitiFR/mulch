@@ -630,7 +630,7 @@ func (db *SecretDatabase) GetAllVMsUsingSecret(key string) ([]string, error) {
 
 // GetSecretsUsage returns a list of secrets and the number of VMs using them
 func (db *SecretDatabase) GetSecretsUsage(with_peers bool) (common.APISecretUsageEntries, error) {
-	// create a temporary map of secrets, it will be faster
+	// create a temporary map of secrets, faster for lookups
 	secrets := make(map[string]*common.APISecretUsageEntry)
 
 	// get our secrets
