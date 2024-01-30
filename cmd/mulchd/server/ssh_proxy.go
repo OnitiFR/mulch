@@ -210,8 +210,9 @@ func (proxy *SSHProxy) serveProxy() error {
 	go proxy.ForwardRequestsToClient(reqs, clientConn)
 
 	// with "ssh -R" tunnels from the outside to the VM, the client (VM)
-	// will request new channels
+	// will request new channels (same for X11 forwarding)
 	proxy.ClientHandleChannelOpen("forwarded-tcpip", clientConn, serverConn)
+	proxy.ClientHandleChannelOpen("x11", clientConn, serverConn)
 
 	err = proxy.runChannels(chans, clientConn)
 	if err != nil {
