@@ -22,7 +22,7 @@ See 'vm list' for VM Names.
 		noCompress, _ := cmd.Flags().GetBool("no-compress")
 		expire, _ := cmd.Flags().GetString("expire")
 
-		expireDuration, err := client.ParseExpiration(expire)
+		expireDuration, err := client.ParseDuration(expire)
 		if err != nil {
 			log.Fatalf("unable to parse expiration: %s", err)
 		}

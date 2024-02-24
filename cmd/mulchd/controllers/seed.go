@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
@@ -75,6 +76,7 @@ func GetSeedStatusController(req *server.Request) {
 		Status:       seed.Status,
 		StatusTime:   seed.StatusTime,
 		LastModified: seed.LastModified,
+		PausedUntil:  seed.PausedUntil,
 	}
 
 	req.Response.Header().Set("Content-Type", "application/json")
@@ -111,6 +113,13 @@ func ActionSeedController(req *server.Request) {
 		} else {
 			req.Stream.Successf("refresh completed (%s)", after.Sub(before))
 		}
+	case "pause":
+		err := seedPause(req, seed)
+		if err != nil {
+			req.Stream.Failuref("pause failed: %s", err)
+		} else {
+			req.Stream.Successf("paused")
+		}
 	default:
 		req.Stream.Failuref("missing or invalid action ('%s')", action)
 		return
@@ -131,4 +140,21 @@ func seedRefresh(req *server.Request, seed *server.Seed) error {
 		return err
 	}
 	return nil
+}
+
+// seedPause will pause seed refresh for a given duration
+func seedPause(req *server.Request, seed *server.Seed) error {
+	durationStr := req.HTTP.FormValue("duration")
+
+	seconds, err := strconv.Atoi(durationStr)
+	if err != nil {
+		return fmt.Errorf("unable to parse duration value")
+	}
+	expire := time.Duration(seconds) * time.Second
+
+	expireDate := time.Now().Add(expire)
+
+	err = req.App.Seeder.PauseSeed(seed, expireDate)
+
+	return err
 }

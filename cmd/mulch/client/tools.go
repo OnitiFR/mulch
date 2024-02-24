@@ -29,9 +29,9 @@ func openBrowser(url string) {
 
 }
 
-// ParseExpiration returns a duration from string (ex: 1h, 10d, 1y)
+// ParseDuration returns a duration from string (ex: 1h, 10d, 1y)
 // An empty string is valid (expiration = 0)
-func ParseExpiration(duration string) (time.Duration, error) {
+func ParseDuration(duration string) (time.Duration, error) {
 	if duration == "" || duration == "0" {
 		return 0, nil
 	}

@@ -1,7 +1,7 @@
 package server
 
 // Version of the server
-const Version = "1.43.1"
+const Version = "1.42.0"
 
 // ProtocolVersion implemented by this server
 const ProtocolVersion = 1

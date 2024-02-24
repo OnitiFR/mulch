@@ -21,7 +21,7 @@ progress -mc mulch
 	Run: func(cmd *cobra.Command, args []string) {
 		expire, _ := cmd.Flags().GetString("expire")
 
-		expireDuration, err := client.ParseExpiration(expire)
+		expireDuration, err := client.ParseDuration(expire)
 		if err != nil {
 			log.Fatalf("unable to parse expiration: %s", err)
 		}

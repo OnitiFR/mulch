@@ -34,6 +34,7 @@ type Seed struct {
 	Size         uint64
 	Status       string
 	StatusTime   time.Time
+	PausedUntil  time.Time
 }
 
 // SeedRefresh force flag
@@ -191,6 +192,11 @@ func (db *SeedDatabase) runStepSeeds() {
 			continue
 		}
 
+		if seed.IsPaused() {
+			db.app.Log.Tracef("seed '%s' is paused", seed.Name)
+			continue
+		}
+
 		if seed.URL != "" {
 			err = db.RefreshSeed(seed, SeedRefreshIfNeeded)
 		}
@@ -206,6 +212,11 @@ func (db *SeedDatabase) runStepSeeders() {
 		var err error
 
 		if seed.URL != "" {
+			continue
+		}
+
+		if seed.IsPaused() {
+			db.app.Log.Tracef("seeder '%s' is paused", seed.Name)
 			continue
 		}
 
@@ -476,6 +487,20 @@ func (db *SeedDatabase) seedDownload(seed *Seed, tmpPath string) (string, error)
 	return tmpfile.Name(), nil
 }
 
+// PauseSeed pause a seed until a given time (and save the DB)
+func (db *SeedDatabase) PauseSeed(seed *Seed, unpauseTime time.Time) error {
+	untilStr := unpauseTime.Format("2006-01-02 15:04")
+
+	db.app.Log.Infof("pausing seed '%s' until %s", seed.Name, untilStr)
+
+	seed.PausedUntil = unpauseTime
+	err := db.save()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // UpdateStatus change status informations
 func (seed *Seed) UpdateStatus(status string) {
 	seed.Status = status
@@ -485,4 +510,13 @@ func (seed *Seed) UpdateStatus(status string) {
 // GetVolumeName return the seed volume file name
 func (seed *Seed) GetVolumeName() string {
 	return seed.Name + ".qcow2"
+}
+
+// IsPaused returns true if the seed is paused
+func (seed *Seed) IsPaused() bool {
+	if seed.PausedUntil.IsZero() {
+		return false
+	}
+
+	return seed.PausedUntil.After(time.Now())
 }

@@ -13,4 +13,5 @@ type APISeedStatus struct {
 	StatusTime   time.Time
 	Status       string
 	LastModified time.Time
+	PausedUntil  time.Time
 }

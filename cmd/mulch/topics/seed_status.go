@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"time"
 
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
@@ -38,9 +39,19 @@ func seedStatusCB(reader io.Reader, _ http.Header) {
 	typeOfT := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		key := typeOfT.Field(i).Name
+
+		if key == "PausedUntil" {
+			continue
+		}
+
 		val := common.InterfaceValueToString(v.Field(i).Interface())
 		fmt.Printf("%s: %s\n", key, val)
 	}
+
+	if data.PausedUntil.After(time.Now()) {
+		fmt.Printf("PausedUntil: %s\n", data.PausedUntil.Format("2006-01-02 15:04:05"))
+	}
+
 }
 
 func init() {
