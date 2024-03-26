@@ -5,7 +5,7 @@
 #  mulch vm create sample-vm-full.toml
 
 name = "testvm"
-hostname = "testvm.localdomain" # default: localhost or first provided domain if provided
+hostname = "testvm.localdomain" # default: localhost or first domain if provided (see below)
 timezone = "Europe/Paris" # default
 app_user = "app" # default
 

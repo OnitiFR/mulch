@@ -29,6 +29,7 @@ Resource leaks:
 Current:
 
 Short term:
+- global 'timezone' setting (only in TOMLs currently)
 - investigate the case where a mulch-secrets.db was erased (0 bytes) during and update + restart
 - allow to export a port to a different number? (only possible for @PUBLIC now)
   - not a quick change, VMPort is not ready for that
