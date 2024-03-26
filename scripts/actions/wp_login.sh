@@ -1,10 +1,24 @@
 #!/bin/bash
 
-if [ -n "$1" ]; then
-    user_login="$1"
-else
-    user_login="$_CALLING_KEY"
-fi
+user_login="$_CALLING_KEY"
+echo_prefix='_MULCH_OPEN_URL='
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --help)
+            echo "Usage: $0 [username] [--url]"
+            echo "  --url: print the URL instead of opening it"
+            exit 0
+            ;;
+        --url)
+            echo_prefix=''
+            ;;
+        *)
+            user_login="$1"
+            ;;
+    esac
+    shift
+done
 
 if [ -z "$user_login" ]; then
     >&2 echo "you must provide a username as argument"
@@ -52,4 +66,5 @@ header('Location: ' . parse_url(get_admin_url(), PHP_URL_PATH));
 EOS
 [ $? -eq 0 ] || exit $?
 
-echo "_MULCH_OPEN_URL=https://$_DOMAIN_FIRST/auth/$filename"
+echo "${echo_prefix}https://$_DOMAIN_FIRST/auth/$filename"
+
