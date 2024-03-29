@@ -362,7 +362,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader, app *App) (*VMConfig, error) 
 		if len(vmConfig.Domains) > 0 {
 			fqdn := vmConfig.Domains[0].Name
 			parts := strings.Split(fqdn, ".")
-			vmConfig.Hostname = parts[0]
+			vmConfig.Hostname = parts[0] + ".localdomain"
 		} else {
 			vmConfig.Hostname = "localhost.localdomain"
 		}
