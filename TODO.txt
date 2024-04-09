@@ -29,6 +29,10 @@ Resource leaks:
 Current:
 
 Short term:
+- remove the need to supply the VM name for redefine command?
+  - keep: sanity check for a dangerous op, but looks confusing to the user
+  - remove: change controller logic
+  - allow both!
 - global 'timezone' setting (only in TOMLs currently)
 - investigate the case where a mulch-secrets.db was erased (0 bytes) during and update + restart
 - allow to export a port to a different number? (only possible for @PUBLIC now)
@@ -82,9 +86,6 @@ Long term:
 - remove libvirt? (direct use of QEMU/KVM) - warning: network
 - create a nice and shiny website for Mulch project
 - have a look at ansible? (for sample scripts)
-- remove the need to supply the VM name for redefine command?
-  - keep: sanity check for a dangerous op, but looks confusing to the user
-  - remove: change controller logic
 - shortcut for "do action" (ex: mulch open xyz) with completion?
 - add 'env' to mulchd.toml? (overridden by VM's env directive)
 - check for missing response.Body.Close() (or things like that)
