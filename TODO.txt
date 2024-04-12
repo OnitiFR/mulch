@@ -29,10 +29,6 @@ Resource leaks:
 Current:
 
 Short term:
-- remove the need to supply the VM name for redefine command?
-  - keep: sanity check for a dangerous op, but looks confusing to the user
-  - remove: change controller logic
-  - allow both!
 - global 'timezone' setting (only in TOMLs currently)
 - investigate the case where a mulch-secrets.db was erased (0 bytes) during and update + restart
 - allow to export a port to a different number? (only possible for @PUBLIC now)
