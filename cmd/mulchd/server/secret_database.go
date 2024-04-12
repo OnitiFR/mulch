@@ -241,7 +241,10 @@ func (db *SecretDatabase) save() error {
 	}
 	defer f.Close()
 
-	return db.saveToWriter(f)
+	err = db.saveToWriter(f)
+	f.Sync()
+
+	return err
 }
 
 // save the database to a writer (without a mutex lock)

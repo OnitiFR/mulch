@@ -31,6 +31,7 @@ Current:
 Short term:
 - global 'timezone' setting (only in TOMLs currently)
 - investigate the case where a mulch-secrets.db was erased (0 bytes) during and update + restart
+  - a Sync() is now done during save(), as for VM database, let's see if it helps
 - allow to export a port to a different number? (only possible for @PUBLIC now)
   - not a quick change, VMPort is not ready for that
   - can be a bit tricky to understand for the user? (can be tempted to use "real" source port instead)
