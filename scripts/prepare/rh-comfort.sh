@@ -77,16 +77,6 @@ line=$(expr $line - 2)
 sudo sed -i "$line a {\"function\": \"powerline.segments.common.vcs.branch\", \"priority\": 40, \"args\": {\"status_colors\": false}}," "$theme" || exit $?
 sudo sed -i "s/\"function\": \"powerline.segments.common.net.hostname\",/\"function\": \"powerline.segments.common.env.environment\", \"args\": {\"variable\": \"_VM_NAME\"},/" "$theme" || exit $?
 
-# DNS resolution of the short-hostname timeouts when not using systemd-resolved,
-# making some commands very slow. This is a workaround.
-if [ $(systemctl is-active systemd-resolved) != "active" ]; then
-  line="127.0.0.1 $(cat /etc/hostname) # added by rh-comfort.sh"
-  sudo bash -c "cat >> /etc/hosts" <<- EOS
-$line
-EOS
-[ $? -eq 0 ] || exit $?
-fi
-
 # add a "open" action (see "do" command) if there's any domain defined
 if [ -n "$_DOMAIN_FIRST" ]; then
     echo "_MULCH_ACTION_NAME=open"
