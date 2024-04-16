@@ -44,13 +44,14 @@ func CloudInitDataGen(vm *VM, vmName *VMName, app *App) (string, string, error) 
 	// 1 - create cidata file contents
 	metaData := cloudInitMetaData(vm.SecretUUID, vm.Config.Hostname)
 
-	// DO NOT FORGET TO UPDATE ci-user-data.yml TEMPLATE TOO!
+	// see also GetEnvMap() in cmd/mulchd/server/vm.go
 	userDataVariables := make(map[string]interface{})
 	userDataVariables["_SSH_PUBKEY"] = sshKeyPair.Public
 	userDataVariables["_PACKAGE_UPGRADE"] = vm.Config.InitUpgrade
 	userDataVariables["_HOME_URL"] = homeURL
 	userDataVariables["_PHONE_HOME_URL"] = phURL
 	userDataVariables["_TIMEZONE"] = vm.Config.Timezone
+	userDataVariables["_HOSTNAME"] = vm.Config.Hostname
 	userDataVariables["_MULCH_SUPER_USER"] = app.Config.MulchSuperUser
 	userDataVariables["_APP_USER"] = vm.Config.AppUser
 
