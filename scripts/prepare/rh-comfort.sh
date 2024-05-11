@@ -55,6 +55,14 @@ if [ "x\${BASH_VERSION-}" != x -a "x\${PS1-}" != x ]; then
 fi
 EOS
 
+# Fix SSL confirmation issue with old pip (8.1.2 on CentOS 7)
+# TODO: check if it's still needed
+sudo bash -c "cat > /etc/pip.conf" <<- EOS
+[global]
+trusted-host = pypi.python.org pypi.org files.pythonhosted.org
+EOS
+[ $? -eq 0 ] || exit $?
+
 # Powerline
 sudo yum -y install epel-release || exit $?
 sudo yum -y install python-pip python-pygit2 || exit $?
