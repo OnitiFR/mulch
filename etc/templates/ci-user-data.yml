@@ -28,7 +28,7 @@ users:
   #- name: root
   #  lock_passwd: false
   #  hashed_passwd: '' (use mkpass)
-  # also: virt-customize -a ubuntu_2204.qcow2 --ssh-inject root:file:.ssh/id_rsa.pub
+  # also: virt-customize -a ubuntu_2404.qcow2 --ssh-inject root:file:.ssh/id_rsa.pub
   - name: $_MULCH_SUPER_USER
     primary-group: mulcher
     gecos: Mulch Control and Command admin account

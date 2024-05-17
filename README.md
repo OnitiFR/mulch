@@ -206,8 +206,8 @@ As said previously, seeds are base Linux images for VMs, defined in `mulchd.conf
 file:
 ```toml
 [[seed]]
-name = "ubuntu_2204"
-url = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64-disk-kvm.img"
+name = "ubuntu_2404"
+url = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
 ```
 
 Mulchd will download images on first boot and each time the image is updated by the vendor.
@@ -222,12 +222,12 @@ file (based on another seed), prepare the VM, stop it and will then store its di
 a seed (the VM is then deleted).
 
 One usage of this feature is VM creation speedup, since you can pre-install packages.
-See the following example ([ubuntu_2204_lamp.toml](https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2204_lamp.toml)) :
+See the following example ([ubuntu_2404_lamp.toml](https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2404_lamp.toml)) :
 
 ```toml
 [[seed]]
-name = "ubuntu_2204_lamp"
-seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2204_lamp.toml"
+name = "ubuntu_2404_lamp"
+seeder = "https://raw.githubusercontent.com/OnitiFR/mulch/master/vm-samples/seeders/ubuntu_2404_lamp.toml"
 ```
 Seeds are automatically rebuild, so everything is kept up to date (base seed, packages, …).
 

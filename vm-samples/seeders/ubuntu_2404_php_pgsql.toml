@@ -1,0 +1,15 @@
+name = "ubuntu_2404_php_pgql"
+hostname = "phppg"
+
+seed = "ubuntu_2404"
+
+disk_size = "8G"
+ram_size = "2G"
+cpu_count = 1
+
+auto_rebuild = "daily"
+
+prepare = [
+    "admin@{core}/prepare/seeders/deb-comfort.sh",
+    "admin@{core}/prepare/seeders/deb-php-pgsql.sh",
+]
