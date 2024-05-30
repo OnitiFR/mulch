@@ -33,6 +33,6 @@ See 'vm list' for VM Names.
 func init() {
 	vmCmd.AddCommand(vmStopCmd)
 	vmStopCmd.Flags().StringP("revision", "r", "", "revision number")
-	vmStopCmd.Flags().BoolP("emergency", "e", false, "allow to emergency stop (may corrupt data)")
+	vmStopCmd.Flags().BoolP("emergency", "e", false, "allow emergency stop (may corrupt data)")
 	vmStopCmd.Flags().BoolP("force", "f", false, "force stop a locked VM")
 }
