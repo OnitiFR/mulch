@@ -154,7 +154,7 @@ func (lv *Libvirt) GetOrCreateStoragePool(poolName string, poolPath string, temp
 				return nil, nil, fmt.Errorf("GetOrCreateStoragePool: StoragePoolDefineXML: %s", err)
 			}
 
-			pool.SetAutostart(true)
+			err = pool.SetAutostart(true)
 			if err != nil {
 				return nil, nil, fmt.Errorf("GetOrCreateStoragePool: pool.SetAutostart: %s", err)
 			}

@@ -100,7 +100,7 @@ func (db *SecretDatabase) Get(key string) (*Secret, error) {
 }
 
 // set a secret value (low-level)
-func (db *SecretDatabase) set(key string, value string, authorKey string, deleted bool) {
+func (db *SecretDatabase) set(key string, value string, authorKey string) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
@@ -116,7 +116,7 @@ func (db *SecretDatabase) set(key string, value string, authorKey string, delete
 // Set a secret value
 func (db *SecretDatabase) Set(key string, value string, authorKey string) error {
 
-	db.set(key, value, authorKey, false)
+	db.set(key, value, authorKey)
 
 	err := db.Save()
 	if err != nil {
@@ -143,6 +143,7 @@ func (db *SecretDatabase) delete(key string, authorKey string) error {
 	secret.Value = ""
 	secret.Deleted = true
 	secret.Modified = time.Now()
+	secret.AuthorKey = authorKey
 
 	return nil
 }

@@ -407,7 +407,7 @@ func (db *SeedDatabase) RefreshSeed(seed *Seed, force bool) error {
 		seed.UpdateStatus("moving to storage")
 
 		errR := db.app.Libvirt.DeleteVolume(seed.GetVolumeName(), db.app.Libvirt.Pools.Seeds)
-		if err != nil {
+		if errR != nil {
 			virtErr := errR.(libvirt.Error)
 			if !(virtErr.Domain == libvirt.FROM_STORAGE && virtErr.Code == libvirt.ERR_NO_STORAGE_VOL) {
 				return fmt.Errorf("unable to delete old image: %s", errR)

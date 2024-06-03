@@ -26,7 +26,7 @@ func MakeSSHKey() (private string, public string, err error) {
 		Bytes: edkey.MarshalED25519PrivateKey(privateKey),
 	}
 
-	if errE := pem.Encode(bufPriv, privateKeyPEM); err != nil {
+	if errE := pem.Encode(bufPriv, privateKeyPEM); errE != nil {
 		return "", "", fmt.Errorf("pem encoding: %s", errE)
 	}
 
