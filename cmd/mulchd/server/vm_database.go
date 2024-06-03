@@ -311,7 +311,7 @@ func (vmdb *VMDatabase) Update() error {
 }
 
 // Delete the VM from the database using its name
-func (vmdb *VMDatabase) Delete(name *VMName) error {
+func (vmdb *VMDatabase) Delete(name *VMName, log *Log) error {
 	entryToDelete, err := vmdb.GetEntryByName(name)
 	if err != nil {
 		return fmt.Errorf("VM '%s' was not found in database", name.ID())
@@ -339,6 +339,7 @@ func (vmdb *VMDatabase) Delete(name *VMName) error {
 			if err != nil {
 				return err
 			}
+			log.Warningf("revision %d of VM '%s' is now active", maxRevision, entryToDelete.Name.Name)
 		}
 	}
 

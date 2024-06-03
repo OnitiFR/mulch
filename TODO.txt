@@ -28,7 +28,6 @@ Resource leaks:
 Current:
 
 Short term:
-- inform user when a VM deletion activates an older revision
 - auto-rebuild VS wip operations?
 - global 'timezone' setting (only in TOMLs currently)
 - investigate the case where a mulch-secrets.db was erased (0 bytes) during an update + restart

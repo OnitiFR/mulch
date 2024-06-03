@@ -281,7 +281,7 @@ func (app *App) initVMDB() error {
 		}
 		if dom == nil {
 			app.Log.Warningf("VM '%s' does not exists in libvirt, deleting from Mulch DB", name)
-			app.VMDB.Delete(name)
+			app.VMDB.Delete(name, app.Log)
 		} else {
 			func() { // use an anonymous func for the defer
 				vm, err2 := app.VMDB.GetByName(name)

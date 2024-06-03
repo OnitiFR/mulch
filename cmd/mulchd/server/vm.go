@@ -966,7 +966,7 @@ func VMDelete(vmName *VMName, app *App, log *Log) error {
 	}
 
 	// remove from database
-	errD := app.VMDB.Delete(vmName)
+	errD := app.VMDB.Delete(vmName, log)
 	if errD != nil {
 		return errD
 	}
@@ -1611,7 +1611,7 @@ func VMRename(orgVMName *VMName, newVMName *VMName, app *App, log *Log) error {
 	}
 
 	// rename in app DB
-	err = app.VMDB.Delete(orgVMName)
+	err = app.VMDB.Delete(orgVMName, log)
 	if err != nil {
 		return err
 	}
