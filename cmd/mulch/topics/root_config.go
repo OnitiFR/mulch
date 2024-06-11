@@ -146,7 +146,11 @@ func NewRootConfig(filename string) (*client.RootConfig, error) {
 
 	if rootCmd.PersistentFlags().Lookup("dump-servers").Changed {
 		for _, server := range tConfig.Server {
-			fmt.Println(server.Name)
+			if !rootConfig.Trace {
+				fmt.Println(server.Name)
+			} else {
+				fmt.Printf("%s:%s\n", server.Name, server.Alias)
+			}
 		}
 		os.Exit(0)
 	}

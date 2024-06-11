@@ -52,7 +52,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("trace", "t", false, "also show server TRACE messages (debug)")
 	rootCmd.PersistentFlags().CountP("time", "d", "show server time on messages (use -dd to also show date)")
 	rootCmd.PersistentFlags().StringP("server", "s", "", "selected server in the config file")
-	rootCmd.PersistentFlags().BoolP("dump-servers", "", false, "dump server list and exit")
+	rootCmd.PersistentFlags().BoolP("dump-servers", "", false, "dump server list and exit (add -t for aliases)")
 
 	rootCmd.PersistentFlags().BoolP("dump-server", "", false, "dump current server name (useful for completion)")
 	rootCmd.PersistentFlags().MarkHidden("dump-server")
