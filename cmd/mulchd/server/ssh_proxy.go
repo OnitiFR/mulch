@@ -209,12 +209,15 @@ func (proxy *SSHProxy) serveProxy() error {
 	// global requests (from outside to the VM)
 	go proxy.ForwardRequestsToClient(reqs, clientConn)
 
-	// with "ssh -R" tunnels from the outside to the VM, the client (VM)
-	// will request new channels (same for X11 forwarding)
+	// special channels (requested by the VM to the outside):
+
+	//  -- "ssh -R" tunnels from the outside
 	proxy.ClientHandleChannelOpen("forwarded-tcpip", clientConn, serverConn)
+
+	// -- X11 forwarding
 	proxy.ClientHandleChannelOpen("x11", clientConn, serverConn)
 
-	// ssh agent forwarding (old and new names)
+	// -- agent forwarding (old and new names)
 	proxy.ClientHandleChannelOpen("auth-agent@openssh.com", clientConn, serverConn)
 	proxy.ClientHandleChannelOpen("agent-connect", clientConn, serverConn)
 
