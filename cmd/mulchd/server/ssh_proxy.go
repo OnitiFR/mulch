@@ -214,6 +214,10 @@ func (proxy *SSHProxy) serveProxy() error {
 	proxy.ClientHandleChannelOpen("forwarded-tcpip", clientConn, serverConn)
 	proxy.ClientHandleChannelOpen("x11", clientConn, serverConn)
 
+	// ssh agent forwarding (old and new names)
+	proxy.ClientHandleChannelOpen("auth-agent@openssh.com", clientConn, serverConn)
+	proxy.ClientHandleChannelOpen("agent-connect", clientConn, serverConn)
+
 	err = proxy.runChannels(chans, clientConn)
 	if err != nil {
 		return err
