@@ -82,6 +82,13 @@ EOS
 # remove public access for home directories
 sudo chmod o= /home/*/ /etc/skel || exit $?
 
+# increase watches (to a quarter of the maximum allowed)
+sudo bash -c "cat > /etc/sysctl.d/60-inotify.conf" <<- EOS
+fs.inotify.max_user_watches = 131072
+EOS
+[ $? -eq 0 ] || exit $?
+sudo systemctl restart systemd-sysctl.service || exit $?
+
 # add a "open" action (see "do" command) if there's any domain defined
 if [ -n "$_DOMAIN_FIRST" ]; then
     echo "_MULCH_ACTION_NAME=open"

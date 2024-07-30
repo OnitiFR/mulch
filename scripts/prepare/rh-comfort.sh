@@ -87,6 +87,13 @@ line=$(expr $line - 2)
 sudo sed -i "$line a {\"function\": \"powerline.segments.common.vcs.branch\", \"priority\": 40, \"args\": {\"status_colors\": false}}," "$theme" || exit $?
 sudo sed -i "s/\"function\": \"powerline.segments.common.net.hostname\",/\"function\": \"powerline.segments.common.env.environment\", \"args\": {\"variable\": \"_VM_NAME\"},/" "$theme" || exit $?
 
+# increase watches (to a quarter of the maximum allowed)
+sudo bash -c "cat > /etc/sysctl.d/60-inotify.conf" <<- EOS
+fs.inotify.max_user_watches = 131072
+EOS
+[ $? -eq 0 ] || exit $?
+sudo systemctl restart systemd-sysctl.service || exit $?
+
 # add a "open" action (see "do" command) if there's any domain defined
 if [ -n "$_DOMAIN_FIRST" ]; then
     echo "_MULCH_ACTION_NAME=open"
