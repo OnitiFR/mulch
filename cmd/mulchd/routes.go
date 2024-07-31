@@ -204,6 +204,30 @@ func AddRoutes(app *server.App) {
 	}, server.RouteAPI)
 
 	app.AddRoute(&server.Route{
+		Route:   "GET /key/trust/list",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.ListKeyTrustedVMsController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "POST /key/trust/list/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.AddKeyTrustedVMController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "DELETE /key/trust/list/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.DeleteKeyTrustedVMController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "POST /key/trust/clean",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.CleanKeyTrustedVMsController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
 		Route:   "GET /sshpair",
 		Type:    server.RouteTypeCustom,
 		Handler: controllers.GetKeyPairController,

@@ -14,7 +14,7 @@ import (
 type SSHProxy struct {
 	net.Conn
 	config    *ssh.ServerConfig
-	connectCB func(c ssh.ConnMetadata) (*ssh.Client, error)
+	connectCB func(c ssh.ConnMetadata) (*sshServerClient, error)
 	closeCB   func(c ssh.ConnMetadata) error
 	log       *Log
 }
@@ -194,10 +194,12 @@ func (proxy *SSHProxy) serveProxy() error {
 	}
 	defer serverConn.Close()
 
-	clientConn, err := proxy.connectCB(serverConn)
+	client, err := proxy.connectCB(serverConn)
 	if err != nil {
 		return err
 	}
+	clientConn := client.sshClient
+
 	defer clientConn.Close()
 
 	// send keepalives on both sides
@@ -217,9 +219,11 @@ func (proxy *SSHProxy) serveProxy() error {
 	// -- X11 forwarding
 	proxy.ClientHandleChannelOpen("x11", clientConn, serverConn)
 
-	// -- agent forwarding (old and new names)
-	proxy.ClientHandleChannelOpen("auth-agent@openssh.com", clientConn, serverConn)
-	proxy.ClientHandleChannelOpen("agent-connect", clientConn, serverConn)
+	if client.isTrustedVM {
+		// -- agent forwarding (old and new names)
+		proxy.ClientHandleChannelOpen("auth-agent@openssh.com", clientConn, serverConn)
+		proxy.ClientHandleChannelOpen("agent-connect", clientConn, serverConn)
+	}
 
 	err = proxy.runChannels(chans, clientConn)
 	if err != nil {
@@ -236,8 +240,9 @@ func (proxy *SSHProxy) serveProxy() error {
 func ListenAndServeProxy(
 	addr string,
 	serverConfig *ssh.ServerConfig,
+	sshClients *sshServerClients,
 	log *Log,
-	connectCB func(c ssh.ConnMetadata) (*ssh.Client, error),
+	connectCB func(c ssh.ConnMetadata) (*sshServerClient, error),
 	closeCB func(c ssh.ConnMetadata) error,
 ) error {
 	listener, err := net.Listen("tcp", addr)

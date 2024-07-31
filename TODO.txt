@@ -71,6 +71,7 @@ Short term:
 - add "ipv4 only" option for seed downloads?
 
 Long term:
+- find a way to secure ssh agent forwarding? (so other users can't use the socket in the VM)
 - allow a centralized secret share (useful with many hosts)
 - "hidden multi-server support"? (with a "proxy mulchd" routing requests to the correct real mulchd)
 - full async API?

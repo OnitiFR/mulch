@@ -13,12 +13,13 @@ import (
 )
 
 type sshServerClient struct {
-	sshClient  *ssh.Client
-	remoteAddr net.Addr
-	vm         *VM
-	sshUser    string
-	apiAuth    string
-	startTime  time.Time
+	sshClient   *ssh.Client
+	remoteAddr  net.Addr
+	vm          *VM
+	isTrustedVM bool
+	sshUser     string
+	apiAuth     string
+	startTime   time.Time
 }
 
 type sshServerClients struct {
@@ -138,6 +139,10 @@ func NewSSHProxyServer(app *App) error {
 			client.startTime = time.Now()
 			client.remoteAddr = c.RemoteAddr()
 
+			if apiKey != nil {
+				client.isTrustedVM = apiKey.IsTrustedVM(vm.Config.Name)
+			}
+
 			clientConfig := &ssh.ClientConfig{}
 
 			clientConfig.User = user
@@ -167,13 +172,14 @@ func NewSSHProxyServer(app *App) error {
 	err = ListenAndServeProxy(
 		app.Config.ProxyListenSSH,
 		config,
+		app.sshClients,
 		app.Log,
-		func(c ssh.ConnMetadata) (*ssh.Client, error) {
+		func(c ssh.ConnMetadata) (*sshServerClient, error) {
 			client := app.sshClients.findByAddress(c.RemoteAddr())
 			// we could delete entry here, but we keep it for infos/stats (see status command)
 			app.Log.Tracef("SSH proxy: connection accepted from %s forwarded to %s", c.RemoteAddr(), client.sshClient.RemoteAddr())
 
-			return client.sshClient, err
+			return client, err
 		}, func(c ssh.ConnMetadata) error {
 			app.sshClients.delete(c.RemoteAddr())
 			app.Log.Tracef("SSH proxy: connection closed from: %s", c.RemoteAddr())

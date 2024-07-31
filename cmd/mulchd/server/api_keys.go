@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/ryanuber/go-glob"
 	"golang.org/x/crypto/ssh"
@@ -26,6 +27,7 @@ type APIKey struct {
 	SSHPrivate string
 	SSHPublic  string
 	Rights     []APIRight
+	TrustedVMs map[string]bool
 }
 
 // APIRight is a parsed "Rights" line
@@ -40,6 +42,7 @@ type APIKeyDatabase struct {
 	filename string
 	keys     []*APIKey
 	rand     *rand.Rand
+	mutex    sync.Mutex
 }
 
 // NewAPIKeyDatabase creates a new API key database
@@ -65,7 +68,7 @@ func NewAPIKeyDatabase(filename string, log *Log, rand *rand.Rand) (*APIKeyDatab
 	}
 
 	// save the file to check if it's writable
-	err := db.Save()
+	err := db.save()
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +77,9 @@ func NewAPIKeyDatabase(filename string, log *Log, rand *rand.Rand) (*APIKeyDatab
 }
 
 func (db *APIKeyDatabase) load(log *Log) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
 	f, err := os.Open(db.filename)
 	if err != nil {
 		return err
@@ -124,6 +130,14 @@ func (db *APIKeyDatabase) load(log *Log) error {
 
 // Save the database on the disk
 func (db *APIKeyDatabase) Save() error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	return db.save()
+}
+
+// Save the database on the disk, without locking (internal use)
+func (db *APIKeyDatabase) save() error {
 	f, err := os.OpenFile(db.filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
@@ -142,6 +156,9 @@ func (db *APIKeyDatabase) Save() error {
 // IsValidKey return true if the key exists in the database
 // (and returns the key as the second return value)
 func (db *APIKeyDatabase) IsValidKey(key string) (bool, *APIKey) {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
 	if len(key) < apiKeyMinLength {
 		return false, nil
 	}
@@ -154,11 +171,27 @@ func (db *APIKeyDatabase) IsValidKey(key string) (bool, *APIKey) {
 	return false, nil
 }
 
-// List returns all keys
-// NOTE: This function signature may change in the future, since
-// the current one does not offer much safety to interal structures.
-func (db *APIKeyDatabase) List() []*APIKey {
-	return db.keys
+// keyExists return true if the key address exists in the database
+func (db *APIKeyDatabase) keyExists(key *APIKey) bool {
+	for _, candidate := range db.keys {
+		if candidate == key {
+			return true
+		}
+	}
+	return false
+}
+
+// List returns all keys (comments only)
+func (db *APIKeyDatabase) ListComments() []string {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	var comments []string
+	for _, key := range db.keys {
+		comments = append(comments, key.Comment)
+	}
+
+	return comments
 }
 
 // GenKey generates a new random API key
@@ -168,6 +201,8 @@ func (db *APIKeyDatabase) genKey() string {
 
 // AddNew generates a new key and adds it to the database
 func (db *APIKeyDatabase) AddNew(comment string) (*APIKey, error) {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
 
 	for _, key := range db.keys {
 		if key.Comment == comment {
@@ -188,7 +223,7 @@ func (db *APIKeyDatabase) AddNew(comment string) (*APIKey, error) {
 	}
 	db.keys = append(db.keys, key)
 
-	err = db.Save()
+	err = db.save()
 	if err != nil {
 		return nil, err
 	}
@@ -199,6 +234,9 @@ func (db *APIKeyDatabase) AddNew(comment string) (*APIKey, error) {
 // GetByPubKey returns an API key by its (marshaled) public key
 // Returns nil and no error when key was not found
 func (db *APIKeyDatabase) GetByPubKey(pub string) (*APIKey, error) {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
 	for _, key := range db.keys {
 		pubKey, _, _, _, errP := ssh.ParseAuthorizedKey([]byte(key.SSHPublic))
 		if errP != nil {
@@ -215,12 +253,77 @@ func (db *APIKeyDatabase) GetByPubKey(pub string) (*APIKey, error) {
 
 // GetByComment returns an API key by its comment, or nil if not found
 func (db *APIKeyDatabase) GetByComment(comment string) *APIKey {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
 	for _, key := range db.keys {
 		if key.Comment == comment {
 			return key
 		}
 	}
 	return nil
+}
+
+// AddTrustedVM adds a VM to the list of trusted VMs for the key
+func (db *APIKeyDatabase) AddTrustedVM(key *APIKey, vmName string) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	if key.TrustedVMs == nil {
+		key.TrustedVMs = make(map[string]bool)
+	}
+
+	if !db.keyExists(key) {
+		return errors.New("key not found in database")
+	}
+
+	if key.TrustedVMs[vmName] {
+		return errors.New("VM already trusted")
+	}
+
+	key.TrustedVMs[vmName] = true
+
+	err := db.save()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RemoveTrustedVM removes a VM from the list of trusted VMs for the key
+func (db *APIKeyDatabase) RemoveTrustedVM(key *APIKey, vmName string) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	if key.TrustedVMs == nil {
+		key.TrustedVMs = make(map[string]bool)
+	}
+
+	if !db.keyExists(key) {
+		return errors.New("key not found in database")
+	}
+
+	if !key.TrustedVMs[vmName] {
+		return errors.New("VM was not trusted")
+	}
+
+	delete(key.TrustedVMs, vmName)
+
+	err := db.save()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// IsTrustedVM returns true if the VM is trusted by the key
+func (key *APIKey) IsTrustedVM(vmName string) bool {
+	if key.TrustedVMs == nil {
+		return false
+	}
+	return key.TrustedVMs[vmName]
 }
 
 // IsAllowed will return true if the APIKey is allowed to request this method/path/headers

@@ -93,6 +93,15 @@ __internal_list_secrets() {
     fi
 }
 
+__internal_list_trusted_vms() {
+    local mulch_output out
+    __mulch_get_server
+    if mulch_output=$(mulch --server $__mulch_current_server trust list 2>/dev/null); then
+        out=($(echo "${mulch_output}"))
+        COMPREPLY=( $( compgen -W "${out[*]}" -- "$cur" ) )
+    fi
+}
+
 __internal_list_greenhouse_vms() {
     local mulch_output out
     __mulch_get_server
@@ -158,6 +167,10 @@ __mulch_custom_func() {
             ;;
         mulch_secret_set | mulch_secret_get | mulch_secret_delete | mulch_secret_list)
             __internal_list_secrets
+            return
+            ;;
+        mulch_trust_delete | mulch_trust_remove)
+            __internal_list_trusted_vms
             return
             ;;
         *)
