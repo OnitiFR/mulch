@@ -1,17 +1,13 @@
 package server
 
 import (
-	"bytes"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
 )
 
 // SSHConnection stores connection informations
@@ -66,7 +62,7 @@ func (connection *SSHConnection) Close() error {
 
 // We don't check SSH fingerprint, because it changes at each VM reconstruction
 // and we're not using SSH outside of local host
-func hostKeyBilndTrustChecker(hostname string, remote net.Addr, key ssh.PublicKey) error {
+func hostKeyBlindTrustChecker(hostname string, remote net.Addr, key ssh.PublicKey) error {
 	return nil
 }
 
@@ -77,7 +73,7 @@ func (connection *SSHConnection) Connect() error {
 		Auth: connection.Auths,
 	}
 
-	sshConfig.HostKeyCallback = hostKeyBilndTrustChecker
+	sshConfig.HostKeyCallback = hostKeyBlindTrustChecker
 
 	// if len(connection.Ciphers) > 0 {
 	// 	sshConfig.Config = ssh.Config{
@@ -113,60 +109,6 @@ func PublicKeyFile(file string) ssh.AuthMethod {
 		return nil
 	}
 	return ssh.PublicKeys(key)
-}
-
-// SSHAgent returns an AuthMethod using SSH agent connection. The pubkeyFile
-// params restricts the AuthMethod to only one key, so it wont spam the
-// SSH server if the agent holds multiple keys.
-func SSHAgent(pubkeyFile string, log *Log) (ssh.AuthMethod, error) {
-	sshAgent, errd := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
-	if errd == nil {
-		agent := agent.NewClient(sshAgent)
-
-		// we'll try every key, then
-		if pubkeyFile == "" {
-			return ssh.PublicKeysCallback(agent.Signers), nil
-		}
-
-		agentSigners, err := agent.Signers()
-		if err != nil {
-			return nil, fmt.Errorf("requesting SSH agent key/signer list: %s", err)
-		}
-
-		buffer, err := os.ReadFile(pubkeyFile)
-		if err != nil {
-			return nil, fmt.Errorf("reading public key '%s': %s", pubkeyFile, err)
-		}
-
-		fields := strings.Fields(string(buffer))
-
-		if len(fields) < 3 {
-			return nil, fmt.Errorf("invalid field count for public key '%s'", pubkeyFile)
-		}
-
-		buffer2, err := base64.StdEncoding.DecodeString(fields[1])
-		if err != nil {
-			return nil, fmt.Errorf("decoding public key '%s': %s", pubkeyFile, err)
-		}
-
-		key, err := ssh.ParsePublicKey(buffer2)
-		if err != nil {
-			return nil, fmt.Errorf("parsing public key '%s': %s", pubkeyFile, err)
-		}
-
-		for _, potentialSigner := range agentSigners {
-			if bytes.Equal(key.Marshal(), potentialSigner.PublicKey().Marshal()) {
-				log.Tracef("successfully found %s key in the SSH agent (%s)", pubkeyFile, fields[2])
-				cb := func() ([]ssh.Signer, error) {
-					signers := []ssh.Signer{potentialSigner}
-					return signers, nil
-				}
-				return ssh.PublicKeysCallback(cb), nil
-			}
-		}
-		return nil, fmt.Errorf("can't find '%s' key in the SSH agent", pubkeyFile)
-	}
-	return nil, fmt.Errorf("SSH agent: %v (check SSH_AUTH_SOCK?)", errd)
 }
 
 // SSHSendKeepAlive sends a keepalive request using a timeout

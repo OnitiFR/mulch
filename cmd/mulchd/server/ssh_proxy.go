@@ -21,13 +21,13 @@ type SSHProxy struct {
 
 // ClientHandleChannelOpen is called when the client (= the VM) asks
 // for a new channel (ex: forwarded-tcpip)
-func (proxy *SSHProxy) ClientHandleChannelOpen(chanType string, client *ssh.Client, destConn ssh.Conn) {
-	channels := client.HandleChannelOpen(chanType)
+func (proxy *SSHProxy) ClientHandleChannelOpen(chanType string, client *sshServerClient, destConn ssh.Conn) {
+	channels := client.sshClient.HandleChannelOpen(chanType)
 	if channels == nil {
 		proxy.log.Warningf("HandleChannelOpen failed for '%s' channels", chanType)
 		return
 	}
-	go proxy.runChannels(channels, destConn)
+	go proxy.runChannels(channels, destConn, client)
 }
 
 // ForwardRequestsToClient forwards server ("outside") global requests to the client ("VM")
@@ -105,7 +105,7 @@ func (proxy *SSHProxy) scheduleSSHKeepAlives(sshConn ssh.Conn, name string) {
 
 // runChannels is the the core of the ssh-proxy, where we manage channels and requests
 // the usual destination is the VM, but see ClientHandleChannelOpen() for special cases
-func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Conn) error {
+func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Conn, clientInfo *sshServerClient) error {
 	var wgChannels sync.WaitGroup
 
 	for newChannel := range chans {
@@ -129,6 +129,11 @@ func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Con
 		downChannel, downRequests, err := newChannel.Accept()
 		if err != nil {
 			return fmt.Errorf("failed Accept: %s", err)
+		}
+
+		if newChannel.ChannelType() == "auth-agent@openssh.com" || newChannel.ChannelType() == "agent-connect" {
+			proxy.newSshAgentProxy(upChannel, downChannel, clientInfo)
+			continue
 		}
 
 		// requests + two Copy
@@ -214,18 +219,18 @@ func (proxy *SSHProxy) serveProxy() error {
 	// special channels (requested by the VM to the outside):
 
 	//  -- "ssh -R" tunnels from the outside
-	proxy.ClientHandleChannelOpen("forwarded-tcpip", clientConn, serverConn)
+	proxy.ClientHandleChannelOpen("forwarded-tcpip", client, serverConn)
 
 	// -- X11 forwarding
-	proxy.ClientHandleChannelOpen("x11", clientConn, serverConn)
+	proxy.ClientHandleChannelOpen("x11", client, serverConn)
 
 	if client.isTrustedVM {
 		// -- agent forwarding (old and new names)
-		proxy.ClientHandleChannelOpen("auth-agent@openssh.com", clientConn, serverConn)
-		proxy.ClientHandleChannelOpen("agent-connect", clientConn, serverConn)
+		proxy.ClientHandleChannelOpen("auth-agent@openssh.com", client, serverConn)
+		proxy.ClientHandleChannelOpen("agent-connect", client, serverConn)
 	}
 
-	err = proxy.runChannels(chans, clientConn)
+	err = proxy.runChannels(chans, clientConn, client)
 	if err != nil {
 		return err
 	}
@@ -234,6 +239,18 @@ func (proxy *SSHProxy) serveProxy() error {
 		proxy.closeCB(serverConn)
 	}
 	return nil
+}
+
+// run a SSH agent server as filter between the client and the real agent
+func (proxy *SSHProxy) newSshAgentProxy(realAgent ssh.Channel, client ssh.Channel, clientInfo *sshServerClient) {
+	agent := NewSSHProxyAgent(realAgent, client, proxy.log)
+	go func() {
+		agent.Serve()
+		proxy.log.Tracef("SSH internal agent closed")
+
+		realAgent.Close()
+		client.Close()
+	}()
 }
 
 // ListenAndServeProxy of our own SSH server

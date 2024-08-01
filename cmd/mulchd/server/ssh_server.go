@@ -160,7 +160,6 @@ func NewSSHProxyServer(app *App) error {
 
 			client.sshClient = sshClient
 
-			app.Log.Trace("SSH Proxy: adding client to the map")
 			app.sshClients.add(c.RemoteAddr(), &client)
 			return nil, nil
 		},
