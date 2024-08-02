@@ -16,18 +16,16 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// TODO: lock this database with a mutex?
-
 const apiKeyMinLength = 64
 
 // APIKey describes an API key
 type APIKey struct {
-	Comment    string
-	Key        string
-	SSHPrivate string
-	SSHPublic  string
-	Rights     []APIRight
-	TrustedVMs map[string]bool
+	Comment                string
+	Key                    string
+	SSHPrivate             string
+	SSHPublic              string
+	Rights                 []APIRight
+	SSHAllowedFingerprints []APISSHFingerprint
 }
 
 // APIRight is a parsed "Rights" line
@@ -35,6 +33,12 @@ type APIRight struct {
 	Method  string
 	Path    string
 	Headers map[string]string
+}
+
+// APISSHFingerprint is a fingerprint the user allows to be forwarded to a VM
+type APISSHFingerprint struct {
+	VMName      string
+	Fingerprint string
 }
 
 // APIKeyDatabase describes a persistent API Key database
@@ -264,24 +268,20 @@ func (db *APIKeyDatabase) GetByComment(comment string) *APIKey {
 	return nil
 }
 
-// AddTrustedVM adds a VM to the list of trusted VMs for the key
-func (db *APIKeyDatabase) AddTrustedVM(key *APIKey, vmName string) error {
+// AllowSSHFingerprint allows a fingertprint to be forwarded to a VM
+func (db *APIKeyDatabase) AllowSSHFingerprint(key *APIKey, fp APISSHFingerprint) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
-
-	if key.TrustedVMs == nil {
-		key.TrustedVMs = make(map[string]bool)
-	}
 
 	if !db.keyExists(key) {
 		return errors.New("key not found in database")
 	}
 
-	if key.TrustedVMs[vmName] {
-		return errors.New("VM already trusted")
+	if key.IsTrustedFingerprint(fp) {
+		return errors.New("fingerprint already trusted")
 	}
 
-	key.TrustedVMs[vmName] = true
+	key.SSHAllowedFingerprints = append(key.SSHAllowedFingerprints, fp)
 
 	err := db.save()
 	if err != nil {
@@ -291,24 +291,27 @@ func (db *APIKeyDatabase) AddTrustedVM(key *APIKey, vmName string) error {
 	return nil
 }
 
-// RemoveTrustedVM removes a VM from the list of trusted VMs for the key
-func (db *APIKeyDatabase) RemoveTrustedVM(key *APIKey, vmName string) error {
+// RemoveSSHFingerprint removes a fingerprint from the list of allowed fingerprints
+func (db *APIKeyDatabase) RemoveSSHFingerprint(key *APIKey, fp APISSHFingerprint) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
-
-	if key.TrustedVMs == nil {
-		key.TrustedVMs = make(map[string]bool)
-	}
 
 	if !db.keyExists(key) {
 		return errors.New("key not found in database")
 	}
 
-	if !key.TrustedVMs[vmName] {
-		return errors.New("VM was not trusted")
+	found := false
+	for i, f := range key.SSHAllowedFingerprints {
+		if f.VMName == fp.VMName && f.Fingerprint == fp.Fingerprint {
+			key.SSHAllowedFingerprints = append(key.SSHAllowedFingerprints[:i], key.SSHAllowedFingerprints[i+1:]...)
+			found = true
+			break
+		}
 	}
 
-	delete(key.TrustedVMs, vmName)
+	if !found {
+		return errors.New("fingerprint not found in the list of allowed fingerprints")
+	}
 
 	err := db.save()
 	if err != nil {
@@ -318,12 +321,54 @@ func (db *APIKeyDatabase) RemoveTrustedVM(key *APIKey, vmName string) error {
 	return nil
 }
 
-// IsTrustedVM returns true if the VM is trusted by the key
+// RemoveAllSSHFingerprint removes all fingerprints allowed for a VM of a key
+func (db *APIKeyDatabase) RemoveAllSSHFingerprint(key *APIKey, vmName string) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	res := make([]APISSHFingerprint, 0)
+
+	found := false
+	for _, k := range key.SSHAllowedFingerprints {
+		if k.VMName == vmName {
+			found = true
+			continue
+		}
+		res = append(res, k)
+	}
+
+	if !found {
+		return errors.New("this VM has no allowed fingerprints")
+	}
+
+	key.SSHAllowedFingerprints = res
+
+	err := db.save()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// IsTrustedFingerprint returns true if the fingerprint allowed to be forwarded to a VM
+func (key *APIKey) IsTrustedFingerprint(fp APISSHFingerprint) bool {
+	for _, v := range key.SSHAllowedFingerprints {
+		if v.VMName == fp.VMName && v.Fingerprint == fp.Fingerprint {
+			return true
+		}
+	}
+	return false
+}
+
+// IsTrustedVM returns true if the VM has any allowed fingerprint
 func (key *APIKey) IsTrustedVM(vmName string) bool {
-	if key.TrustedVMs == nil {
-		return false
+	for _, fp := range key.SSHAllowedFingerprints {
+		if fp.VMName == vmName {
+			return true
+		}
 	}
-	return key.TrustedVMs[vmName]
+	return false
 }
 
 // IsAllowed will return true if the APIKey is allowed to request this method/path/headers
