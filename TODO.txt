@@ -30,6 +30,7 @@ Current:
 - mulch trust add my-vm -f ~/.ssh/id_rsa_my_vm.pub
 - mulch trust remove my-vm
 - mulch trust clean
+- mulch ssh cmd must forward the agent by default
 
 Short term:
 - auto-rebuild VS wip operations?
