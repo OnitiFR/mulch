@@ -658,7 +658,7 @@ func (app *App) Status() (*common.APIStatus, error) {
 		}
 		ret.SSHConnections = append(ret.SSHConnections, common.APISSHConnection{
 			FromIP:    client.remoteAddr.String(),
-			FromUser:  client.apiAuth,
+			FromUser:  client.apiKeyComment,
 			ToUser:    client.sshUser,
 			ToVMName:  entry.Name.ID(),
 			StartTime: client.startTime,

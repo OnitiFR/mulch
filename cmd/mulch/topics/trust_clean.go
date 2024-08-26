@@ -8,7 +8,7 @@ import (
 // trustCleanCmd represents the "trust remove" command
 var trustCleanCmd = &cobra.Command{
 	Use:   "clean",
-	Short: "Remove all deleted and inactive trusted VMs",
+	Short: "Remove all forwarded keys for deleted and inactive VMs",
 	Args:  cobra.NoArgs,
 	Run: func(_ *cobra.Command, args []string) {
 		call := client.GlobalAPI.NewCall("POST", "/key/trust/clean", map[string]string{})

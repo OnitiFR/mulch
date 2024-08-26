@@ -13,13 +13,13 @@ import (
 )
 
 type sshServerClient struct {
-	sshClient   *ssh.Client
-	remoteAddr  net.Addr
-	vm          *VM
-	isTrustedVM bool
-	sshUser     string
-	apiAuth     string
-	startTime   time.Time
+	sshClient     *ssh.Client
+	remoteAddr    net.Addr
+	vm            *VM
+	sshUser       string
+	apiKeyComment string
+	apiKey        *APIKey
+	startTime     time.Time
 }
 
 type sshServerClients struct {
@@ -67,7 +67,8 @@ func NewSSHProxyServer(app *App) error {
 
 				user = parts[0]
 				vmName = parts[1]
-				client.apiAuth = apiKey.Comment
+				client.apiKeyComment = apiKey.Comment
+				client.apiKey = apiKey
 				app.Log.Tracef("SSH Proxy: %s (API key '%s') %s@%s", c.RemoteAddr(), apiKey.Comment, user, vmName)
 			} else {
 				matchingPubKey, comment, errS := SearchSSHAuthorizedKey(pubKey, app.Config.ProxySSHExtraKeysFile)
@@ -76,7 +77,7 @@ func NewSSHProxyServer(app *App) error {
 				}
 				// Extra public key access
 				if matchingPubKey != nil {
-					client.apiAuth = "[pubKey] " + comment
+					client.apiKeyComment = "[pubKey] " + comment
 					parts := strings.Split(comment, "@")
 					if len(parts) != 2 {
 						return nil, fmt.Errorf("wrong user format '%s' (user@vm needed)", c.User())
@@ -138,10 +139,6 @@ func NewSSHProxyServer(app *App) error {
 			client.sshUser = user
 			client.startTime = time.Now()
 			client.remoteAddr = c.RemoteAddr()
-
-			if apiKey != nil {
-				client.isTrustedVM = apiKey.IsTrustedVM(vm.Config.Name)
-			}
 
 			clientConfig := &ssh.ClientConfig{}
 

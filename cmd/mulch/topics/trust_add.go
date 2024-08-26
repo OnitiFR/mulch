@@ -1,26 +1,42 @@
 package topics
 
 import (
+	"log"
+	"os"
+
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
+	"golang.org/x/crypto/ssh"
 )
 
-// trustAddCmd represents the "trust add" command
-var trustAddCmd = &cobra.Command{
-	Use:   "add <name>",
-	Short: "Add a trusted VM to my key",
-	Long: `Add a trusted VM to my key.
+// trustForwardCmd represents the "trust forward" command
+var trustForwardCmd = &cobra.Command{
+	Use:   "forward <vm> <ssh-pub-file>",
+	Short: "Forward a SSH key to a VM",
 
-WARNING: trusted VMs have access to your SSH agent, anyone with access to
-this VM will be able to use all your SSH keys while you are connected!
-`,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.ExactArgs(2),
 	Run: func(_ *cobra.Command, args []string) {
-		call := client.GlobalAPI.NewCall("POST", "/key/trust/list/"+args[0], map[string]string{})
+		// read the public key file and get it's SHA256
+		pubKeyFile := args[1]
+		pubKeyData, err := os.ReadFile(pubKeyFile)
+		if err != nil {
+			log.Fatalf("error reading public key file: %s", err)
+		}
+
+		pubKey, _, _, _, err := ssh.ParseAuthorizedKey(pubKeyData)
+		if err != nil {
+			log.Fatalf("error parsing public key: %s", err)
+		}
+
+		sha256 := ssh.FingerprintSHA256(pubKey)
+
+		call := client.GlobalAPI.NewCall("POST", "/key/trust/list/"+args[0], map[string]string{
+			"fingerprint": sha256,
+		})
 		call.Do()
 	},
 }
 
 func init() {
-	trustCmd.AddCommand(trustAddCmd)
+	trustCmd.AddCommand(trustForwardCmd)
 }

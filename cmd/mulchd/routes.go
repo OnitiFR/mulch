@@ -204,7 +204,7 @@ func AddRoutes(app *server.App) {
 	}, server.RouteAPI)
 
 	app.AddRoute(&server.Route{
-		Route:   "GET /key/trust/list",
+		Route:   "GET /key/trust/list/*",
 		Type:    server.RouteTypeCustom,
 		Handler: controllers.ListKeyTrustedVMsController,
 	}, server.RouteAPI)

@@ -93,15 +93,6 @@ __internal_list_secrets() {
     fi
 }
 
-__internal_list_trusted_vms() {
-    local mulch_output out
-    __mulch_get_server
-    if mulch_output=$(mulch --server $__mulch_current_server trust list 2>/dev/null); then
-        out=($(echo "${mulch_output}"))
-        COMPREPLY=( $( compgen -W "${out[*]}" -- "$cur" ) )
-    fi
-}
-
 __internal_list_greenhouse_vms() {
     local mulch_output out
     __mulch_get_server
@@ -133,7 +124,7 @@ __mulch_custom_func() {
             __internal_list_toml_files
             return
             ;;
-        mulch_ssh | mulch_vm_backup | mulch_vm_config | mulch_vm_delete | mulch_vm_infos | mulch_vm_lock | mulch_vm_rebuild | mulch_vm_redefine | mulch_vm_start | mulch_vm_stop | mulch_vm_unlock | mulch_vm_activate | mulch_vm_deactivate | mulch_log | mulch_vm_console | mulch_vm_restart | mulch_vm_load | mulch_trust_add)
+        mulch_ssh | mulch_vm_backup | mulch_vm_config | mulch_vm_delete | mulch_vm_infos | mulch_vm_lock | mulch_vm_rebuild | mulch_vm_redefine | mulch_vm_start | mulch_vm_stop | mulch_vm_unlock | mulch_vm_activate | mulch_vm_deactivate | mulch_log | mulch_vm_console | mulch_vm_restart | mulch_vm_load | mulch_trust_forward | mulch_trust_list | mulch_trust_remove)
             __internal_list_vms
             return
             ;;
@@ -167,10 +158,6 @@ __mulch_custom_func() {
             ;;
         mulch_secret_set | mulch_secret_get | mulch_secret_delete | mulch_secret_list)
             __internal_list_secrets
-            return
-            ;;
-        mulch_trust_delete | mulch_trust_remove)
-            __internal_list_trusted_vms
             return
             ;;
         *)

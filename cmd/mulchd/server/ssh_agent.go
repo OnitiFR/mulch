@@ -10,24 +10,44 @@ import (
 type SSHAgentProxy struct {
 	agent  agent.ExtendedAgent
 	client ssh.Channel
+	apiKey *APIKey
+	vm     *VM
 	log    *Log
 }
 
 var ErrSSHProxyNotAllowed = errors.New("this action is not allowed through the SSH proxy")
+var ErrSSHProxyNotForwarded = errors.New("this key is not forwarded to this VM")
 
 // NewSSHProxyAgent creates a new SSH agent proxy
-func NewSSHProxyAgent(realAgent ssh.Channel, client ssh.Channel, log *Log) *SSHAgentProxy {
+func NewSSHProxyAgent(realAgent ssh.Channel, client ssh.Channel, vm *VM, apiKey *APIKey, log *Log) *SSHAgentProxy {
 	return &SSHAgentProxy{
 		agent:  agent.NewClient(realAgent),
 		client: client,
+		vm:     vm,
+		apiKey: apiKey,
 		log:    log,
 	}
 }
 
+func (p *SSHAgentProxy) isKeyAllowed(key ssh.PublicKey) bool {
+	if p.apiKey == nil {
+		return false
+	}
+
+	for _, fingerprint := range p.apiKey.SSHAllowedFingerprints {
+		if fingerprint.VMName != p.vm.Config.Name {
+			continue
+		}
+
+		if ssh.FingerprintSHA256(key) == fingerprint.Fingerprint {
+			return true
+		}
+	}
+	return false
+}
+
 // List returns the identities known to the agent
 func (p *SSHAgentProxy) List() ([]*agent.Key, error) {
-	p.log.Tracef("SSH agent: List")
-
 	keys, err := p.agent.List()
 	if err != nil {
 		return nil, err
@@ -35,7 +55,10 @@ func (p *SSHAgentProxy) List() ([]*agent.Key, error) {
 
 	res := make([]*agent.Key, 0)
 	for _, v := range keys {
-		p.log.Tracef("SSH agent: List: %s %s", ssh.FingerprintSHA256(v), v.Comment)
+		if !p.isKeyAllowed(v) {
+			continue
+		}
+		// p.log.Tracef("SSH agent: List: %s %s", ssh.FingerprintSHA256(v), v.Comment)
 		res = append(res, v)
 	}
 
@@ -45,14 +68,20 @@ func (p *SSHAgentProxy) List() ([]*agent.Key, error) {
 // Sign has the agent sign the data using a protocol 2 key as defined
 // in [PROTOCOL.agent] section 2.6.2
 func (p *SSHAgentProxy) Sign(key ssh.PublicKey, data []byte) (*ssh.Signature, error) {
-	p.log.Tracef("SSH agent: Sign")
+	if !p.isKeyAllowed(key) {
+		p.log.Tracef("SSH agent error: Sign: %s", ErrSSHProxyNotForwarded)
+		return nil, ErrSSHProxyNotForwarded
+	}
 	return p.agent.Sign(key, data)
 }
 
 // SignWithFlags has the agent sign the data using a protocol 2 key as defined
 // in [PROTOCOL.agent] section 2.6.2
 func (p *SSHAgentProxy) SignWithFlags(key ssh.PublicKey, data []byte, flags agent.SignatureFlags) (*ssh.Signature, error) {
-	p.log.Tracef("SSH agent: SignWithFlags")
+	if !p.isKeyAllowed(key) {
+		p.log.Tracef("SSH agent error: SignWithFlags: %s", ErrSSHProxyNotForwarded)
+		return nil, ErrSSHProxyNotForwarded
+	}
 	return p.agent.SignWithFlags(key, data, flags)
 }
 

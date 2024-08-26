@@ -224,11 +224,9 @@ func (proxy *SSHProxy) serveProxy() error {
 	// -- X11 forwarding
 	proxy.ClientHandleChannelOpen("x11", client, serverConn)
 
-	if client.isTrustedVM {
-		// -- agent forwarding (old and new names)
-		proxy.ClientHandleChannelOpen("auth-agent@openssh.com", client, serverConn)
-		proxy.ClientHandleChannelOpen("agent-connect", client, serverConn)
-	}
+	// -- agent forwarding (old and new names)
+	proxy.ClientHandleChannelOpen("auth-agent@openssh.com", client, serverConn)
+	proxy.ClientHandleChannelOpen("agent-connect", client, serverConn)
 
 	err = proxy.runChannels(chans, clientConn, client)
 	if err != nil {
@@ -243,7 +241,7 @@ func (proxy *SSHProxy) serveProxy() error {
 
 // run a SSH agent server as filter between the client and the real agent
 func (proxy *SSHProxy) newSshAgentProxy(realAgent ssh.Channel, client ssh.Channel, clientInfo *sshServerClient) {
-	agent := NewSSHProxyAgent(realAgent, client, proxy.log)
+	agent := NewSSHProxyAgent(realAgent, client, clientInfo.vm, clientInfo.apiKey, proxy.log)
 	go func() {
 		agent.Serve()
 		proxy.log.Tracef("SSH internal agent closed")

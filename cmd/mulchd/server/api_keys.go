@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ryanuber/go-glob"
 	"golang.org/x/crypto/ssh"
@@ -39,6 +40,7 @@ type APIRight struct {
 type APISSHFingerprint struct {
 	VMName      string
 	Fingerprint string
+	AddedAt     time.Time
 }
 
 // APIKeyDatabase describes a persistent API Key database
@@ -281,6 +283,7 @@ func (db *APIKeyDatabase) AllowSSHFingerprint(key *APIKey, fp APISSHFingerprint)
 		return errors.New("fingerprint already trusted")
 	}
 
+	fp.AddedAt = time.Now()
 	key.SSHAllowedFingerprints = append(key.SSHAllowedFingerprints, fp)
 
 	err := db.save()

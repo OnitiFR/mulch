@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"sort"
 	"strings"
@@ -145,16 +144,37 @@ func DeleteKeyRightController(req *server.Request) {
 
 // ListKeyTrustedVMsController list all trusted VMs for the current key
 func ListKeyTrustedVMsController(req *server.Request) {
-	req.Response.Header().Set("Content-Type", "text/plain")
+	req.Response.Header().Set("Content-Type", "application/json")
 
-	if req.APIKey.TrustedVMs == nil || len(req.APIKey.TrustedVMs) == 0 {
-		msg := fmt.Sprintf("no trusted VMs yet for key '%s'", req.APIKey.Comment)
-		req.App.Log.Error(msg)
-		http.Error(req.Response, msg, 404)
+	vmName := req.SubPath
+
+	var retData common.APITrustListEntries
+
+	for _, fp := range req.APIKey.SSHAllowedFingerprints {
+		if vmName != "" && fp.VMName != vmName {
+			continue
+		}
+
+		retData = append(retData, common.APITrustListEntry{
+			VM:          fp.VMName,
+			Fingerprint: fp.Fingerprint,
+			AddedAt:     fp.AddedAt,
+		})
 	}
 
-	for vmName := range req.APIKey.TrustedVMs {
-		req.Println(vmName)
+	// sort by VM name, then by date (newest first)
+	sort.Slice(retData, func(i, j int) bool {
+		if retData[i].VM == retData[j].VM {
+			return retData[i].AddedAt.After(retData[j].AddedAt)
+		}
+		return retData[i].VM < retData[j].VM
+	})
+
+	enc := json.NewEncoder(req.Response)
+	err := enc.Encode(&retData)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
 	}
 }
 
@@ -163,21 +183,27 @@ func AddKeyTrustedVMController(req *server.Request) {
 	req.StartStream()
 
 	vmName := req.SubPath
+	fingerprint := req.HTTP.FormValue("fingerprint")
 
 	_, err := req.App.VMDB.GetActiveByName(vmName)
 	if err != nil {
-		req.Stream.Failuref("Cannot trust VM: %s", err)
+		req.Stream.Failuref("cannot find VM: %s", err)
 		return
 	}
 
-	err = req.App.APIKeysDB.AddTrustedVM(req.APIKey, vmName)
+	fp := server.APISSHFingerprint{
+		VMName:      vmName,
+		Fingerprint: fingerprint,
+	}
+	err = req.App.APIKeysDB.AllowSSHFingerprint(req.APIKey, fp)
 	if err != nil {
-		req.Stream.Failuref("Cannot add VM to trusted list: %s", err)
+		req.Stream.Failuref("cannot forward key to VM: %s", err)
 		return
 	}
 
-	req.Stream.Warning("trusted VMs have access to your SSH agent, anyone with access to this VM will be able to use all your SSH keys while you are connected!")
-	req.Stream.Successf("VM '%s' added to trusted list", vmName)
+	req.Stream.Warning("reminder: this key can be used by other users on the VM when you are connected")
+
+	req.Stream.Successf("key will now be forwared to VM '%s'", vmName)
 }
 
 // DeleteKeyTrustedVMController remove a VM from the trusted list of the current key
@@ -185,43 +211,50 @@ func DeleteKeyTrustedVMController(req *server.Request) {
 	req.StartStream()
 
 	vmName := req.SubPath
+	fingerprint := req.HTTP.FormValue("fingerprint")
 
-	err := req.App.APIKeysDB.RemoveTrustedVM(req.APIKey, vmName)
-	if err != nil {
-		req.Stream.Failuref("Cannot remove VM from trusted list: %s", err)
+	if fingerprint == "" {
+		req.App.APIKeysDB.RemoveAllSSHFingerprint(req.APIKey, vmName)
+		req.Stream.Successf("all keys removed from VM '%s'", vmName)
 		return
 	}
 
-	req.Stream.Successf("VM '%s' removed from trusted list", vmName)
+	fp := server.APISSHFingerprint{
+		VMName:      vmName,
+		Fingerprint: fingerprint,
+	}
+
+	err := req.App.APIKeysDB.RemoveSSHFingerprint(req.APIKey, fp)
+	if err != nil {
+		req.Stream.Failuref("cannot remove key from VM: %s", err)
+		return
+	}
+
+	req.Stream.Successf("key removed from VM '%s'", vmName)
 }
 
 // CleanKeyTrustedVMsController deleted all inexistant and inactive VMs from the trusted list of the current key
 func CleanKeyTrustedVMsController(req *server.Request) {
 	req.StartStream()
 
-	if req.APIKey.TrustedVMs == nil || len(req.APIKey.TrustedVMs) == 0 {
-		req.Stream.Successf("List is empty, nothing to clean")
-		return
-	}
+	sshAllowedFingerprints := make([]server.APISSHFingerprint, 0)
 
-	trustedVMs := make(map[string]bool)
-
-	for vmName := range req.APIKey.TrustedVMs {
-		_, err := req.App.VMDB.GetActiveByName(vmName)
+	for _, fp := range req.APIKey.SSHAllowedFingerprints {
+		_, err := req.App.VMDB.GetActiveByName(fp.VMName)
 		if err != nil {
-			req.Stream.Infof("VM '%s' is inactive or deleted, removing from trusted list", vmName)
+			req.Stream.Infof("VM '%s' is inactive or deleted, removing key %s", fp.VMName, fp.Fingerprint)
 		} else {
-			trustedVMs[vmName] = true
+			sshAllowedFingerprints = append(sshAllowedFingerprints, fp)
 		}
 	}
 
-	req.APIKey.TrustedVMs = trustedVMs
+	req.APIKey.SSHAllowedFingerprints = sshAllowedFingerprints
 	err := req.App.APIKeysDB.Save()
 
 	if err != nil {
-		req.Stream.Failuref("Cannot save: %s", err)
+		req.Stream.Failuref("cannot save: %s", err)
 		return
 	}
 
-	req.Stream.Successf("Trusted VMs cleaned")
+	req.Stream.Successf("forwarded keys cleaned")
 }
