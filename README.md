@@ -62,7 +62,51 @@ In this example, the VM is up and ready 40 seconds later.
 
 Any more complete example?
 ---
-See the [complete sample VM configuration file](https://raw.github.com/OnitiFR/mulch/master/vm-samples/sample-vm-full.toml) to get a broader view of Mulch features.
+A production VM configuration file may look like this (WordPress website):
+```toml
+name = "xfennec"
+
+seed = "debian_12_lamp"
+
+disk_size = "20G"
+ram_size = "2G"
+cpu_count = 1
+
+backup_disk_size = "4G"
+auto_rebuild = "weekly"
+
+domains = ['xfennec.raydium.org']
+
+prepare = [
+    "admin@{core}/prepare/deb-comfort.sh",
+    "admin@{core}/prepare/deb-lamp.sh",
+    "app@{core}/prepare/wp-cli.sh",
+]
+
+# (done after prepare, and not replayed on VM rebuild)
+install = [
+    "app@{core}/install/deb-wordpress.sh",
+]
+
+backup = [
+    "app@{core}/backup/lamp.sh",
+
+    "app@{core}/backup/bash_history.sh",
+    "admin@{core}/backup/bash_history.sh",
+    "root@{core}/backup/bash_history.sh",
+]
+
+restore = [
+    "app@{core}/restore/lamp.sh",
+    "app@{core}/restore/../actions/wp_url.sh",
+
+    "app@{core}/restore/bash_history.sh",
+    "admin@{core}/restore/bash_history.sh",
+    "root@{core}/restore/bash_history.sh",
+]
+```
+
+See also the [complete sample VM configuration file](https://raw.github.com/OnitiFR/mulch/master/vm-samples/sample-vm-full.toml) to get a broader view of Mulch features.
 
 Let's see a few interesting samples:
 
