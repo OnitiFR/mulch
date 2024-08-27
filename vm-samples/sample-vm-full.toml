@@ -152,7 +152,6 @@ restore = [
 # Print the following lines:
 # _MULCH_ACTION_NAME=open
 # _MULCH_ACTION_SCRIPT={core}/actions/open.sh
-# or _MULCH_ACTION_SCRIPT={core}/actions/open.sh
 # _MULCH_ACTION_USER=app
 # _MULCH_ACTION_DESCRIPTION=Open VM first domain in the browser
 # _MULCH_ACTION=commit
