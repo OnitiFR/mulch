@@ -25,10 +25,6 @@ Resource leaks:
   - heap profile show a very small memory consumption, comparatively
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
-Current:
-- mulch ssh cmd must forward the agent by default
-- test SSH-forward code on pubkey-SSH-auth path
-
 Short term:
 - auto-rebuild VS wip operations?
 - global 'timezone' setting (only in TOMLs currently)

@@ -48,6 +48,7 @@ func (p *SSHAgentProxy) isKeyAllowed(key ssh.PublicKey) bool {
 
 // List returns the identities known to the agent
 func (p *SSHAgentProxy) List() ([]*agent.Key, error) {
+	// p.log.Tracef("SSH agent: List")
 	keys, err := p.agent.List()
 	if err != nil {
 		return nil, err
@@ -87,43 +88,43 @@ func (p *SSHAgentProxy) SignWithFlags(key ssh.PublicKey, data []byte, flags agen
 
 // Extension sends a vendor-specific extension message to the agent
 func (p *SSHAgentProxy) Extension(extensionType string, contents []byte) ([]byte, error) {
-	p.log.Tracef("SSH agent: Extension")
+	// p.log.Tracef("SSH agent: Extension")
 	return p.agent.Extension(extensionType, contents)
 }
 
 // Add adds a private key to the agent
 func (p *SSHAgentProxy) Add(key agent.AddedKey) error {
-	p.log.Tracef("SSH agent error: Add: %s", ErrSSHProxyNotAllowed)
+	// p.log.Tracef("SSH agent error: Add: %s", ErrSSHProxyNotAllowed)
 	return ErrSSHProxyNotAllowed
 }
 
 // Remove removes all identities with the given public key
 func (p *SSHAgentProxy) Remove(key ssh.PublicKey) error {
-	p.log.Tracef("SSH agent error: Remove: %s", ErrSSHProxyNotAllowed)
+	// p.log.Tracef("SSH agent error: Remove: %s", ErrSSHProxyNotAllowed)
 	return ErrSSHProxyNotAllowed
 }
 
 // RemoveAll removes all identities
 func (p *SSHAgentProxy) RemoveAll() error {
-	p.log.Tracef("SSH agent error: RemoveAll: %s", ErrSSHProxyNotAllowed)
+	// p.log.Tracef("SSH agent error: RemoveAll: %s", ErrSSHProxyNotAllowed)
 	return ErrSSHProxyNotAllowed
 }
 
 // Lock locks the agent
 func (p *SSHAgentProxy) Lock(passphrase []byte) error {
-	p.log.Tracef("SSH agent error: Lock: %s", ErrSSHProxyNotAllowed)
+	// p.log.Tracef("SSH agent error: Lock: %s", ErrSSHProxyNotAllowed)
 	return ErrSSHProxyNotAllowed
 }
 
 // Unlock undoes a previous Lock
 func (p *SSHAgentProxy) Unlock(passphrase []byte) error {
-	p.log.Tracef("SSH agent error: Unlock: %s", ErrSSHProxyNotAllowed)
+	// p.log.Tracef("SSH agent error: Unlock: %s", ErrSSHProxyNotAllowed)
 	return ErrSSHProxyNotAllowed
 }
 
 // Signers returns signers for all keys
 func (p *SSHAgentProxy) Signers() ([]ssh.Signer, error) {
-	p.log.Tracef("SSH agent error: Signers: %s", ErrSSHProxyNotAllowed)
+	// p.log.Tracef("SSH agent error: Signers: %s", ErrSSHProxyNotAllowed)
 	return nil, ErrSSHProxyNotAllowed
 }
 
