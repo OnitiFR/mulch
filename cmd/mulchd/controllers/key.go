@@ -201,8 +201,8 @@ func AddKeyTrustedVMController(req *server.Request) {
 		return
 	}
 
+	req.Stream.Infof("key fingerprint: %s", fingerprint)
 	req.Stream.Warning("reminder: this key can be used by other users on the VM when you are connected")
-
 	req.Stream.Successf("key will now be forwared to VM '%s'", vmName)
 }
 
