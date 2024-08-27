@@ -13,6 +13,20 @@ import (
 var trustForwardCmd = &cobra.Command{
 	Use:   "forward <vm> <ssh-pub-file>",
 	Short: "Forward a SSH key to a VM",
+	Long: `Forward a SSH key to a VM.
+
+This key will automatically be available in VM's SSH agent,
+when you connect to the VM.
+
+Mulch server does not store the key, only its SHA256 fingerprint.
+
+Your SSH key will be forwarded, from any computer, as long as this key
+exists in your own SSH agent (and you use the same mulch API key, of course).
+
+Warning: this is a security-sensitive operation, and your key will be available
+to anyone who can connect to the VM while you are connected.
+`,
+	Aliases: []string{"add"},
 
 	Args: cobra.ExactArgs(2),
 	Run: func(_ *cobra.Command, args []string) {
