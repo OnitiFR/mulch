@@ -94,7 +94,7 @@ ServerTokens Prod
     ServerAdmin webmaster@localhost
     DocumentRoot $html_dir
 
-    # combined with real IP + response time in ms
+    # combined with real IP + response time in ms (2.4.13 needed, CentOS 7 will fall back to seconds)
     LogFormat "%{X-Real-Ip}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\" %{ms}T" combined_real_plus
     ErrorLog logs/error_log
     CustomLog logs/access_log combined_real_plus
