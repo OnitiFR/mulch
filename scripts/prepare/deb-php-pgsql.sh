@@ -82,9 +82,10 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
     ServerAdmin webmaster@localhost
     DocumentRoot $html_dir
 
-    LogFormat "%{X-Real-Ip}i %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\"" combined_real
+    # combined with real IP + response time in ms
+    LogFormat "%{X-Real-Ip}i %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" %{ms}T" combined_real_plus
     ErrorLog \${APACHE_LOG_DIR}/error.log
-    CustomLog \${APACHE_LOG_DIR}/access.log combined_real
+    CustomLog \${APACHE_LOG_DIR}/access.log combined_real_plus
 
     # compression
     AddOutputFilterByType DEFLATE text/css
