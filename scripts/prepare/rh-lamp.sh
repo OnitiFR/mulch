@@ -94,9 +94,10 @@ ServerTokens Prod
     ServerAdmin webmaster@localhost
     DocumentRoot $html_dir
 
-    LogFormat "%{X-Real-Ip}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" combined_real
+    # combined with real IP + response time in ms
+    LogFormat "%{X-Real-Ip}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\" %{ms}T" combined_real_plus
     ErrorLog logs/error_log
-    CustomLog logs/access_log combined_real
+    CustomLog logs/access_log combined_real_plus
 
     # compression
     AddOutputFilterByType DEFLATE text/css
