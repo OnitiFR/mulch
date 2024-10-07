@@ -186,6 +186,12 @@ func AddRoutes(app *server.App) {
 	}, server.RouteAPI)
 
 	app.AddRoute(&server.Route{
+		Route:   "DELETE /key/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.DeleteKeyController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
 		Route:   "GET /key/right/*",
 		Type:    server.RouteTypeCustom,
 		Handler: controllers.ListKeyRightsController,

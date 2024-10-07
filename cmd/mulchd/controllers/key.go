@@ -53,6 +53,27 @@ func NewKeyController(req *server.Request) {
 	req.Stream.Successf("Key '%s' created", key.Comment)
 }
 
+// DeleteKeyController remove an API key from the DB
+func DeleteKeyController(req *server.Request) {
+	req.StartStream()
+	keyComment := req.SubPath
+
+	req.Stream.Info("deleting key")
+
+	if req.APIKey.Comment == keyComment {
+		req.Stream.Failure("Cannot delete your own key")
+		return
+	}
+
+	err := req.App.APIKeysDB.Delete(keyComment)
+	if err != nil {
+		req.Stream.Failuref("Cannot delete Key: %s", err)
+		return
+	}
+
+	req.Stream.Successf("Key '%s' deleted", keyComment)
+}
+
 // ListKeyRightsController list all rights of a specific key
 func ListKeyRightsController(req *server.Request) {
 	keyName := req.SubPath

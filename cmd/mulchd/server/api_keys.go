@@ -237,6 +237,29 @@ func (db *APIKeyDatabase) AddNew(comment string) (*APIKey, error) {
 	return key, nil
 }
 
+// Delete removes a key from the database
+func (db *APIKeyDatabase) Delete(comment string) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	found := false
+	for i, key := range db.keys {
+		fmt.Println(key.Comment)
+		if key.Comment == comment {
+			db.keys = append(db.keys[:i], db.keys[i+1:]...)
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return errors.New("key not found in database")
+	}
+
+	err := db.save()
+	return err
+}
+
 // GetByPubKey returns an API key by its (marshaled) public key
 // Returns nil and no error when key was not found
 func (db *APIKeyDatabase) GetByPubKey(pub string) (*APIKey, error) {
