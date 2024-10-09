@@ -152,7 +152,7 @@ __mulch_custom_func() {
             __internal_list_seeds
             return
             ;;
-        mulch_key_right_list | mulch_key_right_add | mulch_key_right_remove)
+        mulch_key_right_list | mulch_key_right_add | mulch_key_right_remove | mulch_key_delete)
             __internal_list_keys
             return
             ;;
