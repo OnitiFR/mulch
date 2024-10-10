@@ -92,7 +92,7 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 </Location>
 
 <Directory $html_dir>
-    Options Indexes FollowSymLinks
+    Options FollowSymLinks
     # Options is for .htaccess PHP settings and MultiViews
     # FileInfo is for rewrite
     # AuthConfig for Require

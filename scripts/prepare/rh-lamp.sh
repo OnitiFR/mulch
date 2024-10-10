@@ -81,7 +81,7 @@ ServerTokens Prod
 </Location>
 
 <Directory $html_dir>
-    Options Indexes FollowSymLinks
+    Options FollowSymLinks
     # Options is for .htaccess PHP settings and MultiViews
     # FileInfo is for rewrite
     # AuthConfig for Require
