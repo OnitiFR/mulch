@@ -80,6 +80,17 @@ func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 		chainDomain = app.Config.ChainChildURL.Hostname()
 	}
 
+	var rateController *RateController
+	if app.Config.RateControllerConfig != nil {
+		rateController = NewRateController(*app.Config.RateControllerConfig)
+		scheduler := time.NewTicker(1 * time.Minute)
+		go func() {
+			for range scheduler.C {
+				rateController.Clean(5 * time.Minute)
+			}
+		}()
+	}
+
 	app.ProxyServer = NewProxyServer(&ProxyServerParams{
 		DirCache:              cacheDir,
 		Email:                 app.Config.AcmeEmail,
@@ -96,6 +107,7 @@ func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 		ForceXForwardedFor:    app.Config.ForceXForwardedFor,
 		Log:                   app.Log,
 		RequestList:           NewRequestList(debug),
+		RateController:        rateController,
 		Trace:                 trace,
 		Debug:                 debug,
 	})

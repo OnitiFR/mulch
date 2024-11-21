@@ -29,12 +29,13 @@ const (
 
 // ProxyServer describe a Mulch proxy server
 type ProxyServer struct {
-	DomainDB    *DomainDatabase
-	Log         *Log
-	RequestList *RequestList
-	HTTP        *http.Server
-	HTTPS       *http.Server
-	config      *ProxyServerParams
+	DomainDB       *DomainDatabase
+	Log            *Log
+	RequestList    *RequestList
+	RateController *RateController
+	HTTP           *http.Server
+	HTTPS          *http.Server
+	config         *ProxyServerParams
 }
 
 // ProxyServerParams is needed to create a ProxyServer
@@ -54,6 +55,7 @@ type ProxyServerParams struct {
 	ForceXForwardedFor    bool
 	Log                   *Log
 	RequestList           *RequestList
+	RateController        *RateController
 	Trace                 bool
 	Debug                 bool
 }
@@ -94,10 +96,11 @@ func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 // NewProxyServer instanciates a new ProxyServer
 func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 	proxy := ProxyServer{
-		DomainDB:    config.DomainDB,
-		Log:         config.Log,
-		RequestList: config.RequestList,
-		config:      config,
+		DomainDB:       config.DomainDB,
+		Log:            config.Log,
+		RequestList:    config.RequestList,
+		RateController: config.RateController,
+		config:         config,
 	}
 
 	manager := &autocert.Manager{
@@ -118,8 +121,8 @@ func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 	// (ex: no 301 path cleaning)
 	handler := http.HandlerFunc(proxy.handleRequest)
 
-	// We're still very gentle here, there are some legitimate "long idling request"
-	// use case out there. But we should add a runtime setting somewhere to
+	// We're still very kind here, because some legitimate "long idling request"
+	// use case exists out there. But we should add a runtime setting somewhere to
 	// allow the admin to drastically lower this value. (ex: Træfik default is 3min)
 	IdleTimeout := 15 * time.Minute
 
@@ -281,10 +284,32 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 		if errG != nil {
 			proxy.Log.Errorf("Error with the error page: %s", errG)
 		}
-		proxy.Log.Errorf("Error 500 (%s)", err)
+		proxy.Log.Errorf("Error 500 {%d} (%s)", id, err)
 		res.WriteHeader(500)
 		res.Write([]byte(body))
 		return
+	}
+
+	// rate limiting
+	if !fromParent && proxy.RateController != nil {
+		ip, _, _ := net.SplitHostPort(req.RemoteAddr)
+		entry := proxy.RateController.GetEntry(ip)
+
+		// add + defer remove
+		entry.AddRequest()
+		defer entry.RemoveRequest()
+
+		allowed, reason := entry.IsAllowed(req.Context())
+		if !allowed {
+			body, errG := proxy.genErrorPage(429, "Too many requests")
+			if errG != nil {
+				proxy.Log.Errorf("Error with the error page: %s", errG)
+			}
+			proxy.Log.Errorf("Error 429 {%d} (%s) for %s", id, reason, req.Host)
+			res.WriteHeader(429)
+			res.Write([]byte(body))
+			return
+		}
 	}
 
 	// redirect to another URL?
@@ -319,6 +344,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 
 	// now, do our proxy job
 	proxy.serveReverseProxy(domain, proto, res, req, fromParent)
+
 }
 
 // RefreshReverseProxies create new (internal) ReverseProxy instances

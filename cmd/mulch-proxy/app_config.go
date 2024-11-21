@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -57,6 +58,9 @@ type AppConfig struct {
 	// Replace X-Forwarded-For header with remote address
 	ForceXForwardedFor bool
 
+	// Rate controller configuration (if any)
+	RateControllerConfig *RateControllerConfig
+
 	// global mulchd configuration path
 	configPath string
 }
@@ -69,17 +73,22 @@ type tomlAppConfig struct {
 	HTTPSAddress      string `toml:"proxy_listen_https"`
 	ListenHTTPSDomain string `toml:"listen_https_domain"`
 
-	ChainMode          string `toml:"proxy_chain_mode"`
-	ChainParentURL     string `toml:"proxy_chain_parent_url"`
-	ChainChildURL      string `toml:"proxy_chain_child_url"`
-	ChainPSK           string `toml:"proxy_chain_psk"`
-	ForceXForwardedFor bool   `toml:"proxy_force_x_forwarded_for"`
+	ChainMode      string `toml:"proxy_chain_mode"`
+	ChainParentURL string `toml:"proxy_chain_parent_url"`
+	ChainChildURL  string `toml:"proxy_chain_child_url"`
+	ChainPSK       string `toml:"proxy_chain_psk"`
+
+	ForceXForwardedFor bool `toml:"proxy_force_x_forwarded_for"`
+
+	RateMaxConcurrentRequests int32   `toml:"proxy_rate_max_concurrent_requests"`
+	RateBurstRequests         int     `toml:"proxy_rate_burst_requests"`
+	RateRequestsPerSecond     float64 `toml:"proxy_rate_requests_per_second"`
+	RateMaxDelaySeconds       float64 `toml:"proxy_rate_max_delay_seconds"`
 }
 
 // NewAppConfigFromTomlFile return a AppConfig using
 // mulchd.toml config file in the given configPath
 func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
-
 	filename := path.Clean(configPath + "/mulchd.toml")
 
 	appConfig := &AppConfig{
@@ -174,6 +183,30 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	}
 
 	appConfig.ForceXForwardedFor = tConfig.ForceXForwardedFor
+
+	if tConfig.RateMaxConcurrentRequests > 0 {
+		appConfig.RateControllerConfig = &RateControllerConfig{
+			MaxConcurrentRequests: tConfig.RateMaxConcurrentRequests,
+		}
+	}
+
+	if tConfig.RateBurstRequests > 0 || tConfig.RateRequestsPerSecond > 0 || tConfig.RateMaxDelaySeconds > 0 {
+		if tConfig.RateBurstRequests <= 0 {
+			return nil, errors.New("proxy_rate_burst_requests must be > 0")
+		}
+
+		if tConfig.RateRequestsPerSecond <= 0 {
+			return nil, errors.New("proxy_rate_requests_per_second must be > 0")
+		}
+
+		if appConfig.RateControllerConfig == nil {
+			appConfig.RateControllerConfig = &RateControllerConfig{}
+		}
+		appConfig.RateControllerConfig.EnableRateLimit = true
+		appConfig.RateControllerConfig.BurstRequests = tConfig.RateBurstRequests
+		appConfig.RateControllerConfig.RequestsPerSecond = tConfig.RateRequestsPerSecond
+		appConfig.RateControllerConfig.MaxDelay = time.Duration(tConfig.RateMaxDelaySeconds) * time.Second
+	}
 
 	return appConfig, nil
 }

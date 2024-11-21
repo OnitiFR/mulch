@@ -91,6 +91,31 @@ proxy_chain_psk = ""
 # This setting is proxy_chain compliant (the original IP is preserved).
 proxy_force_x_forwarded_for = false
 
+# Rate Control for the Reverse Proxy
+#
+# Limit 1 ("running" requests):
+# - proxy_rate_max_concurrent_requests
+#     Maximum number of concurrent "running" requests
+#
+# Limit 2 (rate limiting):
+# - proxy_rate_burst_requests
+#     Number of requests that be accepted without delay…
+# - proxy_rate_requests_per_second
+#     … after that, requests will be delayed to match this rate…
+# - proxy_rate_max_delay_seconds
+#     … with a maximum delay of this number of seconds
+#
+# Both of these limits are independent and can be enabled separately,
+# or disabled by setting (all) their value to 0.
+#
+# Rate control is applied per IP address.
+#
+# Rejected requests will return a 429 status code.
+proxy_rate_max_concurrent_requests = 0
+proxy_rate_burst_requests = 0
+proxy_rate_requests_per_second = 0
+proxy_rate_max_delay_seconds = 0
+
 # Auto-rebuild will check everyday, at specified time, if any VM need
 # an automatic rebuild (according its settings). Format: HH:MM
 auto_rebuild_time = "23:30"
