@@ -10,7 +10,6 @@ require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/c2h5oh/datasize v0.0.0-20231215233829-aa82cc1e6500
 	github.com/cloudflare/circl v1.3.7 // indirect
-	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/color v1.16.0
 	github.com/go-git/go-billy/v5 v5.5.0
 	github.com/go-git/go-git/v5 v5.11.0
