@@ -293,22 +293,25 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	// rate limiting
 	if !fromParent && proxy.RateController != nil {
 		ip, _, _ := net.SplitHostPort(req.RemoteAddr)
-		entry := proxy.RateController.GetEntry(ip)
 
-		allowed, needFinish, reason := entry.IsAllowed(req.Context())
-		if needFinish {
-			defer entry.FinishRequest()
-		}
+		if !proxy.RateController.IsVIP(ip) {
+			entry := proxy.RateController.GetEntry(ip)
 
-		if !allowed {
-			body, errG := proxy.genErrorPage(429, "Too many requests")
-			if errG != nil {
-				proxy.Log.Errorf("Error with the error page: %s", errG)
+			allowed, needFinish, reason := entry.IsAllowed(req.Context())
+			if needFinish {
+				defer entry.FinishRequest()
 			}
-			proxy.Log.Errorf("Error 429 {%d} (%s) for %s", id, reason, req.Host)
-			res.WriteHeader(429)
-			res.Write([]byte(body))
-			return
+
+			if !allowed {
+				body, errG := proxy.genErrorPage(429, "Too many requests")
+				if errG != nil {
+					proxy.Log.Errorf("Error with the error page: %s", errG)
+				}
+				proxy.Log.Errorf("Error 429 {%d} (%s) for %s", id, reason, req.Host)
+				res.WriteHeader(429)
+				res.Write([]byte(body))
+				return
+			}
 		}
 	}
 

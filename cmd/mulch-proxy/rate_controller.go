@@ -24,10 +24,12 @@ type RateControllerConfig struct {
 	ConcurrentMaxRequests     int32
 	ConcurrentOverflowTimeout time.Duration // when we are over the limit, how long to wait before returning an error
 
-	EnableRateLimit   bool          // enable rate limiting (if false, only MaxConcurrentRequests is used)
-	BurstRequests     int           // number of requests that be accepted without delay… (must be > 0)
-	RequestsPerSecond float64       // … and after that, requests will be delayed to match this rate … (must be > 0)
-	MaxDelay          time.Duration // … with a maximum delay of this duration
+	RateEnable            bool          // enable rate limiting (if false, only MaxConcurrentRequests is used)
+	RateBurst             int           // number of requests that be accepted without delay… (must be > 0)
+	RateRequestsPerSecond float64       // … and after that, requests will be delayed to match this rate … (must be > 0)
+	RateMaxDelay          time.Duration // … with a maximum delay of this duration
+
+	VipList map[string]bool // list of IPs that are not rate limited
 }
 
 // RateControllerEntry holds data for a single IP
@@ -62,8 +64,8 @@ func (rc *RateController) GetEntry(ip string) *RateControllerEntry {
 			entry.currentRequestSlots = make(chan bool, rc.config.ConcurrentMaxRequests)
 		}
 
-		if rc.config.EnableRateLimit {
-			entry.rateLimiter = rate.NewLimiter(rate.Limit(rc.config.RequestsPerSecond), rc.config.BurstRequests)
+		if rc.config.RateEnable {
+			entry.rateLimiter = rate.NewLimiter(rate.Limit(rc.config.RateRequestsPerSecond), rc.config.RateBurst)
 		}
 
 		rc.entries[ip] = entry
@@ -72,6 +74,15 @@ func (rc *RateController) GetEntry(ip string) *RateControllerEntry {
 	entry.lastUseTime = time.Now()
 
 	return entry
+}
+
+// IsVIP will check if an IP is in the VIP list
+func (rc *RateController) IsVIP(ip string) bool {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+
+	_, ok := rc.config.VipList[ip]
+	return ok
 }
 
 // Clean will remove old entries
@@ -105,7 +116,7 @@ func (rce *RateControllerEntry) IsAllowed(reqCtx context.Context) (bool, bool, s
 		return true, true, ""
 	}
 
-	ctx, cancel := context.WithTimeout(reqCtx, rce.config.MaxDelay)
+	ctx, cancel := context.WithTimeout(reqCtx, rce.config.RateMaxDelay)
 	defer cancel()
 
 	// will return an error if the context deadline (MaxDelay) is too short
