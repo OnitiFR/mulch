@@ -80,10 +80,11 @@ type tomlAppConfig struct {
 
 	ForceXForwardedFor bool `toml:"proxy_force_x_forwarded_for"`
 
-	RateMaxConcurrentRequests int32   `toml:"proxy_rate_max_concurrent_requests"`
-	RateBurstRequests         int     `toml:"proxy_rate_burst_requests"`
-	RateRequestsPerSecond     float64 `toml:"proxy_rate_requests_per_second"`
-	RateMaxDelaySeconds       float64 `toml:"proxy_rate_max_delay_seconds"`
+	RateConcurrentMaxRequests     int32   `toml:"proxy_rate_concurrent_max_requests"`
+	RateConcurrentOverflowTimeout float64 `toml:"proxy_rate_concurrent_overflow_timeout_seconds"`
+	RateBurstRequests             int     `toml:"proxy_rate_limit_burst_requests"`
+	RateRequestsPerSecond         float64 `toml:"proxy_rate_limit_requests_per_second"`
+	RateMaxDelaySeconds           float64 `toml:"proxy_rate_limit_max_delay_seconds"`
 }
 
 // NewAppConfigFromTomlFile return a AppConfig using
@@ -184,19 +185,26 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 
 	appConfig.ForceXForwardedFor = tConfig.ForceXForwardedFor
 
-	if tConfig.RateMaxConcurrentRequests > 0 {
+	// concurrent requests
+	if tConfig.RateConcurrentMaxRequests > 0 {
 		appConfig.RateControllerConfig = &RateControllerConfig{
-			MaxConcurrentRequests: tConfig.RateMaxConcurrentRequests,
+			ConcurrentMaxRequests:     tConfig.RateConcurrentMaxRequests,
+			ConcurrentOverflowTimeout: time.Duration(tConfig.RateConcurrentOverflowTimeout * float64(time.Second)),
+		}
+	} else {
+		if tConfig.RateConcurrentOverflowTimeout > 0 {
+			return nil, errors.New("proxy_rate_concurrent_overflow_timeout requires proxy_rate_concurrent_max_requests")
 		}
 	}
 
+	// rate limit
 	if tConfig.RateBurstRequests > 0 || tConfig.RateRequestsPerSecond > 0 || tConfig.RateMaxDelaySeconds > 0 {
 		if tConfig.RateBurstRequests <= 0 {
-			return nil, errors.New("proxy_rate_burst_requests must be > 0")
+			return nil, errors.New("proxy_rate_limit_burst_requests must be > 0")
 		}
 
-		if tConfig.RateRequestsPerSecond <= 0 {
-			return nil, errors.New("proxy_rate_requests_per_second must be > 0")
+		if tConfig.RateRequestsPerSecond <= 1 {
+			return nil, errors.New("proxy_rate_limit_requests_per_second must be > 1")
 		}
 
 		if appConfig.RateControllerConfig == nil {
@@ -205,7 +213,7 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		appConfig.RateControllerConfig.EnableRateLimit = true
 		appConfig.RateControllerConfig.BurstRequests = tConfig.RateBurstRequests
 		appConfig.RateControllerConfig.RequestsPerSecond = tConfig.RateRequestsPerSecond
-		appConfig.RateControllerConfig.MaxDelay = time.Duration(tConfig.RateMaxDelaySeconds) * time.Second
+		appConfig.RateControllerConfig.MaxDelay = time.Duration(tConfig.RateMaxDelaySeconds * float64(time.Second))
 	}
 
 	return appConfig, nil

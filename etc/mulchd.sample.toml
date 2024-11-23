@@ -93,16 +93,20 @@ proxy_force_x_forwarded_for = false
 
 # Rate Control for the Reverse Proxy
 #
-# Limit 1 ("running" requests):
-# - proxy_rate_max_concurrent_requests
+# Limit 1 (concurrent requests):
+# - proxy_rate_concurrent_max_requests
 #     Maximum number of concurrent "running" requests
+# - proxy_rate_concurrent_overflow_timeout_seconds
+#     When the limit is reached, wait this number of seconds for a free slot
+#     before rejecting (0 = immediate)
 #
 # Limit 2 (rate limiting):
-# - proxy_rate_burst_requests
+# - proxy_rate_limit_burst_requests
 #     Number of requests that be accepted without delay…
-# - proxy_rate_requests_per_second
+# - proxy_rate_limit_requests_per_second
 #     … after that, requests will be delayed to match this rate…
-# - proxy_rate_max_delay_seconds
+#     (it also acts as a "cooldown" for the burst, must be > 1)
+# - proxy_rate_limit_max_delay_seconds
 #     … with a maximum delay of this number of seconds
 #
 # Both of these limits are independent and can be enabled separately,
@@ -111,10 +115,12 @@ proxy_force_x_forwarded_for = false
 # Rate control is applied per IP address.
 #
 # Rejected requests will return a 429 status code.
-proxy_rate_max_concurrent_requests = 0
-proxy_rate_burst_requests = 0
-proxy_rate_requests_per_second = 0
-proxy_rate_max_delay_seconds = 0
+proxy_rate_concurrent_max_requests = 0
+proxy_rate_concurrent_overflow_timeout_seconds = 0
+
+proxy_rate_limit_burst_requests = 0
+proxy_rate_limit_requests_per_second = 0
+proxy_rate_limit_max_delay_seconds = 0
 
 # Auto-rebuild will check everyday, at specified time, if any VM need
 # an automatic rebuild (according its settings). Format: HH:MM

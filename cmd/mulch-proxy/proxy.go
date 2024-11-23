@@ -295,11 +295,11 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 		ip, _, _ := net.SplitHostPort(req.RemoteAddr)
 		entry := proxy.RateController.GetEntry(ip)
 
-		// add + defer remove
-		entry.AddRequest()
-		defer entry.RemoveRequest()
+		allowed, needFinish, reason := entry.IsAllowed(req.Context())
+		if needFinish {
+			defer entry.FinishRequest()
+		}
 
-		allowed, reason := entry.IsAllowed(req.Context())
 		if !allowed {
 			body, errG := proxy.genErrorPage(429, "Too many requests")
 			if errG != nil {
