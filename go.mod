@@ -25,11 +25,10 @@ require (
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/smallnest/ringbuffer v0.0.0-20230728150354-35801fa39d0e
 	github.com/spf13/cobra v1.8.0
-	golang.org/x/crypto v0.18.0
-	golang.org/x/term v0.16.0
-	golang.org/x/text v0.14.0
+	golang.org/x/crypto v0.31.0
+	golang.org/x/term v0.27.0
+	golang.org/x/text v0.21.0
 	golang.org/x/time v0.8.0
-	golang.org/x/tools v0.17.0 // indirect
 	libvirt.org/go/libvirt v1.10000.0
 	libvirt.org/go/libvirtxml v1.10000.0
 )
