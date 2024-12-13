@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -47,7 +46,7 @@ func NewSSHProxyServer(app *App) error {
 
 			user := ""
 			vmName := ""
-			var client sshServerClient
+			apiKeyComment := ""
 
 			apiKey, errG := app.APIKeysDB.GetByPubKey(string(pubKey.Marshal()))
 			if errG != nil {
@@ -67,8 +66,7 @@ func NewSSHProxyServer(app *App) error {
 
 				user = parts[0]
 				vmName = parts[1]
-				client.apiKeyComment = apiKey.Comment
-				client.apiKey = apiKey
+				apiKeyComment = apiKey.Comment
 				app.Log.Tracef("SSH Proxy: %s (API key '%s') %s@%s", c.RemoteAddr(), apiKey.Comment, user, vmName)
 			} else {
 				matchingPubKey, comment, errS := SearchSSHAuthorizedKey(pubKey, app.Config.ProxySSHExtraKeysFile)
@@ -77,7 +75,7 @@ func NewSSHProxyServer(app *App) error {
 				}
 				// Extra public key access
 				if matchingPubKey != nil {
-					client.apiKeyComment = "[pubKey] " + comment
+					apiKeyComment = "[pubKey] " + comment
 					parts := strings.Split(comment, "@")
 					if len(parts) != 2 {
 						return nil, fmt.Errorf("wrong user format '%s' (user@vm needed)", c.User())
@@ -100,65 +98,13 @@ func NewSSHProxyServer(app *App) error {
 				return nil, fmt.Errorf("no allowed public key found (%s)", c.RemoteAddr())
 			}
 
-			var vm *VM
-
-			if strings.Contains(vmName, "-") {
-				parts := strings.Split(vmName, "-")
-				if len(parts) != 2 {
-					return nil, fmt.Errorf("wrong VM-revision name '%s'", vmName)
-				}
-
-				name := parts[0]
-				revStr := parts[1]
-
-				// we accept vm-123 (old) and vm-r123 (new) formats
-				if revStr[0] == 'r' {
-					revStr = revStr[1:]
-				}
-				revision, errA := strconv.Atoi(revStr)
-				if errA != nil {
-					return nil, errA
-				}
-				vm, errG = app.VMDB.GetByName(NewVMName(name, revision))
-				if errG != nil {
-					return nil, errG
-				}
-			} else {
-				vm, errG = app.VMDB.GetActiveByName(vmName)
-				if errG != nil {
-					return nil, errG
-				}
-			}
-
-			destAuth, errP := app.SSHPairDB.GetPublicKeyAuth(vm.MulchSuperUserSSHKey)
-			if errP != nil {
-				return nil, errP
-			}
-
-			client.vm = vm
-			client.sshUser = user
-			client.startTime = time.Now()
-			client.remoteAddr = c.RemoteAddr()
-
-			clientConfig := &ssh.ClientConfig{}
-
-			clientConfig.User = user
-			clientConfig.Auth = []ssh.AuthMethod{
-				destAuth,
-			}
-			clientConfig.HostKeyCallback = ssh.InsecureIgnoreHostKey()
-
-			app.Log.Tracef("SSH Proxy: dial %s@%s", user, vm.LastIP)
-
-			sshClient, errD := ssh.Dial("tcp", vm.LastIP+":22", clientConfig)
-			if errD != nil {
-				return nil, errD
-			}
-
-			client.sshClient = sshClient
-
-			app.sshClients.add(c.RemoteAddr(), &client)
-			return nil, nil
+			return &ssh.Permissions{
+				Extensions: map[string]string{
+					"apiKeyComment": apiKeyComment,
+					"user":          user,
+					"vmName":        vmName,
+				},
+			}, nil
 		},
 	}
 
@@ -169,18 +115,8 @@ func NewSSHProxyServer(app *App) error {
 		app.Config.ProxyListenSSH,
 		config,
 		app.sshClients,
-		app.Log,
-		func(c ssh.ConnMetadata) (*sshServerClient, error) {
-			client := app.sshClients.findByAddress(c.RemoteAddr())
-			// we could delete entry here, but we keep it for infos/stats (see status command)
-			app.Log.Tracef("SSH proxy: connection accepted from %s forwarded to %s", c.RemoteAddr(), client.sshClient.RemoteAddr())
-
-			return client, err
-		}, func(c ssh.ConnMetadata) error {
-			app.sshClients.delete(c.RemoteAddr())
-			app.Log.Tracef("SSH proxy: connection closed from: %s", c.RemoteAddr())
-			return nil
-		})
+		app,
+	)
 	if err != nil {
 		return err
 	}
@@ -208,12 +144,6 @@ func (sc *sshServerClients) delete(addr net.Addr) {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
 	delete(sc.db, addr)
-}
-
-func (sc *sshServerClients) findByAddress(addr net.Addr) *sshServerClient {
-	sc.mutex.Lock()
-	defer sc.mutex.Unlock()
-	return sc.db[addr]
 }
 
 // getClients as an array

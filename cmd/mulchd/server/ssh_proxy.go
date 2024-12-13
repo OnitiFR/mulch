@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,10 +15,8 @@ import (
 // SSHProxy is a proxy between two SSH connections
 type SSHProxy struct {
 	net.Conn
-	config    *ssh.ServerConfig
-	connectCB func(c ssh.ConnMetadata) (*sshServerClient, error)
-	closeCB   func(c ssh.ConnMetadata) error
-	log       *Log
+	config *ssh.ServerConfig
+	app    *App
 }
 
 // ClientHandleChannelOpen is called when the client (= the VM) asks
@@ -24,7 +24,7 @@ type SSHProxy struct {
 func (proxy *SSHProxy) ClientHandleChannelOpen(chanType string, client *sshServerClient, destConn ssh.Conn) {
 	channels := client.sshClient.HandleChannelOpen(chanType)
 	if channels == nil {
-		proxy.log.Warningf("HandleChannelOpen failed for '%s' channels", chanType)
+		proxy.app.Log.Warningf("HandleChannelOpen failed for '%s' channels", chanType)
 		return
 	}
 	go proxy.runChannels(channels, destConn, client)
@@ -33,10 +33,10 @@ func (proxy *SSHProxy) ClientHandleChannelOpen(chanType string, client *sshServe
 // ForwardRequestsToClient forwards server ("outside") global requests to the client ("VM")
 func (proxy *SSHProxy) ForwardRequestsToClient(in <-chan *ssh.Request, client *ssh.Client) {
 	for req := range in {
-		proxy.log.Tracef("ForwardRequests: %s %t", req.Type, req.WantReply)
+		proxy.app.Log.Tracef("ForwardRequests: %s %t", req.Type, req.WantReply)
 		respStatus, respPayload, err := client.SendRequest(req.Type, req.WantReply, req.Payload)
 		if err != nil {
-			proxy.log.Tracef("ForwardRequests failed: %s", err)
+			proxy.app.Log.Tracef("ForwardRequests failed: %s", err)
 			if req.WantReply {
 				req.Reply(false, nil)
 			}
@@ -92,10 +92,10 @@ func (proxy *SSHProxy) scheduleSSHKeepAlives(sshConn ssh.Conn, name string) {
 	t := time.NewTicker(1 * time.Minute)
 	defer t.Stop()
 	for range t.C {
-		proxy.log.Tracef("send SSH keepalive (%s, %s)", name, sshConn.RemoteAddr())
+		proxy.app.Log.Tracef("send SSH keepalive (%s, %s)", name, sshConn.RemoteAddr())
 		err := SSHSendKeepAlive(sshConn, 10*time.Second)
 		if err != nil {
-			proxy.log.Tracef("ssh (%s) keepalive error: %s, closing", name, err)
+			proxy.app.Log.Tracef("ssh (%s) keepalive error: %s, closing", name, err)
 			sshConn.Close()
 			proxy.Close() // hardcore§§!!
 			return
@@ -110,7 +110,7 @@ func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Con
 
 	for newChannel := range chans {
 
-		proxy.log.Tracef("SSH: newChannel.ChannelType() = %s", newChannel.ChannelType())
+		proxy.app.Log.Tracef("SSH: newChannel.ChannelType() = %s", newChannel.ChannelType())
 
 		// up = proxy to internal VM (for usual channels)
 		upChannel, upRequests, err := destConn.OpenChannel(newChannel.ChannelType(), newChannel.ExtraData())
@@ -120,7 +120,7 @@ func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Con
 				return fmt.Errorf("OpenChannel: %s", err)
 			}
 
-			proxy.log.Errorf("OpenChannel: %s", err)
+			proxy.app.Log.Errorf("OpenChannel: %s", err)
 			newChannel.Reject(2, err.Error()) // 2 = SSH_OPEN_CONNECT_FAILED
 			continue
 		}
@@ -144,7 +144,7 @@ func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Con
 
 		// connect requests
 		go func() {
-			proxy.log.Trace("SSH: waiting for request")
+			proxy.app.Log.Trace("SSH: waiting for request")
 
 			for {
 				var req *ssh.Request
@@ -161,18 +161,18 @@ func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Con
 				}
 
 				if req == nil {
-					proxy.log.Trace("SSH: req is nil, both chan closed")
+					proxy.app.Log.Trace("SSH: req is nil, both chan closed")
 					wgChannels.Done()
 					wgClosed.Done()
 					break
 				}
 
-				proxy.log.Tracef("SSH: request: %s %t %s", req.Type, req.WantReply, chn)
-				// proxy.log.Tracef("SSH payload: -%s-", req.Payload)
+				proxy.app.Log.Tracef("SSH: request: %s %t %s", req.Type, req.WantReply, chn)
+				// proxy.app.Log.Tracef("SSH payload: -%s-", req.Payload)
 
 				b, errS := dst.SendRequest(req.Type, req.WantReply, req.Payload)
 				if errS != nil {
-					proxy.log.Errorf("SSH: SendRequest error: %s", errS)
+					proxy.app.Log.Errorf("SSH: SendRequest error: %s", errS)
 				}
 
 				if req.WantReply {
@@ -181,10 +181,10 @@ func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Con
 			}
 		}()
 
-		proxy.log.Trace("SSH: Connecting channels")
+		proxy.app.Log.Trace("SSH: Connecting channels")
 
-		go sshProxyCopyChan(upChannel, downChannel, "down->up", &wgChannels, &wgClosed, proxy.log)
-		go sshProxyCopyChan(downChannel, upChannel, "up->down", &wgChannels, &wgClosed, proxy.log)
+		go sshProxyCopyChan(upChannel, downChannel, "down->up", &wgChannels, &wgClosed, proxy.app.Log)
+		go sshProxyCopyChan(downChannel, upChannel, "up->down", &wgChannels, &wgClosed, proxy.app.Log)
 	}
 
 	// Wait io.Copies (we have defered Closes in this function)
@@ -199,11 +199,80 @@ func (proxy *SSHProxy) serveProxy() error {
 	}
 	defer serverConn.Close()
 
-	client, err := proxy.connectCB(serverConn)
-	if err != nil {
-		return err
+	vmName := serverConn.Permissions.Extensions["vmName"]
+	user := serverConn.Permissions.Extensions["user"]
+	apiKeyComment := serverConn.Permissions.Extensions["apiKeyComment"]
+
+	var vm *VM
+	var errV error
+
+	if strings.Contains(vmName, "-") {
+		parts := strings.Split(vmName, "-")
+		if len(parts) != 2 {
+			return fmt.Errorf("wrong VM-revision name '%s'", vmName)
+		}
+
+		name := parts[0]
+		revStr := parts[1]
+
+		// we accept vm-123 (old) and vm-r123 (new) formats
+		if revStr[0] == 'r' {
+			revStr = revStr[1:]
+		}
+
+		revision, errA := strconv.Atoi(revStr)
+		if errA != nil {
+			return errA
+		}
+		vm, errV = proxy.app.VMDB.GetByName(NewVMName(name, revision))
+		if errV != nil {
+			return errV
+		}
+	} else {
+		vm, errV = proxy.app.VMDB.GetActiveByName(vmName)
+		if errV != nil {
+			return errV
+		}
 	}
-	clientConn := client.sshClient
+
+	destAuth, errP := proxy.app.SSHPairDB.GetPublicKeyAuth(vm.MulchSuperUserSSHKey)
+	if errP != nil {
+		return errP
+	}
+
+	apiKey := proxy.app.APIKeysDB.GetByComment(apiKeyComment)
+	if apiKey == nil {
+		return fmt.Errorf("API key not found")
+	}
+
+	var client sshServerClient
+	client.vm = vm
+	client.sshUser = user
+	client.apiKeyComment = apiKeyComment
+	client.apiKey = apiKey
+	client.startTime = time.Now()
+	client.remoteAddr = proxy.RemoteAddr()
+
+	clientConfig := &ssh.ClientConfig{}
+	clientConfig.User = user
+	clientConfig.Auth = []ssh.AuthMethod{
+		destAuth,
+	}
+	clientConfig.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+
+	// connect to the destination VM
+	proxy.app.Log.Tracef("SSH Proxy: dial %s@%s", user, vm.LastIP)
+	clientConn, errD := ssh.Dial("tcp", vm.LastIP+":22", clientConfig)
+	if errD != nil {
+		return errD
+	}
+
+	client.sshClient = clientConn
+
+	proxy.app.sshClients.add(proxy.RemoteAddr(), &client)
+	proxy.app.Log.Tracef("SSH proxy: connection accepted from %s forwarded to %s", proxy.RemoteAddr(), client.sshClient.RemoteAddr())
+
+	// --
 
 	defer clientConn.Close()
 
@@ -219,32 +288,32 @@ func (proxy *SSHProxy) serveProxy() error {
 	// special channels (requested by the VM to the outside):
 
 	//  -- "ssh -R" tunnels from the outside
-	proxy.ClientHandleChannelOpen("forwarded-tcpip", client, serverConn)
+	proxy.ClientHandleChannelOpen("forwarded-tcpip", &client, serverConn)
 
 	// -- X11 forwarding
-	proxy.ClientHandleChannelOpen("x11", client, serverConn)
+	proxy.ClientHandleChannelOpen("x11", &client, serverConn)
 
 	// -- agent forwarding (old and new names)
-	proxy.ClientHandleChannelOpen("auth-agent@openssh.com", client, serverConn)
-	proxy.ClientHandleChannelOpen("agent-connect", client, serverConn)
+	proxy.ClientHandleChannelOpen("auth-agent@openssh.com", &client, serverConn)
+	proxy.ClientHandleChannelOpen("agent-connect", &client, serverConn)
 
-	err = proxy.runChannels(chans, clientConn, client)
+	err = proxy.runChannels(chans, clientConn, &client)
 	if err != nil {
 		return err
 	}
 
-	if proxy.closeCB != nil {
-		proxy.closeCB(serverConn)
-	}
+	proxy.app.sshClients.delete(proxy.RemoteAddr())
+	proxy.app.Log.Tracef("SSH proxy: connection closed from: %s", proxy.RemoteAddr())
+
 	return nil
 }
 
 // run a SSH agent server as filter between the client and the real agent
 func (proxy *SSHProxy) newSshAgentProxy(realAgent ssh.Channel, client ssh.Channel, clientInfo *sshServerClient) {
-	agent := NewSSHProxyAgent(realAgent, client, clientInfo.vm, clientInfo.apiKey, proxy.log)
+	agent := NewSSHProxyAgent(realAgent, client, clientInfo.vm, clientInfo.apiKey, proxy.app.Log)
 	go func() {
 		agent.Serve()
-		proxy.log.Tracef("SSH internal agent closed")
+		proxy.app.Log.Tracef("SSH internal agent closed")
 
 		realAgent.Close()
 		client.Close()
@@ -256,9 +325,7 @@ func ListenAndServeProxy(
 	addr string,
 	serverConfig *ssh.ServerConfig,
 	sshClients *sshServerClients,
-	log *Log,
-	connectCB func(c ssh.ConnMetadata) (*sshServerClient, error),
-	closeCB func(c ssh.ConnMetadata) error,
+	app *App,
 ) error {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -269,28 +336,26 @@ func ListenAndServeProxy(
 		defer listener.Close()
 		for {
 			connListener, err := listener.Accept()
-			log.Tracef("SSH connection from %s", connListener.RemoteAddr())
+			app.Log.Tracef("SSH connection from %s", connListener.RemoteAddr())
 
 			if err != nil {
-				log.Error(err.Error())
+				app.Log.Error(err.Error())
 				return
 			}
 
 			sshconn := &SSHProxy{
-				Conn:      connListener,
-				config:    serverConfig,
-				connectCB: connectCB,
-				closeCB:   closeCB,
-				log:       log,
+				Conn:   connListener,
+				config: serverConfig,
+				app:    app,
 			}
 
 			go func() {
 				if err := sshconn.serveProxy(); err != nil {
-					log.Tracef("SSH: proxy serving error: %s", err)
+					app.Log.Tracef("SSH: proxy serving error: %s", err)
 					return
 				}
 
-				log.Tracef("SSH: connection closed (%s)", connListener.RemoteAddr())
+				app.Log.Tracef("SSH: connection closed (%s)", connListener.RemoteAddr())
 			}()
 		}
 	}()
