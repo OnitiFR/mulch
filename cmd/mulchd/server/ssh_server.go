@@ -17,7 +17,7 @@ type sshServerClient struct {
 	vm            *VM
 	sshUser       string
 	apiKeyComment string
-	apiKey        *APIKey
+	apiKey        *APIKey // can be nil
 	startTime     time.Time
 }
 

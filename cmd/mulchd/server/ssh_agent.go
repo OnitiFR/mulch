@@ -24,7 +24,7 @@ func NewSSHProxyAgent(realAgent ssh.Channel, client ssh.Channel, vm *VM, apiKey 
 		agent:  agent.NewClient(realAgent),
 		client: client,
 		vm:     vm,
-		apiKey: apiKey,
+		apiKey: apiKey, // can be nil
 		log:    log,
 	}
 }

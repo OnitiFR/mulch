@@ -43,7 +43,7 @@ func MakeSSHKey() (private string, public string, err error) {
 func SearchSSHAuthorizedKey(searchedPubKey ssh.PublicKey, authorizedKeysFile string) (ssh.PublicKey, string, error) {
 
 	if authorizedKeysFile == "" {
-		return nil, "", nil
+		return nil, "", fmt.Errorf("no authorized_keys file")
 	}
 
 	// check mode

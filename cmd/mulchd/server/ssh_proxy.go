@@ -240,10 +240,8 @@ func (proxy *SSHProxy) serveProxy() error {
 		return errP
 	}
 
+	// for pubkeys, will be nil (and it's ok)
 	apiKey := proxy.app.APIKeysDB.GetByComment(apiKeyComment)
-	if apiKey == nil {
-		return fmt.Errorf("API key not found")
-	}
 
 	var client sshServerClient
 	client.vm = vm
