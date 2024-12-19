@@ -1,5 +1,7 @@
-# Extra (limited) SSH pub keys, in usual "authorized_keys" format.
-# (remove "sample" from the filename to enable)
+# Extra (limited) SSH pub keys, in usual "authorized_keys" format
+# Enable with proxy_ssh_extra_keys_file = "…" in mulchd.toml
+# (remove "sample" from the filename)
+# File mode must be 0600
 
 # The "comment" defines the SSH destination, ex:
 # ssh-rsa ABC…12== me@my-vm
@@ -17,6 +19,3 @@
 # You can find it in /home/admin/.ssh/authorized_keys
 
 # You don't need to reload Mulchd when this file is modified.
-# File mode must be 0600.
-
-# Enable with proxy_ssh_extra_keys_file = "…" in mulchd.toml
