@@ -6,10 +6,6 @@ Always:
   - https://libvirt.org/news.html
   - https://pkg.go.dev/libvirt.org/go/libvirt
 
-WIP:
-- test SSH proxy's SearchSSHAuthorizedKey
-- see if we can write an error to the client on early error? (is it a good idea anyway?)
-
 Resource leaks:
 - check for remaining map race-conditions
 - check that the switch to Context fixes all known resource leaks
@@ -30,6 +26,8 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Short term:
+- SSH proxy: can we write an error to the client on early error? (is it a good idea anyway?)
+  - see SSHProxy.serveProxy()
 - auto-rebuild VS wip operations?
 - global 'timezone' setting (only in TOMLs currently)
 - investigate the case where a mulch-secrets.db was erased (0 bytes) during an update + restart
