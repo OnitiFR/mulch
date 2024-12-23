@@ -100,9 +100,9 @@ func NewSSHProxyServer(app *App) error {
 
 			return &ssh.Permissions{
 				Extensions: map[string]string{
-					"apiKeyComment": apiKeyComment,
-					"user":          user,
-					"vmName":        vmName,
+					"mulch-apiKeyComment": apiKeyComment,
+					"mulch-user":          user,
+					"mulch-vmName":        vmName,
 				},
 			}, nil
 		},

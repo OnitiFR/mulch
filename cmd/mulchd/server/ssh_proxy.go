@@ -199,9 +199,9 @@ func (proxy *SSHProxy) serveProxy() error {
 	}
 	defer serverConn.Close()
 
-	vmName := serverConn.Permissions.Extensions["vmName"]
-	user := serverConn.Permissions.Extensions["user"]
-	apiKeyComment := serverConn.Permissions.Extensions["apiKeyComment"]
+	vmName := serverConn.Permissions.Extensions["mulch-vmName"]
+	user := serverConn.Permissions.Extensions["mulch-user"]
+	apiKeyComment := serverConn.Permissions.Extensions["mulch-apiKeyComment"]
 
 	var vm *VM
 	var errV error
