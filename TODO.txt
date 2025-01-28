@@ -28,6 +28,7 @@ Resource leaks:
 Short term:
 - SSH proxy: can we write an error to the client on early error? (is it a good idea anyway?)
   - see SSHProxy.serveProxy()
+- allo SSH connection to VMs in the greenhouse? (with -rX)
 - auto-rebuild VS wip operations?
 - global 'timezone' setting (only in TOMLs currently)
 - investigate the case where a mulch-secrets.db was erased (0 bytes) during an update + restart
