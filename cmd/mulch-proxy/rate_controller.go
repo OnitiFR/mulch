@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"sync"
 	"time"
 
@@ -134,5 +136,24 @@ func (rce *RateControllerEntry) IsAllowed(reqCtx context.Context) (bool, bool, s
 func (rce *RateControllerEntry) FinishRequest() {
 	if rce.config.ConcurrentMaxRequests > 0 {
 		<-rce.currentRequestSlots
+	}
+}
+
+// Dump will return a string representation of the controller
+func (rc *RateController) Dump(w io.Writer) {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+
+	fmt.Fprintf(w, "-- RateController: %d entries\n", len(rc.entries))
+
+	for ip, entry := range rc.entries {
+		fmt.Fprintf(w, "  %s:\n", ip)
+		fmt.Fprintf(w, "    lastUseTime: %s\n", entry.lastUseTime)
+		if entry.config.ConcurrentMaxRequests > 0 {
+			fmt.Fprintf(w, "    currentRequestSlots: %d\n", len(entry.currentRequestSlots))
+		}
+		if entry.config.RateEnable {
+			fmt.Fprintf(w, "    rateLimiter free tokens: %f / %d (negative = waiting)\n", entry.rateLimiter.Tokens(), entry.rateLimiter.Burst())
+		}
 	}
 }
