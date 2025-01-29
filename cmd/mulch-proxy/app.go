@@ -33,6 +33,9 @@ const PSKHeaderName = "Mulch-PSK"
 // WatchDogHeaderName is used for parent-to-child watchdog requests
 const WatchDogHeaderName = "Mulch-Watchdog"
 
+// RateControllerCleanupInterval is the interval for cleaning the rate controller IP entries
+const RateControllerCleanupInterval = 5 * time.Minute
+
 // NewApp creates a new application
 func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 
@@ -86,7 +89,7 @@ func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 		scheduler := time.NewTicker(1 * time.Minute)
 		go func() {
 			for range scheduler.C {
-				rateController.Clean(5 * time.Minute)
+				rateController.Clean(RateControllerCleanupInterval)
 			}
 		}()
 	}

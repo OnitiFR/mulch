@@ -89,7 +89,7 @@ func (rc *RateController) IsVIP(ip string) bool {
 
 // Clean will remove old entries
 // WARNING: a scheduled goroutine calling this function will prevent
-// the RateController from being garbage collected!
+// the RateController from being garbage collected! (ex: a RateController per VM)
 func (rc *RateController) Clean(UnusedTime time.Duration) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
@@ -144,7 +144,7 @@ func (rc *RateController) Dump(w io.Writer) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 
-	fmt.Fprintf(w, "-- RateController: %d entrie(s)\n", len(rc.entries))
+	fmt.Fprintf(w, "-- RateController: %d entrie(s), exp %s\n", len(rc.entries), RateControllerCleanupInterval)
 
 	cnt := 0
 	for ip, entry := range rc.entries {
@@ -156,10 +156,10 @@ func (rc *RateController) Dump(w io.Writer) {
 		fmt.Fprintf(w, "  %s:\n", ip)
 		fmt.Fprintf(w, "    lastUseTime: %s\n", entry.lastUseTime)
 		if entry.config.ConcurrentMaxRequests > 0 {
-			fmt.Fprintf(w, "    currentRequestSlots: %d\n", len(entry.currentRequestSlots))
+			fmt.Fprintf(w, "    currentRequestSlots: %d / %d\n", len(entry.currentRequestSlots), entry.config.ConcurrentMaxRequests)
 		}
 		if entry.config.RateEnable {
-			fmt.Fprintf(w, "    rateLimiter free tokens: %f / %d (negative = waiting)\n", entry.rateLimiter.Tokens(), entry.rateLimiter.Burst())
+			fmt.Fprintf(w, "    rateLimiter free tokens (negative = waiting): %f / %d\n", entry.rateLimiter.Tokens(), entry.rateLimiter.Burst())
 		}
 	}
 
