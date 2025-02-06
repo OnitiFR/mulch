@@ -30,6 +30,8 @@ POST /vm/myvm action=do do_action=logs
 
 Allow SSH access:
 GET /sshpair
+
+Note: when setting rights, server log shows denied requests, it may help you.
 `,
 	Args: cobra.ExactArgs(2),
 	Run: func(_ *cobra.Command, args []string) {
