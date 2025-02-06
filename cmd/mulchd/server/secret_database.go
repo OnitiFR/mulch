@@ -124,7 +124,7 @@ func (db *SecretDatabase) Set(key string, value string, authorKey string) error 
 	}
 
 	if err = db.SyncPeers(); err != nil {
-		db.app.Log.Errorf(err.Error())
+		db.app.Log.Error(err.Error())
 	}
 
 	return nil
