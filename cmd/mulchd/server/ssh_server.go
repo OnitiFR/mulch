@@ -61,7 +61,11 @@ func NewSSHProxyServer(app *App) error {
 				}
 
 				if !apiKey.IsAllowed("GET", "/sshpair", nil) {
-					return nil, errors.New("permission denied (rights)")
+					return nil, errors.New("permission denied (rights: sshpair)")
+				}
+
+				if !apiKey.IsAllowed("SSH", "/"+parts[1], nil) {
+					return nil, errors.New("permission denied (rights: SSH)")
 				}
 
 				user = parts[0]
