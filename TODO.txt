@@ -49,7 +49,6 @@ Short term:
 - explore vm migration possible edge case:
   // migration of active VM ok → local vm deletion → an existing
   // "lower" inactive VM is activated (unharmful error if source was active?)
-- rights: limit SSH to a specific VM? (check a fake vm=… header in the SSH proxy?)
 - rights: logs may expose sensitive data (which ones?)
 - rights: add predefined right groups for common usages?
 - add "variables" to TOML files? (like $author or $USER in VM name or URL, to create "generic" TOML files)
