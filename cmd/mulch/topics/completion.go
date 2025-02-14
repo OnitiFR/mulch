@@ -27,6 +27,11 @@ completion support. (don't forget to restart your shell after any change).
 
 func init() {
 	binaryPath, _ := os.Executable()
+
+	if os.PathSeparator == '\\' {
+		binaryPath = strings.Replace(binaryPath, "\\", "/", -1)
+	}
+
 	completionCmd.Long = strings.Replace(completionCmd.Long, "{{mulch}}", binaryPath, -1)
 	rootCmd.AddCommand(completionCmd)
 }
