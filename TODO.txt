@@ -65,7 +65,8 @@ Short term:
 - like restore_backup, allow to restore from a VM (ex: autorebuild from prod)
 - backup available at "prepare" stage during a restore? / "meta" informations for restore? (ex: gitlab version)
   - must be available BEFORE the backup even exists (ex: rebuild)
-- purge old secrets (caution with long time disconnected peers)
+- purge old secrets (caution with long time disconnected peers, manual 'purge' command?)
+  - new endpoint so every peer purge at the same time?
 - even better "secret list" command (closer to the usual FS experience)
 - investigate Let's Encrypt throttling issues
 - add "ipv4 only" option for seed downloads?
