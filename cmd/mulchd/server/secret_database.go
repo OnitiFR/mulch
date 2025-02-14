@@ -708,3 +708,28 @@ func (db *SecretDatabase) GetSecretsUsage(with_peers bool) (common.APISecretUsag
 
 	return res, nil
 }
+
+// GetStats returns statistics about the secrets
+func (db *SecretDatabase) GetStats() (common.APISecretStats, error) {
+	stats := common.APISecretStats{}
+
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	// get db file size
+	stat, err := os.Stat(db.dbFilename)
+	if err != nil {
+		return stats, err
+	}
+	stats.FileSize = stat.Size()
+
+	for _, secret := range db.db {
+		if secret.Deleted {
+			stats.TrashCount++
+		} else {
+			stats.ActiveCount++
+		}
+	}
+
+	return stats, nil
+}

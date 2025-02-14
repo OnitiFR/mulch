@@ -260,3 +260,22 @@ func ListSecretsUsageController(req *server.Request) {
 		http.Error(req.Response, err.Error(), 500)
 	}
 }
+
+// SecretsStatsController returns some stats about secrets
+func SecretsStatsController(req *server.Request) {
+	req.Response.Header().Set("Content-Type", "application/json")
+
+	retData, err := req.App.SecretsDB.GetStats()
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
+	enc := json.NewEncoder(req.Response)
+	err = enc.Encode(retData)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+	}
+}
