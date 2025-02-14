@@ -62,6 +62,7 @@ const (
 )
 
 const VMStopDefaultTimeout = 3 * time.Minute
+const VMStopEmergencyTimeout = 20 * time.Second
 
 // BackupBlankRestore disables *install* scripts during a
 // a VM creation (so we can restore backup a bit later)

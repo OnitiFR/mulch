@@ -199,13 +199,13 @@ func NewVMController(req *server.Request) (*server.VM, error) {
 		entry, err := req.App.VMDB.GetActiveEntryByName(restoreVM)
 		if err != nil {
 			msg := fmt.Sprintf("Cannot find VM to backup: %s", err)
-			req.Stream.Failuref(msg)
+			req.Stream.Failure(msg)
 			return nil, errors.New(msg)
 		}
 		backup, err := server.VMBackup(entry.Name, req.APIKey.Comment, req.App, req.Stream, server.BackupCompressDisable, server.BackupNoExpiration)
 		if err != nil {
 			msg := fmt.Sprintf("Cannot backup %s: %s", restoreVM, err)
-			req.Stream.Failuref(msg)
+			req.Stream.Failure(msg)
 			return nil, errors.New(msg)
 		}
 		defer func() {
@@ -221,7 +221,7 @@ func NewVMController(req *server.Request) (*server.VM, error) {
 	vm, vmName, err := server.NewVM(conf, active, allowScriptFailure, req.APIKey.Comment, req.App, req.Stream)
 	if err != nil {
 		msg := fmt.Sprintf("Cannot create VM: %s", err)
-		req.Stream.Failuref(msg)
+		req.Stream.Failure(msg)
 		return nil, errors.New(msg)
 	}
 
@@ -838,11 +838,16 @@ func StopVM(req *server.Request, vm *server.VM, entry *server.VMDatabaseEntry) {
 		return
 	}
 
-	err := server.VMStopByName(entry.Name, server.VMStopNormal, server.VMStopDefaultTimeout, req.App, req.Stream)
+	emergency := req.HTTP.FormValue("emergency")
+	timeout := server.VMStopDefaultTimeout
+	if emergency == common.TrueStr {
+		timeout = server.VMStopEmergencyTimeout
+	}
+
+	err := server.VMStopByName(entry.Name, server.VMStopNormal, timeout, req.App, req.Stream)
 	if err != nil {
 		req.Stream.Failuref("unable to stop %s: %s", entry.Name, err)
 
-		emergency := req.HTTP.FormValue("emergency")
 		if emergency != common.TrueStr {
 			req.Stream.Failuref("aborting operation (see --emergency)")
 			return
@@ -870,11 +875,16 @@ func RestartVM(req *server.Request, vm *server.VM, entry *server.VMDatabaseEntry
 		return
 	}
 
-	err := server.VMStopByName(entry.Name, server.VMStopNormal, server.VMStopDefaultTimeout, req.App, req.Stream)
+	emergency := req.HTTP.FormValue("emergency")
+	timeout := server.VMStopDefaultTimeout
+	if emergency == common.TrueStr {
+		timeout = server.VMStopEmergencyTimeout
+	}
+
+	err := server.VMStopByName(entry.Name, server.VMStopNormal, timeout, req.App, req.Stream)
 	if err != nil {
 		req.Stream.Failuref("unable to stop %s: %s", entry.Name, err)
 
-		emergency := req.HTTP.FormValue("emergency")
 		if emergency != common.TrueStr {
 			req.Stream.Failuref("aborting operation (see --emergency)")
 			return
