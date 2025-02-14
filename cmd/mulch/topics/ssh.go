@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"syscall"
 
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
@@ -101,7 +100,6 @@ func sshCmdPairCB(reader io.Reader, _ http.Header) {
 
 	// launch 'ssh' command
 	args := []string{
-		"ssh",
 		"-i", privFilePath,
 		"-p", strconv.Itoa(client.GlobalConfig.Server.SSHPort),
 		"-A",
@@ -113,8 +111,16 @@ func sshCmdPairCB(reader io.Reader, _ http.Header) {
 		log.Fatalf("ssh command not found: %s", err)
 	}
 
-	err = syscall.Exec(sshPath, args, os.Environ())
-	log.Fatal(err.Error())
+	cmd := exec.Command(sshPath, args...)
+	cmd.Env = os.Environ()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	err = cmd.Run()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 }
 
 func init() {

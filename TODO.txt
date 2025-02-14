@@ -38,7 +38,6 @@ Short term:
 - allow to export a port to a different number? (only possible for @PUBLIC now)
   - not a quick change, VMPort is not ready for that
   - can be a bit tricky to understand for the user? (can be tempted to use "real" source port instead)
-- syscall.Exec alternative in cmd/mulch/topics/ssh.go for win compat?
 - remove mulch/mulch.env in backup? (because of secrets?)
 - better error message in case of a double creation?
 - vm info: show ports?
