@@ -39,7 +39,7 @@ Short term:
   - not a quick change, VMPort is not ready for that
   - can be a bit tricky to understand for the user? (can be tempted to use "real" source port instead)
 - syscall.Exec alternative in cmd/mulch/topics/ssh.go for win compat?
-- keep mulch/mulch.env in backup? (with secrets?)
+- remove mulch/mulch.env in backup? (because of secrets?)
 - better error message in case of a double creation?
 - vm info: show ports?
 - mulch client port forwarding (via SSH)?
