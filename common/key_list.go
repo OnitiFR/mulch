@@ -5,5 +5,7 @@ type APIKeyListEntries []APIKeyListEntry
 
 // APIKeyListEntry is an entry for a backup
 type APIKeyListEntry struct {
-	Comment string
+	Comment          string
+	RightCount       int
+	FingerprintCount int
 }

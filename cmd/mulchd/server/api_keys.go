@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/OnitiFR/mulch/common"
 	"github.com/ryanuber/go-glob"
 	"golang.org/x/crypto/ssh"
 )
@@ -198,6 +199,22 @@ func (db *APIKeyDatabase) ListComments() []string {
 	}
 
 	return comments
+}
+
+func (db *APIKeyDatabase) ListEntries() common.APIKeyListEntries {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	entries := common.APIKeyListEntries{}
+	for _, key := range db.keys {
+		entries = append(entries, common.APIKeyListEntry{
+			Comment:          key.Comment,
+			RightCount:       len(key.Rights),
+			FingerprintCount: len(key.SSHAllowedFingerprints),
+		})
+	}
+
+	return entries
 }
 
 // GenKey generates a new random API key

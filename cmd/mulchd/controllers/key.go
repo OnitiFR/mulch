@@ -13,15 +13,7 @@ import (
 // ListKeysController list API keys
 func ListKeysController(req *server.Request) {
 	req.Response.Header().Set("Content-Type", "application/json")
-	comments := req.App.APIKeysDB.ListComments()
-
-	var retData common.APIKeyListEntries
-	for _, comment := range comments {
-
-		retData = append(retData, common.APIKeyListEntry{
-			Comment: comment,
-		})
-	}
+	retData := req.App.APIKeysDB.ListEntries()
 
 	sort.Slice(retData, func(i, j int) bool {
 		return retData[i].Comment < retData[j].Comment

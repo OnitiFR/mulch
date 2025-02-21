@@ -56,10 +56,12 @@ func keyListCB(reader io.Reader, _ http.Header) {
 		for _, line := range data {
 			strData = append(strData, []string{
 				line.Comment,
+				fmt.Sprintf("%d", line.RightCount),
+				fmt.Sprintf("%d", line.FingerprintCount),
 			})
 		}
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Comment"})
+		table.SetHeader([]string{"Comment", "Rights", "Fingerprints"})
 		table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 		table.SetCenterSeparator("|")
 		table.AppendBulk(strData)
