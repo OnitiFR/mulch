@@ -30,6 +30,7 @@ Short term:
   - see SSHProxy.serveProxy()
 - allow SSH connection to VMs in the greenhouse? (with -rX)
 - custom 5xx error pages for certain domains? (including non-existing ones ["garage"])
+- allow late backup when creating a VM with -R? always late?
 - auto-rebuild VS wip operations?
 - global 'timezone' setting (only in TOMLs currently)
 - investigate the case where a mulch-secrets.db was erased (0 bytes) during an update + restart
