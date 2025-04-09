@@ -176,7 +176,7 @@ sudo systemctl restart postgresql || exit $?
 
 sudo bash -c "cat | sudo -iu postgres psql -v ON_ERROR_STOP=1" <<- EOS
 CREATE USER $_APP_USER WITH PASSWORD '$PGSQL_PASSWORD';
-CREATE DATABASE $_APP_USER OWNER $_APP_USER;
+CREATE DATABASE $_APP_USER;
 GRANT ALL PRIVILEGES ON DATABASE $_APP_USER to $_APP_USER;
 \connect $_APP_USER
 GRANT USAGE, CREATE ON SCHEMA public TO $_APP_USER; -- required since PgSQL 15
