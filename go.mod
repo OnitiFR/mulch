@@ -1,39 +1,39 @@
 module github.com/OnitiFR/mulch
 
-go 1.22.0
+go 1.23.0
 
-toolchain go1.23.6
+toolchain go1.23.7
 
 require (
-	github.com/BurntSushi/toml v1.4.0
+	github.com/BurntSushi/toml v1.5.0
 	github.com/Knetic/govaluate v3.0.0+incompatible
 	github.com/alessio/shellescape v1.4.2
 	github.com/blang/semver/v4 v4.0.0
 	github.com/c2h5oh/datasize v0.0.0-20231215233829-aa82cc1e6500
 	github.com/fatih/color v1.18.0
 	github.com/go-git/go-billy/v5 v5.6.2
-	github.com/go-git/go-git/v5 v5.13.2
+	github.com/go-git/go-git/v5 v5.14.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/joho/godotenv v1.5.1
 	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/pkg/sftp v1.13.7
+	github.com/pkg/sftp v1.13.9
 	github.com/ryanuber/go-glob v1.0.0
-	github.com/smallnest/ringbuffer v0.0.0-20241129171057-356c688ba81d
-	github.com/spf13/cobra v1.8.1
-	golang.org/x/crypto v0.33.0
-	golang.org/x/term v0.29.0
-	golang.org/x/text v0.22.0
-	golang.org/x/time v0.10.0
+	github.com/smallnest/ringbuffer v0.0.0-20250317021400-0da97b586904
+	github.com/spf13/cobra v1.9.1
+	golang.org/x/crypto v0.37.0
+	golang.org/x/term v0.31.0
+	golang.org/x/text v0.24.0
+	golang.org/x/time v0.11.0
 	libvirt.org/go/libvirt v1.11001.0
-	libvirt.org/go/libvirtxml v1.11000.1
+	libvirt.org/go/libvirtxml v1.11001.0
 )
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/ProtonMail/go-crypto v1.1.5 // indirect
+	github.com/ProtonMail/go-crypto v1.1.6 // indirect
 	github.com/cloudflare/circl v1.6.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -52,7 +52,7 @@ require (
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
-	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/net v0.39.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
