@@ -5,7 +5,7 @@
 echo "copying backup…"
 
 sudo cp $_BACKUP/mulch_gitlab_backup.tar /var/opt/gitlab/backups/ || exit $?
-sudo chown git.git /var/opt/gitlab/backups/mulch_gitlab_backup.tar || exit $?
+sudo chown git:git /var/opt/gitlab/backups/mulch_gitlab_backup.tar || exit $?
 
 sudo cp $_BACKUP/gitlab-secrets.json /etc/gitlab/ || exit $?
 sudo cp $_BACKUP/gitlab.rb /etc/gitlab/ || exit $?
