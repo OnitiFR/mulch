@@ -32,4 +32,7 @@ MaxAuthTries 4
 EOS
 [ $? -eq 0 ] || exit $?
 
-sudo systemctl restart sshd || exit $?
+ssh_unit=$(systemctl list-unit-files | cut -d\  -f1 | grep 'sshd*\.service' | head -n1)
+
+echo "Restarting $ssh_unit for new host keys"
+sudo systemctl restart $ssh_unit || exit $?
