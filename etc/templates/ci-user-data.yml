@@ -67,9 +67,9 @@ write_files:
       [Unit]
       Description=Get env on boot
       DefaultDependencies=no
-      Wants=cloud-init.service
-      After=cloud-init.service
-      Before=network-online.target
+      Wants=network-online.target cloud-init.service
+      After=network-online.target cloud-init.service
+      Before=multi-user.target
 
       [Service]
       Type=oneshot
