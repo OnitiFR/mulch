@@ -67,9 +67,9 @@ write_files:
       [Unit]
       Description=Get env on boot
       DefaultDependencies=no
-      Wants=network-online.target cloud-init.service
-      After=network-online.target cloud-init.service
-      Before=multi-user.target
+      After=network.target
+      # warning: with rh7, this is not enough to run BEFORE httpd and other servers (deb OK)
+      Before=cloud-init.service
 
       [Service]
       Type=oneshot
@@ -78,7 +78,7 @@ write_files:
       TimeoutSec=0
 
       [Install]
-      WantedBy=multi-user.target
+      WantedBy=network-pre.target
     owner: root:root
     path: /etc/systemd/system/get_env.service
 

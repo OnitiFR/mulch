@@ -170,6 +170,9 @@ file="/home/$_MULCH_SUPER_USER/.httpd_env"
 sudo bash -c "cat > $http_env" <<- EOS
 #!/bin/bash
 echo "# generated, do not modify" > $file
+if [ -x /usr/local/bin/env_refresh ]; then
+    /usr/local/bin/env_refresh
+fi
 grep ^export /etc/mulch.env | sed 's/; /\n/g' | sed 's/^export //' >> $file
 cat "/home/$_APP_USER/env" >> $file
 EOS
