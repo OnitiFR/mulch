@@ -172,18 +172,18 @@ func (proxy *ProxyServer) genErrorPage(code int, message string) (string, error)
 
 func (proxy *ProxyServer) hostPolicy(ctx context.Context, host string) error {
 	if host == proxy.config.MulchdHTTPSDomain && proxy.config.MulchdHTTPSDomain != "" {
-		proxy.Log.Trace("hostPolicy OK for MulchdHTTPSDomain")
+		// proxy.Log.Trace("hostPolicy OK for MulchdHTTPSDomain")
 		return nil
 	}
 
 	if host == proxy.config.ChainDomain && proxy.config.ChainDomain != "" {
-		proxy.Log.Trace("hostPolicy OK for ChainDomain")
+		// proxy.Log.Trace("hostPolicy OK for ChainDomain")
 		return nil
 	}
 
 	_, err := proxy.DomainDB.GetByName(host)
 	if err == nil {
-		proxy.Log.Tracef("hostPolicy OK, host '%s' found in DomainDB", host)
+		// proxy.Log.Tracef("hostPolicy OK, host '%s' found in DomainDB", host)
 		return nil
 	}
 
