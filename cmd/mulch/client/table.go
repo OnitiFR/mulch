@@ -10,12 +10,16 @@ import (
 )
 
 // RenderStringTable renders a table as a string
-func RenderStringTable(headers []string, data [][]string) string {
+func RenderStringTable(headers []string, data [][]string, tableCallback func(*tablewriter.Table)) string {
 	tableString := &strings.Builder{}
 	table := tablewriter.NewWriter(tableString)
 	table.SetHeader(headers)
 	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	table.SetCenterSeparator("|")
+	// apply callback if provided
+	if tableCallback != nil {
+		tableCallback(table)
+	}
 	table.AppendBulk(data)
 	table.Render()
 
@@ -23,14 +27,14 @@ func RenderStringTable(headers []string, data [][]string) string {
 }
 
 // RenderTable renders a table to stdout
-func RenderTable(headers []string, data [][]string) {
-	fmt.Print(RenderStringTable(headers, data))
+func RenderTable(headers []string, data [][]string, tableCallback func(*tablewriter.Table)) {
+	fmt.Print(RenderStringTable(headers, data, tableCallback))
 }
 
 // RenderTableTruncateCol renders a table to stdout, truncatting the column
 // colNum if table does not fit the screen width
-func RenderTableTruncateCol(colNum int, headers []string, data [][]string) {
-	tableStr := RenderStringTable(headers, data)
+func RenderTableTruncateCol(colNum int, headers []string, data [][]string, tableCallback func(*tablewriter.Table)) {
+	tableStr := RenderStringTable(headers, data, tableCallback)
 
 	// find the longest line of tableString
 	lines := strings.Split(tableStr, "\n")
@@ -69,5 +73,5 @@ func RenderTableTruncateCol(colNum int, headers []string, data [][]string) {
 		}
 	}
 
-	RenderTable(headers, data)
+	RenderTable(headers, data, tableCallback)
 }

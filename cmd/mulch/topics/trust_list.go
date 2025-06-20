@@ -6,12 +6,10 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -64,13 +62,9 @@ func TrustListCB(reader io.Reader, _ http.Header) {
 		})
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"VM", "Fingerprint", "Added at"})
-	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-	table.SetCenterSeparator("|")
-	table.SetAutoWrapText(true)
-	table.AppendBulk(strData)
-	table.Render()
+	// TODO: deal with fingerprint string length
+	headers := []string{"VM", "Fingerprint", "Added at"}
+	client.RenderTable(headers, strData, nil)
 }
 
 func init() {

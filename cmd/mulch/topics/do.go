@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
@@ -17,7 +16,7 @@ import (
 
 var doListFlagBasic bool
 
-//  doCmd represents the "do" command
+// doCmd represents the "do" command
 var doCmd = &cobra.Command{
 	Use:   "do <vm-name> [action] [arguments]",
 	Short: "Do action on VM",
@@ -90,13 +89,12 @@ func doListCB(reader io.Reader, _ http.Header) {
 				line.Description,
 			})
 		}
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Name", "User", "Description"})
-		table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-		table.SetColWidth(50)
-		table.SetCenterSeparator("|")
-		table.AppendBulk(strData)
-		table.Render()
+
+		headers := []string{"Name", "User", "Description"}
+		client.RenderTable(headers, strData, func(table *tablewriter.Table) {
+			table.SetColWidth(50)
+		})
+
 	}
 }
 

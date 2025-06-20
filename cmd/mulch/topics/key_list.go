@@ -6,11 +6,9 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -60,12 +58,9 @@ func keyListCB(reader io.Reader, _ http.Header) {
 				fmt.Sprintf("%d", line.FingerprintCount),
 			})
 		}
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Comment", "Rights", "Fingerprints"})
-		table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-		table.SetCenterSeparator("|")
-		table.AppendBulk(strData)
-		table.Render()
+
+		headers := []string{"Comment", "Rights", "Fingerprints"}
+		client.RenderTable(headers, strData, nil)
 	}
 }
 

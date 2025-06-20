@@ -5,13 +5,11 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"sort"
 	"strconv"
 
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -76,18 +74,12 @@ func secretUsageCB(reader io.Reader, _ http.Header) {
 		strData = append(strData, d)
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-
+	headers := []string{"Secret", "Total"}
 	if secretListVerbose {
-		table.SetHeader([]string{"Secret", "Total", "Local", "Remote"})
-	} else {
-		table.SetHeader([]string{"Secret", "Total"})
+		headers = append(headers, "Local", "Remote")
 	}
 
-	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-	table.SetCenterSeparator("|")
-	table.AppendBulk(strData)
-	table.Render()
+	client.RenderTable(headers, strData, nil)
 }
 
 func init() {

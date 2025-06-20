@@ -6,13 +6,11 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/fatih/color"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -86,12 +84,9 @@ func vmListCB(reader io.Reader, _ http.Header) {
 				yellow(line.WIP),
 			})
 		}
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Name", "Rev", "State", "Locked", "Operation"})
-		table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-		table.SetCenterSeparator("|")
-		table.AppendBulk(strData)
-		table.Render()
+
+		headers := []string{"Name", "Rev", "State", "Locked", "Operation"}
+		client.RenderTable(headers, strData, nil)
 	}
 }
 

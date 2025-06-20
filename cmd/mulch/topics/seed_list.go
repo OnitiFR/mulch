@@ -6,14 +6,12 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
 	"github.com/c2h5oh/datasize"
 	"github.com/fatih/color"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -71,12 +69,9 @@ func seedsCB(reader io.Reader, _ http.Header) {
 				(datasize.ByteSize(line.Size) * datasize.B).HR(),
 			})
 		}
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Name", "Ready", "Image date", "Size"})
-		table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-		table.SetCenterSeparator("|")
-		table.AppendBulk(strData)
-		table.Render()
+
+		headers := []string{"Name", "Ready", "Last Modified", "Size"}
+		client.RenderTable(headers, strData, nil)
 	}
 }
 

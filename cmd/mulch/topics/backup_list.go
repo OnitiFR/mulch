@@ -75,7 +75,7 @@ func backupListCB(reader io.Reader, _ http.Header) {
 		}
 
 		headers := []string{"Disk Name", "Author", "Size", "Expires"}
-		client.RenderTableTruncateCol(0, headers, strData)
+		client.RenderTableTruncateCol(0, headers, strData, nil)
 	}
 }
 

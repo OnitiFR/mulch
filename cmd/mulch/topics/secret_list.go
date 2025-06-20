@@ -6,12 +6,10 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -63,12 +61,9 @@ func secretListCB(reader io.Reader, _ http.Header) {
 				line.AuthorKey,
 			})
 		}
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Secret", "Modified", "Author"})
-		table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-		table.SetCenterSeparator("|")
-		table.AppendBulk(strData)
-		table.Render()
+
+		headers := []string{"Secret", "Modified", "Author"}
+		client.RenderTable(headers, strData, nil)
 	}
 }
 
