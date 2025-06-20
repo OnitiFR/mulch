@@ -14,7 +14,7 @@ var vmSearchFlagShowRevision bool
 var vmSearchCmd = &cobra.Command{
 	Use:   "search",
 	Short: "Search VMs",
-	Long: `List for one or more VMs using criteria
+	Long: `List VMs matching a search query.
 
 Some examples:
   mulch vm search 'state == "down"'
