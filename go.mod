@@ -5,9 +5,9 @@ go 1.23.0
 toolchain go1.23.7
 
 require (
+	al.essio.dev/pkg/shellescape v1.6.0
 	github.com/BurntSushi/toml v1.5.0
 	github.com/Knetic/govaluate v3.0.0+incompatible
-	github.com/alessio/shellescape v1.4.2
 	github.com/blang/semver/v4 v4.0.0
 	github.com/c2h5oh/datasize v0.0.0-20231215233829-aa82cc1e6500
 	github.com/fatih/color v1.18.0
@@ -17,7 +17,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/olekukonko/tablewriter v0.0.5
+	github.com/olekukonko/tablewriter v1.0.7
 	github.com/pkg/sftp v1.13.9
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/smallnest/ringbuffer v0.0.0-20250317021400-0da97b586904

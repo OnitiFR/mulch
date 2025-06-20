@@ -71,7 +71,7 @@ func seedsCB(reader io.Reader, _ http.Header) {
 		}
 
 		headers := []string{"Name", "Ready", "Last Modified", "Size"}
-		client.RenderTable(headers, strData, nil)
+		client.RenderTable(headers, strData)
 	}
 }
 

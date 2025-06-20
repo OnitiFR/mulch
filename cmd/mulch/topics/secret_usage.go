@@ -79,7 +79,7 @@ func secretUsageCB(reader io.Reader, _ http.Header) {
 		headers = append(headers, "Local", "Remote")
 	}
 
-	client.RenderTable(headers, strData, nil)
+	client.RenderTable(headers, strData)
 }
 
 func init() {

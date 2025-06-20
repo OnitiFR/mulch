@@ -62,9 +62,8 @@ func TrustListCB(reader io.Reader, _ http.Header) {
 		})
 	}
 
-	// TODO: deal with fingerprint string length
 	headers := []string{"VM", "Fingerprint", "Added at"}
-	client.RenderTable(headers, strData, nil)
+	client.RenderTable(headers, strData)
 }
 
 func init() {

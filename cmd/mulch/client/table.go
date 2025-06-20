@@ -6,72 +6,80 @@ import (
 	"strings"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/tw"
 	"golang.org/x/term"
 )
 
-// RenderStringTable renders a table as a string
-func RenderStringTable(headers []string, data [][]string, tableCallback func(*tablewriter.Table)) string {
+func RenderTableString(headers []string, data [][]string, conf tablewriter.Config) string {
+	config := tablewriter.WithConfig(conf)
+
 	tableString := &strings.Builder{}
-	table := tablewriter.NewWriter(tableString)
-	table.SetHeader(headers)
-	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-	table.SetCenterSeparator("|")
-	// apply callback if provided
-	if tableCallback != nil {
-		tableCallback(table)
-	}
-	table.AppendBulk(data)
+	table := tablewriter.NewTable(tableString, config)
+	table.Header(headers)
+	table.Bulk(data)
 	table.Render()
 
 	return tableString.String()
 }
 
 // RenderTable renders a table to stdout
-func RenderTable(headers []string, data [][]string, tableCallback func(*tablewriter.Table)) {
-	fmt.Print(RenderStringTable(headers, data, tableCallback))
-}
-
-// RenderTableTruncateCol renders a table to stdout, truncatting the column
-// colNum if table does not fit the screen width
-func RenderTableTruncateCol(colNum int, headers []string, data [][]string, tableCallback func(*tablewriter.Table)) {
-	tableStr := RenderStringTable(headers, data, tableCallback)
-
-	// find the longest line of tableString
-	lines := strings.Split(tableStr, "\n")
-	longestLine := len(lines[0]) // all lines have the same length
-
+// Note: tablewriter v1.0.7: can't get consistent results with MaxWidth,
+// so we use an internal table hack
+func RenderTable(headers []string, data [][]string) {
 	// compute screen overflow
 	width, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		width = 0
 	}
 
-	overflow := longestLine - width
-	if width == 0 {
-		overflow = 0
-	}
+	conf := tablewriter.Config{}
 
-	// get longest value for colNum column
-	longestName := 0
-	for _, line := range data {
-		l := len(line[colNum])
-		if l > longestName {
-			longestName = l
+	internalTableString := RenderTableString(headers, data, conf)
+
+	// read first line to get the width of the table
+	firstLine := strings.Split(internalTableString, "\n")[0]
+	firstLineLen := len([]rune(firstLine))
+	overflow := firstLineLen - width
+
+	largestColWidth := 0
+	currentColWidth := 0
+
+	// (anything else than '─' is a column separator)
+	for _, r := range firstLine {
+		if r != '─' {
+			if currentColWidth > largestColWidth {
+				largestColWidth = currentColWidth
+			}
+			currentColWidth = 0
+		} else {
+			currentColWidth++
 		}
 	}
 
-	maxLen := longestName - overflow
-	if maxLen < 5 {
-		// don't shorten names if we only have a few characters, it will be unreadable
-		maxLen = longestName
+	newMaxColWidth := largestColWidth - overflow + 1
+	if newMaxColWidth < 10 {
+		newMaxColWidth = 10
 	}
 
-	for _, line := range data {
-		name := line[colNum]
-		if len(name) > maxLen {
-			line[colNum] = name[:maxLen-1] + "…"
-		}
+	// is truncation needed?
+	conf.Row = tw.CellConfig{
+		ColMaxWidths: tw.CellWidth{Global: newMaxColWidth},
 	}
 
-	RenderTable(headers, data, tableCallback)
+	internalTableString = RenderTableString(headers, data, conf)
+	firstLine = strings.Split(internalTableString, "\n")[0]
+	firstLineLen = len([]rune(firstLine))
+	if firstLineLen <= width {
+		// no
+		fmt.Println(internalTableString)
+		return
+	}
+
+	// yes, we need to truncate
+	conf.Row.Formatting = tw.CellFormatting{
+		AutoWrap: tw.WrapTruncate,
+	}
+
+	tableString := RenderTableString(headers, data, conf)
+	fmt.Println(tableString)
 }

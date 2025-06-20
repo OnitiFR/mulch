@@ -10,7 +10,6 @@ import (
 
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -91,9 +90,7 @@ func doListCB(reader io.Reader, _ http.Header) {
 		}
 
 		headers := []string{"Name", "User", "Description"}
-		client.RenderTable(headers, strData, func(table *tablewriter.Table) {
-			table.SetColWidth(50)
-		})
+		client.RenderTable(headers, strData)
 
 	}
 }

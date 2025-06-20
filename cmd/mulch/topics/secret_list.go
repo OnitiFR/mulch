@@ -63,7 +63,7 @@ func secretListCB(reader io.Reader, _ http.Header) {
 		}
 
 		headers := []string{"Secret", "Modified", "Author"}
-		client.RenderTable(headers, strData, nil)
+		client.RenderTable(headers, strData)
 	}
 }
 

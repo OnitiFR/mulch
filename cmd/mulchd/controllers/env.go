@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"sort"
 
+	"al.essio.dev/pkg/shellescape"
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
-	"github.com/alessio/shellescape"
 )
 
 // EnvController returns a text file with exported environment

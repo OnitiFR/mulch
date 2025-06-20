@@ -60,7 +60,7 @@ func keyListCB(reader io.Reader, _ http.Header) {
 		}
 
 		headers := []string{"Comment", "Rights", "Fingerprints"}
-		client.RenderTable(headers, strData, nil)
+		client.RenderTable(headers, strData)
 	}
 }
 

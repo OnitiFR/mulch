@@ -86,7 +86,7 @@ func vmListCB(reader io.Reader, _ http.Header) {
 		}
 
 		headers := []string{"Name", "Rev", "State", "Locked", "Operation"}
-		client.RenderTable(headers, strData, nil)
+		client.RenderTable(headers, strData)
 	}
 }
 
