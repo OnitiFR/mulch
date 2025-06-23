@@ -56,7 +56,7 @@ func RenderTable(headers []string, data [][]string) {
 		}
 	}
 
-	newMaxColWidth := largestColWidth - overflow + 1
+	newMaxColWidth := largestColWidth - overflow
 	if newMaxColWidth < 10 {
 		newMaxColWidth = 10
 	}
@@ -71,7 +71,7 @@ func RenderTable(headers []string, data [][]string) {
 	firstLineLen = len([]rune(firstLine))
 	if firstLineLen <= width {
 		// no
-		fmt.Println(internalTableString)
+		fmt.Print(internalTableString)
 		return
 	}
 
@@ -81,5 +81,5 @@ func RenderTable(headers []string, data [][]string) {
 	}
 
 	tableString := RenderTableString(headers, data, conf)
-	fmt.Println(tableString)
+	fmt.Print(tableString)
 }
