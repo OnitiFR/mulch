@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/term"
 )
 
 const stringWordSeparators = "[ \t\n,.;:\\(\\)\\[\\]{}'\"/\\\\!\\?<>@#|*+-=]"
@@ -128,4 +130,16 @@ func StringIsVariable(s string, varName string) (bool, string) {
 		return false, ""
 	}
 	return true, s[len(varName)+1:]
+}
+
+func GetTerminalSize() (int, int, error) {
+	if tty, err := os.Open("/dev/tty"); err == nil {
+		defer tty.Close()
+		return term.GetSize(int(tty.Fd()))
+	} else if term.IsTerminal(int(os.Stdout.Fd())) {
+		return term.GetSize(int(os.Stdout.Fd()))
+	} else if term.IsTerminal(int(os.Stderr.Fd())) {
+		return term.GetSize(int(os.Stderr.Fd()))
+	}
+	return 0, 0, fmt.Errorf("aucun terminal détecté")
 }

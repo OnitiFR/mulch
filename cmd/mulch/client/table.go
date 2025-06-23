@@ -2,12 +2,11 @@ package client
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
+	"github.com/OnitiFR/mulch/common"
 	"github.com/olekukonko/tablewriter"
 	"github.com/olekukonko/tablewriter/tw"
-	"golang.org/x/term"
 )
 
 func RenderTableString(headers []string, data [][]string, conf tablewriter.Config) string {
@@ -27,9 +26,9 @@ func RenderTableString(headers []string, data [][]string, conf tablewriter.Confi
 // so we use an internal table hack
 func RenderTable(headers []string, data [][]string) {
 	// compute screen overflow
-	width, _, err := term.GetSize(int(os.Stdout.Fd()))
+	width, _, err := common.GetTerminalSize()
 	if err != nil {
-		width = 0
+		width = 80
 	}
 
 	conf := tablewriter.Config{}
