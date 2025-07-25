@@ -102,6 +102,8 @@ func AbordGreenhouseVMController(req *server.Request) {
 	- … so we use a force stop (with the help of SSH keep-alives to quickly detect shutdown)
 	*/
 
+	entry.VM.TemporaryFlags.ForceDeleteOnScriptFailure = true
+
 	err := server.VMStopByName(entry.Name, server.VMStopForce, 10*time.Second, req.App, req.Stream)
 	if err != nil {
 		req.Stream.Failuref("unable to abort: %s", err)

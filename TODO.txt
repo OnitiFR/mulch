@@ -26,7 +26,6 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Short term:
-- "vm abort" on "vm create -k" results in a half-created stoppped VM, change this?
 - SSH proxy: can we write an error to the client on early error? (is it a good idea anyway?)
   - see SSHProxy.serveProxy()
 - allow SSH connection to VMs in the greenhouse? (with -rX)

@@ -68,6 +68,11 @@ const VMStopEmergencyTimeout = 20 * time.Second
 // a VM creation (so we can restore backup a bit later)
 const BackupBlankRestore = "-"
 
+// VMTemporaryFlags are temporary flags for a VM (not saved in database)
+type VMTemporaryFlags struct {
+	ForceDeleteOnScriptFailure bool
+}
+
 // VM defines a virtual machine ("domain")
 type VM struct {
 	App                  *App `json:"-"`
@@ -84,6 +89,8 @@ type VM struct {
 	LastRebuildDowntime  time.Duration
 	AssignedMAC          string
 	AssignedIPv4         string
+
+	TemporaryFlags VMTemporaryFlags `json:"-"`
 }
 
 // SetOperation change VM WIP
@@ -645,7 +652,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	}
 	err = run.Go(ctx)
 	if err != nil {
-		if !allowScriptFailure {
+		if !allowScriptFailure || vm.TemporaryFlags.ForceDeleteOnScriptFailure {
 			return nil, nil, err
 		}
 		log.Error(err.Error())
@@ -660,7 +667,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 			// 5a - restore backup
 			err = VMRestoreNoChecks(vm, vmName, backup, app, log)
 			if err != nil {
-				if !allowScriptFailure {
+				if !allowScriptFailure || vm.TemporaryFlags.ForceDeleteOnScriptFailure {
 					return nil, nil, err
 				}
 				log.Error(err.Error())
@@ -707,7 +714,7 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		}
 		err = run.Go(ctx)
 		if err != nil {
-			if !allowScriptFailure {
+			if !allowScriptFailure || vm.TemporaryFlags.ForceDeleteOnScriptFailure {
 				return nil, nil, err
 			}
 			log.Error(err.Error())
