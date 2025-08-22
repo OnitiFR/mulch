@@ -104,6 +104,12 @@
       <address type='pci' domain='0x0000' bus='0x00' slot='0x08' function='0x0'/>
     </memballoon>
 
+    <!-- Debian 13 reboot-loops without a video card -->
+    <video>
+      <model type="virtio" heads="1" primary="yes"/>
+      <address type="pci" domain="0x0000" bus="0x00" slot="0x02" function="0x0"/>
+    </video>
+
     <rng model='virtio'>
       <backend model='random'>/dev/urandom</backend>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x09' function='0x0'/>

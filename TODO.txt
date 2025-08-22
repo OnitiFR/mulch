@@ -71,6 +71,8 @@ Short term:
 - even better "secret list" command (closer to the usual FS experience)
 - investigate Let's Encrypt throttling issues
 - add "ipv4 only" option for seed downloads?
+- cloud-init: The 'nocloud-net' datasource name is deprecated in 24.1 and scheduled to be removed in 29.1. Use 'nocloud' instead, which uses the seedfrom protocolscheme (http// or file://) to decide how to run.
+- cloud-init: Unhandled non-multipart (text/x-not-multipart) userdata: 'b''...'
 
 Long term:
 - find a way to secure ssh agent forwarding? (so other users can't use the socket in the VM)
