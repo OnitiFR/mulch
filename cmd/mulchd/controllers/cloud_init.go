@@ -47,6 +47,8 @@ func CloudInitController(req *server.Request) {
 		req.Println(userData)
 	case "vendor-data":
 		req.Println("") // nothing here (yet?), everything is sent as user-data
+	case "network-config":
+		req.Println("") // nothing here
 	default:
 		errMsg := "invalid requested filename"
 		log.Error(errMsg)
