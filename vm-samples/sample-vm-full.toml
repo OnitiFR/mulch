@@ -9,7 +9,7 @@ hostname = "testvm.localdomain" # default: localhost or first domain if provided
 timezone = "Europe/Paris" # default
 app_user = "app" # default
 
-seed = "debian_12"
+seed = "debian_13"
 
 # Will speed up creation for this test (no update/upgrade)
 # (but install will not be up to date, don't do this in production!)

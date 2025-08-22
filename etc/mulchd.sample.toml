@@ -129,8 +129,8 @@ auto_rebuild_time = "23:30"
 
 # Sample seeds
 [[seed]]
-name = "debian_12"
-url = "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
+name = "debian_13"
+url = "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2"
 
 [[seed]]
 name = "centos_7"
