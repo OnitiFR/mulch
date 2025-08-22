@@ -1,0 +1,16 @@
+name = "debian_13_lamp"
+hostname = "lamp"
+
+seed = "debian_13"
+
+disk_size = "8G"
+ram_size = "2G"
+cpu_count = 1
+
+auto_rebuild = "daily"
+
+prepare = [
+    "admin@{core}/prepare/seeders/deb-comfort.sh",
+    "admin@{core}/prepare/seeders/deb-lamp.sh",
+    "app@{core}/prepare/wp-cli.sh",
+]
