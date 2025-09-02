@@ -221,7 +221,9 @@ func (app *App) initSigQUITHandler() {
 				// TODO: add a proper dump (listener list, connections per listeners, etc)
 				fmt.Fprintf(writer, "port proxy: %d connection(s)\n", app.PortServer.GetTotalConnections())
 				fmt.Fprintf(writer, "\n\n")
-				app.ProxyServer.RateController.Dump(writer)
+				if app.ProxyServer.RateController != nil {
+					app.ProxyServer.RateController.Dump(writer)
+				}
 
 				writer.Flush()
 				app.Log.Infof("QUIT Signal, dumped data to %s", filename)
