@@ -4,7 +4,7 @@
 # For: Debian 9+ / Ubuntu 18.10+
 
 export DEBIAN_FRONTEND="noninteractive"
-sudo -E apt-get -y -qq install progress mc powerline locate man xfsprogs || exit $?
+sudo -E apt-get -y -qq install progress mc powerline locate man || exit $?
 
 # Debian 12+: cron is not installed by default
 sudo -E apt-get -y -qq install --no-install-recommends cron || exit $?

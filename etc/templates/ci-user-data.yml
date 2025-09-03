@@ -45,6 +45,7 @@ users:
 # Needed when we phone home
 packages:
   - curl
+  - xfsprogs
 
 write_files:
   - content: |
