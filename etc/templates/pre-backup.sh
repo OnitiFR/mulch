@@ -25,7 +25,7 @@ rm "$tmpfile"
 # big qcow2 files as a result.
 sudo which mkfs.xfs > /dev/null
 if [ $? -ne 0 ]; then
-  echo "resizing FS on $part…"
+  echo "resizing FS on $part… (ext)"
   sudo resize2fs "$part" > "$tmpfile" 2>&1
   if [ $? -ne 0 ]; then
       cat "$tmpfile"
