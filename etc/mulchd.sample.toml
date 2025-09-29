@@ -91,6 +91,11 @@ proxy_chain_psk = ""
 # This setting is proxy_chain compliant (the original IP is preserved).
 proxy_force_x_forwarded_for = false
 
+# If you use a third-party reverse proxy in front of mulch-proxy,
+# you can specify its IP address(es) here, so that headers are trusted
+# and forwarded (proxy_chain must be disabled).
+proxy_trusted_proxies = []
+
 # Rate Control for the Reverse Proxy
 #
 # Limit 1 (concurrent requests):

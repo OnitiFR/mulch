@@ -108,6 +108,8 @@ func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 		ChainPSK:              app.Config.ChainPSK,
 		ChainDomain:           chainDomain,
 		ForceXForwardedFor:    app.Config.ForceXForwardedFor,
+		TrustedProxies:        app.Config.TrustedProxies,
+		HaveTrustedProxies:    app.Config.HaveTrustedProxies,
 		Log:                   app.Log,
 		RequestList:           NewRequestList(debug),
 		RateController:        rateController,

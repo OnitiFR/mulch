@@ -53,6 +53,8 @@ type ProxyServerParams struct {
 	ChainPSK              string
 	ChainDomain           string
 	ForceXForwardedFor    bool
+	HaveTrustedProxies    bool
+	TrustedProxies        map[string]bool
 	Log                   *Log
 	RequestList           *RequestList
 	RateController        *RateController
@@ -241,6 +243,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	// remove any port info from req.Host for the lookup
 	parts := strings.Split(req.Host, ":")
 	host := strings.ToLower(parts[0])
+	ip, _, _ := net.SplitHostPort(req.RemoteAddr)
 
 	if req.Header.Get(WatchDogHeaderName) != "" {
 		res.Write([]byte("OK"))
@@ -250,6 +253,12 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	fromParent := false
 	if proxy.config.ChainMode == ChainModeChild && proxy.config.ChainPSK == req.Header.Get(PSKHeaderName) {
 		fromParent = true
+	}
+
+	if proxy.config.ChainMode == ChainModeNone && proxy.config.HaveTrustedProxies {
+		if _, ok := proxy.config.TrustedProxies[ip]; ok {
+			fromParent = true
+		}
 	}
 
 	proto := ProtoHTTP
@@ -292,8 +301,6 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 
 	// rate limiting
 	if !fromParent && proxy.RateController != nil {
-		ip, _, _ := net.SplitHostPort(req.RemoteAddr)
-
 		if !proxy.RateController.IsVIP(ip) {
 			entry := proxy.RateController.GetEntry(ip)
 

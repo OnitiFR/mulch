@@ -58,6 +58,10 @@ type AppConfig struct {
 	// Replace X-Forwarded-For header with remote address
 	ForceXForwardedFor bool
 
+	// Trusted third-party proxies
+	TrustedProxies     map[string]bool
+	HaveTrustedProxies bool
+
 	// Rate controller configuration (if any)
 	RateControllerConfig *RateControllerConfig
 
@@ -79,6 +83,8 @@ type tomlAppConfig struct {
 	ChainPSK       string `toml:"proxy_chain_psk"`
 
 	ForceXForwardedFor bool `toml:"proxy_force_x_forwarded_for"`
+
+	TrustedProxies []string `toml:"proxy_trusted_proxies"`
 
 	RateConcurrentMaxRequests     int32    `toml:"proxy_rate_concurrent_max_requests"`
 	RateConcurrentOverflowTimeout float64  `toml:"proxy_rate_concurrent_overflow_timeout_seconds"`
@@ -185,6 +191,19 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	}
 
 	appConfig.ForceXForwardedFor = tConfig.ForceXForwardedFor
+
+	appConfig.TrustedProxies = make(map[string]bool)
+
+	if len(tConfig.TrustedProxies) > 0 {
+		appConfig.HaveTrustedProxies = true
+
+		for _, ip := range tConfig.TrustedProxies {
+			if _, ok := appConfig.TrustedProxies[ip]; ok {
+				return nil, fmt.Errorf("duplicate IP in proxy_trusted_proxies: %s", ip)
+			}
+			appConfig.TrustedProxies[ip] = true
+		}
+	}
 
 	// concurrent requests
 	if tConfig.RateConcurrentMaxRequests > 0 {
