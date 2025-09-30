@@ -86,7 +86,8 @@ type tomlVMConfig struct {
 	RAMSize         datasize.ByteSize `toml:"ram_size"`
 	CPUCount        int               `toml:"cpu_count"`
 	Domains         []string
-	RedirectToHTTPS bool `toml:"redirect_to_https"`
+	RedirectToHTTPS bool   `toml:"redirect_to_https"`
+	RateProfile     string `toml:"rate_profile"`
 	Redirects       [][]string
 	Env             [][]string
 	Secrets         []string
@@ -293,6 +294,7 @@ func NewVMConfigFromTomlReader(configIn io.Reader, app *App) (*VMConfig, error) 
 			Name:            hostName,
 			DestinationPort: portNum,
 			RedirectToHTTPS: tConfig.RedirectToHTTPS,
+			RateProfile:     tConfig.RateProfile,
 		}
 		vmConfig.Domains = append(vmConfig.Domains, &domain)
 		domainList = append(domainList, hostName)

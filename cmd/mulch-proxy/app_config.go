@@ -63,7 +63,7 @@ type AppConfig struct {
 	HaveTrustedProxies bool
 
 	// Rate controller configuration (if any)
-	RateControllerConfig *RateControllerConfig
+	RateControllerConfigs map[string]*RateControllerConfig
 
 	// global mulchd configuration path
 	configPath string
@@ -86,12 +86,17 @@ type tomlAppConfig struct {
 
 	TrustedProxies []string `toml:"proxy_trusted_proxies"`
 
-	RateConcurrentMaxRequests     int32    `toml:"proxy_rate_concurrent_max_requests"`
-	RateConcurrentOverflowTimeout float64  `toml:"proxy_rate_concurrent_overflow_timeout_seconds"`
-	RateLimitBurstRequests        int      `toml:"proxy_rate_limit_burst_requests"`
-	RateLimitRequestsPerSecond    float64  `toml:"proxy_rate_limit_requests_per_second"`
-	RateLimitMaxDelaySeconds      float64  `toml:"proxy_rate_limit_max_delay_seconds"`
-	RateVIPList                   []string `toml:"proxy_rate_vip_list"`
+	RateControllers []tomlConfigRate `toml:"proxy_rate"`
+}
+
+type tomlConfigRate struct {
+	Name                      string   `toml:"name"`
+	ConcurrentMaxRequests     int32    `toml:"concurrent_max_requests"`
+	ConcurrentOverflowTimeout float64  `toml:"concurrent_overflow_timeout_seconds"`
+	LimitBurstRequests        int      `toml:"limit_burst_requests"`
+	LimitRequestsPerSecond    float64  `toml:"limit_requests_per_second"`
+	LimitMaxDelaySeconds      float64  `toml:"limit_max_delay_seconds"`
+	VipList                   []string `toml:"vip_list"`
 }
 
 // NewAppConfigFromTomlFile return a AppConfig using
@@ -205,48 +210,61 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 		}
 	}
 
-	// concurrent requests
-	if tConfig.RateConcurrentMaxRequests > 0 {
-		appConfig.RateControllerConfig = &RateControllerConfig{
-			ConcurrentMaxRequests:     tConfig.RateConcurrentMaxRequests,
-			ConcurrentOverflowTimeout: time.Duration(tConfig.RateConcurrentOverflowTimeout * float64(time.Second)),
-		}
-	} else {
-		if tConfig.RateConcurrentOverflowTimeout > 0 {
-			return nil, errors.New("proxy_rate_concurrent_overflow_timeout requires proxy_rate_concurrent_max_requests")
-		}
-	}
+	appConfig.RateControllerConfigs = make(map[string]*RateControllerConfig)
 
-	// rate limit
-	if tConfig.RateLimitBurstRequests > 0 || tConfig.RateLimitRequestsPerSecond > 0 || tConfig.RateLimitMaxDelaySeconds > 0 {
-		if tConfig.RateLimitBurstRequests <= 0 {
-			return nil, errors.New("proxy_rate_limit_burst_requests must be > 0")
+	for _, rc := range tConfig.RateControllers {
+		if rc.Name == "" {
+			return nil, errors.New("a proxy_rate entry is missing the name")
 		}
 
-		if tConfig.RateLimitRequestsPerSecond <= 1 {
-			return nil, errors.New("proxy_rate_limit_requests_per_second must be > 1")
+		if _, ok := appConfig.RateControllerConfigs[rc.Name]; ok {
+			return nil, fmt.Errorf("duplicate proxy_rate name: '%s'", rc.Name)
 		}
 
-		if appConfig.RateControllerConfig == nil {
-			appConfig.RateControllerConfig = &RateControllerConfig{}
+		appRc := &RateControllerConfig{
+			Name:                      rc.Name,
+			ConcurrentMaxRequests:     rc.ConcurrentMaxRequests,
+			ConcurrentOverflowTimeout: time.Duration(rc.ConcurrentOverflowTimeout * float64(time.Second)),
+			RateEnable:                false,
 		}
-		appConfig.RateControllerConfig.RateEnable = true
-		appConfig.RateControllerConfig.RateBurst = tConfig.RateLimitBurstRequests
-		appConfig.RateControllerConfig.RateRequestsPerSecond = tConfig.RateLimitRequestsPerSecond
-		appConfig.RateControllerConfig.RateMaxDelay = time.Duration(tConfig.RateLimitMaxDelaySeconds * float64(time.Second))
-	}
 
-	if len(tConfig.RateVIPList) > 0 {
-		if appConfig.RateControllerConfig == nil {
-			return nil, errors.New("proxy_rate_vip_list requires a rate limit configuration")
-		}
-		appConfig.RateControllerConfig.VipList = make(map[string]bool)
-		for _, ip := range tConfig.RateVIPList {
-			if _, ok := appConfig.RateControllerConfig.VipList[ip]; ok {
-				return nil, fmt.Errorf("duplicate IP in proxy_rate_vip_list: %s", ip)
+		if rc.LimitBurstRequests > 0 || rc.LimitRequestsPerSecond > 0 || rc.LimitMaxDelaySeconds > 0 {
+			if rc.LimitBurstRequests <= 0 {
+				return nil, fmt.Errorf("proxy_rate '%s': limit_burst_requests must be > 0", rc.Name)
 			}
 
-			appConfig.RateControllerConfig.VipList[ip] = true
+			if rc.LimitRequestsPerSecond <= 1 {
+				return nil, fmt.Errorf("proxy_rate '%s': limit_requests_per_second must be > 1", rc.Name)
+			}
+
+			if rc.LimitMaxDelaySeconds <= 0 {
+				return nil, fmt.Errorf("proxy_rate '%s': limit_max_delay_seconds must be > 0", rc.Name)
+			}
+
+			appRc.RateEnable = true
+			appRc.RateBurst = rc.LimitBurstRequests
+			appRc.RateRequestsPerSecond = rc.LimitRequestsPerSecond
+			appRc.RateMaxDelay = time.Duration(rc.LimitMaxDelaySeconds * float64(time.Second))
+		}
+
+		if len(rc.VipList) > 0 {
+			appRc.VipList = make(map[string]bool)
+			for _, ip := range rc.VipList {
+				if _, ok := appRc.VipList[ip]; ok {
+					return nil, fmt.Errorf("duplicate IP in proxy_rate '%s' vip_list: %s", rc.Name, ip)
+				}
+
+				appRc.VipList[ip] = true
+			}
+		}
+
+		appConfig.RateControllerConfigs[rc.Name] = appRc
+	}
+
+	// create "default" (empty) rate controller if not already defined
+	if _, ok := appConfig.RateControllerConfigs["default"]; !ok {
+		appConfig.RateControllerConfigs["default"] = &RateControllerConfig{
+			Name: "default",
 		}
 	}
 

@@ -29,13 +29,13 @@ const (
 
 // ProxyServer describe a Mulch proxy server
 type ProxyServer struct {
-	DomainDB       *DomainDatabase
-	Log            *Log
-	RequestList    *RequestList
-	RateController *RateController
-	HTTP           *http.Server
-	HTTPS          *http.Server
-	config         *ProxyServerParams
+	DomainDB        *DomainDatabase
+	Log             *Log
+	RequestList     *RequestList
+	RateControllers map[string]*RateController
+	HTTP            *http.Server
+	HTTPS           *http.Server
+	config          *ProxyServerParams
 }
 
 // ProxyServerParams is needed to create a ProxyServer
@@ -57,7 +57,7 @@ type ProxyServerParams struct {
 	TrustedProxies        map[string]bool
 	Log                   *Log
 	RequestList           *RequestList
-	RateController        *RateController
+	RateControllers       map[string]*RateController
 	Trace                 bool
 	Debug                 bool
 }
@@ -98,11 +98,11 @@ func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 // NewProxyServer instanciates a new ProxyServer
 func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 	proxy := ProxyServer{
-		DomainDB:       config.DomainDB,
-		Log:            config.Log,
-		RequestList:    config.RequestList,
-		RateController: config.RateController,
-		config:         config,
+		DomainDB:        config.DomainDB,
+		Log:             config.Log,
+		RequestList:     config.RequestList,
+		RateControllers: config.RateControllers,
+		config:          config,
 	}
 
 	manager := &autocert.Manager{
@@ -300,9 +300,14 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 	}
 
 	// rate limiting
-	if !fromParent && proxy.RateController != nil {
-		if !proxy.RateController.IsVIP(ip) {
-			entry := proxy.RateController.GetEntry(ip)
+	if !fromParent {
+		rc, ok := proxy.RateControllers[domain.RateProfile]
+		if !ok {
+			rc = proxy.RateControllers["default"]
+		}
+
+		if !rc.IsVIP(ip) {
+			entry := rc.GetEntry(ip)
 
 			allowed, needFinish, reason := entry.IsAllowed(req.Context())
 			if needFinish {

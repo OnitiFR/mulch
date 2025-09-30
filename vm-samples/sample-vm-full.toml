@@ -47,6 +47,10 @@ redirects = [
     ["old.test1.localhost", "test1.localhost", "301"], # default HTTP redirect is 302
 ]
 
+# Rate limiting profile for this VM's domains (see mulchd.toml)
+# (using a non-existing profile will fallback to "default", without any warning)
+rate_profile = "default"
+
 # Allow communications **between VMs** of the same @group using a TCP-proxy
 # Notes:
 #   - only TCP is supported currently

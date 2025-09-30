@@ -83,16 +83,19 @@ func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 		chainDomain = app.Config.ChainChildURL.Hostname()
 	}
 
-	var rateController *RateController
-	if app.Config.RateControllerConfig != nil {
-		rateController = NewRateController(*app.Config.RateControllerConfig)
-		scheduler := time.NewTicker(1 * time.Minute)
-		go func() {
-			for range scheduler.C {
+	rateControllers := make(map[string]*RateController)
+	for name, rcConfig := range app.Config.RateControllerConfigs {
+		rateControllers[name] = NewRateController(*rcConfig)
+	}
+
+	scheduler := time.NewTicker(1 * time.Minute)
+	go func() {
+		for range scheduler.C {
+			for _, rateController := range rateControllers {
 				rateController.Clean(RateControllerCleanupInterval)
 			}
-		}()
-	}
+		}
+	}()
 
 	app.ProxyServer = NewProxyServer(&ProxyServerParams{
 		DirCache:              cacheDir,
@@ -112,7 +115,7 @@ func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 		HaveTrustedProxies:    app.Config.HaveTrustedProxies,
 		Log:                   app.Log,
 		RequestList:           NewRequestList(debug),
-		RateController:        rateController,
+		RateControllers:       rateControllers,
 		Trace:                 trace,
 		Debug:                 debug,
 	})
@@ -223,8 +226,8 @@ func (app *App) initSigQUITHandler() {
 				// TODO: add a proper dump (listener list, connections per listeners, etc)
 				fmt.Fprintf(writer, "port proxy: %d connection(s)\n", app.PortServer.GetTotalConnections())
 				fmt.Fprintf(writer, "\n\n")
-				if app.ProxyServer.RateController != nil {
-					app.ProxyServer.RateController.Dump(writer)
+				for _, rc := range app.ProxyServer.RateControllers {
+					rc.Dump(writer)
 				}
 
 				writer.Flush()

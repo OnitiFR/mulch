@@ -20,6 +20,8 @@ type RateController struct {
 
 // RateControllerConfig holds controller config
 type RateControllerConfig struct {
+	Name string // name of this profile
+
 	// max number of concurrent "running" requests (0 = unlimited)
 	// WARN: the client may close a request (and therefore decrement the
 	// counter) but the request can still exists in the backend
@@ -144,11 +146,11 @@ func (rc *RateController) Dump(w io.Writer) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 
-	fmt.Fprintf(w, "-- RateController: %d entrie(s), exp %s\n", len(rc.entries), RateControllerCleanupInterval)
+	fmt.Fprintf(w, "-- RateController %s: %d entrie(s), exp %s\n", rc.config.Name, len(rc.entries), RateControllerCleanupInterval)
 
 	cnt := 0
 	for ip, entry := range rc.entries {
-		if len(entry.currentRequestSlots) == 0 && entry.rateLimiter.Tokens() == float64(entry.rateLimiter.Burst()) {
+		if len(entry.currentRequestSlots) == 0 && (!entry.config.RateEnable || entry.rateLimiter.Tokens() == float64(entry.rateLimiter.Burst())) {
 			continue
 		}
 
@@ -163,5 +165,5 @@ func (rc *RateController) Dump(w io.Writer) {
 		}
 	}
 
-	fmt.Fprintf(w, "-- displayed %d non-idle entrie(s)\n", cnt)
+	fmt.Fprintf(w, "-- displayed %d non-idle entrie(s)\n\n", cnt)
 }

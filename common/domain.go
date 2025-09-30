@@ -11,6 +11,7 @@ type Domain struct {
 	DestinationHost string
 	DestinationPort int
 	RedirectToHTTPS bool
+	RateProfile     string
 
 	// used internaly by Mulch reverse proxy server
 	ReverseProxy *httputil.ReverseProxy `json:"-"`

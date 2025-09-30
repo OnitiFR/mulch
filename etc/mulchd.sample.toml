@@ -37,6 +37,10 @@ mulch_super_user = "admin"
 # Leave this alone if you don't know what you're doing ;)
 mulch_super_user_ssh_key = "mulch_super_user"
 
+# Auto-rebuild will check everyday, at specified time, if any VM need
+# an automatic rebuild (according its settings). Format: HH:MM
+auto_rebuild_time = "23:30"
+
 # Listen address for SSH proxy
 proxy_listen_ssh = ":8022"
 
@@ -97,40 +101,39 @@ proxy_force_x_forwarded_for = false
 proxy_trusted_proxies = []
 
 # Rate Control for the Reverse Proxy
+# (use "proxy_rate" in VM TOMLs to select a rate control profile)
 #
 # Limit 1 (concurrent requests):
-# - proxy_rate_concurrent_max_requests
+# - concurrent_max_requests
 #     Maximum number of concurrent "running" requests
-# - proxy_rate_concurrent_overflow_timeout_seconds
+# - concurrent_overflow_timeout_seconds
 #     When the limit is reached, wait this number of seconds for a free slot
 #     before rejecting (0 = immediate)
 #
 # Limit 2 (rate limiting):
-# - proxy_rate_limit_burst_requests
+# - limit_burst_requests
 #     Number of requests that be accepted without delay…
-# - proxy_rate_limit_requests_per_second
+# - limit_requests_per_second
 #     … after that, requests will be delayed to match this rate…
 #     (it also acts as a "cooldown" for the burst, must be > 1)
-# - proxy_rate_limit_max_delay_seconds
-#     … with a maximum delay of this number of seconds
+# - limit_max_delay_seconds
+#     … with a maximum delay of this number of seconds (rejected if exceeded)
 #
 # - Both of these limits are independent and can be enabled separately
 # - Disable a limit by setting all values to 0
 # - Rate control is applied per IP address
 # - Rejected requests will return a 429 status code
-# - proxy_rate_vip_list are not affected by rate control (list of IPs strings)
-proxy_rate_concurrent_max_requests = 0
-proxy_rate_concurrent_overflow_timeout_seconds = 0
+# - vip_list are not affected by rate control (list of IPs strings)
+[[proxy_rate]]
+name = "default"
+concurrent_max_requests = 0
+concurrent_overflow_timeout_seconds = 0
 
-proxy_rate_limit_burst_requests = 0
-proxy_rate_limit_requests_per_second = 0
-proxy_rate_limit_max_delay_seconds = 0
+limit_burst_requests = 0
+limit_requests_per_second = 0
+limit_max_delay_seconds = 0
 
-proxy_rate_vip_list = []
-
-# Auto-rebuild will check everyday, at specified time, if any VM need
-# an automatic rebuild (according its settings). Format: HH:MM
-auto_rebuild_time = "23:30"
+vip_list = []
 
 # Sample seeds
 [[seed]]
