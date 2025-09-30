@@ -53,6 +53,10 @@ func NewRateController(config RateControllerConfig) *RateController {
 	}
 }
 
+func (rc *RateController) IsActive() bool {
+	return rc.config.ConcurrentMaxRequests > 0 || rc.config.RateEnable
+}
+
 // GetEntry will return the RateControllerEntry for a given IP
 func (rc *RateController) GetEntry(ip string) *RateControllerEntry {
 	rc.mu.Lock()

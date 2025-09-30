@@ -306,7 +306,7 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 			rc = proxy.RateControllers["default"]
 		}
 
-		if !rc.IsVIP(ip) {
+		if rc.IsActive() && !rc.IsVIP(ip) {
 			entry := rc.GetEntry(ip)
 
 			allowed, needFinish, reason := entry.IsAllowed(req.Context())
