@@ -162,7 +162,8 @@ func (srv *APIServer) checkDomainsController(response http.ResponseWriter, reque
 		http.Error(response, err.Error(), http.StatusBadRequest)
 		return err
 	}
-	conflicts := srv.ProxyServer.DomainDB.GetConflictingDomains(data.Domains, data.ForwardTo)
+
+	conflicts := srv.ProxyServer.DomainDB.GetConflictingDomains(data.GetDomainNames(), data.ForwardTo)
 
 	response.Header().Set("Content-Type", "application/json")
 	dataJSON, err := json.Marshal(conflicts)

@@ -250,7 +250,7 @@ func (app *App) refreshDomains() {
 // contact our parent proxy and send all our routes so he can forward requests
 func (app *App) refreshParentDomains() error {
 	data := common.ProxyChainDomains{
-		Domains:   app.ProxyServer.DomainDB.GetDomainsNames(),
+		Domains:   app.ProxyServer.DomainDB.GetProxyChainDomains(),
 		ForwardTo: app.Config.ChainChildURL.String(),
 	}
 

@@ -96,6 +96,18 @@ func (ddb *DomainDatabase) GetDomainsNames() []string {
 	return keys
 }
 
+// GetProxyChainDomains returns all domains as a ProxyChainDomain array
+func (ddb *DomainDatabase) GetProxyChainDomains() []common.ProxyChainDomain {
+	ddb.mutex.Lock()
+	defer ddb.mutex.Unlock()
+
+	var domains []common.ProxyChainDomain
+	for _, domain := range ddb.db {
+		domains = append(domains, common.NewProxyChainDomain(domain.Name, domain.RateProfile))
+	}
+	return domains
+}
+
 // GetByName lookups a Domain by its domain
 func (ddb *DomainDatabase) GetByName(name string) (*common.Domain, error) {
 	ddb.mutex.Lock()
@@ -118,7 +130,7 @@ func (ddb *DomainDatabase) Count() int {
 
 // ReplaceChainedDomains remove all domains chain-forwared to "forwardTo"
 // and replace it with "domains"
-func (ddb *DomainDatabase) ReplaceChainedDomains(domains []string, forwardTo string) error {
+func (ddb *DomainDatabase) ReplaceChainedDomains(domains []common.ProxyChainDomain, forwardTo string) error {
 	ddb.mutex.Lock()
 	defer ddb.mutex.Unlock()
 
@@ -131,10 +143,11 @@ func (ddb *DomainDatabase) ReplaceChainedDomains(domains []string, forwardTo str
 
 	// 2 - add new domains, erasing any conflicting domain
 	for _, domain := range domains {
-		ddb.db[domain] = &common.Domain{
-			Name:      domain,
-			TargetURL: forwardTo,
-			Chained:   true,
+		ddb.db[domain.Domain] = &common.Domain{
+			Name:        domain.Domain,
+			TargetURL:   forwardTo,
+			Chained:     true,
+			RateProfile: domain.RateProfile,
 		}
 	}
 

@@ -56,13 +56,15 @@ func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM s
 // CheckDomainsConflictsOnParent will contact proxy-chain parent and ask if any
 // domain is conflicting with another child mulchd
 func CheckDomainsConflictsOnParent(domains []*common.Domain, config *AppConfig) error {
-	var domainNames []string
+	var pcDomains []common.ProxyChainDomain
 	for _, domain := range domains {
-		domainNames = append(domainNames, domain.Name)
+		pcDomains = append(pcDomains, common.ProxyChainDomain{
+			Domain: domain.Name,
+		})
 	}
 
 	data := common.ProxyChainDomains{
-		Domains:   domainNames,
+		Domains:   pcDomains,
 		ForwardTo: config.ProxyChainChildURL,
 	}
 
