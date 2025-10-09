@@ -122,6 +122,8 @@ proxy_trusted_proxies = []
 # - limit_max_delay_seconds
 #     … with a maximum delay of this number of seconds (rejected if exceeded)
 #
+# Notes:
+# - Limit 1 is applied before Limit 2
 # - Both of these limits are independent and can be enabled separately
 # - Disable a limit by setting all values to 0
 # - Rate control is applied per IP address
