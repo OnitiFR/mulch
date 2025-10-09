@@ -158,9 +158,9 @@ func (rc *RateController) Dump(w io.Writer) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 
-	fmt.Fprintf(w, "-- Too many requests (429) error counter: %d\n", atomic.LoadUint64(&rc.tooManyRequestsCounter))
-
-	fmt.Fprintf(w, "-- RateController %s: %d entrie(s), exp %s\n", rc.config.Name, len(rc.entries), RateControllerCleanupInterval)
+	fmt.Fprintf(w, "-- RateController '%s':\n", rc.config.Name)
+	fmt.Fprintf(w, "-- %d entrie(s), exp %s\n", len(rc.entries), RateControllerCleanupInterval)
+	fmt.Fprintf(w, "-- too many requests (429) errors: %d\n", atomic.LoadUint64(&rc.tooManyRequestsCounter))
 
 	cnt := 0
 	for ip, entry := range rc.entries {
