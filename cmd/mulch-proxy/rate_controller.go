@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -149,6 +150,8 @@ func (rce *RateControllerEntry) FinishRequest() {
 func (rc *RateController) Dump(w io.Writer) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
+
+	fmt.Fprintf(w, "-- Too many requests (429) error counter: %d\n", atomic.LoadUint64(&tooManyRequestsCounter))
 
 	fmt.Fprintf(w, "-- RateController %s: %d entrie(s), exp %s\n", rc.config.Name, len(rc.entries), RateControllerCleanupInterval)
 
