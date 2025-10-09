@@ -129,11 +129,16 @@ func (rce *RateControllerEntry) IsAllowed(reqCtx context.Context) (bool, bool, s
 	ctx, cancel := context.WithTimeout(reqCtx, rce.rateController.config.RateMaxDelay)
 	defer cancel()
 
-	// will return an error if the context deadline (MaxDelay) is too short
+	// will return an error if the context deadline (MaxDelay) is too short for the wait
 	// interesting fact: it fails immediately (it's not a timeout)
 	// (Tokens() is then typically -49.3 for a rate of 50 req/s)
 	err := rce.rateLimiter.Wait(ctx)
 	if err != nil {
+		// if request context was cancelled, just return (client gone?)
+		if reqCtx.Err() != nil {
+			return true, true, ""
+		}
+
 		atomic.AddUint64(&rce.rateController.tooManyRequestsCounter, 1)
 		return false, true, "rate limit maximum delay reached"
 	}
