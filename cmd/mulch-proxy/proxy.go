@@ -64,7 +64,6 @@ type ProxyServerParams struct {
 
 var contextKeyID interface{} = 1
 var requestCounter uint64
-var tooManyRequestsCounter uint64
 
 // Until Go 1.11 and his reverseProxy.ErrorHandler is mainstream, let's
 // have our own error generator
@@ -316,8 +315,6 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 			}
 
 			if !allowed {
-				atomic.AddUint64(&tooManyRequestsCounter, 1)
-
 				body, errG := proxy.genErrorPage(429, "Too many requests")
 				if errG != nil {
 					proxy.Log.Errorf("Error with the error page: %s", errG)

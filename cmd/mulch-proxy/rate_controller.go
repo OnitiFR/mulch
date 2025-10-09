@@ -14,9 +14,10 @@ import (
 // RateController will manage rate limits and request delays
 // (using a internal hashmap of rate limiters per ip)
 type RateController struct {
-	config  RateControllerConfig
-	entries map[string]*RateControllerEntry
-	mu      sync.Mutex
+	tooManyRequestsCounter uint64
+	config                 RateControllerConfig
+	entries                map[string]*RateControllerEntry
+	mu                     sync.Mutex
 }
 
 // RateControllerConfig holds controller config
@@ -39,8 +40,7 @@ type RateControllerConfig struct {
 
 // RateControllerEntry holds data for a single IP
 type RateControllerEntry struct {
-	config *RateControllerConfig
-	// currentRequestCount atomic.Int32
+	rateController      *RateController
 	currentRequestSlots chan bool
 	rateLimiter         *rate.Limiter
 	lastUseTime         time.Time
@@ -66,7 +66,7 @@ func (rc *RateController) GetEntry(ip string) *RateControllerEntry {
 	entry, ok := rc.entries[ip]
 	if !ok {
 		entry = &RateControllerEntry{
-			config: &rc.config,
+			rateController: rc,
 		}
 
 		if rc.config.ConcurrentMaxRequests > 0 {
@@ -112,10 +112,11 @@ func (rc *RateController) Clean(UnusedTime time.Duration) {
 // returns (allowed, need_finish, reason)
 func (rce *RateControllerEntry) IsAllowed(reqCtx context.Context) (bool, bool, string) {
 	// check if we are over the limit
-	if rce.config.ConcurrentMaxRequests > 0 {
+	if rce.rateController.config.ConcurrentMaxRequests > 0 {
 		select {
 		case rce.currentRequestSlots <- true:
-		case <-time.After(rce.config.ConcurrentOverflowTimeout):
+		case <-time.After(rce.rateController.config.ConcurrentOverflowTimeout):
+			atomic.AddUint64(&rce.rateController.tooManyRequestsCounter, 1)
 			// tell caller to NOT call FinishRequest, because we failed to get a slot
 			return false, false, "concurrent requests limit timeout reached"
 		}
@@ -125,7 +126,7 @@ func (rce *RateControllerEntry) IsAllowed(reqCtx context.Context) (bool, bool, s
 		return true, true, ""
 	}
 
-	ctx, cancel := context.WithTimeout(reqCtx, rce.config.RateMaxDelay)
+	ctx, cancel := context.WithTimeout(reqCtx, rce.rateController.config.RateMaxDelay)
 	defer cancel()
 
 	// will return an error if the context deadline (MaxDelay) is too short
@@ -133,6 +134,7 @@ func (rce *RateControllerEntry) IsAllowed(reqCtx context.Context) (bool, bool, s
 	// (Tokens() is then typically -49.3 for a rate of 50 req/s)
 	err := rce.rateLimiter.Wait(ctx)
 	if err != nil {
+		atomic.AddUint64(&rce.rateController.tooManyRequestsCounter, 1)
 		return false, true, "rate limit maximum delay reached"
 	}
 
@@ -141,7 +143,7 @@ func (rce *RateControllerEntry) IsAllowed(reqCtx context.Context) (bool, bool, s
 
 // RemoveRequest will free a request slot
 func (rce *RateControllerEntry) FinishRequest() {
-	if rce.config.ConcurrentMaxRequests > 0 {
+	if rce.rateController.config.ConcurrentMaxRequests > 0 {
 		<-rce.currentRequestSlots
 	}
 }
@@ -151,23 +153,23 @@ func (rc *RateController) Dump(w io.Writer) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 
-	fmt.Fprintf(w, "-- Too many requests (429) error counter: %d\n", atomic.LoadUint64(&tooManyRequestsCounter))
+	fmt.Fprintf(w, "-- Too many requests (429) error counter: %d\n", atomic.LoadUint64(&rc.tooManyRequestsCounter))
 
 	fmt.Fprintf(w, "-- RateController %s: %d entrie(s), exp %s\n", rc.config.Name, len(rc.entries), RateControllerCleanupInterval)
 
 	cnt := 0
 	for ip, entry := range rc.entries {
-		if len(entry.currentRequestSlots) == 0 && (!entry.config.RateEnable || entry.rateLimiter.Tokens() == float64(entry.rateLimiter.Burst())) {
+		if len(entry.currentRequestSlots) == 0 && (!entry.rateController.config.RateEnable || entry.rateLimiter.Tokens() == float64(entry.rateLimiter.Burst())) {
 			continue
 		}
 
 		cnt++
 		fmt.Fprintf(w, "  %s:\n", ip)
 		fmt.Fprintf(w, "    lastUseTime: %s\n", entry.lastUseTime)
-		if entry.config.ConcurrentMaxRequests > 0 {
-			fmt.Fprintf(w, "    currentRequestSlots: %d / %d\n", len(entry.currentRequestSlots), entry.config.ConcurrentMaxRequests)
+		if entry.rateController.config.ConcurrentMaxRequests > 0 {
+			fmt.Fprintf(w, "    currentRequestSlots: %d / %d\n", len(entry.currentRequestSlots), entry.rateController.config.ConcurrentMaxRequests)
 		}
-		if entry.config.RateEnable {
+		if entry.rateController.config.RateEnable {
 			fmt.Fprintf(w, "    rateLimiter free tokens (negative = waiting): %f / %d\n", entry.rateLimiter.Tokens(), entry.rateLimiter.Burst())
 		}
 	}
