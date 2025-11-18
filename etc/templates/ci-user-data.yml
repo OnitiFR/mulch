@@ -6,7 +6,7 @@
 # ways to debug a failing cloud-init:
 # 1 - use mulch "vm console" command immediately after boot
 # 2 - use /dev/pts/xx to see boot output (cat, screen, ...)
-# 3 - unable the root password (see "users" below) and log on console/pts
+# 3 - enable the root password (see "users" below) and log on console/pts
 
 package_upgrade: $_PACKAGE_UPGRADE
 package_reboot_if_required: $_PACKAGE_UPGRADE
@@ -27,8 +27,8 @@ groups:
 users:
   #- name: root
   #  lock_passwd: false
-  #  hashed_passwd: '' (use mkpass)
-  # also: virt-customize -a ubuntu_2404.qcow2 --ssh-inject root:file:.ssh/id_rsa.pub
+  #  hashed_passwd: ... (use mkpasswd --method=SHA-512, no quotes)
+  # also: virt-customize -a ubuntu_2404.qcow2 --ssh-inject root:file:/home/xyz/.ssh/id_rsa.pub
   - name: $_MULCH_SUPER_USER
     primary-group: mulcher
     gecos: Mulch Control and Command admin account
