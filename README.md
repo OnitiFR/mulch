@@ -456,7 +456,16 @@ How do I install the server? (mulchd and mulch-proxy)
 
 ### Requirements:
 
-#### Ubuntu (22.04)
+### Quick install:
+For a quick installation on a **blank** Ubuntu 24.04 system, you may also use this standalone
+auto-install script (with root privileges):
+```
+wget https://raw.github.com/OnitiFR/mulch/master/install/deb_ubuntu_autoinstall.sh
+chmod +x deb_ubuntu_autoinstall.sh
+./deb_ubuntu_autoinstall.sh
+```
+
+#### Ubuntu
 ```
 sudo apt install golang-go
 sudo apt install ebtables gawk libxml2-utils libcap2-bin dnsmasq libvirt-daemon-system libvirt-dev
@@ -482,12 +491,3 @@ As a user:
  - `./install.sh --help` (see sample install section)
 
 The install script will give you details about installation: destination, rights, services, …
-
-### Quick install:
-For a quick installation on a **blank** Ubuntu 22.04+ system, you may also use this standalone
-auto-install script (with root privileges):
-```
-wget https://raw.github.com/OnitiFR/mulch/master/install/deb_ubuntu_autoinstall.sh
-chmod +x deb_ubuntu_autoinstall.sh
-./deb_ubuntu_autoinstall.sh
-```

@@ -154,10 +154,6 @@ name = "rocky_8"
 url = "https://dl.rockylinux.org/pub/rocky/8/images/x86_64/Rocky-8-GenericCloud.latest.x86_64.qcow2"
 
 [[seed]]
-name = "ubuntu_2004"
-url = "https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64-disk-kvm.img"
-
-[[seed]]
 name = "ubuntu_2204"
 url = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64-disk-kvm.img"
 

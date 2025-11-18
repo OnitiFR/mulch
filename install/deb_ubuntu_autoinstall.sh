@@ -7,6 +7,7 @@
 echo "This is a standalone Mulch server install script for Ubuntu."
 echo "It was tested on: (default server install)"
 echo " - Ubuntu 22.04"
+echo " - Ubuntu 24.04"
 #echo " - Debian 10"
 echo "It's intended to be used for a quick demo install, since most settings are left to default values."
 echo ""
