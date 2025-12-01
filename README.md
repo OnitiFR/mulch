@@ -454,9 +454,7 @@ How do I install the server? (mulchd and mulch-proxy)
 ---
 *This section is still a WIP.*
 
-### Requirements:
-
-### Quick install:
+### Quick install
 For a quick installation on a **blank** Ubuntu 24.04 system, you may also use this standalone
 auto-install script (with root privileges):
 ```
@@ -464,6 +462,8 @@ wget https://raw.github.com/OnitiFR/mulch/master/install/deb_ubuntu_autoinstall.
 chmod +x deb_ubuntu_autoinstall.sh
 ./deb_ubuntu_autoinstall.sh
 ```
+
+### Requirements
 
 #### Ubuntu
 ```
@@ -474,7 +474,7 @@ sudo usermod -aG libvirt USER # replace USER by the user running mulchd
 sudo setfacl -m g:libvirt-qemu:x /home/USER
 ```
 
-#### Fedora:
+#### Fedora
 ```
 sudo dnf install golang git
 sudo dnf install qemu-kvm libvirt-client libvirt-devel libvirt-daemon-kvm libvirt-daemon-config-nwfilter
@@ -483,7 +483,7 @@ sudo usermod -aG libvirt USER # replace USER by the user running mulchd
 sudo setfacl -m g:qemu:x /home/USER/
 ```
 
-### Install:
+### Install
 As a user:
  - `git clone https://github.com/OnitiFR/mulch.git`
  - `cd mulch`
