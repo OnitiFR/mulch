@@ -68,6 +68,11 @@ else
     auth="Require all granted"
 fi
 
+hsts=""
+if /usr/local/bin/phone_home | grep -qE "^\s*redirect_to_https\s*=\s*false"; then
+    hsts='Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"'
+fi
+
 sudo bash -c "cat > /etc/httpd/conf.d/000-default.conf" <<- EOS
 User $_APP_USER
 Group $_APP_USER
@@ -98,6 +103,8 @@ ServerTokens Prod
     LogFormat "%{X-Real-Ip}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\" %{ms}T" combined_real_plus
     ErrorLog logs/error_log
     CustomLog logs/access_log combined_real_plus
+
+    $hsts
 
     # compression
     AddOutputFilterByType DEFLATE text/css
