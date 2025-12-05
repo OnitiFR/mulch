@@ -46,7 +46,10 @@ check $? "unable to backup"
 backup_name=$(echo "$data" | grep BACKUP= | cut -d= -f2)
 
 mulch backup download "$backup_name" > /dev/null
-check $? "unable to download backup"
+if [ $? -ne 0 ]; then
+    mulch backup delete "$backup_name" > /dev/null
+    check 1 "unable to download backup"
+fi
 
 ## Cleaning
 
