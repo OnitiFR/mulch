@@ -68,9 +68,9 @@ else
     auth="Require all granted"
 fi
 
-hsts=""
+hsts='Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"'
 if /usr/local/bin/phone_home | grep -qE "^\s*redirect_to_https\s*=\s*false"; then
-    hsts='Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"'
+    hsts=""
 fi
 
 sudo bash -c "cat > /etc/httpd/conf.d/000-default.conf" <<- EOS
