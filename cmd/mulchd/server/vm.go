@@ -544,6 +544,10 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		}
 	}
 
+	// we're not listening anymore, so unregister to avoid deadlocks if a
+	// prepare / install script calls phone_home (double unregister is safe)
+	phone.Unregister()
+
 	log.Infof("REVISION=%d", revision)
 
 	// 4 - run prepare scripts
