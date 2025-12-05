@@ -83,10 +83,10 @@ else
     auth="Require all granted"
 fi
 
-hsts='Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"'
-if /usr/local/bin/phone_home | grep -qE "^\s*redirect_to_https\s*=\s*false"; then
-    hsts=""
-fi
+# hsts='Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"'
+# if /usr/local/bin/phone_home | grep -qE "^\s*redirect_to_https\s*=\s*false"; then
+#     hsts=""
+# fi
 
 sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 # Allow mod_status even if we use RewriteEngine
