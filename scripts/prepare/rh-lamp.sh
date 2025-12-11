@@ -106,6 +106,8 @@ ServerTokens Prod
 
     $hsts
 
+    Header set X-Content-Type-Options "nosniff"
+
     # compression
     AddOutputFilterByType DEFLATE text/css
 

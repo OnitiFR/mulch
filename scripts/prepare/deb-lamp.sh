@@ -117,6 +117,8 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 
     $hsts
 
+    Header set X-Content-Type-Options "nosniff"
+
     # compression
     AddOutputFilterByType DEFLATE text/css
 
