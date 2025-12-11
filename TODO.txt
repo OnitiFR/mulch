@@ -28,7 +28,7 @@ Resource leaks:
 
 Short term:
 - make startup errors more explicit (ex: on empty files, "EOF" without file name is not helpful)
-- calling phone_home during prepare scripts (so inside NewVM) makes PhoneHomeHub hangs!
+- allow `. [...]another_script.sh` in scripts? (from another origin? ex: apache2)
 - SSH proxy: can we write an error to the client on early error? (is it a good idea anyway?)
   - see SSHProxy.serveProxy()
 - allow SSH connection to VMs in the greenhouse? (with -rX)

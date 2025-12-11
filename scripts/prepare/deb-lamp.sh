@@ -88,6 +88,11 @@ if /usr/local/bin/phone_home | grep -qE "^\s*redirect_to_https\s*=\s*false"; the
     hsts=""
 fi
 
+xfo='Header always set X-Frame-Options "SAMEORIGIN"'
+if [ "$MULCH_HTTP_FRAME_ALLOW" = "true" ]; then
+    xfo=""
+fi
+
 sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 # Allow mod_status even if we use RewriteEngine
 <Location /server-status>
@@ -116,8 +121,8 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
     CustomLog \${APACHE_LOG_DIR}/access.log combined_real_plus
 
     $hsts
-
-    Header set X-Content-Type-Options "nosniff"
+    $xfo
+    Header always set X-Content-Type-Options "nosniff"
 
     # compression
     AddOutputFilterByType DEFLATE text/css

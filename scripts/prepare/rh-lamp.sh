@@ -73,6 +73,11 @@ if /usr/local/bin/phone_home | grep -qE "^\s*redirect_to_https\s*=\s*false"; the
     hsts=""
 fi
 
+xfo='Header always set X-Frame-Options "SAMEORIGIN"'
+if [ "$MULCH_HTTP_FRAME_ALLOW" = "true" ]; then
+    xfo=""
+fi
+
 sudo bash -c "cat > /etc/httpd/conf.d/000-default.conf" <<- EOS
 User $_APP_USER
 Group $_APP_USER
@@ -105,8 +110,8 @@ ServerTokens Prod
     CustomLog logs/access_log combined_real_plus
 
     $hsts
-
-    Header set X-Content-Type-Options "nosniff"
+    $xfo
+    Header always set X-Content-Type-Options "nosniff"
 
     # compression
     AddOutputFilterByType DEFLATE text/css
