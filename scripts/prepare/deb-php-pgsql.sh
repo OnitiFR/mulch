@@ -60,6 +60,11 @@ else
     auth="Require all granted"
 fi
 
+hsts='Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"'
+if /usr/local/bin/phone_home | grep -qE "^\s*redirect_to_https\s*=\s*false"; then
+    hsts=""
+fi
+
 sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 # Allow mod_status even if we use RewriteEngine
 <Location /server-status>
@@ -86,6 +91,8 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
     LogFormat "%{X-Real-Ip}i %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\" %{ms}T" combined_real_plus
     ErrorLog \${APACHE_LOG_DIR}/error.log
     CustomLog \${APACHE_LOG_DIR}/access.log combined_real_plus
+
+    $hsts
 
     # compression
     AddOutputFilterByType DEFLATE text/css
