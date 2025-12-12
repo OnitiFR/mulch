@@ -131,7 +131,7 @@ sudo bash -c "cat > /etc/apache2/sites-available/000-default.conf" <<- EOS
 EOS
 [ $? -eq 0 ] || exit $?
 
-sudo a2enmod rewrite expires || exit $?
+sudo a2enmod rewrite expires headers || exit $?
 
 sudo sed -i 's/^disable_functions = \(.*\)/disable_functions = \1phpinfo,/' /etc/php/*/apache2/php.ini || exit $?
 
