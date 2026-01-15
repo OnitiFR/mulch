@@ -28,6 +28,8 @@ Resource leaks:
 
 Short term:
 - allow `. [...]another_script.sh` in scripts? (from another origin? ex: apache2)
+  - search "GetContent"
+  - this is currently a stream, it makes things a bit tricky
   - need to parse bash? (ex: ./script.sh in HereDoc)
 - SSH proxy: can we write an error to the client on early error? (is it a good idea anyway?)
   - see SSHProxy.serveProxy()
