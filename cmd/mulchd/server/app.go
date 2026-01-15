@@ -116,22 +116,22 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 
 	err = app.initSSHPairDB()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("SSH Pair DB: %s", err)
 	}
 
 	err = app.initSecretDB()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Secret DB: %s", err)
 	}
 
 	err = app.initVMDB()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("VM DB: %s", err)
 	}
 
 	err = app.initVMStateDB()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("VM State DB: %s", err)
 	}
 
 	// clean DHCP leases
@@ -142,12 +142,12 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 
 	err = app.initBackupDB()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Backup DB: %s", err)
 	}
 
 	err = app.initAPIKeysDB()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("API Keys DB: %s", err)
 	}
 
 	app.AlertSender, err = NewAlertSender(app.Config.configPath, app.Log)
@@ -158,7 +158,7 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 
 	err = app.initSeedsDB()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Seeds DB: %s", err)
 	}
 	go app.Seeder.Run()
 

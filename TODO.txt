@@ -27,7 +27,6 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Short term:
-- make startup errors more explicit (ex: on empty files, "EOF" without file name is not helpful)
 - allow `. [...]another_script.sh` in scripts? (from another origin? ex: apache2)
   - need to parse bash? (ex: ./script.sh in HereDoc)
 - SSH proxy: can we write an error to the client on early error? (is it a good idea anyway?)

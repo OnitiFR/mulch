@@ -36,7 +36,7 @@ func NewSSHProxyServer(app *App) error {
 
 	ourPrivate, err := ssh.ParsePrivateKey([]byte(ourPair.Private))
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot parse %s SSH private key: %s", SSHProxyPair, err)
 	}
 
 	app.sshClients = newSSHServerClients()
