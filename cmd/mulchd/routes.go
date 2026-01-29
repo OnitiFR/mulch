@@ -186,6 +186,12 @@ func AddRoutes(app *server.App) {
 	}, server.RouteAPI)
 
 	app.AddRoute(&server.Route{
+		Route:   "GET /key/me/comment",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.GetMyKeyCommentController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
 		Route:   "DELETE /key/*",
 		Type:    server.RouteTypeStream,
 		Handler: controllers.DeleteKeyController,

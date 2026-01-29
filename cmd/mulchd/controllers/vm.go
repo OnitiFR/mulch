@@ -162,6 +162,13 @@ func NewVMController(req *server.Request) (*server.VM, error) {
 	keepOnFailure := req.HTTP.FormValue("keep_on_failure")
 	lock := req.HTTP.FormValue("lock")
 
+	// additional check AFTER the "/POST /vm" to allow limited VM creation rights
+	if req.APIKey.IsAllowed("CREATE", "/vm/"+conf.Name, req.HTTP) == false {
+		msg := "not allowed to create this VM (needs CREATE right)"
+		req.Stream.Failure(msg)
+		return nil, errors.New(msg)
+	}
+
 	active := true
 	if inactive == common.TrueStr {
 		active = false

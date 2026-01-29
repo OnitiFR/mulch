@@ -480,7 +480,7 @@ func (key *APIKey) AddNewRight(rightStr string) error {
 	path := strings.TrimSpace(parts[1])
 
 	switch method {
-	case "GET", "POST", "PUT", "DELETE", "SSH", "*":
+	case "GET", "POST", "PUT", "DELETE", "SSH", "CREATE", "*":
 	default:
 		return fmt.Errorf("'%s' is an unsupported method", method)
 	}

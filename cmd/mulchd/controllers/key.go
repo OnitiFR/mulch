@@ -27,6 +27,12 @@ func ListKeysController(req *server.Request) {
 	}
 }
 
+// GetMyKeyCommentController get the comment of the current API key
+func GetMyKeyCommentController(req *server.Request) {
+	req.Response.Header().Set("Content-Type", "text/plain")
+	req.Println(req.APIKey.Comment)
+}
+
 // NewKeyController creates and add a new API key to the DB
 func NewKeyController(req *server.Request) {
 	req.StartStream()

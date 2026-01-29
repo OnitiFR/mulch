@@ -32,6 +32,10 @@ Allow SSH access:
 GET /sshpair
 SSH /myvm
 
+Allow VM creation:
+POST /vm
+CREATE /vm/*
+
 Note: when setting rights, server log shows denied requests, it may help you.
 `,
 	Args: cobra.ExactArgs(2),
