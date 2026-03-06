@@ -63,6 +63,7 @@ type ProxyServerParams struct {
 }
 
 var contextKeyID interface{} = 1
+var contextKeyNoCancelTransport interface{} = 2
 var requestCounter uint64
 
 // Until Go 1.11 and his reverseProxy.ErrorHandler is mainstream, let's
@@ -74,6 +75,13 @@ type errorHandlingRoundTripper struct {
 }
 
 func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	// If signaled by handleRequest, detach from any client-side cancellation
+	// that httputil.ReverseProxy may have injected into the context. This
+	// ensures the concurrent slot is held until the backend actually responds.
+	if req.Context().Value(contextKeyNoCancelTransport) != nil {
+		req = req.WithContext(context.WithoutCancel(req.Context()))
+	}
+
 	// we may have to clone http.DefaultTransport to adjust settings
 	// t := http.DefaultTransport.(*http.Transport).Clone()
 	tr := http.DefaultTransport
@@ -325,15 +333,19 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 				return
 			}
 
-			// Detach from client cancellation so the concurrent slot stays
-			// occupied until the backend actually responds, even if the
-			// client cancels early. This prevents slot exhaustion via
+			// Signal the transport to detach from client cancellation, so the
+			// concurrent slot stays occupied until the backend actually responds,
+			// even if the client cancels early. This prevents slot exhaustion via
 			// rapid connect-then-cancel attacks.
+			// context.WithoutCancel is applied in the RoundTripper (not here)
+			// because httputil.ReverseProxy may wrap the context with its own
+			// cancellable child before calling RoundTrip. Context values are
+			// inherited through WithCancel, so the signal survives that wrapping.
 			// Note: if the backend never responds (hung process, saturated
 			// worker pool…), the goroutine will be held until the TCP
 			// connection drops, even if the client quits.
 			if rc.config.ConcurrentMaxRequests > 0 {
-				req = req.WithContext(context.WithoutCancel(req.Context()))
+				req = req.WithContext(context.WithValue(req.Context(), contextKeyNoCancelTransport, true))
 			}
 		}
 	}
