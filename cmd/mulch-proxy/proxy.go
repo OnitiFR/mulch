@@ -75,9 +75,8 @@ type errorHandlingRoundTripper struct {
 }
 
 func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	// If signaled by handleRequest, detach from any client-side cancellation
-	// that httputil.ReverseProxy may have injected into the context. This
-	// ensures the concurrent slot is held until the backend actually responds.
+	// ensures the concurrent slot is held until the backend responds ? (and not until the client cancels)
+	// (see handleRequest() below)
 	if req.Context().Value(contextKeyNoCancelTransport) != nil {
 		req = req.WithContext(context.WithoutCancel(req.Context()))
 	}
@@ -337,10 +336,6 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 			// concurrent slot stays occupied until the backend actually responds,
 			// even if the client cancels early. This prevents slot exhaustion via
 			// rapid connect-then-cancel attacks.
-			// context.WithoutCancel is applied in the RoundTripper (not here)
-			// because httputil.ReverseProxy may wrap the context with its own
-			// cancellable child before calling RoundTrip. Context values are
-			// inherited through WithCancel, so the signal survives that wrapping.
 			// Note: if the backend never responds (hung process, saturated
 			// worker pool…), the goroutine will be held until the TCP
 			// connection drops, even if the client quits.
