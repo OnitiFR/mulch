@@ -324,6 +324,17 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 				res.Write([]byte(body))
 				return
 			}
+
+			// Detach from client cancellation so the concurrent slot stays
+			// occupied until the backend actually responds, even if the
+			// client cancels early. This prevents slot exhaustion via
+			// rapid connect-then-cancel attacks.
+			// Note: if the backend never responds (hung process, saturated
+			// worker pool…), the goroutine will be held until the TCP
+			// connection drops, even if the client quits.
+			if rc.config.ConcurrentMaxRequests > 0 {
+				req = req.WithContext(context.WithoutCancel(req.Context()))
+			}
 		}
 	}
 

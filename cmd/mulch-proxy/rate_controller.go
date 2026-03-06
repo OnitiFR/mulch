@@ -25,8 +25,6 @@ type RateControllerConfig struct {
 	Name string // name of this profile
 
 	// max number of concurrent "running" requests (0 = unlimited)
-	// WARN: the client may close a request (and therefore decrement the
-	// counter) but the request can still exists in the backend
 	ConcurrentMaxRequests     int32
 	ConcurrentOverflowTimeout time.Duration // when we are over the limit, how long to wait before returning an error
 
