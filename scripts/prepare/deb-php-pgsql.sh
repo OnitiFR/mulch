@@ -190,6 +190,10 @@ EOS
 sudo systemctl restart postgresql || exit $?
 
 if [ -n "$PG_LOCALE" ]; then
+    echo "fr_FR.UTF-8 UTF-8" | sudo tee -a /etc/locale.gen || exit $?
+    sudo locale-gen || exit $?
+    sudo systemctl restart postgresql || exit $?
+
     # warn: pgsql 15+ syntax
     create_database_sql="CREATE DATABASE $_APP_USER TEMPLATE = template0 LOCALE_PROVIDER = 'libc' LOCALE = '$PG_LOCALE';"
 else
