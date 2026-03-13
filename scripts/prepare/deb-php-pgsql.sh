@@ -190,7 +190,7 @@ EOS
 sudo systemctl restart postgresql || exit $?
 
 if [ -n "$PG_LOCALE" ]; then
-    echo "fr_FR.UTF-8 UTF-8" | sudo tee -a /etc/locale.gen || exit $?
+    echo "$PG_LOCALE ${PG_LOCALE#*.}" | sudo tee -a /etc/locale.gen || exit $?
     sudo locale-gen || exit $?
     sudo systemctl restart postgresql || exit $?
 
