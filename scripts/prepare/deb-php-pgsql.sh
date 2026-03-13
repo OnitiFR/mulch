@@ -189,9 +189,16 @@ EOS
 
 sudo systemctl restart postgresql || exit $?
 
+if [ -n "$PG_LOCALE" ]; then
+    # warn: pgsql 15+ syntax
+    create_database_sql="CREATE DATABASE $_APP_USER TEMPLATE = template0 LOCALE_PROVIDER = 'libc' LOCALE = '$PG_LOCALE';"
+else
+    create_database_sql="CREATE DATABASE $_APP_USER;"
+fi
+
 sudo bash -c "cat | sudo -iu postgres psql -v ON_ERROR_STOP=1" <<- EOS
 CREATE USER $_APP_USER WITH PASSWORD '$PGSQL_PASSWORD';
-CREATE DATABASE $_APP_USER;
+$create_database_sql
 GRANT ALL PRIVILEGES ON DATABASE $_APP_USER to $_APP_USER;
 \connect $_APP_USER
 GRANT USAGE, CREATE ON SCHEMA public TO $_APP_USER; -- required since PgSQL 15
