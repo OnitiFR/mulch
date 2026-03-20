@@ -224,9 +224,15 @@ func (proxy *SSHProxy) serveProxy() error {
 		if errA != nil {
 			return errA
 		}
-		vm, errV = proxy.app.VMDB.GetByName(NewVMName(name, revision))
+		vmName := NewVMName(name, revision)
+		vm, errV = proxy.app.VMDB.GetByName(vmName)
 		if errV != nil {
-			return errV
+			// also search in the greenhouse (building VMs)
+			entry, errG := proxy.app.VMDB.GetGreenhouseEntryByName(vmName)
+			if errG != nil {
+				return errV // return original error
+			}
+			vm = entry.VM
 		}
 	} else {
 		vm, errV = proxy.app.VMDB.GetActiveByName(vmName)
