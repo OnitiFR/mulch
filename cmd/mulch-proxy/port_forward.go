@@ -70,13 +70,13 @@ func (pf *PortForward) pipe(src io.Reader, dst io.Writer) {
 	buff := make([]byte, 64*1024) // 64kB
 	for {
 		n, err := src.Read(buff)
-		if err != nil {
-			pf.close()
-			return
+		if n > 0 {
+			_, werr := dst.Write(buff[:n])
+			if werr != nil {
+				pf.close()
+				return
+			}
 		}
-		b := buff[:n]
-
-		_, err = dst.Write(b)
 		if err != nil {
 			pf.close()
 			return

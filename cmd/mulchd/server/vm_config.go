@@ -129,9 +129,9 @@ func vmCheckScriptURL(scriptURL string, origins *Origins) error {
 
 	// check script signature
 	signature := make([]byte, 2)
-	n, errR := stream.Read(signature)
-	if n != 2 || errR != nil {
-		return fmt.Errorf("error reading script '%s' (n=%d)", scriptURL, n)
+	_, errR := io.ReadFull(stream, signature)
+	if errR != nil {
+		return fmt.Errorf("error reading script '%s': %s", scriptURL, errR)
 	}
 	if string(signature) != "#!" {
 		return fmt.Errorf("script '%s': no shebang found, is it really a shell script?", scriptURL)

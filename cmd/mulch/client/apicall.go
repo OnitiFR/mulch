@@ -321,6 +321,7 @@ func downloadFile(filename string, reader io.Reader) error {
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
 	fmt.Printf("downloading %s…\n", filename)
 

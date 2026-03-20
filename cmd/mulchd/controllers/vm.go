@@ -128,9 +128,11 @@ func NewVMAsyncController(req *server.Request) {
 		client := http.Client{
 			Timeout: time.Duration(30 * time.Second),
 		}
-		_, err = client.PostForm(callbackURL, data.AsURLValue())
+		resp, err := client.PostForm(callbackURL, data.AsURLValue())
 		if err != nil {
 			req.App.Log.Errorf("unable to contact callback URL '%s' for VM %s: %s", callbackURL, name, err.Error())
+		} else {
+			resp.Body.Close()
 		}
 	}()
 

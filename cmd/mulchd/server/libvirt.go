@@ -392,6 +392,7 @@ func (lv *Libvirt) UploadFileToLibvirt(pool *libvirt.StoragePool, poolXML *libvi
 	if err != nil {
 		return err
 	}
+	defer streamSrc.Close()
 
 	return lv.UploadFileToLibvirtFromReader(pool, poolXML, template, streamSrc, asName, log)
 }
