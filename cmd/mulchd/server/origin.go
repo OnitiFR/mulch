@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-git/go-billy/v6"
@@ -24,6 +26,9 @@ const (
 
 	// maximum git cache life
 	OriginGitCacheMaxLife = 10 * time.Minute
+
+	// maximum size for HTTP 429 cache entries
+	OriginHTTPCacheMaxSize = 128 * 1024
 )
 
 type Origins struct {
@@ -153,18 +158,65 @@ func getContentFromFileURL(url string) (io.ReadCloser, error) {
 	return file, nil
 }
 
-// http:// or https:// protocol
+// originHTTPCache stores successful HTTP responses to serve as fallback on 429 errors
+var originHTTPCache = struct {
+	sync.RWMutex
+	entries map[string][]byte
+}{entries: make(map[string][]byte)}
+
+// http:// or https:// protocol (with "stale-on-429" caching)
 func getContentFromHttpURL(url string) (io.ReadCloser, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
 
+	if resp.StatusCode == http.StatusTooManyRequests {
+		resp.Body.Close()
+		originHTTPCache.RLock()
+		cached, found := originHTTPCache.entries[url]
+		originHTTPCache.RUnlock()
+		if found {
+			return io.NopCloser(bytes.NewReader(cached)), nil
+		}
+		return nil, fmt.Errorf("response was %s (%v) and no cached content available", resp.Status, resp.StatusCode)
+	}
+
 	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
 		return nil, fmt.Errorf("response was %s (%v)", resp.Status, resp.StatusCode)
 	}
 
-	return resp.Body, nil
+	// If Content-Length is known and too large, skip caching and stream directly (-1 = unknown length)
+	if resp.ContentLength > OriginHTTPCacheMaxSize {
+		return resp.Body, nil
+	}
+
+	// Read up to the cache size limit + 1 byte to detect overflow
+	body, err := io.ReadAll(io.LimitReader(resp.Body, OriginHTTPCacheMaxSize+1))
+	if err != nil {
+		resp.Body.Close()
+		return nil, err
+	}
+
+	if int64(len(body)) > OriginHTTPCacheMaxSize {
+		// Too large for cache: return what we read + the rest of the stream
+		return struct {
+			io.Reader
+			io.Closer
+		}{
+			Reader: io.MultiReader(bytes.NewReader(body), resp.Body),
+			Closer: resp.Body,
+		}, nil
+	}
+
+	resp.Body.Close()
+
+	originHTTPCache.Lock()
+	originHTTPCache.entries[url] = body
+	originHTTPCache.Unlock()
+
+	return io.NopCloser(bytes.NewReader(body)), nil
 }
 
 // returns a content using a git origin
