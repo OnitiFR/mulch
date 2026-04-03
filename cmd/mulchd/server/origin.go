@@ -158,26 +158,46 @@ func getContentFromFileURL(url string) (io.ReadCloser, error) {
 	return file, nil
 }
 
-// originHTTPCache stores successful HTTP responses to serve as fallback on 429 errors
+type originHTTPCacheEntry struct {
+	body []byte
+	etag string
+}
+
+// originHTTPCache stores successful HTTP responses for conditional GET and 429 fallback
 var originHTTPCache = struct {
 	sync.RWMutex
-	entries map[string][]byte
-}{entries: make(map[string][]byte)}
+	entries map[string]*originHTTPCacheEntry
+}{entries: make(map[string]*originHTTPCacheEntry)}
 
-// http:// or https:// protocol (with "stale-on-429" caching)
+// http:// or https:// protocol (with conditional GET caching)
 func getContentFromHttpURL(url string) (io.ReadCloser, error) {
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	// add conditional GET header if we have a cached version
+	originHTTPCache.RLock()
+	cached := originHTTPCache.entries[url]
+	originHTTPCache.RUnlock()
+	if cached != nil && cached.etag != "" {
+		req.Header.Set("If-None-Match", cached.etag)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusNotModified && cached != nil {
+		resp.Body.Close()
+		return io.NopCloser(bytes.NewReader(cached.body)), nil
+	}
+
 	if resp.StatusCode == http.StatusTooManyRequests {
 		resp.Body.Close()
-		originHTTPCache.RLock()
-		cached, found := originHTTPCache.entries[url]
-		originHTTPCache.RUnlock()
-		if found {
-			return io.NopCloser(bytes.NewReader(cached)), nil
+		if cached != nil {
+			return io.NopCloser(bytes.NewReader(cached.body)), nil
 		}
 		return nil, fmt.Errorf("response was %s (%v) and no cached content available", resp.Status, resp.StatusCode)
 	}
@@ -186,6 +206,8 @@ func getContentFromHttpURL(url string) (io.ReadCloser, error) {
 		resp.Body.Close()
 		return nil, fmt.Errorf("response was %s (%v)", resp.Status, resp.StatusCode)
 	}
+
+	etag := resp.Header.Get("ETag")
 
 	// If Content-Length is known and too large, skip caching and stream directly (-1 = unknown length)
 	if resp.ContentLength > OriginHTTPCacheMaxSize {
@@ -212,9 +234,11 @@ func getContentFromHttpURL(url string) (io.ReadCloser, error) {
 
 	resp.Body.Close()
 
-	originHTTPCache.Lock()
-	originHTTPCache.entries[url] = body
-	originHTTPCache.Unlock()
+	if etag != "" {
+		originHTTPCache.Lock()
+		originHTTPCache.entries[url] = &originHTTPCacheEntry{body: body, etag: etag}
+		originHTTPCache.Unlock()
+	}
 
 	return io.NopCloser(bytes.NewReader(body)), nil
 }

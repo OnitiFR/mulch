@@ -6,6 +6,10 @@ etc/alerts/*.sh
 mulchd.service
 mulch-proxy.service
 
+/mulch
+/mulchd
+/mulch-proxy
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
