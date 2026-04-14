@@ -21,10 +21,6 @@ const (
 	ReplicationScanInterval = 5 * time.Second
 	// ReplicationFSFreezeTimeout is the timeout for FSFreeze operations
 	ReplicationFSFreezeTimeout = 10 * time.Second
-	// ReplicationBackupTimeout is the maximum time for a backup job
-	ReplicationBackupTimeout = 30 * time.Minute
-	// ReplicationBackupPollInterval is the polling interval for backup job status
-	ReplicationBackupPollInterval = 1 * time.Second
 	// ReplicationMaxConsecutiveErrors before backoff
 	ReplicationMaxConsecutiveErrors = 5
 	// ReplicationPauseErrors pauses replication and sends alert
@@ -251,8 +247,8 @@ func (rm *ReplicationManager) getEffectiveInterval(vm *VM, state *ReplicationSta
 }
 
 // syncVM performs one sync cycle for a VM (full or incremental) using pull mode.
-// QEMU exposes dirty blocks on a local Unix socket, we read them and stream
-// to the peer via HTTP.
+// QEMU exposes dirty blocks on a TCP NBD server (localhost), we read them and
+// stream to the peer via HTTP.
 func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 	app := rm.app
 	domainName := vmName.LibvirtDomainName(app)
@@ -566,9 +562,6 @@ func findFreePort() (uint, error) {
 	return uint(port), nil
 }
 
-
-
-
 // pullAndStreamBlocks connects to QEMU's local NBD server, reads dirty blocks,
 // and streams them to the peer via HTTP.
 func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAddress string, exportName string, bitmapName string, fullCopy bool) (uint64, error) {
@@ -701,9 +694,9 @@ func (rm *ReplicationManager) writeBlockStream(w io.Writer, nbdClient *NBDClient
 			}
 
 			for _, ext := range extents {
-				if ext.Flags&1 != 0 {
+				if ext.Dirty {
 					dirtyExtents++
-					// dirty (bitmap bit set): read and send
+					// dirty: read and send
 					readLen := ext.Length
 					readOff := offset
 

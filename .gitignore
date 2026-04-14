@@ -22,3 +22,5 @@ mulch-proxy.service
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+/HA_IMPL.md
