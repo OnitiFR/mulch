@@ -82,8 +82,10 @@ func NewNBDClient(address string, exportName string, bitmapName string) (*NBDCli
 }
 
 // BlockStatus queries the block status (dirty bitmap) for a range.
-func (c *NBDClient) BlockStatus(offset uint64, length uint32) ([]NBDExtent, error) {
-	var extents []NBDExtent
+// The provided slice is reused to avoid allocations; results are returned
+// in the same slice (re-sliced).
+func (c *NBDClient) BlockStatus(offset uint64, length uint32, extents []NBDExtent) ([]NBDExtent, error) {
+	extents = extents[:0]
 	err := c.conn.BlockStatus(offset, length, func(bs nbd.BlockStatus) error {
 		for _, desc := range bs.Descriptors {
 			flags := nbdmeta.DirtyBitmapFlags(desc.Status)

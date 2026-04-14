@@ -408,13 +408,15 @@ func (rm *ReplicationManager) writeBlockStream(w io.Writer, nbdClient *NBDClient
 		var offset uint64
 		var dirtyExtents uint64
 		var cleanExtents uint64
+		var extents []NBDExtent
+		var err error
 		for offset < diskSize {
 			queryLen := uint32(ReplicationMaxBlockSize)
 			if uint64(queryLen) > diskSize-offset {
 				queryLen = uint32(diskSize - offset)
 			}
 
-			extents, err := nbdClient.BlockStatus(offset, queryLen)
+			extents, err = nbdClient.BlockStatus(offset, queryLen, extents)
 			if err != nil {
 				return totalBytes, fmt.Errorf("NBD block status at offset %d: %s", offset, err)
 			}
