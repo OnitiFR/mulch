@@ -32,19 +32,19 @@ const (
 type VMConfig struct {
 	FileContent string // config file content
 
-	Name           string
-	Hostname       string
-	Timezone       string
-	AppUser        string
-	Seed           string
-	InitUpgrade    bool
-	DiskSize       uint64
-	RAMSize        uint64
-	CPUCount       int
-	Domains        []*common.Domain
-	Env            map[string]string
-	Secrets        []string
-	Ports          []*VMPort
+	Name                string
+	Hostname            string
+	Timezone            string
+	AppUser             string
+	Seed                string
+	InitUpgrade         bool
+	DiskSize            uint64
+	RAMSize             uint64
+	CPUCount            int
+	Domains             []*common.Domain
+	Env                 map[string]string
+	Secrets             []string
+	Ports               []*VMPort
 	BackupDiskSize      uint64
 	BackupCompress      bool
 	RestoreBackup       string
@@ -78,23 +78,23 @@ type VMDoAction struct {
 }
 
 type tomlVMConfig struct {
-	Name            string
-	Hostname        string
-	Timezone        string
-	AppUser         string `toml:"app_user"`
-	Seed            string
-	InitUpgrade     bool              `toml:"init_upgrade"`
-	DiskSize        datasize.ByteSize `toml:"disk_size"`
-	RAMSize         datasize.ByteSize `toml:"ram_size"`
-	CPUCount        int               `toml:"cpu_count"`
-	Domains         []string
-	RedirectToHTTPS bool   `toml:"redirect_to_https"`
-	RateProfile     string `toml:"rate_profile"`
-	Redirects       [][]string
-	Env             [][]string
-	Secrets         []string
-	EnvRaw          string `toml:"env_raw"`
-	Ports           []string
+	Name                string
+	Hostname            string
+	Timezone            string
+	AppUser             string `toml:"app_user"`
+	Seed                string
+	InitUpgrade         bool              `toml:"init_upgrade"`
+	DiskSize            datasize.ByteSize `toml:"disk_size"`
+	RAMSize             datasize.ByteSize `toml:"ram_size"`
+	CPUCount            int               `toml:"cpu_count"`
+	Domains             []string
+	RedirectToHTTPS     bool   `toml:"redirect_to_https"`
+	RateProfile         string `toml:"rate_profile"`
+	Redirects           [][]string
+	Env                 [][]string
+	Secrets             []string
+	EnvRaw              string `toml:"env_raw"`
+	Ports               []string
 	BackupDiskSize      datasize.ByteSize `toml:"backup_disk_size"`
 	BackupCompress      bool              `toml:"backup_compress"`
 	RestoreBackup       string            `toml:"restore_backup"`
@@ -502,8 +502,8 @@ func NewVMConfigFromTomlReader(configIn io.Reader, app *App) (*VMConfig, error) 
 			if errD != nil {
 				return nil, fmt.Errorf("invalid replication_interval value '%s'", tConfig.ReplicationInterval)
 			}
-			if duration < 10*time.Second {
-				return nil, fmt.Errorf("replication_interval value '%s' is too small (minimum 10s)", tConfig.ReplicationInterval)
+			if duration < 2*ReplicationScanInterval {
+				return nil, fmt.Errorf("replication_interval value '%s' is too small (minimum %s)", tConfig.ReplicationInterval, 2*ReplicationScanInterval)
 			}
 			vmConfig.ReplicationInterval = duration
 		}
