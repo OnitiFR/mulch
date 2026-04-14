@@ -1,0 +1,174 @@
+package controllers
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strconv"
+
+	"github.com/OnitiFR/mulch/cmd/mulchd/server"
+)
+
+// ListReplicationController lists all replication states
+func ListReplicationController(req *server.Request) {
+	req.Response.Header().Set("Content-Type", "application/json")
+
+	states := req.App.ReplicationDB.GetAll()
+
+	enc := json.NewEncoder(req.Response)
+	err := enc.Encode(states)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+	}
+}
+
+// GetReplicationStatusController returns the replication state for a VM
+func GetReplicationStatusController(req *server.Request) {
+	req.Response.Header().Set("Content-Type", "application/json")
+
+	vmName := req.SubPath
+	if vmName == "" {
+		http.Error(req.Response, "missing VM name", 400)
+		return
+	}
+
+	state := req.App.ReplicationDB.Get(vmName)
+	if state == nil {
+		http.Error(req.Response, fmt.Sprintf("no replication state for VM '%s'", vmName), 404)
+		return
+	}
+
+	enc := json.NewEncoder(req.Response)
+	err := enc.Encode(state)
+	if err != nil {
+		req.App.Log.Error(err.Error())
+		http.Error(req.Response, err.Error(), 500)
+	}
+}
+
+// ActionReplicationController handles replication actions (sync, full-resync, disable, enable)
+func ActionReplicationController(req *server.Request) {
+	req.StartStream()
+	vmNameStr := req.SubPath
+	if vmNameStr == "" {
+		req.Stream.Failure("missing VM name")
+		return
+	}
+
+	action := req.HTTP.FormValue("action")
+	if action == "" {
+		req.Stream.Failure("missing 'action' parameter")
+		return
+	}
+
+	vmName, err := server.ParseVMName(vmNameStr)
+	if err != nil {
+		req.Stream.Failuref("invalid VM name: %s", err)
+		return
+	}
+
+	vm, err := req.App.VMDB.GetByName(vmName)
+	if err != nil {
+		req.Stream.Failuref("VM not found: %s", err)
+		return
+	}
+
+	if vm.Config.ReplicationPeer == "" {
+		req.Stream.Failure("replication is not configured for this VM")
+		return
+	}
+
+	switch action {
+	case "full-resync":
+		req.App.ReplicationMgr.ResetFullCopy(vmName)
+		req.Stream.Infof("replication for %s marked for full resync", vmName.ID())
+	default:
+		req.Stream.Failuref("unknown action '%s' (valid: full-resync)", action)
+		return
+	}
+
+	req.Stream.Success("done")
+}
+
+// PrepareReplicationController creates or recreates a raw replica file (called by the source peer)
+func PrepareReplicationController(req *server.Request) {
+	req.StartStream()
+	vmName := req.HTTP.FormValue("vm_name")
+	if vmName == "" {
+		req.Stream.Failure("missing 'vm_name' parameter")
+		return
+	}
+
+	if !server.IsValidName(vmName) {
+		req.Stream.Failuref("invalid VM name '%s'", vmName)
+		return
+	}
+
+	diskSizeStr := req.HTTP.FormValue("disk_size")
+	if diskSizeStr == "" {
+		req.Stream.Failure("missing 'disk_size' parameter")
+		return
+	}
+
+	diskSize, err := strconv.ParseUint(diskSizeStr, 10, 64)
+	if err != nil {
+		req.Stream.Failuref("invalid disk_size '%s': %s", diskSizeStr, err)
+		return
+	}
+
+	err = req.App.ReplicationReceiver.Prepare(vmName, diskSize)
+	if err != nil {
+		req.Stream.Failuref("prepare failed: %s", err)
+		return
+	}
+
+	req.Stream.Successf("replica prepared for '%s'", vmName)
+}
+
+// SyncReplicationController receives a binary block stream and applies it to the replica file
+func SyncReplicationController(req *server.Request) {
+	vmName := req.HTTP.FormValue("vm_name")
+	if vmName == "" {
+		http.Error(req.Response, "missing 'vm_name' parameter", 400)
+		return
+	}
+
+	if !server.IsValidName(vmName) {
+		http.Error(req.Response, fmt.Sprintf("invalid VM name '%s'", vmName), 400)
+		return
+	}
+
+	err := req.App.ReplicationReceiver.ApplyBlocks(vmName, req.HTTP.Body)
+	if err != nil {
+		req.App.Log.Errorf("replication sync for '%s' failed: %s", vmName, err)
+		http.Error(req.Response, err.Error(), 500)
+		return
+	}
+
+	req.Response.Header().Set("Content-Type", "text/plain")
+	req.Response.Write([]byte("OK"))
+}
+
+// CleanupReplicationController removes a replica file (called by the source peer on VM delete)
+func CleanupReplicationController(req *server.Request) {
+	req.StartStream()
+	vmName := req.HTTP.FormValue("vm_name")
+	if vmName == "" {
+		req.Stream.Failure("missing 'vm_name' parameter")
+		return
+	}
+
+	if !server.IsValidName(vmName) {
+		req.Stream.Failuref("invalid VM name '%s'", vmName)
+		return
+	}
+
+	err := req.App.ReplicationReceiver.Delete(vmName)
+	if err != nil {
+		req.Stream.Failuref("cleanup failed: %s", err)
+		return
+	}
+
+	req.Stream.Successf("replica cleaned up for '%s'", vmName)
+}

@@ -110,6 +110,10 @@ auto_rebuild = "weekly"
 # (see https://pkg.go.dev/time#ParseDuration for syntax)
 build_timeout = "10m"
 
+# Disk will live-replicated to the peer (WIP)
+#replication_peer = "test1"
+#replication_interval = "60s"
+
 # Lifecyle scripts
 
 # If all prepare scripts share the same base URL, you can use prepare_prefix_url.

@@ -319,4 +319,42 @@ func AddRoutes(app *server.App) {
 		Handler: controllers.AbordGreenhouseVMController,
 	}, server.RouteAPI)
 
+	// Replication
+	app.AddRoute(&server.Route{
+		Route:   "GET /replication",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.ListReplicationController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "GET /replication/*",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.GetReplicationStatusController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "POST /replication/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.ActionReplicationController,
+	}, server.RouteAPI)
+
+	// Replication receiver (called by peers)
+	app.AddRoute(&server.Route{
+		Route:   "POST /replication/prepare",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.PrepareReplicationController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "POST /replication/sync",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.SyncReplicationController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "POST /replication/cleanup",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.CleanupReplicationController,
+	}, server.RouteAPI)
+
 }

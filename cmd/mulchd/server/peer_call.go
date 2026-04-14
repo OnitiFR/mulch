@@ -25,6 +25,7 @@ type PeerCall struct {
 	Args              map[string]string
 	UploadVolume      *PeerCallLibvirtFile
 	UploadString      *PeerCallStringFile
+	UploadStream      *PeerCallStreamBody
 	TextCallback      func(body []byte) error
 	JSONCallback      func(io.Reader, http.Header) error
 	BinaryCallback    func(io.Reader, http.Header) error
@@ -33,6 +34,12 @@ type PeerCall struct {
 
 	Log     *Log
 	Libvirt *Libvirt
+}
+
+// PeerCallStreamBody allows streaming a raw binary body in a PeerCall POST
+type PeerCallStreamBody struct {
+	ContentType string
+	Reader      io.Reader
 }
 
 type PeerCallLibvirtFile struct {
@@ -189,6 +196,14 @@ func (call *PeerCall) do() error {
 				return err
 			}
 			req.Header.Set("Content-Type", multipartWriter.FormDataContentType())
+		} else if call.UploadStream != nil {
+			// raw binary body, params in URL query string
+			finalURL := apiURL + "?" + data.Encode()
+			req, err = http.NewRequest(method, finalURL, call.UploadStream.Reader)
+			if err != nil {
+				return err
+			}
+			req.Header.Set("Content-Type", call.UploadStream.ContentType)
 		} else {
 			// simple URL encoded form
 

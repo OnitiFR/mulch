@@ -45,11 +45,13 @@ type VMConfig struct {
 	Env            map[string]string
 	Secrets        []string
 	Ports          []*VMPort
-	BackupDiskSize uint64
-	BackupCompress bool
-	RestoreBackup  string
-	AutoRebuild    string
-	BuildTimeout   time.Duration
+	BackupDiskSize      uint64
+	BackupCompress      bool
+	RestoreBackup       string
+	AutoRebuild         string
+	BuildTimeout        time.Duration
+	ReplicationPeer     string
+	ReplicationInterval time.Duration
 
 	Prepare []*VMConfigScript
 	Install []*VMConfigScript
@@ -93,11 +95,13 @@ type tomlVMConfig struct {
 	Secrets         []string
 	EnvRaw          string `toml:"env_raw"`
 	Ports           []string
-	BackupDiskSize  datasize.ByteSize `toml:"backup_disk_size"`
-	BackupCompress  bool              `toml:"backup_compress"`
-	RestoreBackup   string            `toml:"restore_backup"`
-	AutoRebuild     string            `toml:"auto_rebuild"`
-	BuildTimeout    string            `toml:"build_timeout"`
+	BackupDiskSize      datasize.ByteSize `toml:"backup_disk_size"`
+	BackupCompress      bool              `toml:"backup_compress"`
+	RestoreBackup       string            `toml:"restore_backup"`
+	AutoRebuild         string            `toml:"auto_rebuild"`
+	BuildTimeout        string            `toml:"build_timeout"`
+	ReplicationPeer     string            `toml:"replication_peer"`
+	ReplicationInterval string            `toml:"replication_interval"`
 
 	PreparePrefixURL string `toml:"prepare_prefix_url"`
 	Prepare          []string
@@ -484,6 +488,25 @@ func NewVMConfigFromTomlReader(configIn io.Reader, app *App) (*VMConfig, error) 
 			return nil, fmt.Errorf("build_timeout value '%s' is too small", tConfig.BuildTimeout)
 		}
 		vmConfig.BuildTimeout = duration
+	}
+
+	if tConfig.ReplicationPeer != "" {
+		if _, exists := app.Config.Peers[tConfig.ReplicationPeer]; !exists {
+			return nil, fmt.Errorf("replication_peer '%s' is not a known peer", tConfig.ReplicationPeer)
+		}
+		vmConfig.ReplicationPeer = tConfig.ReplicationPeer
+
+		vmConfig.ReplicationInterval = 60 * time.Second // default
+		if tConfig.ReplicationInterval != "" {
+			duration, errD := time.ParseDuration(tConfig.ReplicationInterval)
+			if errD != nil {
+				return nil, fmt.Errorf("invalid replication_interval value '%s'", tConfig.ReplicationInterval)
+			}
+			if duration < 10*time.Second {
+				return nil, fmt.Errorf("replication_interval value '%s' is too small (minimum 10s)", tConfig.ReplicationInterval)
+			}
+			vmConfig.ReplicationInterval = duration
+		}
 	}
 
 	var actions []*VMDoAction

@@ -57,6 +57,9 @@ type App struct {
 	AlertSender    *AlertSender
 	Seeder         *SeedDatabase
 	Origins        *Origins
+	ReplicationDB       *ReplicationDatabase
+	ReplicationMgr      *ReplicationManager
+	ReplicationReceiver *ReplicationReceiver
 	routesInternal map[string][]*Route
 	routesAPI      map[string][]*Route
 	sshClients     *sshServerClients
@@ -180,6 +183,19 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	go AutoRebuildSchedule(app)
 
 	go app.BackupsDB.Run()
+
+	err = app.initReplicationDB()
+	if err != nil {
+		return nil, fmt.Errorf("Replication DB: %s", err)
+	}
+
+	app.ReplicationReceiver, err = NewReplicationReceiver(app)
+	if err != nil {
+		return nil, fmt.Errorf("Replication Receiver: %s", err)
+	}
+
+	app.ReplicationMgr = NewReplicationManager(app)
+	go app.ReplicationMgr.Run()
 
 	return app, nil
 }
@@ -388,6 +404,22 @@ func (app *App) initSeedsDB() error {
 		return err
 	}
 	app.Seeder = seeder
+
+	return nil
+}
+
+func (app *App) initReplicationDB() error {
+	dbPath := app.Config.DataPath + "/mulch-replication.db"
+
+	db, err := NewReplicationDatabase(dbPath)
+	if err != nil {
+		return err
+	}
+	app.ReplicationDB = db
+
+	if db.Count() > 0 {
+		app.Log.Infof("found %d replication state(s) in database %s", db.Count(), dbPath)
+	}
 
 	return nil
 }

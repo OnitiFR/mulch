@@ -790,6 +790,11 @@ func VMStopByName(name *VMName, force bool, timeout time.Duration, app *App, log
 		return errors.New("VM is not up")
 	}
 
+	// abort any replication sync in progress before stopping
+	if app.ReplicationMgr != nil {
+		app.ReplicationMgr.AbortSync(name)
+	}
+
 	if !force {
 		// shutdown
 		errS := domain.Shutdown()
@@ -877,6 +882,23 @@ func VMStartByName(name *VMName, secretUUID string, app *App, log *Log) error {
 		log.Infof("vm %s phoned home", name)
 	}
 
+	// check replication checkpoint validity after start
+	if app.ReplicationMgr != nil {
+		vm, errVM := app.VMDB.GetByName(name)
+		if errVM == nil && vm.Config.ReplicationPeer != "" {
+			state := app.ReplicationDB.Get(name.ID())
+			if state != nil && state.FullCopyDone && state.LastCheckpointName != "" {
+				cp, errCp := domain.CheckpointLookupByName(state.LastCheckpointName, 0)
+				if errCp != nil {
+					log.Warningf("replication %s: checkpoint lost after start, full copy needed", name.ID())
+					app.ReplicationMgr.ResetFullCopy(name)
+				} else {
+					cp.Free()
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -919,6 +941,11 @@ func VMDelete(vmName *VMName, app *App, log *Log) error {
 		return errG
 	}
 	if state != libvirt.DOMAIN_SHUTOFF {
+		// abort any replication sync in progress before destroying
+		if app.ReplicationMgr != nil {
+			app.ReplicationMgr.AbortSync(vmName)
+		}
+
 		log.Info("forcing VM shutdown")
 		if errD := domain.Destroy(); errD != nil {
 			return errD
@@ -981,6 +1008,29 @@ func VMDelete(vmName *VMName, app *App, log *Log) error {
 	errD := app.VMDB.Delete(vmName, log)
 	if errD != nil {
 		return errD
+	}
+
+	// clean up replication state and peer replica
+	if app.ReplicationDB != nil {
+		app.ReplicationDB.Delete(vmName.ID())
+	}
+	if app.ReplicationMgr != nil && vm.Config.ReplicationPeer != "" {
+		peer, exists := app.Config.Peers[vm.Config.ReplicationPeer]
+		if exists {
+			call := &PeerCall{
+				Peer:   peer,
+				Method: "POST",
+				Path:   "/replication/cleanup",
+				Args: map[string]string{
+					"vm_name": vmName.ID(),
+				},
+				Log:     app.Log,
+				Libvirt: app.Libvirt,
+			}
+			if errC := call.Do(); errC != nil {
+				log.Warningf("replication cleanup on peer failed: %s", errC)
+			}
+		}
 	}
 
 	errR := app.Libvirt.RebuildDHCPStaticLeases(app)
@@ -1793,6 +1843,11 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 
 	// commit (too late to rollback, original VM does not exists anymore)
 	success = true
+
+	// new VM needs a full replication sync (domain was recreated, checkpoints lost)
+	if app.ReplicationMgr != nil && newVM.Config.ReplicationPeer != "" {
+		app.ReplicationMgr.ResetFullCopy(newVMName)
+	}
 
 	if lock || originalLocked {
 		err := VMLockUnlock(newVMName, true, app.VMDB)
