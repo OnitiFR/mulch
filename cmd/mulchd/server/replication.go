@@ -1,3 +1,27 @@
+// Disk replication for VM high availability.
+//
+// Replication uses QEMU dirty bitmaps and libvirt's pull-mode backup API to
+// incrementally copy changed disk blocks from a source mulchd to a peer mulchd.
+//
+// Sync cycle (every replication_interval, per VM):
+//
+//  1. FSFreeze the guest (via QEMU guest agent, ~10ms)
+//  2. Create a libvirt checkpoint (freezes the dirty bitmap)
+//  3. FSThaw immediately
+//  4. BackupBegin in pull mode: QEMU exposes dirty blocks on a TCP NBD server
+//     (localhost, ephemeral port). Libvirt creates a scratch qcow2 in TempPath.
+//  5. Read dirty extents via NBD BLOCK_STATUS, read data via NBD READ
+//  6. Stream blocks to the peer over HTTP POST using custom MRPL binary protocol
+//  7. Peer applies blocks with WriteAt on the raw replica file
+//  8. BlockJobAbort to end the backup, delete the old checkpoint
+//
+// Files:
+//   - replication.go        manager, scan loop, backoff, state, peer calls
+//   - replication_sync.go   syncVM, NBD pull, MRPL stream, checkpoint/backup XML
+//   - replication_state.go  ReplicationState struct and status constants
+//   - replication_database.go  JSON persistence of per-VM replication state
+//   - replication_receiver.go  peer-side: raw file management, MRPL receiver
+//   - nbd_client.go         thin wrapper around digitalocean/go-nbd
 package server
 
 import (
