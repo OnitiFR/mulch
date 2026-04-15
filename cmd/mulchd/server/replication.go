@@ -39,8 +39,8 @@ const (
 	ReplicationStartupDelay = 10 * time.Second
 	// ReplicationScanInterval between VM-to-sync scans (half of replication_interval minimum)
 	ReplicationScanInterval = 5 * time.Second
-	// ReplicationFSFreezeTimeout is the timeout for FSFreeze operations
-	ReplicationFSFreezeTimeout = 10 * time.Second
+	// ReplicationFSFreezeWarningDelay is the delay before logging a warning when FSFreeze is slow
+	ReplicationFSFreezeWarningDelay = 10 * time.Second
 	// ReplicationMaxConsecutiveErrors before backoff
 	ReplicationMaxConsecutiveErrors = 5
 	// ReplicationPauseErrors pauses replication and sends alert

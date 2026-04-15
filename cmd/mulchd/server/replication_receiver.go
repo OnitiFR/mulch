@@ -126,6 +126,15 @@ func (r *ReplicationReceiver) ApplyBlocks(vmName string, body io.Reader) error {
 		return fmt.Errorf("reading disk size: %s", err)
 	}
 
+	// sanity check: diskSize must match the existing replica file
+	fi, err := f.Stat()
+	if err != nil {
+		return fmt.Errorf("can't stat replica file: %s", err)
+	}
+	if uint64(fi.Size()) != diskSize {
+		return fmt.Errorf("disk size mismatch: stream says %d but replica file is %d bytes", diskSize, fi.Size())
+	}
+
 	r.app.Log.Tracef("replication receiver: sync '%s' started (protocol v%d, disk size=%d)", vmName, version, diskSize)
 
 	// read and apply blocks

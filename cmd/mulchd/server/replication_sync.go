@@ -213,7 +213,7 @@ func (rm *ReplicationManager) needsFullCopy(vmName *VMName, vm *VM, dom *libvirt
 	return false
 }
 
-// fsFreeze freezes the guest filesystem with a timeout
+// fsFreeze freezes the guest filesystem.
 func (rm *ReplicationManager) fsFreeze(dom *libvirt.Domain, vmName *VMName) (bool, error) {
 	ch := make(chan error, 1)
 	go func() {
@@ -226,9 +226,15 @@ func (rm *ReplicationManager) fsFreeze(dom *libvirt.Domain, vmName *VMName) (boo
 			return false, err
 		}
 		return true, nil
-	case <-time.After(ReplicationFSFreezeTimeout):
-		return false, fmt.Errorf("FSFreeze timed out after %s", ReplicationFSFreezeTimeout)
+	case <-time.After(ReplicationFSFreezeWarningDelay):
+		rm.app.Log.Warningf("replication %s: FSFreeze is taking longer than %s, still waiting…", vmName.ID(), ReplicationFSFreezeWarningDelay)
 	}
+
+	// keep waiting for the actual result
+	if err := <-ch; err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // buildCheckpointXML builds the XML for a new checkpoint
@@ -343,6 +349,7 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 	}
 
 	callErr := call.Do()
+	pipeReader.Close() // unblock the writer goroutine if call.Do() failed early
 
 	// check streaming error
 	result := <-streamCh
