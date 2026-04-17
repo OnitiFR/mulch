@@ -998,8 +998,14 @@ func VMDelete(vmName *VMName, app *App, log *Log) error {
 
 	log.Infof("removing VM from libvirt and database")
 
-	// undefine domain
-	errU := domain.Undefine()
+	// undefine domain (with metadata cleanup flags to avoid being blocked
+	// by leftover checkpoints, snapshots, managed save or NVRAM files)
+	errU := domain.UndefineFlags(
+		libvirt.DOMAIN_UNDEFINE_CHECKPOINTS_METADATA |
+			libvirt.DOMAIN_UNDEFINE_SNAPSHOTS_METADATA |
+			libvirt.DOMAIN_UNDEFINE_MANAGED_SAVE |
+			libvirt.DOMAIN_UNDEFINE_NVRAM,
+	)
 	if errU != nil {
 		return errU
 	}

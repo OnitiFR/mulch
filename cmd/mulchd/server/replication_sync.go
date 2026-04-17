@@ -74,6 +74,7 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 
 	// FSFreeze with timeout
 	app.Log.Tracef("replication %s: freezing guest filesystem", vmName.ID())
+	freezeStart := time.Now()
 	frozen, err := rm.fsFreeze(dom, vmName)
 	if err != nil {
 		rm.recordError(vmName, fmt.Sprintf("FSFreeze failed: %s", err))
@@ -96,6 +97,7 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 			app.Log.Tracef("replication %s: FSThaw done", vmName.ID())
 		}
 	}
+	app.Log.Tracef("replication %s: freeze window took %s", vmName.ID(), time.Since(freezeStart))
 
 	if cpErr != nil {
 		rm.recordError(vmName, fmt.Sprintf("checkpoint creation failed: %s", cpErr))
