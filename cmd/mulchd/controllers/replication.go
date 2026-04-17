@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
+	"github.com/OnitiFR/mulch/common"
 )
 
 // ListReplicationController lists all replication states
@@ -15,8 +17,32 @@ func ListReplicationController(req *server.Request) {
 
 	states := req.App.ReplicationDB.GetAll()
 
+	entries := make(common.APIReplicationEntries, 0, len(states))
+	for _, s := range states {
+		entries = append(entries, common.APIReplicationEntry{
+			Name:              s.Name,
+			Revision:          s.Revision,
+			PeerName:          s.PeerName,
+			Status:            string(s.Status),
+			FullCopyDone:      s.FullCopyDone,
+			LastSyncTime:      s.LastSyncTime,
+			LastSyncDuration:  s.LastSyncDuration,
+			LastSyncBytes:     s.LastSyncBytes,
+			LastError:         s.LastError,
+			LastErrorTime:     s.LastErrorTime,
+			ConsecutiveErrors: s.ConsecutiveErrors,
+		})
+	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].Name != entries[j].Name {
+			return entries[i].Name < entries[j].Name
+		}
+		return entries[i].Revision < entries[j].Revision
+	})
+
 	enc := json.NewEncoder(req.Response)
-	err := enc.Encode(states)
+	err := enc.Encode(entries)
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)
@@ -100,7 +126,7 @@ func PrepareReplicationController(req *server.Request) {
 		return
 	}
 
-	if !server.IsValidName(vmName) {
+	if _, err := server.ParseVMName(vmName); err != nil {
 		req.Stream.Failuref("invalid VM name '%s'", vmName)
 		return
 	}
@@ -134,7 +160,7 @@ func SyncReplicationController(req *server.Request) {
 		return
 	}
 
-	if !server.IsValidName(vmName) {
+	if _, err := server.ParseVMName(vmName); err != nil {
 		http.Error(req.Response, fmt.Sprintf("invalid VM name '%s'", vmName), 400)
 		return
 	}
@@ -159,7 +185,7 @@ func CleanupReplicationController(req *server.Request) {
 		return
 	}
 
-	if !server.IsValidName(vmName) {
+	if _, err := server.ParseVMName(vmName); err != nil {
 		req.Stream.Failuref("invalid VM name '%s'", vmName)
 		return
 	}

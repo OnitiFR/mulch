@@ -271,7 +271,8 @@ func (rm *ReplicationManager) ensureState(vmName *VMName, vm *VM) *ReplicationSt
 	state := rm.app.ReplicationDB.Get(vmName.ID())
 	if state == nil {
 		state = &ReplicationState{
-			VMName:   vmName.ID(),
+			Name:     vmName.Name,
+			Revision: vmName.Revision,
 			PeerName: vm.Config.ReplicationPeer,
 			Status:   ReplicationIdle,
 		}
@@ -287,7 +288,8 @@ func (rm *ReplicationManager) recordError(vmName *VMName, errMsg string) {
 	state := rm.app.ReplicationDB.Get(vmName.ID())
 	if state == nil {
 		state = &ReplicationState{
-			VMName: vmName.ID(),
+			Name:     vmName.Name,
+			Revision: vmName.Revision,
 		}
 	}
 	state.Status = ReplicationError

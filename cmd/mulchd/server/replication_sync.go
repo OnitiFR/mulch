@@ -182,9 +182,9 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 	app.ReplicationDB.Set(state)
 
 	if needsFullCopy {
-		app.Log.Infof("replication %s: full copy completed (%s)", vmName.ID(), state.LastSyncDuration.Round(time.Second))
+		app.Log.Infof("replication %s: full copy completed (%s)", vmName.ID(), state.LastSyncDuration)
 	} else {
-		app.Log.Tracef("replication %s: incremental sync completed (%s)", vmName.ID(), state.LastSyncDuration.Round(time.Second))
+		app.Log.Tracef("replication %s: incremental sync completed (%s)", vmName.ID(), state.LastSyncDuration)
 	}
 }
 

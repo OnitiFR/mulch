@@ -27,4 +27,9 @@ type APIVMInfos struct {
 	AssignedMAC         string
 	DoActions           []string
 	Tags                []string
+	ReplicationPeer     string
+	ReplicationStatus   string
+	ReplicationFullCopy bool
+	ReplicationLastSync time.Time
+	ReplicationLastErr  string
 }

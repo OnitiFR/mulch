@@ -16,7 +16,8 @@ const (
 
 // ReplicationState stores the replication state for a single VM
 type ReplicationState struct {
-	VMName             string
+	Name               string
+	Revision           int
 	PeerName           string
 	Status             ReplicationStatus
 	LastCheckpointName string // empty = full copy not yet done
@@ -27,4 +28,9 @@ type ReplicationState struct {
 	LastErrorTime      time.Time
 	FullCopyDone       bool
 	ConsecutiveErrors  int
+}
+
+// ID returns the unique VM ID (name + revision) for this state
+func (s *ReplicationState) ID() string {
+	return NewVMName(s.Name, s.Revision).ID()
 }

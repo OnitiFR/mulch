@@ -100,7 +100,7 @@ func (db *ReplicationDatabase) Set(state *ReplicationState) error {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
-	db.db[state.VMName] = state
+	db.db[state.ID()] = state
 	return db.save()
 }
 

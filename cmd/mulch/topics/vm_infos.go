@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/OnitiFR/mulch/common"
@@ -45,6 +46,9 @@ func vmInfosDisplay(reader io.Reader, _ http.Header) {
 	typeOfT := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		key := typeOfT.Field(i).Name
+		if data.ReplicationPeer == "" && strings.HasPrefix(key, "Replication") {
+			continue
+		}
 		val := common.InterfaceValueToString(v.Field(i).Interface())
 		fmt.Printf("%s: %s\n", key, val)
 	}

@@ -692,6 +692,20 @@ func GetVMInfosController(req *server.Request) {
 		tags = append(tags, tag)
 	}
 
+	var replPeer, replStatus, replLastErr string
+	var replFullCopy bool
+	var replLastSync time.Time
+	if vm.Config.ReplicationPeer != "" {
+		replPeer = vm.Config.ReplicationPeer
+		replStatus = "idle"
+		if rs := req.App.ReplicationDB.Get(entry.Name.ID()); rs != nil {
+			replStatus = string(rs.Status)
+			replFullCopy = rs.FullCopyDone
+			replLastSync = rs.LastSyncTime
+			replLastErr = rs.LastError
+		}
+	}
+
 	data := &common.APIVMInfos{
 		Name:                entry.Name.Name,
 		Revision:            entry.Name.Revision,
@@ -716,6 +730,11 @@ func GetVMInfosController(req *server.Request) {
 		AssignedMAC:         vm.AssignedMAC,
 		DoActions:           actions,
 		Tags:                tags,
+		ReplicationPeer:     replPeer,
+		ReplicationStatus:   replStatus,
+		ReplicationFullCopy: replFullCopy,
+		ReplicationLastSync: replLastSync,
+		ReplicationLastErr:  replLastErr,
 	}
 
 	req.Response.Header().Set("Content-Type", "application/json")
