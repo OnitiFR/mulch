@@ -27,7 +27,7 @@ type ReplicationState struct {
 	LastError          string
 	LastErrorTime      time.Time
 	FullCopyDone       bool
-	ConsecutiveErrors  int
+	ConsecutiveErrors int
 }
 
 // ID returns the unique VM ID (name + revision) for this state

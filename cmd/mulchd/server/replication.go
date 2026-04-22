@@ -5,7 +5,7 @@
 //
 // Sync cycle (every replication_interval, per VM):
 //
-//  1. FSFreeze the guest (via QEMU guest agent, ~10ms)
+//  1. FSFreeze the guest (via QEMU guest agent)
 //  2. Create a libvirt checkpoint (freezes the dirty bitmap)
 //  3. FSThaw immediately
 //  4. BackupBegin in pull mode: QEMU exposes dirty blocks on a TCP NBD server
@@ -15,8 +15,12 @@
 //  7. Peer applies blocks with WriteAt on the raw replica file
 //  8. BlockJobAbort to end the backup, delete the old checkpoint
 //
+// Scheduling: a reconcile loop (every 5s) compares VMDB with running
+// goroutines and spawns/stops per-VM replicator goroutines as needed.
+// Each goroutine owns its sync cycle: initial jitter, syncVM, sleep(interval).
+//
 // Files:
-//   - replication.go        manager, scan loop, backoff, state, peer calls
+//   - replication.go        manager, reconcile, per-VM goroutines, backoff, peer calls
 //   - replication_sync.go   syncVM, NBD pull, MRPL stream, checkpoint/backup XML
 //   - replication_state.go  ReplicationState struct and status constants
 //   - replication_database.go  JSON persistence of per-VM replication state
@@ -25,7 +29,9 @@
 package server
 
 import (
+	"context"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"sync"
@@ -37,8 +43,8 @@ import (
 const (
 	// ReplicationStartupDelay is the start delay after VM state restoration
 	ReplicationStartupDelay = 10 * time.Second
-	// ReplicationScanInterval between VM-to-sync scans (half of replication_interval minimum)
-	ReplicationScanInterval = 5 * time.Second
+	// ReplicationReconcileInterval between reconcile scans
+	ReplicationReconcileInterval = 5 * time.Second
 	// ReplicationFSFreezeWarningDelay is the delay before logging a warning when FSFreeze is slow
 	ReplicationFSFreezeWarningDelay = 10 * time.Second
 	// ReplicationMaxConsecutiveErrors before backoff
@@ -49,10 +55,17 @@ const (
 	ReplicationMaxBackoffInterval = 10 * time.Minute
 )
 
+// vmReplicator tracks a running per-VM replication goroutine
+type vmReplicator struct {
+	vmID   string
+	cancel context.CancelFunc
+	done   chan struct{}
+}
+
 // ReplicationManager manages disk replication for all VMs
 type ReplicationManager struct {
 	app              *App
-	syncLocks        map[string]*sync.Mutex
+	replicators      map[string]*vmReplicator
 	mu               sync.Mutex
 	versionSupported bool
 }
@@ -61,8 +74,8 @@ type ReplicationManager struct {
 // libvirt/QEMU version support immediately.
 func NewReplicationManager(app *App) *ReplicationManager {
 	rm := &ReplicationManager{
-		app:       app,
-		syncLocks: make(map[string]*sync.Mutex),
+		app:         app,
+		replicators: make(map[string]*vmReplicator),
 	}
 
 	rm.versionSupported = checkReplicationVersions(app)
@@ -83,12 +96,13 @@ func (rm *ReplicationManager) Run() {
 
 	rm.cleanupOrphanScratchFiles()
 	rm.abortStaleBackupJobs()
+	rm.sweepOrphanReplicationEntries()
 
 	rm.app.Log.Info("replication manager started")
 
 	for {
-		rm.scanVMs()
-		time.Sleep(ReplicationScanInterval)
+		rm.reconcile()
+		time.Sleep(ReplicationReconcileInterval)
 	}
 }
 
@@ -129,28 +143,19 @@ func checkReplicationVersions(app *App) bool {
 		return false
 	}
 
-	// app.Log.Infof("replication: libvirt %d.%d.%d, QEMU %d.%d.%d - version OK",
-	// 	libvirtVer/1000000, (libvirtVer/1000)%1000, libvirtVer%1000,
-	// 	qemuVer/1000000, (qemuVer/1000)%1000, qemuVer%1000)
-
 	return true
 }
 
-// getSyncLock returns the per-VM mutex, creating it if needed
-func (rm *ReplicationManager) getSyncLock(vmName string) *sync.Mutex {
-	rm.mu.Lock()
-	defer rm.mu.Unlock()
-
-	lock, exists := rm.syncLocks[vmName]
-	if !exists {
-		lock = &sync.Mutex{}
-		rm.syncLocks[vmName] = lock
+// randomJitter returns a random duration in [0, interval).
+func randomJitter(interval time.Duration) time.Duration {
+	if interval <= 0 {
+		return 0
 	}
-	return lock
+	return time.Duration(rand.Int64N(int64(interval)))
 }
 
 // abortStaleBackupJobs aborts any backup job left active by a previous crash
-// and resets "syncing" states back to "idle" so the scan loop picks them up again.
+// and resets "syncing" states back to "idle" so replicator goroutines pick them up.
 func (rm *ReplicationManager) abortStaleBackupJobs() {
 	vmNames := rm.app.VMDB.GetNames()
 	for _, vmName := range vmNames {
@@ -183,55 +188,166 @@ func (rm *ReplicationManager) cleanupOrphanScratchFiles() {
 	}
 }
 
-// scanVMs checks all VMs and starts sync goroutines as needed
-func (rm *ReplicationManager) scanVMs() {
-	vmNames := rm.app.VMDB.GetNames()
-
-	for _, vmName := range vmNames {
+// sweepOrphanReplicationEntries cleans up ReplicationDB entries whose VM no
+// longer exists or no longer has replication enabled (crash recovery).
+func (rm *ReplicationManager) sweepOrphanReplicationEntries() {
+	for _, state := range rm.app.ReplicationDB.GetAll() {
+		vmName := NewVMName(state.Name, state.Revision)
 		vm, err := rm.app.VMDB.GetByName(vmName)
-		if err != nil {
+		if err != nil || vm.Config.ReplicationPeer == "" {
+			rm.app.Log.Infof("replication %s: sweeping orphan replication entry", vmName.ID())
+			rm.cleanupDisabledReplication(vmName, state)
+		}
+	}
+}
+
+// reconcile compares desired state (VMDB) with running goroutines and
+// spawns or stops replicator goroutines as needed.
+func (rm *ReplicationManager) reconcile() {
+	// build desired set
+	desired := make(map[string]*VMName)
+	for _, vmName := range rm.app.VMDB.GetNames() {
+		vm, err := rm.app.VMDB.GetByName(vmName)
+		if err != nil || vm.Config.ReplicationPeer == "" {
 			continue
 		}
+		desired[vmName.ID()] = vmName
+	}
 
-		if vm.Config.ReplicationPeer == "" {
-			// replication disabled: clean up stale state if any
-			if state := rm.app.ReplicationDB.Get(vmName.ID()); state != nil {
+	// phase 1: under lock, identify what to stop and what to start
+	rm.mu.Lock()
+	var toStop []*vmReplicator
+	for id, rep := range rm.replicators {
+		if _, ok := desired[id]; !ok {
+			toStop = append(toStop, rep)
+			delete(rm.replicators, id)
+		}
+	}
+	var toStart []*VMName
+	for id, vmName := range desired {
+		if _, exists := rm.replicators[id]; !exists {
+			toStart = append(toStart, vmName)
+		}
+	}
+	rm.mu.Unlock()
+
+	// phase 2: stop old goroutines (outside lock, may block)
+	for _, rep := range toStop {
+		rm.stopReplicator(rep)
+	}
+
+	// phase 3: spawn new goroutines
+	if len(toStart) > 0 {
+		rm.mu.Lock()
+		for _, vmName := range toStart {
+			if _, exists := rm.replicators[vmName.ID()]; !exists {
+				rm.spawnReplicator(vmName)
+			}
+		}
+		rm.mu.Unlock()
+	}
+}
+
+// spawnReplicator creates and starts a per-VM replication goroutine.
+// Must be called with rm.mu held.
+func (rm *ReplicationManager) spawnReplicator(vmName *VMName) {
+	ctx, cancel := context.WithCancel(context.Background())
+	rep := &vmReplicator{
+		vmID:   vmName.ID(),
+		cancel: cancel,
+		done:   make(chan struct{}),
+	}
+	rm.replicators[vmName.ID()] = rep
+	go rm.runReplicator(ctx, vmName, rep.done)
+}
+
+// stopReplicator cancels a replicator goroutine and waits for it to exit.
+// Must be called WITHOUT rm.mu held.
+func (rm *ReplicationManager) stopReplicator(rep *vmReplicator) {
+	rep.cancel()
+	vmName, err := ParseVMName(rep.vmID)
+	if err == nil {
+		rm.AbortSync(vmName)
+	}
+	<-rep.done
+}
+
+// runReplicator is the per-VM replication goroutine. It handles initial jitter,
+// then loops: syncVM → sleep(effectiveInterval) until cancelled.
+func (rm *ReplicationManager) runReplicator(ctx context.Context, vmName *VMName, done chan struct{}) {
+	defer close(done)
+
+	defer func() {
+		vm, err := rm.app.VMDB.GetByName(vmName)
+		if err != nil || vm.Config.ReplicationPeer == "" {
+			state := rm.app.ReplicationDB.Get(vmName.ID())
+			if state != nil {
 				rm.cleanupDisabledReplication(vmName, state)
 			}
-			continue
+		}
+	}()
+
+	vm, err := rm.app.VMDB.GetByName(vmName)
+	if err != nil {
+		return
+	}
+
+	// compute initial delay: respect time remaining from last sync, or jitter
+	initialDelay := rm.computeInitialDelay(vm, vmName)
+
+	select {
+	case <-time.After(initialDelay):
+	case <-ctx.Done():
+		return
+	}
+
+	for {
+		vm, err = rm.app.VMDB.GetByName(vmName)
+		if err != nil || vm.Config.ReplicationPeer == "" {
+			return
 		}
 
-		// check if it's time to sync
+		rm.syncVM(vmName, vm)
+
 		state := rm.app.ReplicationDB.Get(vmName.ID())
 		interval := rm.getEffectiveInterval(vm, state)
 
-		if state != nil && state.Status == ReplicationSyncing {
-			continue
+		select {
+		case <-time.After(interval):
+		case <-ctx.Done():
+			return
 		}
-
-		if state != nil {
-			// use the most recent of LastSyncTime and LastErrorTime for interval check,
-			// so that backoff works even when no sync has ever succeeded
-			lastActivity := state.LastSyncTime
-			if state.LastErrorTime.After(lastActivity) {
-				lastActivity = state.LastErrorTime
-			}
-			if !lastActivity.IsZero() && time.Since(lastActivity) < interval {
-				continue
-			}
-		}
-
-		// try to acquire the lock (non-blocking)
-		lock := rm.getSyncLock(vmName.ID())
-		if !lock.TryLock() {
-			continue // already syncing
-		}
-
-		go func(name *VMName, v *VM) {
-			defer lock.Unlock()
-			rm.syncVM(name, v)
-		}(vmName, vm)
 	}
+}
+
+// computeInitialDelay returns the delay before the first sync of a replicator
+// goroutine. If the VM was recently synced, it waits for the remaining interval
+// plus a small jitter. Otherwise it uses a full random jitter to scatter VMs.
+func (rm *ReplicationManager) computeInitialDelay(vm *VM, vmName *VMName) time.Duration {
+	interval := vm.Config.ReplicationInterval
+
+	state := rm.app.ReplicationDB.Get(vmName.ID())
+	if state == nil {
+		return randomJitter(interval)
+	}
+
+	lastActivity := state.LastSyncTime
+	if state.LastErrorTime.After(lastActivity) {
+		lastActivity = state.LastErrorTime
+	}
+
+	if lastActivity.IsZero() {
+		return randomJitter(interval)
+	}
+
+	effectiveInterval := rm.getEffectiveInterval(vm, state)
+	elapsed := time.Since(lastActivity)
+	if elapsed < effectiveInterval {
+		remaining := effectiveInterval - elapsed
+		return remaining + randomJitter(interval/4)
+	}
+
+	return randomJitter(interval)
 }
 
 // getEffectiveInterval returns the sync interval, applying backoff if needed.
@@ -356,7 +472,7 @@ func (rm *ReplicationManager) peerPrepare(vm *VM, vmName *VMName) error {
 }
 
 // cleanupDisabledReplication cleans up replication state when replication has been
-// disabled on a VM (replication_peer removed via redefine).
+// disabled on a VM (replication_peer removed via redefine) or VM was deleted.
 func (rm *ReplicationManager) cleanupDisabledReplication(vmName *VMName, state *ReplicationState) {
 	rm.app.Log.Infof("replication %s: replication disabled, cleaning up", vmName.ID())
 

@@ -502,8 +502,8 @@ func NewVMConfigFromTomlReader(configIn io.Reader, app *App) (*VMConfig, error) 
 			if errD != nil {
 				return nil, fmt.Errorf("invalid replication_interval value '%s'", tConfig.ReplicationInterval)
 			}
-			if duration < 2*ReplicationScanInterval {
-				return nil, fmt.Errorf("replication_interval value '%s' is too small (minimum %s)", tConfig.ReplicationInterval, 2*ReplicationScanInterval)
+			if duration < 2*ReplicationReconcileInterval {
+				return nil, fmt.Errorf("replication_interval value '%s' is too small (minimum %s)", tConfig.ReplicationInterval, 2*ReplicationReconcileInterval)
 			}
 			vmConfig.ReplicationInterval = duration
 		}
