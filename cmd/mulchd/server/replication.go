@@ -310,7 +310,7 @@ func (rm *ReplicationManager) runReplicator(ctx context.Context, vmName *VMName,
 		rm.syncVM(vmName, vm)
 
 		state := rm.app.ReplicationDB.Get(vmName.ID())
-		interval := rm.getEffectiveInterval(vm, state)
+		interval := rm.GetEffectiveInterval(vm, state)
 
 		select {
 		case <-time.After(interval):
@@ -340,7 +340,7 @@ func (rm *ReplicationManager) computeInitialDelay(vm *VM, vmName *VMName) time.D
 		return randomJitter(interval)
 	}
 
-	effectiveInterval := rm.getEffectiveInterval(vm, state)
+	effectiveInterval := rm.GetEffectiveInterval(vm, state)
 	elapsed := time.Since(lastActivity)
 	if elapsed < effectiveInterval {
 		remaining := effectiveInterval - elapsed
@@ -350,7 +350,7 @@ func (rm *ReplicationManager) computeInitialDelay(vm *VM, vmName *VMName) time.D
 	return randomJitter(interval)
 }
 
-// getEffectiveInterval returns the sync interval, applying backoff if needed.
+// GetEffectiveInterval returns the sync interval, applying backoff if needed.
 //
 // When consecutive sync errors occur, the interval is progressively increased
 // to avoid hammering a broken peer or flooding logs:
@@ -359,7 +359,7 @@ func (rm *ReplicationManager) computeInitialDelay(vm *VM, vmName *VMName) time.D
 //   - >= 20 errors: effectively paused, an alert is sent
 //
 // The counter resets to zero on the first successful sync.
-func (rm *ReplicationManager) getEffectiveInterval(vm *VM, state *ReplicationState) time.Duration {
+func (rm *ReplicationManager) GetEffectiveInterval(vm *VM, state *ReplicationState) time.Duration {
 	interval := vm.Config.ReplicationInterval
 
 	if state == nil || state.ConsecutiveErrors < ReplicationMaxConsecutiveErrors {

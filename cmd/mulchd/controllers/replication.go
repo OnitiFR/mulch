@@ -23,7 +23,7 @@ func ListReplicationController(req *server.Request) {
 		vmName := server.NewVMName(s.Name, s.Revision)
 		active, _ := req.App.VMDB.IsVMActive(vmName)
 
-		entries = append(entries, common.APIReplicationEntry{
+		entry := common.APIReplicationEntry{
 			Name:              s.Name,
 			Revision:          s.Revision,
 			Active:            active,
@@ -36,7 +36,16 @@ func ListReplicationController(req *server.Request) {
 			LastError:         s.LastError,
 			LastErrorTime:     s.LastErrorTime,
 			ConsecutiveErrors: s.ConsecutiveErrors,
-		})
+			BackoffPaused:     s.ConsecutiveErrors >= server.ReplicationPauseErrors,
+		}
+
+		vm, err := req.App.VMDB.GetByName(vmName)
+		if err == nil {
+			entry.ConfiguredInterval = vm.Config.ReplicationInterval
+			entry.BackoffInterval = req.App.ReplicationMgr.GetEffectiveInterval(vm, s)
+		}
+
+		entries = append(entries, entry)
 	}
 
 	sort.Slice(entries, func(i, j int) bool {
@@ -105,10 +114,17 @@ func GetReplicationStatusController(req *server.Request) {
 		LastError:         state.LastError,
 		LastErrorTime:     state.LastErrorTime,
 		ConsecutiveErrors: state.ConsecutiveErrors,
+		BackoffPaused:     state.ConsecutiveErrors >= server.ReplicationPauseErrors,
+	}
+
+	vm, err := req.App.VMDB.GetByName(vmName)
+	if err == nil {
+		entry.ConfiguredInterval = vm.Config.ReplicationInterval
+		entry.BackoffInterval = req.App.ReplicationMgr.GetEffectiveInterval(vm, state)
 	}
 
 	enc := json.NewEncoder(req.Response)
-	err := enc.Encode(entry)
+	err = enc.Encode(entry)
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)
