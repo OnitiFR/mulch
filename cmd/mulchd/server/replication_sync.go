@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/c2h5oh/datasize"
 	"libvirt.org/go/libvirt"
 	"libvirt.org/go/libvirtxml"
 )
@@ -42,12 +43,10 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 		rm.recordError(vmName, fmt.Sprintf("can't resolve disk device: %s", err))
 		return
 	}
-	app.Log.Tracef("replication %s: disk device is '%s'", vmName.ID(), diskDev)
 
 	// determine sync mode
 	state := app.ReplicationDB.Get(vmName.ID())
 	needsFullCopy := rm.needsFullCopy(vmName, vm, dom, state)
-	app.Log.Tracef("replication %s: needsFullCopy=%t", vmName.ID(), needsFullCopy)
 
 	if needsFullCopy {
 		// if the peer changed, clean up the old peer's replica first
@@ -73,19 +72,16 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 	syncStart := time.Now()
 
 	// FSFreeze with timeout
-	app.Log.Tracef("replication %s: freezing guest filesystem", vmName.ID())
 	freezeStart := time.Now()
 	frozen, err := rm.fsFreeze(dom, vmName)
 	if err != nil {
 		rm.recordError(vmName, fmt.Sprintf("FSFreeze failed: %s", err))
 		return
 	}
-	app.Log.Tracef("replication %s: FSFreeze done (frozen=%t)", vmName.ID(), frozen)
 
 	// create checkpoint (must always FSThaw even on error)
 	newCpName := fmt.Sprintf("mulch-repl-%s-%d", vmName.ID(), time.Now().Unix())
 	cpXML := rm.buildCheckpointXML(newCpName, diskDev)
-	app.Log.Tracef("replication %s: creating checkpoint '%s'", vmName.ID(), newCpName)
 	newCp, cpErr := dom.CreateCheckpointXML(cpXML, 0)
 
 	// FSThaw immediately
@@ -93,8 +89,6 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 		thawErr := dom.FSThaw(nil, 0)
 		if thawErr != nil {
 			app.Log.Errorf("replication %s: FSThaw failed: %s", vmName.ID(), thawErr)
-		} else {
-			app.Log.Tracef("replication %s: FSThaw done", vmName.ID())
 		}
 	}
 	app.Log.Tracef("replication %s: freeze window took %s", vmName.ID(), time.Since(freezeStart))
@@ -104,7 +98,6 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 		return
 	}
 	defer newCp.Free()
-	app.Log.Tracef("replication %s: checkpoint created", vmName.ID())
 
 	// scratch file for pull-mode backup (libvirt creates it, handles DAC for QEMU)
 	scratchPath := filepath.Join(app.Config.TempPath, "mulch-repl-scratch-"+vmName.ID()+".qcow2")
@@ -122,20 +115,12 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 	}
 	backupXML := rm.buildPullBackupXML(diskDev, scratchPath, nbdPort, previousCheckpoint)
 
-	if needsFullCopy {
-		app.Log.Infof("replication %s: starting full copy to peer %s", vmName.ID(), vm.Config.ReplicationPeer)
-	} else {
-		app.Log.Tracef("replication %s: starting incremental sync to peer %s", vmName.ID(), vm.Config.ReplicationPeer)
-	}
-
 	// start pull-mode backup
-	app.Log.Tracef("replication %s: starting BackupBegin (pull mode)", vmName.ID())
 	err = dom.BackupBegin(backupXML, "", 0)
 	if err != nil {
 		rm.recordError(vmName, fmt.Sprintf("BackupBegin failed: %s", err))
 		return
 	}
-	app.Log.Tracef("replication %s: BackupBegin succeeded", vmName.ID())
 
 	// ensure we end the backup job even on error
 	backupActive := true
@@ -146,7 +131,6 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 	}()
 
 	nbdAddress := fmt.Sprintf("localhost:%d", nbdPort)
-	app.Log.Tracef("replication %s: NBD server at %s", vmName.ID(), nbdAddress)
 
 	// pull dirty blocks from QEMU and stream them to the peer
 	exportName := "mulch-repl"
@@ -305,8 +289,8 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 	}
 
 	// connect to QEMU's NBD server
-	rm.app.Log.Tracef("replication %s: connecting NBD client to '%s' (export='%s', bitmap='%s')",
-		vmName.ID(), nbdAddress, exportName, bitmapName)
+	// rm.app.Log.Tracef("replication %s: connecting NBD client to '%s' (export='%s', bitmap='%s')",
+	// vmName.ID(), nbdAddress, exportName, bitmapName)
 	nbdClient, err := NewNBDClient(nbdAddress, exportName, bitmapName)
 	if err != nil {
 		return 0, fmt.Errorf("NBD client connect: %s", err)
@@ -314,7 +298,7 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 	defer nbdClient.Close()
 
 	diskSize := nbdClient.ExportSize
-	rm.app.Log.Tracef("replication %s: NBD connected, export size=%d bytes", vmName.ID(), diskSize)
+	rm.app.Log.Tracef("replication %s: NBD connected, export size=%s bytes", vmName.ID(), datasize.ByteSize(diskSize).HR())
 
 	// set up a pipe: we write blocks into the pipe, PeerCall reads from it
 	pipeReader, pipeWriter := io.Pipe()
@@ -385,7 +369,6 @@ func (rm *ReplicationManager) writeBlockStream(w io.Writer, nbdClient *NBDClient
 	buf := make([]byte, ReplicationMaxBlockSize)
 
 	if fullCopy {
-		rm.app.Log.Tracef("replication: writeBlockStream full copy, disk size=%d", diskSize)
 		// read entire disk in chunks
 		var offset uint64
 		for offset < diskSize {
@@ -412,7 +395,6 @@ func (rm *ReplicationManager) writeBlockStream(w io.Writer, nbdClient *NBDClient
 			offset += uint64(length)
 		}
 	} else {
-		rm.app.Log.Tracef("replication: writeBlockStream incremental, disk size=%d", diskSize)
 		// incremental: use block status to find dirty extents
 		var offset uint64
 		var dirtyExtents uint64
@@ -468,7 +450,6 @@ func (rm *ReplicationManager) writeBlockStream(w io.Writer, nbdClient *NBDClient
 				offset += uint64(queryLen)
 			}
 		}
-		rm.app.Log.Tracef("replication: incremental extents: %d dirty, %d clean", dirtyExtents, cleanExtents)
 	}
 
 	// write end sentinel
@@ -479,11 +460,7 @@ func (rm *ReplicationManager) writeBlockStream(w io.Writer, nbdClient *NBDClient
 		return totalBytes, err
 	}
 
-	if zeroBlocks > 0 {
-		rm.app.Log.Tracef("replication: writeBlockStream done: %d blocks, %d bytes sent, %d zero blocks skipped", blockCount, totalBytes, zeroBlocks)
-	} else {
-		rm.app.Log.Tracef("replication: writeBlockStream done: %d blocks, %d bytes sent", blockCount, totalBytes)
-	}
+	rm.app.Log.Tracef("replication: writeBlockStream done: %d blocks, %d bytes sent, %d zero blocks skipped", blockCount, totalBytes, zeroBlocks)
 
 	return totalBytes, nil
 }

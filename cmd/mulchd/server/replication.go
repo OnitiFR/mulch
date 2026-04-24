@@ -42,7 +42,7 @@ import (
 
 const (
 	// ReplicationStartupDelay is the start delay after VM state restoration
-	ReplicationStartupDelay = 10 * time.Second
+	ReplicationStartupDelay = 5 * time.Second // testing
 	// ReplicationReconcileInterval between reconcile scans
 	ReplicationReconcileInterval = 5 * time.Second
 	// ReplicationFSFreezeWarningDelay is the delay before logging a warning when FSFreeze is slow
