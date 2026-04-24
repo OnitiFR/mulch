@@ -12,6 +12,26 @@ import (
 	"github.com/OnitiFR/mulch/common"
 )
 
+// resolveReplicationVMName resolves a VM name + optional "revision" param
+// to a *VMName. Without an explicit revision it tries the active entry first,
+// then falls back to the highest revision known in the ReplicationDB.
+func resolveReplicationVMName(name string, req *server.Request) (*server.VMName, error) {
+	revisionParam := req.HTTP.FormValue("revision")
+	if revisionParam != "" {
+		revision, err := strconv.Atoi(revisionParam)
+		if err != nil {
+			return nil, fmt.Errorf("invalid revision '%s'", revisionParam)
+		}
+		return server.NewVMName(name, revision), nil
+	}
+
+	activeEntry, err := req.App.VMDB.GetActiveEntryByName(name)
+	if err != nil {
+		return nil, fmt.Errorf("no active VM '%s', use --revision to specify one", name)
+	}
+	return activeEntry.Name, nil
+}
+
 // ListReplicationController lists all replication states
 func ListReplicationController(req *server.Request) {
 	req.Response.Header().Set("Content-Type", "application/json")
@@ -74,32 +94,17 @@ func GetReplicationStatusController(req *server.Request) {
 		return
 	}
 
-	var state *server.ReplicationState
-	revisionParam := req.HTTP.FormValue("revision")
-	if revisionParam != "" {
-		revision, err := strconv.Atoi(revisionParam)
-		if err != nil {
-			http.Error(req.Response, fmt.Sprintf("invalid revision '%s'", revisionParam), 400)
-			return
-		}
-		vmName := server.NewVMName(name, revision)
-		state = req.App.ReplicationDB.Get(vmName.ID())
-	} else {
-		activeEntry, err := req.App.VMDB.GetActiveEntryByName(name)
-		if err == nil {
-			state = req.App.ReplicationDB.Get(activeEntry.Name.ID())
-		}
-		if state == nil {
-			state = req.App.ReplicationDB.GetByVMName(name)
-		}
+	vmName, err := resolveReplicationVMName(name, req)
+	if err != nil {
+		http.Error(req.Response, err.Error(), 400)
+		return
 	}
 
+	state := req.App.ReplicationDB.Get(vmName.ID())
 	if state == nil {
 		http.Error(req.Response, fmt.Sprintf("no replication state for VM '%s'", name), 404)
 		return
 	}
-
-	vmName := server.NewVMName(state.Name, state.Revision)
 	active, _ := req.App.VMDB.IsVMActive(vmName)
 
 	entry := common.APIReplicationEntry{
@@ -136,8 +141,8 @@ func GetReplicationStatusController(req *server.Request) {
 // ActionReplicationController handles replication actions (sync, full-resync, disable, enable)
 func ActionReplicationController(req *server.Request) {
 	req.StartStream()
-	vmNameStr := req.SubPath
-	if vmNameStr == "" {
+	name := req.SubPath
+	if name == "" {
 		req.Stream.Failure("missing VM name")
 		return
 	}
@@ -148,9 +153,9 @@ func ActionReplicationController(req *server.Request) {
 		return
 	}
 
-	vmName, err := server.ParseVMName(vmNameStr)
+	vmName, err := resolveReplicationVMName(name, req)
 	if err != nil {
-		req.Stream.Failuref("invalid VM name: %s", err)
+		req.Stream.Failuref("%s", err)
 		return
 	}
 
@@ -169,8 +174,15 @@ func ActionReplicationController(req *server.Request) {
 	case "full-resync":
 		req.App.ReplicationMgr.ResetFullCopy(vmName)
 		req.Stream.Infof("replication for %s marked for full resync", vmName.ID())
+	case "sync-now":
+		err = req.App.ReplicationMgr.TriggerSync(vmName)
+		if err != nil {
+			req.Stream.Failuref("sync-now failed: %s", err)
+			return
+		}
+		req.Stream.Infof("replication sync triggered for %s", vmName.ID())
 	default:
-		req.Stream.Failuref("unknown action '%s' (valid: full-resync)", action)
+		req.Stream.Failuref("unknown action '%s' (valid: full-resync, sync-now)", action)
 		return
 	}
 

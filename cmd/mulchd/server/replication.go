@@ -57,9 +57,10 @@ const (
 
 // vmReplicator tracks a running per-VM replication goroutine
 type vmReplicator struct {
-	vmID   string
-	cancel context.CancelFunc
-	done   chan struct{}
+	vmID    string
+	cancel  context.CancelFunc
+	done    chan struct{}
+	trigger chan struct{}
 }
 
 // ReplicationManager manages disk replication for all VMs
@@ -253,12 +254,13 @@ func (rm *ReplicationManager) reconcile() {
 func (rm *ReplicationManager) spawnReplicator(vmName *VMName) {
 	ctx, cancel := context.WithCancel(context.Background())
 	rep := &vmReplicator{
-		vmID:   vmName.ID(),
-		cancel: cancel,
-		done:   make(chan struct{}),
+		vmID:    vmName.ID(),
+		cancel:  cancel,
+		done:    make(chan struct{}),
+		trigger: make(chan struct{}, 1),
 	}
 	rm.replicators[vmName.ID()] = rep
-	go rm.runReplicator(ctx, vmName, rep.done)
+	go rm.runReplicator(ctx, vmName, rep.done, rep.trigger)
 }
 
 // stopReplicator cancels a replicator goroutine and waits for it to exit.
@@ -274,7 +276,7 @@ func (rm *ReplicationManager) stopReplicator(rep *vmReplicator) {
 
 // runReplicator is the per-VM replication goroutine. It handles initial jitter,
 // then loops: syncVM → sleep(effectiveInterval) until cancelled.
-func (rm *ReplicationManager) runReplicator(ctx context.Context, vmName *VMName, done chan struct{}) {
+func (rm *ReplicationManager) runReplicator(ctx context.Context, vmName *VMName, done chan struct{}, trigger <-chan struct{}) {
 	defer close(done)
 
 	defer func() {
@@ -297,6 +299,7 @@ func (rm *ReplicationManager) runReplicator(ctx context.Context, vmName *VMName,
 
 	select {
 	case <-time.After(initialDelay):
+	case <-trigger:
 	case <-ctx.Done():
 		return
 	}
@@ -314,6 +317,7 @@ func (rm *ReplicationManager) runReplicator(ctx context.Context, vmName *VMName,
 
 		select {
 		case <-time.After(interval):
+		case <-trigger:
 		case <-ctx.Done():
 			return
 		}
@@ -559,4 +563,21 @@ func (rm *ReplicationManager) AbortSync(vmName *VMName) {
 	}
 
 	dom.BlockJobAbort(diskDev, 0)
+}
+
+// TriggerSync wakes up a sleeping replicator goroutine so it syncs immediately.
+func (rm *ReplicationManager) TriggerSync(vmName *VMName) error {
+	rm.mu.Lock()
+	rep, ok := rm.replicators[vmName.ID()]
+	rm.mu.Unlock()
+
+	if !ok {
+		return fmt.Errorf("no active replicator for VM %s", vmName.ID())
+	}
+
+	select {
+	case rep.trigger <- struct{}{}:
+	default:
+	}
+	return nil
 }
