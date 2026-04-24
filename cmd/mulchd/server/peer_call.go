@@ -242,7 +242,7 @@ func (call *PeerCall) do() error {
 			return err
 		}
 
-		httpError := fmt.Errorf("Error: %s (%v)\nMessage: %s",
+		httpError := fmt.Errorf("Error: %s (%v) with message: %s",
 			resp.Status,
 			resp.StatusCode,
 			string(body),

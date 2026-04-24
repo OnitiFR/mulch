@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -208,6 +209,8 @@ func SyncReplicationController(req *server.Request) {
 
 	err := req.App.ReplicationReceiver.ApplyBlocks(vmName, req.HTTP.Body)
 	if err != nil {
+		// drain remaining body so the HTTP 500 response reaches the source
+		io.Copy(io.Discard, io.LimitReader(req.HTTP.Body, 1<<20))
 		req.App.Log.Errorf("replication sync for '%s' failed: %s", vmName, err)
 		http.Error(req.Response, err.Error(), 500)
 		return

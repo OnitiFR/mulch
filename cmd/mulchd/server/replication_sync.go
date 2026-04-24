@@ -337,13 +337,14 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 	callErr := call.Do()
 	pipeReader.Close() // unblock the writer goroutine if call.Do() failed early
 
-	// check streaming error
+	// check errors (prefer callErr: it carries the peer's actual error message,
+	// while result.err is typically just a broken pipe)
 	result := <-streamCh
-	if result.err != nil {
-		return result.bytes, fmt.Errorf("writing block stream: %s", result.err)
-	}
 	if callErr != nil {
 		return result.bytes, fmt.Errorf("peer sync call: %s", callErr)
+	}
+	if result.err != nil {
+		return result.bytes, fmt.Errorf("writing block stream: %s", result.err)
 	}
 
 	return result.bytes, nil
