@@ -472,7 +472,7 @@ func (rm *ReplicationManager) peerCleanup(peerName string, vmName *VMName) {
 }
 
 // peerPrepare notifies the peer to prepare for a full copy
-func (rm *ReplicationManager) peerPrepare(vm *VM, vmName *VMName) error {
+func (rm *ReplicationManager) peerPrepare(vm *VM, vmName *VMName, actualDiskSize uint64) error {
 	peer, exists := rm.app.Config.Peers[vm.Config.ReplicationPeer]
 	if !exists {
 		return fmt.Errorf("peer '%s' not found in configuration", vm.Config.ReplicationPeer)
@@ -484,7 +484,7 @@ func (rm *ReplicationManager) peerPrepare(vm *VM, vmName *VMName) error {
 		Path:   "/replication/prepare",
 		Args: map[string]string{
 			"vm_name":   vmName.ID(),
-			"disk_size": fmt.Sprintf("%d", vm.Config.DiskSize),
+			"disk_size": fmt.Sprintf("%d", actualDiskSize),
 		},
 		Log:     rm.app.Log,
 		Libvirt: rm.app.Libvirt,

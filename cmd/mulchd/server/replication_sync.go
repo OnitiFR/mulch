@@ -56,8 +56,15 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 			rm.peerCleanup(state.PeerName, vmName)
 		}
 
+		// get actual disk capacity from libvirt (may differ from vm.Config.DiskSize after resize)
+		blockInfo, err := dom.GetBlockInfo(diskDev, 0)
+		if err != nil {
+			rm.recordError(vmName, fmt.Sprintf("can't get block info for '%s': %s", diskDev, err))
+			return
+		}
+
 		// notify new peer to prepare (create raw file)
-		err = rm.peerPrepare(vm, vmName)
+		err = rm.peerPrepare(vm, vmName, blockInfo.Capacity)
 		if err != nil {
 			rm.recordError(vmName, fmt.Sprintf("peer prepare failed: %s", err))
 			return
