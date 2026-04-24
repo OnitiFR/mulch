@@ -43,6 +43,7 @@ func ListReplicationController(req *server.Request) {
 		if err == nil {
 			entry.ConfiguredInterval = vm.Config.ReplicationInterval
 			entry.BackoffInterval = req.App.ReplicationMgr.GetEffectiveInterval(vm, s)
+			entry.AlertDelay = server.EstimateAlertDelay(vm.Config.ReplicationInterval)
 		}
 
 		entries = append(entries, entry)
@@ -121,6 +122,7 @@ func GetReplicationStatusController(req *server.Request) {
 	if err == nil {
 		entry.ConfiguredInterval = vm.Config.ReplicationInterval
 		entry.BackoffInterval = req.App.ReplicationMgr.GetEffectiveInterval(vm, state)
+		entry.AlertDelay = server.EstimateAlertDelay(vm.Config.ReplicationInterval)
 	}
 
 	enc := json.NewEncoder(req.Response)

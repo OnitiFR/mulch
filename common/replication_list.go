@@ -19,7 +19,8 @@ type APIReplicationEntry struct {
 	LastError         string
 	LastErrorTime     time.Time
 	ConsecutiveErrors int
-	BackoffInterval   time.Duration // effective interval (0 = no backoff or unknown)
+	BackoffInterval    time.Duration // effective interval (0 = no backoff or unknown)
 	ConfiguredInterval time.Duration // configured replication_interval
-	BackoffPaused     bool          // true when errors >= pause threshold
+	BackoffPaused      bool          // true when errors >= pause threshold
+	AlertDelay         time.Duration // estimated total time from first error to alert
 }

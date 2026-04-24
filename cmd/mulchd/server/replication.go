@@ -382,6 +382,28 @@ func (rm *ReplicationManager) GetEffectiveInterval(vm *VM, state *ReplicationSta
 	return backoff
 }
 
+// EstimateAlertDelay returns the estimated total time from the first error
+// until the alert is sent (at ReplicationPauseErrors consecutive errors).
+func EstimateAlertDelay(interval time.Duration) time.Duration {
+	var total time.Duration
+	for errCount := 0; errCount < ReplicationPauseErrors; errCount++ {
+		if errCount < ReplicationMaxConsecutiveErrors {
+			total += interval
+		} else {
+			backoff := interval
+			for i := ReplicationMaxConsecutiveErrors; i < errCount; i++ {
+				backoff *= 2
+				if backoff > ReplicationMaxBackoffInterval {
+					backoff = ReplicationMaxBackoffInterval
+					break
+				}
+			}
+			total += backoff
+		}
+	}
+	return total
+}
+
 // ensureState returns the current ReplicationState, creating it if needed
 func (rm *ReplicationManager) ensureState(vmName *VMName, vm *VM) *ReplicationState {
 	state := rm.app.ReplicationDB.Get(vmName.ID())

@@ -245,7 +245,7 @@ func (call *PeerCall) do() error {
 		httpError := fmt.Errorf("Error: %s (%v) with message: %s",
 			resp.Status,
 			resp.StatusCode,
-			string(body),
+			strings.TrimSpace(string(body)),
 		)
 
 		if call.HTTPErrorCallback != nil {

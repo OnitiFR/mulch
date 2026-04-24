@@ -119,6 +119,11 @@ func replicationStatusCB(reader io.Reader, _ http.Header) {
 			client.HumanShortDuration(data.ConfiguredInterval))
 	}
 
+	if data.AlertDelay > 0 {
+		fmt.Printf("Alert delay:        %s of consecutive errors\n",
+			client.HumanShortDuration(data.AlertDelay))
+	}
+
 	fmt.Printf("Last error:         %s\n", lastError)
 }
 
