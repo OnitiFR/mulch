@@ -95,6 +95,23 @@ func (db *ReplicationDatabase) Get(vmName string) *ReplicationState {
 	return state
 }
 
+// GetByVMName returns the ReplicationState for a VM base name (ignoring revision).
+// If multiple revisions exist, the highest revision is returned.
+func (db *ReplicationDatabase) GetByVMName(name string) *ReplicationState {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	var best *ReplicationState
+	for _, state := range db.db {
+		if state.Name == name {
+			if best == nil || state.Revision > best.Revision {
+				best = state
+			}
+		}
+	}
+	return best
+}
+
 // Set stores or updates the ReplicationState for a VM
 func (db *ReplicationDatabase) Set(state *ReplicationState) error {
 	db.mutex.Lock()

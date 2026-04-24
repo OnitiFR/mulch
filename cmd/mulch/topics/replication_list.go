@@ -98,8 +98,13 @@ func replicationListCB(reader io.Reader, _ http.Header) {
 			errs = red(strconv.Itoa(line.ConsecutiveErrors))
 		}
 
+		name := line.Name
+		if !line.Active {
+			name = grey(name)
+		}
+
 		strData = append(strData, []string{
-			line.Name,
+			name,
 			strconv.Itoa(line.Revision),
 			line.PeerName,
 			status,

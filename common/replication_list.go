@@ -9,6 +9,7 @@ type APIReplicationEntries []APIReplicationEntry
 type APIReplicationEntry struct {
 	Name              string
 	Revision          int
+	Active            bool
 	PeerName          string
 	Status            string
 	FullCopyDone      bool

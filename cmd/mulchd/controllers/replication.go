@@ -19,9 +19,13 @@ func ListReplicationController(req *server.Request) {
 
 	entries := make(common.APIReplicationEntries, 0, len(states))
 	for _, s := range states {
+		vmName := server.NewVMName(s.Name, s.Revision)
+		active, _ := req.App.VMDB.IsVMActive(vmName)
+
 		entries = append(entries, common.APIReplicationEntry{
 			Name:              s.Name,
 			Revision:          s.Revision,
+			Active:            active,
 			PeerName:          s.PeerName,
 			Status:            string(s.Status),
 			FullCopyDone:      s.FullCopyDone,
@@ -53,20 +57,57 @@ func ListReplicationController(req *server.Request) {
 func GetReplicationStatusController(req *server.Request) {
 	req.Response.Header().Set("Content-Type", "application/json")
 
-	vmName := req.SubPath
-	if vmName == "" {
+	name := req.SubPath
+	if name == "" {
 		http.Error(req.Response, "missing VM name", 400)
 		return
 	}
 
-	state := req.App.ReplicationDB.Get(vmName)
+	var state *server.ReplicationState
+	revisionParam := req.HTTP.FormValue("revision")
+	if revisionParam != "" {
+		revision, err := strconv.Atoi(revisionParam)
+		if err != nil {
+			http.Error(req.Response, fmt.Sprintf("invalid revision '%s'", revisionParam), 400)
+			return
+		}
+		vmName := server.NewVMName(name, revision)
+		state = req.App.ReplicationDB.Get(vmName.ID())
+	} else {
+		activeEntry, err := req.App.VMDB.GetActiveEntryByName(name)
+		if err == nil {
+			state = req.App.ReplicationDB.Get(activeEntry.Name.ID())
+		}
+		if state == nil {
+			state = req.App.ReplicationDB.GetByVMName(name)
+		}
+	}
+
 	if state == nil {
-		http.Error(req.Response, fmt.Sprintf("no replication state for VM '%s'", vmName), 404)
+		http.Error(req.Response, fmt.Sprintf("no replication state for VM '%s'", name), 404)
 		return
 	}
 
+	vmName := server.NewVMName(state.Name, state.Revision)
+	active, _ := req.App.VMDB.IsVMActive(vmName)
+
+	entry := common.APIReplicationEntry{
+		Name:              state.Name,
+		Revision:          state.Revision,
+		Active:            active,
+		PeerName:          state.PeerName,
+		Status:            string(state.Status),
+		FullCopyDone:      state.FullCopyDone,
+		LastSyncTime:      state.LastSyncTime,
+		LastSyncDuration:  state.LastSyncDuration,
+		LastSyncBytes:     state.LastSyncBytes,
+		LastError:         state.LastError,
+		LastErrorTime:     state.LastErrorTime,
+		ConsecutiveErrors: state.ConsecutiveErrors,
+	}
+
 	enc := json.NewEncoder(req.Response)
-	err := enc.Encode(state)
+	err := enc.Encode(entry)
 	if err != nil {
 		req.App.Log.Error(err.Error())
 		http.Error(req.Response, err.Error(), 500)
