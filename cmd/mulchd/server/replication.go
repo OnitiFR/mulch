@@ -155,8 +155,9 @@ func randomJitter(interval time.Duration) time.Duration {
 	return time.Duration(rand.Int64N(int64(interval)))
 }
 
-// abortStaleBackupJobs aborts any backup job left active by a previous crash
-// and resets "syncing" states back to "idle" so replicator goroutines pick them up.
+// abortStaleBackupJobs aborts any backup job left active by a previous crash,
+// thaws any guest filesystem left frozen, and resets "syncing" states back to
+// "idle" so replicator goroutines pick them up.
 func (rm *ReplicationManager) abortStaleBackupJobs() {
 	vmNames := rm.app.VMDB.GetNames()
 	for _, vmName := range vmNames {
@@ -165,6 +166,7 @@ func (rm *ReplicationManager) abortStaleBackupJobs() {
 			continue
 		}
 		rm.AbortSync(vmName)
+		rm.thawVM(vmName)
 
 		state := rm.app.ReplicationDB.Get(vmName.ID())
 		if state != nil && state.Status == ReplicationSyncing {
@@ -545,6 +547,27 @@ func (rm *ReplicationManager) ResetFullCopy(vmName *VMName) {
 	state.FullCopyDone = false
 	state.LastCheckpointName = ""
 	rm.app.ReplicationDB.Set(state)
+}
+
+// thawVM thaws the guest filesystem if the VM is running.
+// Safe to call unconditionally: FSThaw is a no-op when the FS is not frozen.
+func (rm *ReplicationManager) thawVM(vmName *VMName) {
+	domainName := vmName.LibvirtDomainName(rm.app)
+
+	dom, err := rm.app.Libvirt.GetDomainByName(domainName)
+	if err != nil || dom == nil {
+		return
+	}
+	defer dom.Free()
+
+	domState, _, err := dom.GetState()
+	if err != nil || domState != libvirt.DOMAIN_RUNNING {
+		return
+	}
+
+	if err := dom.FSThaw(nil, 0); err != nil {
+		rm.app.Log.Warningf("replication %s: startup FSThaw failed (may be normal): %s", vmName.ID(), err)
+	}
 }
 
 // AbortSync aborts any running backup block job for a VM
