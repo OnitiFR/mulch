@@ -40,6 +40,8 @@ EOS
 [ $? -eq 0 ] || exit $?
 
 sudo bash -c "cat > /etc/profile.d/mulch.sh" <<- EOS
+[ -n "\$BASH_VERSION" ] || return 0
+
 if ! shopt -oq posix; then
   alias $sualias="sudo -iu $_APP_USER"
   alias root="sudo -i"
@@ -71,6 +73,8 @@ themes="/usr/share/powerline/config_files/themes/shell/default*.json"
 sudo sed -i "s/\"function\": \"powerline.segments.common.net.hostname\",/\"function\": \"powerline.segments.common.env.environment\", \"args\": {\"variable\": \"_VM_NAME\"},/" $themes || exit $?
 
 sudo bash -c "cat > /etc/profile.d/powerline.sh" <<- EOS
+[ -n "\$BASH_VERSION" ] || return 0
+
 if ! shopt -oq posix; then
   if [ -f /usr/share/powerline/bindings/bash/powerline.sh ]; then
     . /usr/share/powerline/bindings/bash/powerline.sh
