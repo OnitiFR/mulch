@@ -13,7 +13,7 @@
 //  5. Read dirty extents via NBD BLOCK_STATUS, read data via NBD READ
 //  6. Stream blocks to the peer over HTTP POST using custom MRPL binary protocol
 //  7. Peer applies blocks with WriteAt on the raw replica file
-//  8. BlockJobAbort to end the backup, delete the old checkpoint
+//  8. BlockJobAbort to end the backup, then prune all checkpoints but the new one
 //
 // Scheduling: a reconcile loop (every 5s) compares VMDB with running
 // goroutines and spawns/stops per-VM replicator goroutines as needed.
@@ -34,6 +34,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -98,6 +99,7 @@ func (rm *ReplicationManager) Run() {
 	rm.cleanupOrphanScratchFiles()
 	rm.abortStaleBackupJobs()
 	rm.sweepOrphanReplicationEntries()
+	rm.cleanupOrphanCheckpoints()
 
 	rm.app.Log.Info("replication manager started")
 
@@ -531,10 +533,84 @@ func (rm *ReplicationManager) deleteCheckpoint(dom *libvirt.Domain, cpName strin
 	}
 	defer cp.Free()
 
-	err = cp.Delete(0)
+	rm.deleteCheckpointObj(cp, cpName, vmName)
+}
+
+// deleteCheckpointObj deletes a checkpoint, falling back to a metadata-only
+// removal when the normal delete fails because the underlying dirty bitmap is
+// missing or broken in the qcow2 (orphaned libvirt metadata, e.g. after a disk
+// rebuild/resize that wiped the persistent bitmaps). Returns true on success.
+func (rm *ReplicationManager) deleteCheckpointObj(cp *libvirt.DomainCheckpoint, name string, vmName *VMName) bool {
+	err := cp.Delete(0)
+	if err == nil {
+		return true
+	}
+
+	// libvirt still holds the checkpoint metadata but its bitmap is gone from
+	// the disk: drop the metadata so orphans stop piling up in checkpoint-list.
+	if err2 := cp.Delete(libvirt.DOMAIN_CHECKPOINT_DELETE_METADATA_ONLY); err2 != nil {
+		rm.app.Log.Warningf("replication %s: failed to delete checkpoint '%s': %s (metadata-only also failed: %s)",
+			vmName.ID(), name, err, err2)
+		return false
+	}
+
+	rm.app.Log.Warningf("replication %s: checkpoint '%s' had no usable bitmap, removed metadata only (%s)",
+		vmName.ID(), name, err)
+	return true
+}
+
+// pruneCheckpoints deletes all of vmName's replication checkpoints except
+// keepName (the base for the next incremental); pass "" to delete them all.
+// prevName, the base of the sync just completed, is only used to log its
+// removal as a normal rotation rather than an unexpected leftover.
+func (rm *ReplicationManager) pruneCheckpoints(dom *libvirt.Domain, vmName *VMName, keepName string, prevName string) {
+	prefix := fmt.Sprintf("mulch-repl-%s-", vmName.ID())
+
+	cps, err := dom.ListAllCheckpoints(0)
 	if err != nil {
-		rm.app.Log.Warningf("replication %s: failed to delete old checkpoint '%s': %s",
-			vmName.ID(), cpName, err)
+		rm.app.Log.Warningf("replication %s: can't list checkpoints for pruning: %s", vmName.ID(), err)
+		return
+	}
+
+	for i := range cps {
+		cp := &cps[i]
+		name, err := cp.GetName()
+		if err != nil || name == keepName || !strings.HasPrefix(name, prefix) {
+			cp.Free()
+			continue
+		}
+		if rm.deleteCheckpointObj(cp, name, vmName) {
+			if name == prevName {
+				rm.app.Log.Tracef("replication %s: rotated out previous checkpoint '%s'", vmName.ID(), name)
+			} else {
+				rm.app.Log.Infof("replication %s: pruned leftover checkpoint '%s'", vmName.ID(), name)
+			}
+		}
+		cp.Free()
+	}
+}
+
+// cleanupOrphanCheckpoints removes replication checkpoints left behind by failed
+// syncs or crashes, keeping only the one recorded in the replication state.
+// Called once at startup.
+func (rm *ReplicationManager) cleanupOrphanCheckpoints() {
+	for _, vmName := range rm.app.VMDB.GetNames() {
+		vm, err := rm.app.VMDB.GetByName(vmName)
+		if err != nil || vm.Config.ReplicationPeer == "" {
+			continue
+		}
+
+		dom, err := rm.app.Libvirt.GetDomainByName(vmName.LibvirtDomainName(rm.app))
+		if err != nil || dom == nil {
+			continue
+		}
+
+		keep := ""
+		if state := rm.app.ReplicationDB.Get(vmName.ID()); state != nil {
+			keep = state.LastCheckpointName
+		}
+		rm.pruneCheckpoints(dom, vmName, keep, "")
+		dom.Free()
 	}
 }
 

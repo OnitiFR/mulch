@@ -106,6 +106,16 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 	}
 	defer newCp.Free()
 
+	// delete the freshly-created checkpoint unless the whole sync succeeds.
+	// Without this, every failed cycle (BackupBegin error, broken pipe, crash…)
+	// leaves an orphan checkpoint + dirty bitmap piling up on the disk.
+	syncOK := false
+	defer func() {
+		if !syncOK {
+			rm.deleteCheckpoint(dom, newCpName, vmName)
+		}
+	}()
+
 	// scratch file for pull-mode backup (libvirt creates it, handles DAC for QEMU)
 	scratchPath := filepath.Join(app.Config.TempPath, "mulch-repl-scratch-"+vmName.ID()+".qcow2")
 	defer os.Remove(scratchPath)
@@ -125,6 +135,15 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 	// start pull-mode backup
 	err = dom.BackupBegin(backupXML, "", 0)
 	if err != nil {
+		// An incremental BackupBegin fails when the base checkpoint's dirty
+		// bitmap is missing or inconsistent (typically after an unclean VM
+		// shutdown / host crash). The incremental base is then unusable, so
+		// force a full copy on the next cycle instead of looping on the error.
+		if !needsFullCopy {
+			rm.app.Log.Warningf("replication %s: incremental BackupBegin failed (%s), forcing a full copy on next sync",
+				vmName.ID(), err)
+			rm.ResetFullCopy(vmName)
+		}
 		rm.recordError(vmName, fmt.Sprintf("BackupBegin failed: %s", err))
 		return
 	}
@@ -156,10 +175,10 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 	dom.BlockJobAbort(diskDev, 0)
 	backupActive = false
 
-	// delete old checkpoint (incremental mode only)
-	if !needsFullCopy && state.LastCheckpointName != "" {
-		rm.deleteCheckpoint(dom, state.LastCheckpointName, vmName)
-	}
+	// keep only the new checkpoint: delete the old base plus any orphans left
+	// behind by previous failed syncs or crashes. Deleting a checkpoint merges
+	// its bitmap into its parent (never its child), so newCpName stays clean.
+	rm.pruneCheckpoints(dom, vmName, newCpName, previousCheckpoint)
 
 	// update state
 	state.LastCheckpointName = newCpName
@@ -171,6 +190,7 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 	state.LastError = ""
 	state.ConsecutiveErrors = 0
 	app.ReplicationDB.Set(state)
+	syncOK = true
 
 	if needsFullCopy {
 		app.Log.Infof("replication %s: full copy completed (%s)", vmName.ID(), state.LastSyncDuration)
