@@ -169,7 +169,7 @@ __mulch_custom_func() {
             __internal_list_secrets
             return
             ;;
-        mulch_replication_status)
+        mulch_replication_status | mulch_replication_sync_now | mulch_replication_full_resync)
             __internal_list_replicated_vms
             return
             ;;

@@ -173,7 +173,12 @@ func ActionReplicationController(req *server.Request) {
 	switch action {
 	case "full-resync":
 		req.App.ReplicationMgr.ResetFullCopy(vmName)
-		req.Stream.Infof("replication for %s marked for full resync", vmName.ID())
+		err = req.App.ReplicationMgr.TriggerSync(vmName)
+		if err != nil {
+			req.Stream.Failuref("full-resync failed: %s", err)
+			return
+		}
+		req.Stream.Infof("full resync triggered for %s", vmName.ID())
 	case "sync-now":
 		err = req.App.ReplicationMgr.TriggerSync(vmName)
 		if err != nil {
