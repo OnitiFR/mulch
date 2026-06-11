@@ -493,6 +493,7 @@ func (rm *ReplicationManager) peerPrepare(vm *VM, vmName *VMName, actualDiskSize
 		Args: map[string]string{
 			"vm_name":   vmName.ID(),
 			"disk_size": fmt.Sprintf("%d", actualDiskSize),
+			"vm_config": vm.Config.FileContent,
 		},
 		Log:     rm.app.Log,
 		Libvirt: rm.app.Libvirt,

@@ -2,12 +2,20 @@ package server
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path"
 	"sync"
+	"time"
 )
+
+// ErrReplicaFileMissing is returned by ApplyBlocks when the replica .raw file
+// is gone (e.g. deleted out-of-band on the receiver). The source peer must
+// redo a full copy — which recreates the file through Prepare — instead of
+// retrying the (now impossible) incremental sync forever.
+var ErrReplicaFileMissing = errors.New("replica file missing, full copy required")
 
 const (
 	// ReplicationBlockMagic is the magic bytes at the start of a replication block stream
@@ -60,8 +68,9 @@ func (r *ReplicationReceiver) filePath(vmName string) string {
 	return path.Clean(r.replicaPath + "/" + vmName + ".raw")
 }
 
-// Prepare creates or recreates a raw sparse file for the given VM
-func (r *ReplicationReceiver) Prepare(vmName string, diskSize uint64) error {
+// Prepare creates or recreates a raw sparse file for the given VM and records
+// the replica in the database (origin = source identity, config = raw VM TOML).
+func (r *ReplicationReceiver) Prepare(vmName string, diskSize uint64, origin string, config string) error {
 	lock := r.getFileLock(vmName)
 	lock.Lock()
 	defer lock.Unlock()
@@ -80,7 +89,40 @@ func (r *ReplicationReceiver) Prepare(vmName string, diskSize uint64) error {
 		return fmt.Errorf("can't set replica file size: %s", err)
 	}
 
-	r.app.Log.Infof("replication receiver: prepared replica '%s' (%d bytes)", vmName, diskSize)
+	if err := r.recordReplica(vmName, origin, config, diskSize, 0); err != nil {
+		return err
+	}
+
+	r.app.Log.Infof("replication receiver: prepared replica '%s' (%d bytes) from '%s'", vmName, diskSize, origin)
+	return nil
+}
+
+// recordReplica creates or updates the replica database entry for a VM.
+// syncBytes is only updated when > 0 (Prepare passes 0 to keep the previous value).
+func (r *ReplicationReceiver) recordReplica(vmName string, origin string, config string, diskSize uint64, syncBytes uint64) error {
+	name, err := ParseVMName(vmName)
+	if err != nil {
+		return fmt.Errorf("invalid VM name '%s': %s", vmName, err)
+	}
+
+	state := r.app.ReplicaDB.Get(vmName)
+	if state == nil {
+		state = &ReplicaState{
+			Name:     name.Name,
+			Revision: name.Revision,
+		}
+	}
+	state.Origin = origin
+	state.Config = config
+	state.DiskSize = diskSize
+	state.LastUpdate = time.Now()
+	if syncBytes > 0 {
+		state.LastSyncBytes = syncBytes
+	}
+
+	if err := r.app.ReplicaDB.Set(state); err != nil {
+		return fmt.Errorf("can't save replica database entry for '%s': %s", vmName, err)
+	}
 	return nil
 }
 
@@ -91,7 +133,7 @@ func (r *ReplicationReceiver) Prepare(vmName string, diskSize uint64) error {
 //	Header:  "MRPL" (4 bytes) + version (uint8) + diskSize (uint64)
 //	Blocks:  offset (uint64) + length (uint32) + data (length bytes) — repeated
 //	End:     offset=0xFFFFFFFFFFFFFFFF + length=0
-func (r *ReplicationReceiver) ApplyBlocks(vmName string, body io.Reader) error {
+func (r *ReplicationReceiver) ApplyBlocks(vmName string, origin string, config string, body io.Reader) error {
 	lock := r.getFileLock(vmName)
 	lock.Lock()
 	defer lock.Unlock()
@@ -100,6 +142,12 @@ func (r *ReplicationReceiver) ApplyBlocks(vmName string, body io.Reader) error {
 
 	f, err := os.OpenFile(filePath, os.O_RDWR, 0600)
 	if err != nil {
+		if os.IsNotExist(err) {
+			// the file vanished (manual deletion, lost storage…): the source
+			// can't apply an incremental stream against a missing file, signal
+			// it to redo a full copy (which recreates the file via Prepare).
+			return ErrReplicaFileMissing
+		}
 		return fmt.Errorf("can't open replica file '%s': %s", filePath, err)
 	}
 	defer f.Close()
@@ -185,6 +233,10 @@ func (r *ReplicationReceiver) ApplyBlocks(vmName string, body io.Reader) error {
 		return fmt.Errorf("syncing replica file: %s", err)
 	}
 
+	if err := r.recordReplica(vmName, origin, config, diskSize, totalBytes); err != nil {
+		return err
+	}
+
 	r.app.Log.Tracef("replication receiver: applied %d blocks (%d bytes) to '%s'",
 		blockCount, totalBytes, vmName)
 	return nil
@@ -199,6 +251,10 @@ func (r *ReplicationReceiver) Delete(vmName string) error {
 	filePath := r.filePath(vmName)
 	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("can't remove replica file '%s': %s", filePath, err)
+	}
+
+	if err := r.app.ReplicaDB.Delete(vmName); err != nil {
+		return fmt.Errorf("can't remove replica database entry for '%s': %s", vmName, err)
 	}
 
 	r.app.Log.Infof("replication receiver: deleted replica '%s'", vmName)

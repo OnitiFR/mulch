@@ -111,6 +111,15 @@ __internal_list_replicated_vms() {
     fi
 }
 
+__internal_list_replicas() {
+    local mulch_output out
+    __mulch_get_server
+    if mulch_output=$(mulch --server $__mulch_current_server replica list --basic 2>/dev/null); then
+        out=($(echo "${mulch_output}"))
+        COMPREPLY=( $( compgen -W "${out[*]}" -- "$cur" ) )
+    fi
+}
+
 __mulch_get_servers() {
     local out servers
     servers=$(grep -E '^[[:blank:]]*name[[:blank:]]*=' ~/.mulch.toml | awk -F= '{print $2}')
@@ -171,6 +180,10 @@ __mulch_custom_func() {
             ;;
         mulch_replication_status | mulch_replication_sync_now | mulch_replication_full_resync)
             __internal_list_replicated_vms
+            return
+            ;;
+        mulch_replica_delete)
+            __internal_list_replicas
             return
             ;;
         *)

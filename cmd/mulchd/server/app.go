@@ -38,33 +38,34 @@ const LogHistorySize = 20000 // ~2.5mB
 
 // App describes an (the?) application
 type App struct {
-	StartTime      time.Time
-	Config         *AppConfig
-	Libvirt        *Libvirt
-	Hub            *Hub
-	PhoneHome      *PhoneHomeHub
-	Log            *Log
-	LogHistory     *LogHistory
-	MuxInternal    *http.ServeMux
-	MuxAPI         *http.ServeMux
-	Rand           *rand.Rand
-	SSHPairDB      *SSHPairDatabase
-	SecretsDB      *SecretDatabase
-	VMDB           *VMDatabase
-	VMStateDB      *VMStateDatabase
-	BackupsDB      *BackupDatabase
-	APIKeysDB      *APIKeyDatabase
-	AlertSender    *AlertSender
-	Seeder         *SeedDatabase
-	Origins        *Origins
+	StartTime           time.Time
+	Config              *AppConfig
+	Libvirt             *Libvirt
+	Hub                 *Hub
+	PhoneHome           *PhoneHomeHub
+	Log                 *Log
+	LogHistory          *LogHistory
+	MuxInternal         *http.ServeMux
+	MuxAPI              *http.ServeMux
+	Rand                *rand.Rand
+	SSHPairDB           *SSHPairDatabase
+	SecretsDB           *SecretDatabase
+	VMDB                *VMDatabase
+	VMStateDB           *VMStateDatabase
+	BackupsDB           *BackupDatabase
+	APIKeysDB           *APIKeyDatabase
+	AlertSender         *AlertSender
+	Seeder              *SeedDatabase
+	Origins             *Origins
 	ReplicationDB       *ReplicationDatabase
 	ReplicationMgr      *ReplicationManager
 	ReplicationReceiver *ReplicationReceiver
-	routesInternal map[string][]*Route
-	routesAPI      map[string][]*Route
-	sshClients     *sshServerClients
-	Operations     *OperationList
-	ProxyReloader  *ProxyReloader
+	ReplicaDB           *ReplicaDatabase
+	routesInternal      map[string][]*Route
+	routesAPI           map[string][]*Route
+	sshClients          *sshServerClients
+	Operations          *OperationList
+	ProxyReloader       *ProxyReloader
 }
 
 // NewApp creates a new application
@@ -187,6 +188,11 @@ func NewApp(config *AppConfig, trace bool) (*App, error) {
 	err = app.initReplicationDB()
 	if err != nil {
 		return nil, fmt.Errorf("Replication DB: %s", err)
+	}
+
+	err = app.initReplicaDB()
+	if err != nil {
+		return nil, fmt.Errorf("Replica DB: %s", err)
 	}
 
 	app.ReplicationReceiver, err = NewReplicationReceiver(app)
@@ -419,6 +425,22 @@ func (app *App) initReplicationDB() error {
 
 	if db.Count() > 0 {
 		app.Log.Infof("found %d replication state(s) in database %s", db.Count(), dbPath)
+	}
+
+	return nil
+}
+
+func (app *App) initReplicaDB() error {
+	dbPath := app.Config.DataPath + "/mulch-replica.db"
+
+	db, err := NewReplicaDatabase(dbPath)
+	if err != nil {
+		return err
+	}
+	app.ReplicaDB = db
+
+	if db.Count() > 0 {
+		app.Log.Infof("found %d replica(s) in database %s", db.Count(), dbPath)
 	}
 
 	return nil

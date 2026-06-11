@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -165,8 +166,15 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 		bitmapName = "mulch-repl-dirty"
 	}
 
-	syncBytes, err := rm.pullAndStreamBlocks(vm, vmName, nbdAddress, exportName, bitmapName, needsFullCopy)
+	syncBytes, peerFileMissing, err := rm.pullAndStreamBlocks(vm, vmName, nbdAddress, exportName, bitmapName, needsFullCopy)
 	if err != nil {
+		// the peer lost its replica file: an incremental stream can't be applied
+		// against a missing file, so force a full copy on the next cycle (which
+		// recreates the file via peerPrepare) instead of looping on the error.
+		if peerFileMissing && !needsFullCopy {
+			rm.app.Log.Warningf("replication %s: peer replica file is missing, forcing a full copy on next sync", vmName.ID())
+			rm.ResetFullCopy(vmName)
+		}
 		rm.recordError(vmName, fmt.Sprintf("pull and stream failed: %s", err))
 		return
 	}
@@ -309,10 +317,13 @@ func findFreePort() (uint, error) {
 
 // pullAndStreamBlocks connects to QEMU's local NBD server, reads dirty blocks,
 // and streams them to the peer via HTTP.
-func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAddress string, exportName string, bitmapName string, fullCopy bool) (uint64, error) {
+//
+// The returned bool is true when the peer reported that its replica file is
+// missing (HTTP 409): the caller must then force a full copy on the next sync.
+func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAddress string, exportName string, bitmapName string, fullCopy bool) (uint64, bool, error) {
 	peer, exists := rm.app.Config.Peers[vm.Config.ReplicationPeer]
 	if !exists {
-		return 0, fmt.Errorf("peer '%s' not found", vm.Config.ReplicationPeer)
+		return 0, false, fmt.Errorf("peer '%s' not found", vm.Config.ReplicationPeer)
 	}
 
 	// connect to QEMU's NBD server
@@ -320,7 +331,7 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 	// vmName.ID(), nbdAddress, exportName, bitmapName)
 	nbdClient, err := NewNBDClient(nbdAddress, exportName, bitmapName)
 	if err != nil {
-		return 0, fmt.Errorf("NBD client connect: %s", err)
+		return 0, false, fmt.Errorf("NBD client connect: %s", err)
 	}
 	defer nbdClient.Close()
 
@@ -343,12 +354,14 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 	}()
 
 	// send the stream to the peer
+	peerFileMissing := false
 	call := &PeerCall{
 		Peer:   peer,
 		Method: "POST",
 		Path:   "/replication/sync",
 		Args: map[string]string{
-			"vm_name": vmName.ID(),
+			"vm_name":   vmName.ID(),
+			"vm_config": vm.Config.FileContent,
 		},
 		UploadStream: &PeerCallStreamBody{
 			ContentType: "application/octet-stream",
@@ -356,6 +369,13 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 		},
 		TextCallback: func(body []byte) error {
 			return nil // "OK" response
+		},
+		HTTPErrorCallback: func(code int, body []byte, httpError error) error {
+			// 409: the peer's replica file is gone, it needs a full copy
+			if code == http.StatusConflict {
+				peerFileMissing = true
+			}
+			return httpError
 		},
 		Log:     rm.app.Log,
 		Libvirt: rm.app.Libvirt,
@@ -368,13 +388,13 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 	// while result.err is typically just a broken pipe)
 	result := <-streamCh
 	if callErr != nil {
-		return result.bytes, fmt.Errorf("peer sync call: %s", callErr)
+		return result.bytes, peerFileMissing, fmt.Errorf("peer sync call: %s", callErr)
 	}
 	if result.err != nil {
-		return result.bytes, fmt.Errorf("writing block stream: %s", result.err)
+		return result.bytes, false, fmt.Errorf("writing block stream: %s", result.err)
 	}
 
-	return result.bytes, nil
+	return result.bytes, false, nil
 }
 
 // writeBlockStream writes the replication block protocol to w,

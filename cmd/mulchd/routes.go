@@ -357,4 +357,17 @@ func AddRoutes(app *server.App) {
 		Handler: controllers.CleanupReplicationController,
 	}, server.RouteAPI)
 
+	// Replica (receiver side: replicas we hold)
+	app.AddRoute(&server.Route{
+		Route:   "GET /replica",
+		Type:    server.RouteTypeCustom,
+		Handler: controllers.ListReplicaController,
+	}, server.RouteAPI)
+
+	app.AddRoute(&server.Route{
+		Route:   "DELETE /replica/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.DeleteReplicaController,
+	}, server.RouteAPI)
+
 }

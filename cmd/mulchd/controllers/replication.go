@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -220,7 +221,7 @@ func PrepareReplicationController(req *server.Request) {
 		return
 	}
 
-	err = req.App.ReplicationReceiver.Prepare(vmName, diskSize)
+	err = req.App.ReplicationReceiver.Prepare(vmName, diskSize, replicaOrigin(req), req.HTTP.FormValue("vm_config"))
 	if err != nil {
 		req.Stream.Failuref("prepare failed: %s", err)
 		return
@@ -242,12 +243,18 @@ func SyncReplicationController(req *server.Request) {
 		return
 	}
 
-	err := req.App.ReplicationReceiver.ApplyBlocks(vmName, req.HTTP.Body)
+	err := req.App.ReplicationReceiver.ApplyBlocks(vmName, replicaOrigin(req), req.HTTP.FormValue("vm_config"), req.HTTP.Body)
 	if err != nil {
-		// drain remaining body so the HTTP 500 response reaches the source
+		// drain remaining body so the error response reaches the source
 		io.Copy(io.Discard, io.LimitReader(req.HTTP.Body, 1<<20))
 		req.App.Log.Errorf("replication sync for '%s' failed: %s", vmName, err)
-		http.Error(req.Response, err.Error(), 500)
+		// 409 tells the source the replica file is gone: it must redo a full
+		// copy rather than retry the impossible incremental sync forever.
+		status := 500
+		if errors.Is(err, server.ErrReplicaFileMissing) {
+			status = http.StatusConflict
+		}
+		http.Error(req.Response, err.Error(), status)
 		return
 	}
 
