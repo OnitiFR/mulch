@@ -113,6 +113,20 @@ func (db *ReplicaDatabase) Delete(vmID string) error {
 	return db.save()
 }
 
+// GetAllForName returns all ReplicaStates (every revision) sharing the given name
+func (db *ReplicaDatabase) GetAllForName(name string) []*ReplicaState {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	states := make([]*ReplicaState, 0)
+	for _, state := range db.db {
+		if state.Name == name {
+			states = append(states, state)
+		}
+	}
+	return states
+}
+
 // GetAll returns all ReplicaStates
 func (db *ReplicaDatabase) GetAll() []*ReplicaState {
 	db.mutex.Lock()

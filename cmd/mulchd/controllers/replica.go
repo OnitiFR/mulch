@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
 	"github.com/OnitiFR/mulch/common"
@@ -57,15 +59,55 @@ func ListReplicaController(req *server.Request) {
 func DeleteReplicaController(req *server.Request) {
 	req.StartStream()
 
-	vmID := req.SubPath
-	if vmID == "" {
+	nameArg := req.SubPath
+	if nameArg == "" {
 		req.Stream.Failure("missing replica name")
 		return
 	}
 
-	if _, err := server.ParseVMName(vmID); err != nil {
-		req.Stream.Failuref("invalid replica name '%s'", vmID)
+	parsed, err := server.ParseVMName(nameArg)
+	if err != nil {
+		req.Stream.Failuref("invalid replica name '%s'", nameArg)
 		return
+	}
+
+	revisionParam := req.HTTP.FormValue("revision")
+
+	var vmID string
+	switch {
+	case revisionParam != "":
+		// explicit --revision flag: the name must not also carry a revision
+		if parsed.Revision != 0 {
+			req.Stream.Failuref("revision given both in the name ('%s') and with --revision, use only one", nameArg)
+			return
+		}
+		revision, err := strconv.Atoi(revisionParam)
+		if err != nil {
+			req.Stream.Failuref("invalid revision '%s'", revisionParam)
+			return
+		}
+		vmID = server.NewVMName(parsed.Name, revision).ID()
+	case parsed.Revision != 0:
+		// revision embedded in the name (e.g. 'myvm-r2')
+		vmID = nameArg
+	default:
+		// bare name: resolve among existing revisions, refuse if ambiguous
+		matches := req.App.ReplicaDB.GetAllForName(parsed.Name)
+		switch len(matches) {
+		case 0:
+			req.Stream.Failuref("no replica named '%s'", parsed.Name)
+			return
+		case 1:
+			vmID = matches[0].ID()
+		default:
+			revs := make([]string, 0, len(matches))
+			for _, m := range matches {
+				revs = append(revs, strconv.Itoa(m.Revision))
+			}
+			sort.Strings(revs)
+			req.Stream.Failuref("multiple revisions exist for '%s' (%s), select one with --revision", parsed.Name, strings.Join(revs, ", "))
+			return
+		}
 	}
 
 	if req.App.ReplicaDB.Get(vmID) == nil {
@@ -73,8 +115,7 @@ func DeleteReplicaController(req *server.Request) {
 		return
 	}
 
-	err := req.App.ReplicationReceiver.Delete(vmID)
-	if err != nil {
+	if err := req.App.ReplicationReceiver.Delete(vmID); err != nil {
 		req.Stream.Failuref("delete failed: %s", err)
 		return
 	}
