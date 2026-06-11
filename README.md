@@ -12,6 +12,7 @@ Index
  - [Show me!](#show-me)
  - [Any more complete example?](#any-more-complete-example)
  - [How does it works exactly?](#how-does-it-works-exactly)
+ - [VM revisions](#vm-revisions)
  - [Show me more features!](#show-me-more-features)
  - [How do I install the client?](#how-do-i-install-the-client)
  - [How do I install the server?](#how-do-i-install-the-server-mulchd-and-mulch-proxy)
@@ -222,6 +223,27 @@ Workflow examples:
 Note that you can modify *cloud-init* step, but it's used internally by Mulch for VM provisioning (injecting
 SSH keys, configure "home-phoning", …) and should have no interest to Mulch users.
 
+VM revisions
+---
+A VM is not only identified by its name, but by its **name and a revision number**. This means you
+can have several VMs sharing the same name, each with a different revision (`my-vm-r0`, `my-vm-r1`, …).
+
+Only one revision can be **active** at a time. The active revision is the one the reverse proxy sends
+requests to (it owns the VM's domains and exported ports), and it's the default target of every command
+(`backup`, `lock`, `ssh`, …). This makes revisions the foundation of zero-downtime, "blue/green" style
+deployments.
+
+Building a new revision (`-n`) alongside the running one, without serving traffic yet (`-i`), is a
+single command:
+```sh
+mulch vm create -n -i my-vm.toml
+```
+You can then test it (it has its own IP, SSH access, …) and switch over instantly when you're confident —
+no rebuild, no downtime. If anything goes wrong, just activate the previous revision again to roll back.
+```sh
+mulch vm activate my-vm 1   # the reverse proxy switches over immediately
+```
+
 Show me more features!
 ---
 
@@ -244,6 +266,16 @@ for every VM will be generated. You can then use any usual OpenSSH command/featu
 port forwarding, …
 
 ![mulch ssh-config](https://raw.github.com/OnitiFR/mulch/master/doc/images/mulch-ssh-config.png)
+
+You can also **forward one of your own SSH keys** to a VM, so it becomes available in the VM's SSH agent
+when you connect (handy to `git clone / push` a private repository, hop to another host, …):
+```sh
+mulch trust forward my-vm ~/.ssh/id_ed25519.pub
+```
+Mulch only stores the key's SHA256 fingerprint, never the key itself: the key is forwarded from your own
+SSH agent, from any computer, as long as you use the same Mulch API key. Use `mulch trust list` to review
+forwarded keys and `mulch trust remove` to revoke one. Note this is security-sensitive: while you're
+connected, your key is reachable by anyone else on the VM.
 
 #### Seeds
 As said previously, seeds are base Linux images for VMs, defined in `mulchd.conf` server configuration
@@ -410,6 +442,36 @@ ports = [
 
 See `deb-proxy-proto.sh` "prepare" script to add transparent original IP forwarding
 in your VMs even if your services don't support PROXY protocol natively.
+
+#### Searching VMs
+Once you host many VMs, `mulch vm search` filters them with a small query language instead of grepping
+`vm list` output:
+```sh
+mulch vm search '(active == false && locked == false) || revision < 5'
+mulch vm search 'like("*_prod")'
+mulch vm search 'has_tag("wp-cli")'
+```
+Queries combine VM properties (state, seed, ram, author, …), boolean logic and a few helpers like
+`has_domain()` or `has_script()`. Tag your VMs with the `tags` setting to make them even easier to group
+and find.
+
+#### Fine-grained API key rights
+By default, an API key has full privileges. For shared or restricted access (CI/CD, a teammate, a
+limited tool, …), you can attach explicit rights to a key, and it will then be limited to exactly what
+you allow:
+```sh
+# this key may only list VMs and back them up
+mulch key right add ci-key 'GET /vm'
+mulch key right add ci-key 'POST /vm/* action=backup'
+```
+Rights map directly to API calls (with `*` wildcards allowed), and as soon as a key has one, everything
+else is denied. The server log even shows denied requests, so building a tight right set is easy.
+
+#### Rate limiting
+The reverse proxy can rate-limit incoming HTTP(S) traffic to protect your VMs from spikes and abuse,
+limiting both concurrent requests and request rate (with a configurable burst and a VIP exemption list).
+You define named profiles in `mulchd.conf` and pick one per VM with the `rate_profile` setting — see the
+sample config for the available knobs.
 
 #### More…
 You can lock a VM, so no "big" operation, like delete or rebuild can be done until the VM
