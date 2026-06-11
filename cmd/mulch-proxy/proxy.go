@@ -75,17 +75,27 @@ type errorHandlingRoundTripper struct {
 }
 
 func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	// ensures the concurrent slot is held until the backend responds ? (and not until the client cancels)
-	// (see handleRequest() below)
-	if req.Context().Value(contextKeyNoCancelTransport) != nil {
-		req = req.WithContext(context.WithoutCancel(req.Context()))
+	// Anti connect-then-cancel (see handleRequest): the rate-limiter may ask us to
+	// hold the concurrent slot until the backend responds, even if the client
+	// cancels early. We detach RoundTrip from the client for the connection phase
+	// only, then re-arm client cancellation once the backend has responded — so a
+	// client disconnect during a streaming response (SSE, long-polling, chained
+	// proxies…) still propagates to the backend.
+	clientCtx := req.Context()
+	var cancel context.CancelFunc
+	if clientCtx.Value(contextKeyNoCancelTransport) != nil {
+		var ctx context.Context
+		ctx, cancel = context.WithCancel(context.WithoutCancel(clientCtx))
+		req = req.WithContext(ctx)
 	}
 
-	// we may have to clone http.DefaultTransport to adjust settings
-	// t := http.DefaultTransport.(*http.Transport).Clone()
+	// to adjust settings, clone: http.DefaultTransport.(*http.Transport).Clone()
 	tr := http.DefaultTransport
 	res, err := tr.RoundTrip(req)
 	if err != nil {
+		if cancel != nil {
+			cancel()
+		}
 		rt.ProxyServer.Log.Errorf("%s: %s", rt.Domain.Name, err)
 		body, errG := rt.ProxyServer.genErrorPage(502, err.Error())
 		if errG != nil {
@@ -98,6 +108,18 @@ func (rt *errorHandlingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 			Request:       req,
 			Header:        make(http.Header),
 		}, nil
+	}
+
+	if cancel != nil {
+		// Backend responded: re-arm client cancellation by mirroring the client
+		// context's cancel onto the detached transport context. The HTTP server
+		// always cancels the client context when the handler returns, so this
+		// goroutine never leaks; an early client disconnect fires it first and
+		// tears down the upstream request like the standard behavior would.
+		go func() {
+			<-clientCtx.Done()
+			cancel()
+		}()
 	}
 	return res, err
 }
