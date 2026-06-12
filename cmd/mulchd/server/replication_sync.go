@@ -197,6 +197,8 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 	state.Status = ReplicationIdle
 	state.LastError = ""
 	state.ConsecutiveErrors = 0
+	state.ErrorStreakStart = time.Time{}
+	state.Alerted = false // re-arm alerting for any future outage
 	app.ReplicationDB.Set(state)
 	syncOK = true
 

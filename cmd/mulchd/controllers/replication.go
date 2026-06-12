@@ -57,14 +57,14 @@ func ListReplicationController(req *server.Request) {
 			LastError:         s.LastError,
 			LastErrorTime:     s.LastErrorTime,
 			ConsecutiveErrors: s.ConsecutiveErrors,
-			BackoffPaused:     s.ConsecutiveErrors >= server.ReplicationPauseErrors,
+			Alerted:           s.Alerted,
 		}
 
 		vm, err := req.App.VMDB.GetByName(vmName)
 		if err == nil {
 			entry.ConfiguredInterval = vm.Config.ReplicationInterval
 			entry.BackoffInterval = req.App.ReplicationMgr.GetEffectiveInterval(vm, s)
-			entry.AlertDelay = server.EstimateAlertDelay(vm.Config.ReplicationInterval)
+			entry.AlertDelay = server.ComputeAlertDelay(vm.Config.ReplicationInterval)
 		}
 
 		entries = append(entries, entry)
@@ -121,14 +121,14 @@ func GetReplicationStatusController(req *server.Request) {
 		LastError:         state.LastError,
 		LastErrorTime:     state.LastErrorTime,
 		ConsecutiveErrors: state.ConsecutiveErrors,
-		BackoffPaused:     state.ConsecutiveErrors >= server.ReplicationPauseErrors,
+		Alerted:           state.Alerted,
 	}
 
 	vm, err := req.App.VMDB.GetByName(vmName)
 	if err == nil {
 		entry.ConfiguredInterval = vm.Config.ReplicationInterval
 		entry.BackoffInterval = req.App.ReplicationMgr.GetEffectiveInterval(vm, state)
-		entry.AlertDelay = server.EstimateAlertDelay(vm.Config.ReplicationInterval)
+		entry.AlertDelay = server.ComputeAlertDelay(vm.Config.ReplicationInterval)
 	}
 
 	enc := json.NewEncoder(req.Response)

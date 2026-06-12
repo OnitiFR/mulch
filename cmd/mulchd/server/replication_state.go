@@ -27,7 +27,9 @@ type ReplicationState struct {
 	LastError          string
 	LastErrorTime      time.Time
 	FullCopyDone       bool
-	ConsecutiveErrors int
+	ConsecutiveErrors  int
+	ErrorStreakStart   time.Time // start of the current failure streak (zero = none)
+	Alerted            bool      // true once an alert was sent for the current incident
 }
 
 // ID returns the unique VM ID (name + revision) for this state

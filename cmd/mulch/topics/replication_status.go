@@ -110,17 +110,21 @@ func replicationStatusCB(reader io.Reader, _ http.Header) {
 	fmt.Printf("Last sync bytes:    %s\n", size)
 	fmt.Printf("Consecutive errors: %s\n", errs)
 
-	if data.BackoffPaused {
-		fmt.Printf("Backoff:            %s\n", red("PAUSED (too many errors, alert sent)"))
-	} else if data.BackoffInterval > data.ConfiguredInterval && data.ConfiguredInterval > 0 {
+	if data.BackoffInterval > data.ConfiguredInterval && data.ConfiguredInterval > 0 {
 		fmt.Printf("Backoff:            %s, effective interval: %s (configured: %s)\n",
 			red("active"),
 			client.HumanShortDuration(data.BackoffInterval),
 			client.HumanShortDuration(data.ConfiguredInterval))
 	}
 
+	alertedStr := green("no")
+	if data.Alerted {
+		alertedStr = red("yes")
+	}
+	fmt.Printf("Alerted:            %s\n", alertedStr)
+
 	if data.AlertDelay > 0 {
-		fmt.Printf("Alert delay:        %s of consecutive errors\n",
+		fmt.Printf("Alert after:        %s without successful sync\n",
 			client.HumanShortDuration(data.AlertDelay))
 	}
 

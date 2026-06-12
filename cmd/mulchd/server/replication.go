@@ -48,12 +48,17 @@ const (
 	ReplicationReconcileInterval = 5 * time.Second
 	// ReplicationFSFreezeWarningDelay is the delay before logging a warning when FSFreeze is slow
 	ReplicationFSFreezeWarningDelay = 10 * time.Second
-	// ReplicationMaxConsecutiveErrors before backoff
+	// ReplicationMaxConsecutiveErrors before backoff starts
 	ReplicationMaxConsecutiveErrors = 5
-	// ReplicationPauseErrors pauses replication and sends alert
-	ReplicationPauseErrors = 20
-	// ReplicationMaxBackoffInterval is the maximum backoff interval
+	// ReplicationMaxBackoffInterval is the floor of the backoff cap
 	ReplicationMaxBackoffInterval = 10 * time.Minute
+	// ReplicationAlertIntervalFactor multiplies replication_interval to derive
+	// the staleness threshold that triggers an alert (clamped below).
+	ReplicationAlertIntervalFactor = 20
+	// ReplicationAlertMinDelay is the lower bound of the derived alert delay
+	ReplicationAlertMinDelay = 10 * time.Minute
+	// ReplicationAlertMaxDelay is the upper bound of the derived alert delay
+	ReplicationAlertMaxDelay = 2 * time.Hour
 )
 
 // vmReplicator tracks a running per-VM replication goroutine
@@ -105,6 +110,7 @@ func (rm *ReplicationManager) Run() {
 
 	for {
 		rm.reconcile()
+		rm.checkAlerts()
 		time.Sleep(ReplicationReconcileInterval)
 	}
 }
@@ -363,10 +369,13 @@ func (rm *ReplicationManager) computeInitialDelay(vm *VM, vmName *VMName) time.D
 // When consecutive sync errors occur, the interval is progressively increased
 // to avoid hammering a broken peer or flooding logs:
 //   - < 5 errors: normal interval (as configured per VM)
-//   - 5-19 errors: exponential backoff (interval doubled per error, capped at 10min)
-//   - >= 20 errors: effectively paused, an alert is sent
+//   - >= 5 errors: exponential backoff (interval doubled per error), capped at
+//     max(ReplicationMaxBackoffInterval, replication_interval) so the backoff
+//     never retries more often than the configured interval.
 //
-// The counter resets to zero on the first successful sync.
+// The counter resets to zero on the first successful sync. There is no "pause"
+// state: a broken VM keeps retrying at the capped interval until it recovers or
+// an operator intervenes.
 func (rm *ReplicationManager) GetEffectiveInterval(vm *VM, state *ReplicationState) time.Duration {
 	interval := vm.Config.ReplicationInterval
 
@@ -374,42 +383,85 @@ func (rm *ReplicationManager) GetEffectiveInterval(vm *VM, state *ReplicationSta
 		return interval
 	}
 
-	if state.ConsecutiveErrors >= ReplicationPauseErrors {
-		return ReplicationMaxBackoffInterval * 100 // effectively paused
-	}
+	// the cap never goes below the configured interval, otherwise "backoff"
+	// would paradoxically retry more often than normal for intervals > 10min
+	maxInterval := max(ReplicationMaxBackoffInterval, interval)
 
 	// exponential backoff: double the interval for each error past the threshold
 	backoff := interval
 	for i := ReplicationMaxConsecutiveErrors; i < state.ConsecutiveErrors; i++ {
 		backoff *= 2
-		if backoff > ReplicationMaxBackoffInterval {
-			backoff = ReplicationMaxBackoffInterval
+		if backoff > maxInterval {
+			backoff = maxInterval
 			break
 		}
 	}
 	return backoff
 }
 
-// EstimateAlertDelay returns the estimated total time from the first error
-// until the alert is sent (at ReplicationPauseErrors consecutive errors).
-func EstimateAlertDelay(interval time.Duration) time.Duration {
-	var total time.Duration
-	for errCount := 0; errCount < ReplicationPauseErrors; errCount++ {
-		if errCount < ReplicationMaxConsecutiveErrors {
-			total += interval
-		} else {
-			backoff := interval
-			for i := ReplicationMaxConsecutiveErrors; i < errCount; i++ {
-				backoff *= 2
-				if backoff > ReplicationMaxBackoffInterval {
-					backoff = ReplicationMaxBackoffInterval
-					break
-				}
-			}
-			total += backoff
-		}
+// ComputeAlertDelay returns the staleness threshold (time without a successful
+// sync) that triggers an alert for a VM. It is derived from the configured
+// replication_interval and clamped to [ReplicationAlertMinDelay,
+// ReplicationAlertMaxDelay].
+func ComputeAlertDelay(interval time.Duration) time.Duration {
+	delay := time.Duration(ReplicationAlertIntervalFactor) * interval
+	if delay < ReplicationAlertMinDelay {
+		return ReplicationAlertMinDelay
 	}
-	return total
+	if delay > ReplicationAlertMaxDelay {
+		return ReplicationAlertMaxDelay
+	}
+	return delay
+}
+
+// checkAlerts scans replication states and sends a single alert per VM when it
+// has had no successful sync for longer than its derived alert delay. The alert
+// fires once per incident: the Alerted flag is cleared on the next successful
+// sync (see syncVM), re-arming for any future outage. No reminder and no
+// recovery notification are sent, to keep operator noise minimal.
+func (rm *ReplicationManager) checkAlerts() {
+	now := time.Now()
+	for _, state := range rm.app.ReplicationDB.GetAll() {
+		if state.Alerted {
+			continue
+		}
+		// don't alert while a sync is in progress: an initial full copy of a
+		// large disk can legitimately exceed the alert delay
+		if state.Status == ReplicationSyncing {
+			continue
+		}
+
+		vmName := NewVMName(state.Name, state.Revision)
+		vm, err := rm.app.VMDB.GetByName(vmName)
+		if err != nil || vm.Config.ReplicationPeer == "" {
+			continue
+		}
+
+		// staleness reference: time of last successful sync, or the start of the
+		// current failure streak for VMs that never synced successfully
+		ref := state.LastSyncTime
+		if ref.IsZero() {
+			ref = state.ErrorStreakStart
+		}
+		if ref.IsZero() {
+			continue
+		}
+
+		staleness := now.Sub(ref)
+		if staleness <= ComputeAlertDelay(vm.Config.ReplicationInterval) {
+			continue
+		}
+
+		rm.app.AlertSender.Send(&Alert{
+			Type:    AlertTypeBad,
+			Subject: fmt.Sprintf("Replication failing for VM %s", vmName.ID()),
+			Content: fmt.Sprintf("No successful replication for %s (%d consecutive errors). Last error: %s",
+				staleness.Round(time.Second), state.ConsecutiveErrors, state.LastError),
+		})
+
+		state.Alerted = true
+		rm.app.ReplicationDB.Set(state)
+	}
 }
 
 // ensureState returns the current ReplicationState, creating it if needed
@@ -441,16 +493,12 @@ func (rm *ReplicationManager) recordError(vmName *VMName, errMsg string) {
 	state.Status = ReplicationError
 	state.LastError = errMsg
 	state.LastErrorTime = time.Now()
-	state.ConsecutiveErrors++
-
-	if state.ConsecutiveErrors == ReplicationPauseErrors {
-		rm.app.AlertSender.Send(&Alert{
-			Type:    AlertTypeBad,
-			Subject: fmt.Sprintf("Replication paused for VM %s", vmName.ID()),
-			Content: fmt.Sprintf("Replication paused after %d consecutive errors. Last error: %s",
-				state.ConsecutiveErrors, errMsg),
-		})
+	if state.ConsecutiveErrors == 0 {
+		// anchor the start of this failure streak: used to measure staleness for
+		// VMs that have never completed a successful sync (no LastSyncTime yet)
+		state.ErrorStreakStart = state.LastErrorTime
 	}
+	state.ConsecutiveErrors++
 
 	rm.app.ReplicationDB.Set(state)
 }
