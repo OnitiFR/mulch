@@ -11,11 +11,8 @@ import (
 	"time"
 )
 
-// ErrReplicaFileMissing is returned by ApplyBlocks when the replica .raw file
-// is gone (e.g. deleted out-of-band on the receiver). The source peer must
-// redo a full copy — which recreates the file through Prepare — instead of
-// retrying the (now impossible) incremental sync forever.
 var ErrReplicaFileMissing = errors.New("replica file missing, full copy required")
+var ErrReplicaOriginConflict = errors.New("replica name already owned by another peer")
 
 const (
 	// ReplicationBlockMagic is the magic bytes at the start of a replication block stream
@@ -37,6 +34,10 @@ type ReplicationReceiver struct {
 
 	syncing map[string]bool
 	syncMu  sync.Mutex
+
+	// originMu serializes origin-conflict checks so two peers can't concurrently
+	// pass the check and both claim the same VM name
+	originMu sync.Mutex
 }
 
 // NewReplicationReceiver creates a new ReplicationReceiver and ensures the replicas directory exists
@@ -97,9 +98,38 @@ func (r *ReplicationReceiver) filePath(vmName string) string {
 	return path.Clean(r.replicaPath + "/" + vmName + ".raw")
 }
 
+// checkOriginConflict returns ErrReplicaOriginConflict if a replica with the
+// same VM name (any revision) is already owned by a different peer. This keeps
+// a VM name bound to a single source: a peer must not be able to overwrite or
+// shadow a replica that belongs to another origin.
+func (r *ReplicationReceiver) checkOriginConflict(vmName string, origin string) error {
+	name, err := ParseVMName(vmName)
+	if err != nil {
+		return fmt.Errorf("invalid VM name '%s': %s", vmName, err)
+	}
+
+	for _, state := range r.app.ReplicaDB.GetAllForName(name.Name) {
+		if state.Origin != origin {
+			return fmt.Errorf("%w: '%s' is owned by '%s', refusing replication from '%s'",
+				ErrReplicaOriginConflict, name.Name, state.Origin, origin)
+		}
+	}
+	return nil
+}
+
 // Prepare creates or recreates a raw sparse file for the given VM and records
 // the replica in the database (origin = source identity, config = raw VM TOML).
 func (r *ReplicationReceiver) Prepare(vmName string, diskSize uint64, origin string, config string) error {
+	// hold originMu across the conflict check and the ownership claim
+	// (recordReplica) so two peers can't both pass the check before either
+	// records its entry.
+	r.originMu.Lock()
+	defer r.originMu.Unlock()
+
+	if err := r.checkOriginConflict(vmName, origin); err != nil {
+		return err
+	}
+
 	lock := r.getFileLock(vmName)
 	lock.Lock()
 	defer lock.Unlock()
@@ -166,6 +196,13 @@ func (r *ReplicationReceiver) recordReplica(vmName string, origin string, config
 //	Blocks:  offset (uint64) + length (uint32) + data (length bytes) — repeated
 //	End:     offset=0xFFFFFFFFFFFFFFFF + length=0
 func (r *ReplicationReceiver) ApplyBlocks(vmName string, origin string, config string, body io.Reader) error {
+	r.originMu.Lock()
+	conflict := r.checkOriginConflict(vmName, origin)
+	r.originMu.Unlock()
+	if conflict != nil {
+		return conflict
+	}
+
 	lock := r.getFileLock(vmName)
 	lock.Lock()
 	defer lock.Unlock()
