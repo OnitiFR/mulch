@@ -55,11 +55,21 @@ func replicaListCB(reader io.Reader, _ http.Header) {
 		return
 	}
 
+	green := color.New(color.FgHiGreen).SprintFunc()
+	yellow := color.New(color.FgHiYellow).SprintFunc()
 	grey := color.New(color.FgHiBlack).SprintFunc()
 
 	strData := [][]string{}
 	now := time.Now()
 	for _, line := range data {
+		status := line.Status
+		switch line.Status {
+		case "idle":
+			status = green(status)
+		case "syncing":
+			status = yellow(status)
+		}
+
 		lastUpdate := grey("never")
 		if !line.LastUpdate.IsZero() {
 			lastUpdate = client.HumanDuration(now.Sub(line.LastUpdate)) + " ago"
@@ -84,13 +94,14 @@ func replicaListCB(reader io.Reader, _ http.Header) {
 			line.Name,
 			strconv.Itoa(line.Revision),
 			origin,
+			status,
 			size,
 			lastUpdate,
 			lastBytes,
 		})
 	}
 
-	headers := []string{"Name", "Rev", "Origin", "Disk Size", "Last Update", "Last Bytes"}
+	headers := []string{"Name", "Rev", "Origin", "Status", "Disk Size", "Last Update", "Last Bytes"}
 	client.RenderTable(headers, strData)
 }
 

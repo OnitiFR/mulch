@@ -10,6 +10,7 @@ type APIReplicaEntry struct {
 	Name          string
 	Revision      int
 	Origin        string
+	Status        string // "idle" or "syncing"
 	DiskSize      uint64
 	LastUpdate    time.Time
 	LastSyncBytes uint64

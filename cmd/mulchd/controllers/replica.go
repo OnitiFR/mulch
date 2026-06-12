@@ -25,16 +25,45 @@ func ListReplicaController(req *server.Request) {
 	req.Response.Header().Set("Content-Type", "application/json")
 
 	states := req.App.ReplicaDB.GetAll()
+	syncing := req.App.ReplicationReceiver.SyncingIDs()
 
 	entries := make(common.APIReplicaEntries, 0, len(states))
+	seen := make(map[string]bool, len(states))
 	for _, s := range states {
+		id := s.ID()
+		seen[id] = true
+
+		status := "idle"
+		if syncing[id] {
+			status = "syncing"
+		}
+
 		entries = append(entries, common.APIReplicaEntry{
 			Name:          s.Name,
 			Revision:      s.Revision,
 			Origin:        s.Origin,
+			Status:        status,
 			DiskSize:      s.DiskSize,
 			LastUpdate:    s.LastUpdate,
 			LastSyncBytes: s.LastSyncBytes,
+		})
+	}
+
+	// inject syncing VMs not yet recorded in the database: this covers the
+	// very first sync, where the replica is being received before any entry
+	// exists (e.g. during prepare, or a sync against a not-yet-known VM).
+	for id := range syncing {
+		if seen[id] {
+			continue
+		}
+		name, err := server.ParseVMName(id)
+		if err != nil {
+			continue
+		}
+		entries = append(entries, common.APIReplicaEntry{
+			Name:     name.Name,
+			Revision: name.Revision,
+			Status:   "syncing",
 		})
 	}
 

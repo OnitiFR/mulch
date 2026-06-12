@@ -34,6 +34,9 @@ type ReplicationReceiver struct {
 	replicaPath string
 	fileLocks   map[string]*sync.Mutex
 	mu          sync.Mutex
+
+	syncing map[string]bool
+	syncMu  sync.Mutex
 }
 
 // NewReplicationReceiver creates a new ReplicationReceiver and ensures the replicas directory exists
@@ -48,7 +51,33 @@ func NewReplicationReceiver(app *App) (*ReplicationReceiver, error) {
 		app:         app,
 		replicaPath: replicaPath,
 		fileLocks:   make(map[string]*sync.Mutex),
+		syncing:     make(map[string]bool),
 	}, nil
+}
+
+// markSyncing flags a VM ID as currently receiving a sync.
+func (r *ReplicationReceiver) markSyncing(vmName string) {
+	r.syncMu.Lock()
+	defer r.syncMu.Unlock()
+	r.syncing[vmName] = true
+}
+
+// unmarkSyncing clears the syncing flag for a VM ID.
+func (r *ReplicationReceiver) unmarkSyncing(vmName string) {
+	r.syncMu.Lock()
+	defer r.syncMu.Unlock()
+	delete(r.syncing, vmName)
+}
+
+// SyncingIDs returns a set of VM IDs currently receiving a sync.
+func (r *ReplicationReceiver) SyncingIDs() map[string]bool {
+	r.syncMu.Lock()
+	defer r.syncMu.Unlock()
+	out := make(map[string]bool, len(r.syncing))
+	for id := range r.syncing {
+		out[id] = true
+	}
+	return out
 }
 
 // getFileLock returns a per-VM mutex, creating it if needed
@@ -74,6 +103,9 @@ func (r *ReplicationReceiver) Prepare(vmName string, diskSize uint64, origin str
 	lock := r.getFileLock(vmName)
 	lock.Lock()
 	defer lock.Unlock()
+
+	r.markSyncing(vmName)
+	defer r.unmarkSyncing(vmName)
 
 	filePath := r.filePath(vmName)
 
@@ -137,6 +169,9 @@ func (r *ReplicationReceiver) ApplyBlocks(vmName string, origin string, config s
 	lock := r.getFileLock(vmName)
 	lock.Lock()
 	defer lock.Unlock()
+
+	r.markSyncing(vmName)
+	defer r.unmarkSyncing(vmName)
 
 	filePath := r.filePath(vmName)
 
