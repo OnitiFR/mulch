@@ -243,7 +243,12 @@ func SyncReplicationController(req *server.Request) {
 		return
 	}
 
-	err := req.App.ReplicationReceiver.ApplyBlocks(vmName, replicaOrigin(req), req.HTTP.FormValue("vm_config"), req.HTTP.Body)
+	// full_copy tells the receiver whether to apply in place (full copy) or
+	// stage the stream through a journal before committing (incremental).
+	// Absent/invalid is treated as incremental, the safe (journaled) default.
+	fullCopy, _ := strconv.ParseBool(req.HTTP.FormValue("full_copy"))
+
+	err := req.App.ReplicationReceiver.ApplyBlocks(vmName, replicaOrigin(req), req.HTTP.FormValue("vm_config"), fullCopy, req.HTTP.Body)
 	if err != nil {
 		// drain remaining body so the error response reaches the source
 		io.Copy(io.Discard, io.LimitReader(req.HTTP.Body, 1<<20))

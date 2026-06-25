@@ -14,4 +14,9 @@ type APIReplicaEntry struct {
 	DiskSize      uint64
 	LastUpdate    time.Time
 	LastSyncBytes uint64
+
+	// ConsistentSnapshot is false while an initial/forced full copy has not
+	// completed: the .raw is partial and not safe to promote. An incremental
+	// sync preserves consistency, so it stays true once a full copy succeeded.
+	ConsistentSnapshot bool
 }

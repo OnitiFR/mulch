@@ -39,13 +39,14 @@ func ListReplicaController(req *server.Request) {
 		}
 
 		entries = append(entries, common.APIReplicaEntry{
-			Name:          s.Name,
-			Revision:      s.Revision,
-			Origin:        s.Origin,
-			Status:        status,
-			DiskSize:      s.DiskSize,
-			LastUpdate:    s.LastUpdate,
-			LastSyncBytes: s.LastSyncBytes,
+			Name:               s.Name,
+			Revision:           s.Revision,
+			Origin:             s.Origin,
+			Status:             status,
+			DiskSize:           s.DiskSize,
+			LastUpdate:         s.LastUpdate,
+			LastSyncBytes:      s.LastSyncBytes,
+			ConsistentSnapshot: s.ConsistentSnapshot,
 		})
 	}
 

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/c2h5oh/datasize"
@@ -364,6 +365,10 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 		Args: map[string]string{
 			"vm_name":   vmName.ID(),
 			"vm_config": vm.Config.FileContent,
+			// tells the receiver whether to apply in place (full copy: nothing
+			// consistent to protect yet) or stage through a journal (incremental:
+			// protect the previous consistent point against a torn write).
+			"full_copy": strconv.FormatBool(fullCopy),
 		},
 		UploadStream: &PeerCallStreamBody{
 			ContentType: "application/octet-stream",

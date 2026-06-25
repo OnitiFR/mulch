@@ -57,6 +57,7 @@ func replicaListCB(reader io.Reader, _ http.Header) {
 
 	green := color.New(color.FgHiGreen).SprintFunc()
 	yellow := color.New(color.FgHiYellow).SprintFunc()
+	red := color.New(color.FgHiRed).SprintFunc()
 	grey := color.New(color.FgHiBlack).SprintFunc()
 
 	strData := [][]string{}
@@ -64,10 +65,16 @@ func replicaListCB(reader io.Reader, _ http.Header) {
 	for _, line := range data {
 		status := line.Status
 		switch line.Status {
-		case "idle":
-			status = green(status)
 		case "syncing":
 			status = yellow(status)
+		case "idle":
+			// an idle replica whose full copy never completed is not coherent
+			// and must not be promoted: surface it as a distinct state.
+			if line.ConsistentSnapshot {
+				status = green(status)
+			} else {
+				status = red("incomplete")
+			}
 		}
 
 		lastUpdate := grey("never")

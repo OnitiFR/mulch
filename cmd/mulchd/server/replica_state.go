@@ -17,6 +17,20 @@ type ReplicaState struct {
 	Config        string // raw VM TOML config (for future promote)
 	LastUpdate    time.Time
 	LastSyncBytes uint64
+
+	// ConsistentSnapshot is true whenever the .raw holds a complete FSFreeze
+	// point (the normal state after any successful sync). It is cleared only
+	// while a full copy rewrites the whole image in place (Prepare), and set
+	// again once that full copy — or any later incremental — completes. A
+	// promote must refuse a replica whose ConsistentSnapshot is false.
+	ConsistentSnapshot bool
+
+	// Applying mirrors the presence of a committed staging journal
+	// (<vm>.mrpl.journal): true between the atomic commit of an incremental
+	// sync and the completion of its replay onto the .raw. It is informational
+	// (e.g. for "replica list"); the authoritative recovery signal is the
+	// journal file itself (see recoverJournals).
+	Applying bool
 }
 
 // ID returns the unique VM ID (name + revision) for this replica

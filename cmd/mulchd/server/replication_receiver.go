@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 	"sync"
 	"time"
 )
@@ -23,6 +24,13 @@ const (
 	ReplicationMaxBlockSize = 2 * 1024 * 1024
 	// ReplicationEndSentinel marks the end of the block stream
 	ReplicationEndSentinel uint64 = 0xFFFFFFFFFFFFFFFF
+
+	// replica disk file, then the two stages of an incremental sync: a stream
+	// being spooled (.part), then a committed delta pending replay (.journal).
+	// Leftovers of either are reconciled at boot by recoverJournals.
+	replicaRawSuffix     = ".raw"
+	replicaPartSuffix    = ".mrpl.part"
+	replicaJournalSuffix = ".mrpl.journal"
 )
 
 // ReplicationReceiver manages raw replica files on the peer side
@@ -48,12 +56,20 @@ func NewReplicationReceiver(app *App) (*ReplicationReceiver, error) {
 		return nil, fmt.Errorf("can't create replicas directory '%s': %s", replicaPath, err)
 	}
 
-	return &ReplicationReceiver{
+	r := &ReplicationReceiver{
 		app:         app,
 		replicaPath: replicaPath,
 		fileLocks:   make(map[string]*sync.Mutex),
 		syncing:     make(map[string]bool),
-	}, nil
+	}
+
+	// reconcile any staging journal left by a previous unclean shutdown before
+	// accepting syncs, so the crash-consistency invariant holds from boot.
+	if err := r.recoverJournals(); err != nil {
+		return nil, err
+	}
+
+	return r, nil
 }
 
 // markSyncing flags a VM ID as currently receiving a sync.
@@ -95,7 +111,17 @@ func (r *ReplicationReceiver) getFileLock(vmName string) *sync.Mutex {
 }
 
 func (r *ReplicationReceiver) filePath(vmName string) string {
-	return path.Clean(r.replicaPath + "/" + vmName + ".raw")
+	return path.Clean(r.replicaPath + "/" + vmName + replicaRawSuffix)
+}
+
+// partPath is the in-progress staging journal for an incremental sync.
+func (r *ReplicationReceiver) partPath(vmName string) string {
+	return path.Clean(r.replicaPath + "/" + vmName + replicaPartSuffix)
+}
+
+// journalPath is the committed staging journal pending replay onto the .raw.
+func (r *ReplicationReceiver) journalPath(vmName string) string {
+	return path.Clean(r.replicaPath + "/" + vmName + replicaJournalSuffix)
 }
 
 // checkOriginConflict returns ErrReplicaOriginConflict if a replica with the
@@ -151,7 +177,16 @@ func (r *ReplicationReceiver) Prepare(vmName string, diskSize uint64, origin str
 		return fmt.Errorf("can't set replica file size: %s", err)
 	}
 
-	if err := r.recordReplica(vmName, origin, config, diskSize, 0); err != nil {
+	// the file was just truncated: any staging journal from a previous
+	// incremental cycle no longer applies to it and must not be replayed.
+	os.Remove(r.partPath(vmName))
+	os.Remove(r.journalPath(vmName))
+
+	if err := r.recordReplica(vmName, origin, config, diskSize, 0, func(s *ReplicaState) {
+		// no consistent point exists until the full copy completes
+		s.ConsistentSnapshot = false
+		s.Applying = false
+	}); err != nil {
 		return err
 	}
 
@@ -160,8 +195,11 @@ func (r *ReplicationReceiver) Prepare(vmName string, diskSize uint64, origin str
 }
 
 // recordReplica creates or updates the replica database entry for a VM.
-// syncBytes is only updated when > 0 (Prepare passes 0 to keep the previous value).
-func (r *ReplicationReceiver) recordReplica(vmName string, origin string, config string, diskSize uint64, syncBytes uint64) error {
+// syncBytes is only updated when > 0 (Prepare passes 0 to keep the previous
+// value). The optional mutate callback runs on the state before it is saved,
+// letting callers set extra fields (ConsistentSnapshot, Applying…) in the same
+// atomic save.
+func (r *ReplicationReceiver) recordReplica(vmName string, origin string, config string, diskSize uint64, syncBytes uint64, mutate func(*ReplicaState)) error {
 	name, err := ParseVMName(vmName)
 	if err != nil {
 		return fmt.Errorf("invalid VM name '%s': %s", vmName, err)
@@ -181,6 +219,9 @@ func (r *ReplicationReceiver) recordReplica(vmName string, origin string, config
 	if syncBytes > 0 {
 		state.LastSyncBytes = syncBytes
 	}
+	if mutate != nil {
+		mutate(state)
+	}
 
 	if err := r.app.ReplicaDB.Set(state); err != nil {
 		return fmt.Errorf("can't save replica database entry for '%s': %s", vmName, err)
@@ -188,14 +229,32 @@ func (r *ReplicationReceiver) recordReplica(vmName string, origin string, config
 	return nil
 }
 
-// ApplyBlocks reads a binary block stream and applies writes to the replica file.
+// setApplying updates the informational Applying flag on the replica entry (the
+// authoritative signal stays the on-disk journal). It is a no-op if no entry
+// exists yet.
+func (r *ReplicationReceiver) setApplying(vmName string, applying bool) {
+	state := r.app.ReplicaDB.Get(vmName)
+	if state == nil {
+		return
+	}
+	state.Applying = applying
+	if err := r.app.ReplicaDB.Set(state); err != nil {
+		r.app.Log.Errorf("replication receiver: can't update Applying flag for '%s': %s", vmName, err)
+	}
+}
+
+// ApplyBlocks reads a binary block stream and applies it to the replica file.
 //
 // Stream format (all big-endian):
 //
 //	Header:  "MRPL" (4 bytes) + version (uint8) + diskSize (uint64)
 //	Blocks:  offset (uint64) + length (uint32) + data (length bytes) — repeated
 //	End:     offset=0xFFFFFFFFFFFFFFFF + length=0
-func (r *ReplicationReceiver) ApplyBlocks(vmName string, origin string, config string, body io.Reader) error {
+//
+// fullCopy selects the write strategy: see applyFullCopy (in place) and
+// applyIncremental (staged through a journal) for the crash-consistency
+// rationale.
+func (r *ReplicationReceiver) ApplyBlocks(vmName string, origin string, config string, fullCopy bool, body io.Reader) error {
 	r.originMu.Lock()
 	conflict := r.checkOriginConflict(vmName, origin)
 	r.originMu.Unlock()
@@ -210,67 +269,221 @@ func (r *ReplicationReceiver) ApplyBlocks(vmName string, origin string, config s
 	r.markSyncing(vmName)
 	defer r.unmarkSyncing(vmName)
 
+	if fullCopy {
+		return r.applyFullCopy(vmName, origin, config, body)
+	}
+	return r.applyIncremental(vmName, origin, config, body)
+}
+
+// applyFullCopy writes a full-copy stream directly onto the replica .raw.
+// Prepare just truncated the file, so there is no previous consistent point to
+// protect: ConsistentSnapshot stays false for the whole operation and is set to
+// true only once the full copy completes successfully.
+func (r *ReplicationReceiver) applyFullCopy(vmName string, origin string, config string, body io.Reader) error {
 	filePath := r.filePath(vmName)
 
 	f, err := os.OpenFile(filePath, os.O_RDWR, 0600)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// the file vanished (manual deletion, lost storage…): the source
-			// can't apply an incremental stream against a missing file, signal
-			// it to redo a full copy (which recreates the file via Prepare).
 			return ErrReplicaFileMissing
 		}
 		return fmt.Errorf("can't open replica file '%s': %s", filePath, err)
 	}
 	defer f.Close()
 
-	// read header
-	var magic [4]byte
-	if _, err := io.ReadFull(body, magic[:]); err != nil {
-		return fmt.Errorf("reading magic: %s", err)
-	}
-	if string(magic[:]) != ReplicationBlockMagic {
-		return fmt.Errorf("invalid magic: %q", magic)
-	}
-
-	var version uint8
-	if err := binary.Read(body, binary.BigEndian, &version); err != nil {
-		return fmt.Errorf("reading version: %s", err)
-	}
-	if version != ReplicationProtocolVersion {
-		return fmt.Errorf("unsupported protocol version %d", version)
-	}
-
-	var diskSize uint64
-	if err := binary.Read(body, binary.BigEndian, &diskSize); err != nil {
-		return fmt.Errorf("reading disk size: %s", err)
-	}
-
-	// sanity check: diskSize must match the existing replica file
 	fi, err := f.Stat()
 	if err != nil {
 		return fmt.Errorf("can't stat replica file: %s", err)
 	}
-	if uint64(fi.Size()) != diskSize {
-		return fmt.Errorf("disk size mismatch: stream says %d but replica file is %d bytes", diskSize, fi.Size())
+	diskSize := uint64(fi.Size())
+
+	r.app.Log.Tracef("replication receiver: full-copy sync '%s' started (disk size=%d)", vmName, diskSize)
+
+	totalBytes, err := readMRPLStream(body, diskSize, func(offset uint64, data []byte) error {
+		_, werr := f.WriteAt(data, int64(offset))
+		return werr
+	})
+	if err != nil {
+		return err
 	}
 
-	r.app.Log.Tracef("replication receiver: sync '%s' started (protocol v%d, disk size=%d)", vmName, version, diskSize)
+	if err := f.Sync(); err != nil {
+		return fmt.Errorf("syncing replica file: %s", err)
+	}
 
-	// read and apply blocks
+	if err := r.recordReplica(vmName, origin, config, diskSize, totalBytes, func(s *ReplicaState) {
+		// the .raw now holds a complete, consistent image
+		s.ConsistentSnapshot = true
+	}); err != nil {
+		return err
+	}
+
+	r.app.Log.Infof("replication receiver: full copy applied (%d bytes) to '%s'", totalBytes, vmName)
+	return nil
+}
+
+// applyIncremental stages an incremental stream through a journal so the .raw
+// is never observed in a torn state: it is spooled to a side file, atomically
+// committed (rename), then replayed onto the .raw (see the numbered steps
+// below). If the source crashes mid-stream the incomplete spool is discarded
+// and the .raw stays at its previous consistent point.
+func (r *ReplicationReceiver) applyIncremental(vmName string, origin string, config string, body io.Reader) error {
+	filePath := r.filePath(vmName)
+	partPath := r.partPath(vmName)
+	journalPath := r.journalPath(vmName)
+
+	// the replica .raw must already exist for an incremental stream; if it is
+	// gone (manual deletion, lost storage…), signal the source to redo a full
+	// copy, which recreates the file via Prepare.
+	fi, err := os.Stat(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return ErrReplicaFileMissing
+		}
+		return fmt.Errorf("can't stat replica file '%s': %s", filePath, err)
+	}
+	diskSize := uint64(fi.Size())
+
+	// --- 1. spool to the staging journal (validate only, no .raw write) ---
+	part, err := os.OpenFile(partPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+	if err != nil {
+		return fmt.Errorf("can't create staging journal '%s': %s", partPath, err)
+	}
+
+	// the TeeReader mirrors every byte consumed by the parser into the .part,
+	// so a clean parse leaves an exact copy of the MRPL stream on disk.
+	_, err = readMRPLStream(io.TeeReader(body, part), diskSize, nil)
+	if err != nil {
+		part.Close()
+		os.Remove(partPath)
+		return fmt.Errorf("staging incremental stream: %s", err)
+	}
+
+	if err := part.Sync(); err != nil {
+		part.Close()
+		os.Remove(partPath)
+		return fmt.Errorf("syncing staging journal: %s", err)
+	}
+	if err := part.Close(); err != nil {
+		os.Remove(partPath)
+		return fmt.Errorf("closing staging journal: %s", err)
+	}
+
+	// --- 2. atomic commit: .part -> .journal ---
+	if err := os.Rename(partPath, journalPath); err != nil {
+		os.Remove(partPath)
+		return fmt.Errorf("committing staging journal: %s", err)
+	}
+	r.setApplying(vmName, true)
+
+	// --- 3. replay the committed journal onto the .raw ---
+	totalBytes, err := r.replayJournal(vmName, diskSize)
+	if err != nil {
+		// the journal is committed and stays on disk: it will be replayed at the
+		// next boot (idempotent). Surface the error so the source can retry.
+		return fmt.Errorf("applying staging journal: %s", err)
+	}
+
+	if err := r.recordReplica(vmName, origin, config, diskSize, totalBytes, func(s *ReplicaState) {
+		s.Applying = false
+		// a fully replayed incremental leaves the .raw at a complete FSFreeze
+		// point, so it is consistent. The source only streams incrementals after
+		// a coupled successful full copy, so this can never mask a mid-full-copy
+		// torn image; it also re-arms the flag for replicas persisted before it
+		// existed.
+		s.ConsistentSnapshot = true
+	}); err != nil {
+		return err
+	}
+
+	r.app.Log.Tracef("replication receiver: applied incremental journal (%d bytes) to '%s'", totalBytes, vmName)
+	return nil
+}
+
+// replayJournal applies a committed staging journal onto the replica .raw and
+// removes it on success. WriteAt is idempotent, so replaying a journal that was
+// already partially applied (crash mid-replay) is safe.
+func (r *ReplicationReceiver) replayJournal(vmName string, diskSize uint64) (uint64, error) {
+	journalPath := r.journalPath(vmName)
+	filePath := r.filePath(vmName)
+
+	jf, err := os.Open(journalPath)
+	if err != nil {
+		return 0, fmt.Errorf("can't open staging journal '%s': %s", journalPath, err)
+	}
+	defer jf.Close()
+
+	f, err := os.OpenFile(filePath, os.O_RDWR, 0600)
+	if err != nil {
+		return 0, fmt.Errorf("can't open replica file '%s': %s", filePath, err)
+	}
+	defer f.Close()
+
+	totalBytes, err := readMRPLStream(jf, diskSize, func(offset uint64, data []byte) error {
+		_, werr := f.WriteAt(data, int64(offset))
+		return werr
+	})
+	if err != nil {
+		return totalBytes, err
+	}
+
+	if err := f.Sync(); err != nil {
+		return totalBytes, fmt.Errorf("syncing replica file: %s", err)
+	}
+
+	if err := os.Remove(journalPath); err != nil {
+		return totalBytes, fmt.Errorf("removing applied journal '%s': %s", journalPath, err)
+	}
+
+	return totalBytes, nil
+}
+
+// readMRPLStream parses an MRPL block stream from rd, validating the header
+// against expectSize (the replica .raw size). For each data block it invokes
+// apply (when non-nil) to write the block's bytes at its offset; a nil apply
+// only validates the stream (used to spool through a TeeReader). It returns the
+// total number of data bytes carried by the stream.
+//
+// The stream is only complete once the explicit end sentinel is read: a
+// premature EOF (source crashed mid-copy) returns an error, so a truncated
+// journal is never mistaken for a finished one.
+func readMRPLStream(rd io.Reader, expectSize uint64, apply func(offset uint64, data []byte) error) (uint64, error) {
+	var magic [4]byte
+	if _, err := io.ReadFull(rd, magic[:]); err != nil {
+		return 0, fmt.Errorf("reading magic: %s", err)
+	}
+	if string(magic[:]) != ReplicationBlockMagic {
+		return 0, fmt.Errorf("invalid magic: %q", magic)
+	}
+
+	var version uint8
+	if err := binary.Read(rd, binary.BigEndian, &version); err != nil {
+		return 0, fmt.Errorf("reading version: %s", err)
+	}
+	if version != ReplicationProtocolVersion {
+		return 0, fmt.Errorf("unsupported protocol version %d", version)
+	}
+
+	var diskSize uint64
+	if err := binary.Read(rd, binary.BigEndian, &diskSize); err != nil {
+		return 0, fmt.Errorf("reading disk size: %s", err)
+	}
+	if diskSize != expectSize {
+		return 0, fmt.Errorf("disk size mismatch: stream says %d but replica file is %d bytes", diskSize, expectSize)
+	}
+
 	buf := make([]byte, ReplicationMaxBlockSize)
 	var totalBytes uint64
-	var blockCount uint64
 
 	for {
 		var offset uint64
 		var length uint32
 
-		if err := binary.Read(body, binary.BigEndian, &offset); err != nil {
-			return fmt.Errorf("reading block offset: %s", err)
+		if err := binary.Read(rd, binary.BigEndian, &offset); err != nil {
+			return totalBytes, fmt.Errorf("reading block offset: %s", err)
 		}
-		if err := binary.Read(body, binary.BigEndian, &length); err != nil {
-			return fmt.Errorf("reading block length: %s", err)
+		if err := binary.Read(rd, binary.BigEndian, &length); err != nil {
+			return totalBytes, fmt.Errorf("reading block length: %s", err)
 		}
 
 		// end sentinel
@@ -279,39 +492,85 @@ func (r *ReplicationReceiver) ApplyBlocks(vmName string, origin string, config s
 		}
 
 		if length > ReplicationMaxBlockSize {
-			return fmt.Errorf("block too large: %d bytes (max %d)", length, ReplicationMaxBlockSize)
+			return totalBytes, fmt.Errorf("block too large: %d bytes (max %d)", length, ReplicationMaxBlockSize)
 		}
-
 		if offset+uint64(length) > diskSize {
-			return fmt.Errorf("block at offset %d length %d exceeds disk size %d", offset, length, diskSize)
+			return totalBytes, fmt.Errorf("block at offset %d length %d exceeds disk size %d", offset, length, diskSize)
 		}
 
-		if _, err := io.ReadFull(body, buf[:length]); err != nil {
-			return fmt.Errorf("reading block data at offset %d: %s", offset, err)
+		if _, err := io.ReadFull(rd, buf[:length]); err != nil {
+			return totalBytes, fmt.Errorf("reading block data at offset %d: %s", offset, err)
 		}
 
-		if _, err := f.WriteAt(buf[:length], int64(offset)); err != nil {
-			return fmt.Errorf("writing block at offset %d: %s", offset, err)
+		if apply != nil {
+			if err := apply(offset, buf[:length]); err != nil {
+				return totalBytes, fmt.Errorf("writing block at offset %d: %s", offset, err)
+			}
 		}
 
 		totalBytes += uint64(length)
 		if totalBytes > diskSize {
-			return fmt.Errorf("total stream data (%d bytes) exceeds disk size (%d bytes)", totalBytes, diskSize)
+			return totalBytes, fmt.Errorf("total stream data (%d bytes) exceeds disk size (%d bytes)", totalBytes, diskSize)
 		}
-		blockCount++
 	}
 
-	if err := f.Sync(); err != nil {
-		return fmt.Errorf("syncing replica file: %s", err)
+	return totalBytes, nil
+}
+
+// recoverJournals reconciles staging journals left by an unclean shutdown,
+// restoring the crash-consistency invariant before any sync is accepted:
+//
+//   - a <vm>.mrpl.part (spool never committed: source crashed mid-stream) is
+//     discarded; the .raw keeps its previous consistent point;
+//   - a <vm>.mrpl.journal (committed but maybe not fully replayed: we crashed
+//     mid-replay) is replayed onto the .raw (idempotent), then removed.
+func (r *ReplicationReceiver) recoverJournals() error {
+	entries, err := os.ReadDir(r.replicaPath)
+	if err != nil {
+		return fmt.Errorf("can't scan replicas directory '%s': %s", r.replicaPath, err)
 	}
 
-	if err := r.recordReplica(vmName, origin, config, diskSize, totalBytes); err != nil {
-		return err
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+
+		switch {
+		case strings.HasSuffix(name, replicaPartSuffix):
+			partPath := path.Clean(r.replicaPath + "/" + name)
+			if err := os.Remove(partPath); err != nil {
+				r.app.Log.Errorf("replication receiver: can't remove stale staging journal '%s': %s", partPath, err)
+				continue
+			}
+			r.app.Log.Warningf("replication receiver: discarded incomplete staging journal '%s' (source crashed mid-sync); replica left at its last consistent point", name)
+
+		case strings.HasSuffix(name, replicaJournalSuffix):
+			r.recoverOneJournal(strings.TrimSuffix(name, replicaJournalSuffix))
+		}
 	}
 
-	r.app.Log.Tracef("replication receiver: applied %d blocks (%d bytes) to '%s'",
-		blockCount, totalBytes, vmName)
 	return nil
+}
+
+// recoverOneJournal replays a single committed journal at startup. On any error
+// the journal is left in place (never silently dropped): a later full copy
+// (Prepare) clears it, or a subsequent incremental commit overwrites it.
+func (r *ReplicationReceiver) recoverOneJournal(vmName string) {
+	fi, err := os.Stat(r.filePath(vmName))
+	if err != nil {
+		r.app.Log.Warningf("replication receiver: staging journal for '%s' has no replica file, leaving it for the next full copy to clear: %s", vmName, err)
+		return
+	}
+
+	totalBytes, err := r.replayJournal(vmName, uint64(fi.Size()))
+	if err != nil {
+		r.app.Log.Errorf("replication receiver: can't replay staging journal for '%s' (left in place): %s", vmName, err)
+		return
+	}
+
+	r.setApplying(vmName, false)
+	r.app.Log.Infof("replication receiver: replayed committed staging journal for '%s' (%d bytes) after restart", vmName, totalBytes)
 }
 
 // Delete removes the replica file for the given VM
@@ -324,6 +583,10 @@ func (r *ReplicationReceiver) Delete(vmName string) error {
 	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("can't remove replica file '%s': %s", filePath, err)
 	}
+
+	// drop any staging journal so it can't be replayed onto a recreated replica
+	os.Remove(r.partPath(vmName))
+	os.Remove(r.journalPath(vmName))
 
 	if err := r.app.ReplicaDB.Delete(vmName); err != nil {
 		return fmt.Errorf("can't remove replica database entry for '%s': %s", vmName, err)
