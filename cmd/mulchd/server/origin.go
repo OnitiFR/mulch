@@ -33,6 +33,7 @@ const (
 
 type Origins struct {
 	Origins map[string]*Origin
+	Log     *Log
 }
 
 type Origin struct {
@@ -59,6 +60,7 @@ func NewOrigins(app *App) *Origins {
 
 	return &Origins{
 		Origins: origins,
+		Log:     app.Log,
 	}
 }
 
@@ -86,7 +88,7 @@ func (o *Origins) GetContent(path string) (io.ReadCloser, error) {
 
 	switch scheme {
 	case "http", "https":
-		return getContentFromHttpURL(path)
+		return getContentFromHttpURL(o.Log, path)
 	case "file":
 		return getContentFromFileURL(path)
 	default:
@@ -130,7 +132,7 @@ func (*Origins) getContentFromOrigin(origin *Origin, pathStr string) (io.ReadClo
 			return nil, err
 		}
 		u.Path = path.Join(u.Path, pathStr)
-		return getContentFromHttpURL(u.String())
+		return getContentFromHttpURL(origin.Log, u.String())
 	case OriginTypeFile:
 		u, err := url.Parse(origin.Config.Path)
 		if err != nil {
@@ -170,21 +172,26 @@ var originHTTPCache = struct {
 }{entries: make(map[string]*originHTTPCacheEntry)}
 
 // http:// or https:// protocol (with conditional GET caching)
-func getContentFromHttpURL(url string) (io.ReadCloser, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
+func getContentFromHttpURL(log *Log, url string) (io.ReadCloser, error) {
 	// add conditional GET header if we have a cached version
 	originHTTPCache.RLock()
 	cached := originHTTPCache.entries[url]
 	originHTTPCache.RUnlock()
-	if cached != nil && cached.etag != "" {
-		req.Header.Set("If-None-Match", cached.etag)
+
+	doGet := func(conditional bool) (*http.Response, error) {
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+		if conditional {
+			req.Header.Set("If-None-Match", cached.etag)
+		}
+		return http.DefaultClient.Do(req)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	sentConditional := cached != nil && cached.etag != ""
+
+	resp, err := doGet(sentConditional)
 	if err != nil {
 		return nil, err
 	}
@@ -194,9 +201,31 @@ func getContentFromHttpURL(url string) (io.ReadCloser, error) {
 		return io.NopCloser(bytes.NewReader(cached.body)), nil
 	}
 
-	if resp.StatusCode == http.StatusTooManyRequests {
+	// Some GitHub/Fastly edge nodes intermittently reject conditional requests
+	// with a non-2xx status (we've seen random 400 Bad Request). If we sent an
+	// If-None-Match header, retry once without it: this both self-heals and
+	// tells us (via the log) whether the conditional header is the culprit
+	// (plain GET succeeds) or whether it's upstream throttling (still fails).
+	retriedWithoutConditional := false
+	if resp.StatusCode != http.StatusOK && sentConditional {
+		log.Tracef("OriginHTTP: conditional GET for %s returned %s, retrying without If-None-Match", url, resp.Status)
+		resp.Body.Close()
+		resp, err = doGet(false)
+		if err != nil {
+			return nil, err
+		}
+		retriedWithoutConditional = true
+	}
+
+	if retriedWithoutConditional && resp.StatusCode == http.StatusOK {
+		log.Warningf("OriginHTTP: [cause B / conditional] %s rejected the conditional GET but a plain GET succeeded: upstream dislikes If-None-Match", url)
+	}
+
+	// On throttling-like statuses, fall back to stale cached content if we have it
+	if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusBadRequest {
 		resp.Body.Close()
 		if cached != nil {
+			log.Warningf("OriginHTTP: [cause A / throttling] %s returned %s, serving stale cached content", url, resp.Status)
 			return io.NopCloser(bytes.NewReader(cached.body)), nil
 		}
 		return nil, fmt.Errorf("response was %s (%v) and no cached content available", resp.Status, resp.StatusCode)
