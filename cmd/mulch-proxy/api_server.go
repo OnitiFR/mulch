@@ -133,7 +133,10 @@ func (srv *APIServer) registerDomainsController(response http.ResponseWriter, re
 		return err
 	}
 
-	err = srv.ProxyServer.DomainDB.ReplaceChainedDomains(data.Domains, data.ForwardTo)
+	refused, err := srv.ProxyServer.DomainDB.ReplaceChainedDomains(data.Domains, data.ForwardTo)
+	for _, domain := range refused {
+		srv.Log.Warningf("domain '%s' requested by '%s' is pinned by another child, registration refused for this domain", domain, data.ForwardTo)
+	}
 	if err != nil {
 		srv.Log.Error(err.Error())
 		http.Error(response, err.Error(), http.StatusInternalServerError)

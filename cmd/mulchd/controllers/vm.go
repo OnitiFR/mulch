@@ -735,6 +735,9 @@ func GetVMInfosController(req *server.Request) {
 		ReplicationFullCopy: replFullCopy,
 		ReplicationLastSync: replLastSync,
 		ReplicationLastErr:  replLastErr,
+		Promoted:            vm.Promoted,
+		PromotedFrom:        vm.PromotedFrom,
+		PromotedDate:        vm.PromotedDate,
 	}
 
 	req.Response.Header().Set("Content-Type", "application/json")

@@ -9,6 +9,7 @@ type ProxyChainDomains struct {
 type ProxyChainDomain struct {
 	Domain      string
 	RateProfile string
+	Pinned      bool // see Domain.Pinned
 }
 
 // ProxyChainConflictingDomain describes a conflicting domain
@@ -21,10 +22,11 @@ type ProxyChainConflictingDomain struct {
 type ProxyChainConflictingDomains []ProxyChainConflictingDomain
 
 // NewProxyChainDomain creates a new ProxyChainDomain
-func NewProxyChainDomain(domain, rateProfile string) ProxyChainDomain {
+func NewProxyChainDomain(domain, rateProfile string, pinned bool) ProxyChainDomain {
 	return ProxyChainDomain{
 		Domain:      domain,
 		RateProfile: rateProfile,
+		Pinned:      pinned,
 	}
 }
 

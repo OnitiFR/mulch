@@ -103,7 +103,7 @@ func (ddb *DomainDatabase) GetProxyChainDomains() []common.ProxyChainDomain {
 
 	var domains []common.ProxyChainDomain
 	for _, domain := range ddb.db {
-		domains = append(domains, common.NewProxyChainDomain(domain.Name, domain.RateProfile))
+		domains = append(domains, common.NewProxyChainDomain(domain.Name, domain.RateProfile, domain.Pinned))
 	}
 	return domains
 }
@@ -129,8 +129,14 @@ func (ddb *DomainDatabase) Count() int {
 }
 
 // ReplaceChainedDomains remove all domains chain-forwared to "forwardTo"
-// and replace it with "domains"
-func (ddb *DomainDatabase) ReplaceChainedDomains(domains []common.ProxyChainDomain, forwardTo string) error {
+// and replace it with "domains".
+//
+// A conflicting domain is normally erased ("last writer wins", this is what
+// lets a promoted VM take its domains over), with one exception: a domain
+// pinned by ANOTHER child is never overwritten — the first pin wins — and is
+// returned in refused, so the caller can log it. The owner itself can always
+// update, re-pin or release its own domains (they are dropped in step 1).
+func (ddb *DomainDatabase) ReplaceChainedDomains(domains []common.ProxyChainDomain, forwardTo string) ([]string, error) {
 	ddb.mutex.Lock()
 	defer ddb.mutex.Unlock()
 
@@ -141,21 +147,29 @@ func (ddb *DomainDatabase) ReplaceChainedDomains(domains []common.ProxyChainDoma
 		}
 	}
 
-	// 2 - add new domains, erasing any conflicting domain
+	// 2 - add new domains, erasing any conflicting domain (unless pinned)
+	var refused []string
 	for _, domain := range domains {
+		if existing, exists := ddb.db[domain.Domain]; exists && existing.Pinned {
+			// existing.TargetURL != forwardTo here: this child's own entries
+			// were deleted in step 1
+			refused = append(refused, domain.Domain)
+			continue
+		}
 		ddb.db[domain.Domain] = &common.Domain{
 			Name:        domain.Domain,
 			TargetURL:   forwardTo,
 			Chained:     true,
 			RateProfile: domain.RateProfile,
+			Pinned:      domain.Pinned,
 		}
 	}
 
 	err := ddb.save()
 	if err != nil {
-		return err
+		return refused, err
 	}
-	return nil
+	return refused, nil
 }
 
 // GetConflictingDomains returns a list of conflicting domains in the provided

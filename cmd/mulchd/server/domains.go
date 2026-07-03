@@ -15,6 +15,27 @@ import (
 // of other mulchd servers (in case of proxy chaining)
 // You can exclude a specific VM (every revisions) using its name (use empty string otherwise)
 func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM string, config *AppConfig) error {
+	err := CheckDomainsConflictsLocal(db, domains, excludeVM)
+	if err != nil {
+		return err
+	}
+
+	if config.ProxyChainMode == ProxyChainModeChild {
+		err := CheckDomainsConflictsOnParent(domains, config)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// CheckDomainsConflictsLocal is the local-only part of CheckDomainsConflicts:
+// it never contacts the proxy-chain parent. Used by the 'replica promote'
+// path ("force", see HA_PROMOTE.md step 3): the parent may legitimately still
+// route the domains to the dead source peer, but a local conflict remains a
+// real one (this host would compete with itself).
+func CheckDomainsConflictsLocal(db *VMDatabase, domains []*common.Domain, excludeVM string) error {
 	domainMap := make(map[string]*VM)
 	vmNames := db.GetNames()
 	for _, vmName := range vmNames {
@@ -40,13 +61,6 @@ func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM s
 		vm, exist := domainMap[domain.Name]
 		if exist {
 			return fmt.Errorf("vm '%s' already registered domain '%s'", vm.Config.Name, domain.Name)
-		}
-	}
-
-	if config.ProxyChainMode == ProxyChainModeChild {
-		err := CheckDomainsConflictsOnParent(domains, config)
-		if err != nil {
-			return err
 		}
 	}
 

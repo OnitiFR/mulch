@@ -49,6 +49,9 @@ func vmInfosDisplay(reader io.Reader, _ http.Header) {
 		if data.ReplicationPeer == "" && strings.HasPrefix(key, "Replication") {
 			continue
 		}
+		if !data.Promoted && strings.HasPrefix(key, "Promoted") {
+			continue
+		}
 		val := common.InterfaceValueToString(v.Field(i).Interface())
 		fmt.Printf("%s: %s\n", key, val)
 	}

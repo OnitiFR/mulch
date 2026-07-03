@@ -113,7 +113,7 @@ func PromoteReplica(vmID string, authorKey string, app *App, log *Log) (*VMName,
 		return nil, fmt.Errorf("can't refresh disks pool: %s", err)
 	}
 
-	_, vmName, err := NewVMFromExistingDisk(conf, diskName, true, authorKey, &booted, app, log)
+	_, vmName, err := NewVMFromExistingDisk(conf, diskName, true, authorKey, state.Origin, &booted, app, log)
 	if err != nil {
 		log.Warningf("promote failed, moving replica disk back")
 		rollbackMove()
@@ -143,7 +143,7 @@ func PromoteReplica(vmID string, authorKey string, app *App, log *Log) (*VMName,
 // booted is set to true as soon as the guest starts: from that point the disk
 // content is mutated, even if the VM creation fails afterwards (the caller
 // uses it to flag the replica as diverged on rollback).
-func NewVMFromExistingDisk(vmConfig *VMConfig, diskName string, active bool, authorKey string, booted *bool, app *App, log *Log) (*VM, *VMName, error) {
+func NewVMFromExistingDisk(vmConfig *VMConfig, diskName string, active bool, authorKey string, promotedFrom string, booted *bool, app *App, log *Log) (*VM, *VMName, error) {
 	log.Infof("promoting VM '%s' from existing disk '%s'", vmConfig.Name, diskName)
 
 	commit := false
@@ -162,6 +162,9 @@ func NewVMFromExistingDisk(vmConfig *VMConfig, diskName string, active bool, aut
 		InitDate:             time.Now(),
 		Locked:               false,
 		WIP:                  VMOperationNone,
+		Promoted:             true,
+		PromotedFrom:         promotedFrom,
+		PromotedDate:         time.Now(),
 	}
 
 	conn, err := app.Libvirt.GetConnection()
@@ -183,13 +186,12 @@ func NewVMFromExistingDisk(vmConfig *VMConfig, diskName string, active bool, aut
 	}
 
 	if active {
-		// same early checks as NewVM (VMDB.Add re-does them at the end; failing
-		// now avoids a full boot for nothing).
-		// TODO (HA_PROMOTE.md step 3, "force" + pin): CheckDomainsConflicts
-		// includes the parent proxy check, which refuses the promote as long as
-		// the (dead) source peer still owns the domains there. The promote path
-		// will have to skip it.
-		err = CheckDomainsConflicts(app.VMDB, vmConfig.Domains, vmName.Name, app.Config)
+		// same early checks as VMDB.Add for a promoted VM (which re-does them
+		// at the end; failing now avoids a full boot for nothing). The check
+		// is local-only ("force", HA_PROMOTE.md step 3): the parent may still
+		// route these domains to the dead source peer, our pinned registration
+		// will take them over at the proxy refresh.
+		err = CheckDomainsConflictsLocal(app.VMDB, vmConfig.Domains, vmName.Name)
 		if err != nil {
 			return nil, nil, err
 		}

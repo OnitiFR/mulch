@@ -32,4 +32,7 @@ type APIVMInfos struct {
 	ReplicationFullCopy bool
 	ReplicationLastSync time.Time
 	ReplicationLastErr  string
+	Promoted            bool
+	PromotedFrom        string
+	PromotedDate        time.Time
 }

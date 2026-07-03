@@ -82,6 +82,8 @@ func (vmdb *VMDatabase) genDomainsDB() error {
 		vm := entry.VM
 		for _, domain := range vm.Config.Domains {
 			domain.VMName = entry.Name.ID()
+			// domains of a promoted VM are pinned on the proxy-chain parent
+			domain.Pinned = vm.Promoted
 			if domain.RedirectTo == "" {
 				domain.DestinationHost = vm.LastIP
 			}
@@ -360,7 +362,16 @@ func (vmdb *VMDatabase) Delete(name *VMName, log *Log) error {
 func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 
 	if active {
-		err := CheckDomainsConflicts(vmdb, vm.Config.Domains, name.Name, vmdb.app.Config)
+		var err error
+		if vm.Promoted {
+			// "force" (HA_PROMOTE.md step 3): skip the parent conflict check,
+			// which would refuse the promote as long as the parent still
+			// routes these domains to the (dead) source peer. Our pinned
+			// registration takes them over at the next proxy refresh.
+			err = CheckDomainsConflictsLocal(vmdb, vm.Config.Domains, name.Name)
+		} else {
+			err = CheckDomainsConflicts(vmdb, vm.Config.Domains, name.Name, vmdb.app.Config)
+		}
 		if err != nil {
 			return err
 		}
