@@ -30,6 +30,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"os"
@@ -38,8 +39,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/OnitiFR/mulch/common"
 	"libvirt.org/go/libvirt"
 )
+
+// ErrPeerStandDown is detected on the source side when the peer replies with
+// the stand-down sentinel (the VM was promoted there, see HA_PROMOTE.md §3.5):
+// this host must stop serving and replicating the VM (handleStandDown).
+var ErrPeerStandDown = errors.New("peer replied stand-down (VM was promoted there)")
 
 const (
 	// ReplicationStartupDelay is the start delay after VM state restoration
@@ -222,6 +229,11 @@ func (rm *ReplicationManager) reconcile() {
 		if err != nil || vm.Config.ReplicationPeer == "" {
 			continue
 		}
+		// stood down: the VM was promoted on the peer, don't replicate it
+		// anymore (see handleStandDown; 'replication full-resync' re-enables)
+		if state := rm.app.ReplicationDB.Get(vmName.ID()); state != nil && state.Status == ReplicationStandDown {
+			continue
+		}
 		desired[vmName.ID()] = vmName
 	}
 
@@ -323,6 +335,13 @@ func (rm *ReplicationManager) runReplicator(ctx context.Context, vmName *VMName,
 		rm.syncVM(vmName, vm)
 
 		state := rm.app.ReplicationDB.Get(vmName.ID())
+
+		// the sync ended in a stand-down (VM promoted on the peer): exit, the
+		// reconcile loop won't respawn this replicator
+		if state != nil && state.Status == ReplicationStandDown {
+			return
+		}
+
 		interval := rm.GetEffectiveInterval(vm, state)
 
 		select {
@@ -428,6 +447,10 @@ func (rm *ReplicationManager) checkAlerts() {
 		// don't alert while a sync is in progress: an initial full copy of a
 		// large disk can legitimately exceed the alert delay
 		if state.Status == ReplicationSyncing {
+			continue
+		}
+		// stand-down is terminal and was alerted once by handleStandDown
+		if state.Status == ReplicationStandDown {
 			continue
 		}
 
@@ -543,11 +566,67 @@ func (rm *ReplicationManager) peerPrepare(vm *VM, vmName *VMName, actualDiskSize
 			"disk_size": fmt.Sprintf("%d", actualDiskSize),
 			"vm_config": vm.Config.FileContent,
 		},
+		// prepare is a stream route (no HTTP status to match, unlike sync):
+		// the stand-down sentinel is detected in the failure message text
+		MessageCallback: func(m *common.Message) error {
+			if m.Type == common.MessageFailure && strings.Contains(m.Message, common.ReplicationStandDownMessage) {
+				return fmt.Errorf("%w: %s", ErrPeerStandDown, m.Message)
+			}
+			return nil
+		},
 		Log:     rm.app.Log,
 		Libvirt: rm.app.Libvirt,
 	}
 
 	return call.Do()
+}
+
+// handleStandDown reacts to a stand-down reply from the peer: the VM was
+// promoted there (see HA_PROMOTE.md §3.5), so this host must stop serving and
+// replicating it.
+//
+// The VM is deactivated (all revisions: genDomainsDB then drops its domains,
+// so our proxy no longer competes with the peer's for them), the local
+// checkpoint is deleted, and the replication state is durably parked in
+// "stand-down": the reconcile loop stops spawning a replicator, even across
+// restarts. A single alert is sent. The state entry is kept as the marker;
+// 'replication full-resync' clears it (operator override, see ResetFullCopy).
+func (rm *ReplicationManager) handleStandDown(vmName *VMName, vm *VM, cause string) {
+	peerName := vm.Config.ReplicationPeer
+	rm.app.Log.Errorf("replication %s: peer '%s' replied stand-down (VM was promoted there): deactivating the VM and stopping its replication", vmName.ID(), peerName)
+
+	state := rm.ensureState(vmName, vm)
+
+	// delete the local checkpoint: no incremental will ever use it
+	if state.LastCheckpointName != "" {
+		if dom, err := rm.app.Libvirt.GetDomainByName(vmName.LibvirtDomainName(rm.app)); err == nil && dom != nil {
+			rm.deleteCheckpoint(dom, state.LastCheckpointName, vmName)
+			dom.Free()
+		}
+		state.LastCheckpointName = ""
+	}
+
+	state.Status = ReplicationStandDown
+	state.FullCopyDone = false
+	state.LastError = cause
+	state.LastErrorTime = time.Now()
+	rm.app.ReplicationDB.Set(state)
+
+	// deactivate whatever revision of this name is active: the peer serves the
+	// name now, none of our revisions may claim its domains anymore
+	if _, err := rm.app.VMDB.GetActiveEntryByName(vmName.Name); err == nil {
+		if err := rm.app.VMDB.SetActiveRevision(vmName.Name, RevisionNone); err != nil {
+			rm.app.Log.Errorf("replication %s: can't deactivate VM: %s", vmName.ID(), err)
+		} else {
+			rm.app.Log.Warningf("replication %s: VM deactivated (now served by peer '%s')", vmName.ID(), peerName)
+		}
+	}
+
+	rm.app.AlertSender.Send(&Alert{
+		Type:    AlertTypeBad,
+		Subject: fmt.Sprintf("VM %s was promoted on peer %s", vmName.ID(), peerName),
+		Content: fmt.Sprintf("The peer refused replication (stand-down): the VM now runs there. It was deactivated locally and its replication was stopped ('replication full-resync' would re-enable it). Cause: %s", cause),
+	})
 }
 
 // cleanupDisabledReplication cleans up replication state when replication has been
@@ -663,7 +742,10 @@ func (rm *ReplicationManager) cleanupOrphanCheckpoints() {
 	}
 }
 
-// ResetFullCopy marks a VM as needing a full copy on next sync
+// ResetFullCopy marks a VM as needing a full copy on next sync. It also
+// clears a stand-down state (operator override through 'replication
+// full-resync'): the reconcile loop then respawns a replicator — the peer
+// will keep refusing syncs anyway as long as its promoted tombstone exists.
 func (rm *ReplicationManager) ResetFullCopy(vmName *VMName) {
 	state := rm.app.ReplicationDB.Get(vmName.ID())
 	if state == nil {
@@ -671,6 +753,11 @@ func (rm *ReplicationManager) ResetFullCopy(vmName *VMName) {
 	}
 	state.FullCopyDone = false
 	state.LastCheckpointName = ""
+	if state.Status == ReplicationStandDown {
+		rm.app.Log.Infof("replication %s: stand-down cleared by full-resync", vmName.ID())
+		state.Status = ReplicationIdle
+		state.LastError = ""
+	}
 	rm.app.ReplicationDB.Set(state)
 }
 

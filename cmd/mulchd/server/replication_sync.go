@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -68,6 +69,10 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 		// notify new peer to prepare (create raw file)
 		err = rm.peerPrepare(vm, vmName, blockInfo.Capacity)
 		if err != nil {
+			if errors.Is(err, ErrPeerStandDown) {
+				rm.handleStandDown(vmName, vm, err.Error())
+				return
+			}
 			rm.recordError(vmName, fmt.Sprintf("peer prepare failed: %s", err))
 			return
 		}
@@ -169,6 +174,11 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 
 	syncBytes, peerFileMissing, err := rm.pullAndStreamBlocks(vm, vmName, nbdAddress, exportName, bitmapName, needsFullCopy)
 	if err != nil {
+		// the VM was promoted on the peer: stop serving and replicating it
+		if errors.Is(err, ErrPeerStandDown) {
+			rm.handleStandDown(vmName, vm, err.Error())
+			return
+		}
 		// the peer lost its replica file: an incremental stream can't be applied
 		// against a missing file, so force a full copy on the next cycle (which
 		// recreates the file via peerPrepare) instead of looping on the error.
@@ -382,6 +392,10 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 			if code == http.StatusConflict {
 				peerFileMissing = true
 			}
+			// 410: stand-down sentinel, the VM was promoted on the peer
+			if code == http.StatusGone {
+				return fmt.Errorf("%w: %s", ErrPeerStandDown, httpError)
+			}
 			return httpError
 		},
 		Log:     rm.app.Log,
@@ -395,7 +409,8 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 	// while result.err is typically just a broken pipe)
 	result := <-streamCh
 	if callErr != nil {
-		return result.bytes, peerFileMissing, fmt.Errorf("peer sync call: %s", callErr)
+		// %w: sentinel errors (ErrPeerStandDown) must stay matchable upstream
+		return result.bytes, peerFileMissing, fmt.Errorf("peer sync call: %w", callErr)
 	}
 	if result.err != nil {
 		return result.bytes, false, fmt.Errorf("writing block stream: %s", result.err)

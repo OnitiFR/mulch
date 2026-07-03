@@ -66,7 +66,9 @@ func (call *PeerCall) Do() error {
 			entity = fmt.Sprintf("%s %s", call.Args["action"], entity)
 		}
 
-		return fmt.Errorf("call '%s' to %s failed: %s", entity, call.Peer.Name, err)
+		// %w: callback errors may carry sentinel values (e.g. ErrPeerStandDown)
+		// that callers match with errors.Is
+		return fmt.Errorf("call '%s' to %s failed: %w", entity, call.Peer.Name, err)
 	}
 	return nil
 }

@@ -54,6 +54,9 @@ func replicationStatusCB(reader io.Reader, _ http.Header) {
 		status = yellow(status)
 	case "error":
 		status = red(status)
+	case "stand-down":
+		// the VM was promoted on the peer: replication (and the VM) stopped
+		status = red(status)
 	}
 
 	full := green("yes")

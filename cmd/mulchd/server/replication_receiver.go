@@ -10,15 +10,17 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/OnitiFR/mulch/common"
 )
 
 var ErrReplicaFileMissing = errors.New("replica file missing, full copy required")
 var ErrReplicaOriginConflict = errors.New("replica name already owned by another peer")
 
-// ErrReplicaPromoted is the (stubbed) stand-down sentinel: the source peer
-// must stop replicating this VM and reflect that it is now served elsewhere
-// (see HA_PROMOTE.md §3.5, implemented source-side in a later step).
-var ErrReplicaPromoted = errors.New("replica was promoted on this peer, stand down")
+// ErrReplicaPromoted is the stand-down sentinel: the source peer must stop
+// replicating this VM and reflect that it is now served elsewhere (see
+// HA_PROMOTE.md §3.5 and handleStandDown for the source-side handling).
+var ErrReplicaPromoted = errors.New(common.ReplicationStandDownMessage)
 
 const (
 	// ReplicationBlockMagic is the magic bytes at the start of a replication block stream

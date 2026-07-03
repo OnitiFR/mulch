@@ -173,9 +173,18 @@ func ActionReplicationController(req *server.Request) {
 
 	switch action {
 	case "full-resync":
+		state := req.App.ReplicationDB.Get(vmName.ID())
+		wasStandDown := state != nil && state.Status == server.ReplicationStandDown
+
 		req.App.ReplicationMgr.ResetFullCopy(vmName)
 		err = req.App.ReplicationMgr.TriggerSync(vmName)
 		if err != nil {
+			// a stood-down VM has no replicator to trigger: clearing the state
+			// (ResetFullCopy) is enough, the reconcile loop spawns one shortly
+			if wasStandDown {
+				req.Stream.Infof("stand-down cleared for %s, full resync will start shortly (note: the VM is still inactive, and the peer still refuses syncs as long as its promoted replica entry exists)", vmName.ID())
+				break
+			}
 			req.Stream.Failuref("full-resync failed: %s", err)
 			return
 		}
@@ -282,12 +291,23 @@ func CleanupReplicationController(req *server.Request) {
 		return
 	}
 
-	if _, err := server.ParseVMName(vmName); err != nil {
+	parsed, err := server.ParseVMName(vmName)
+	if err != nil {
 		req.Stream.Failuref("invalid VM name '%s'", vmName)
 		return
 	}
 
-	err := req.App.ReplicationReceiver.Delete(vmName)
+	// a promoted (or promoting) tombstone must survive peer-driven cleanup:
+	// it is what keeps the source standing down. Only a local 'replica delete'
+	// clears it.
+	for _, s := range req.App.ReplicaDB.GetAllForName(parsed.Name) {
+		if s.Promoted || s.Promoting {
+			req.Stream.Failuref("cleanup refused: %s", server.ErrReplicaPromoted)
+			return
+		}
+	}
+
+	err = req.App.ReplicationReceiver.Delete(vmName)
 	if err != nil {
 		req.Stream.Failuref("cleanup failed: %s", err)
 		return

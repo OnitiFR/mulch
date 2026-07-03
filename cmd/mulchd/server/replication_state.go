@@ -12,6 +12,8 @@ const (
 	ReplicationSyncing ReplicationStatus = "syncing"
 	// ReplicationError means the last sync failed
 	ReplicationError ReplicationStatus = "error"
+	// ReplicationStandDown means the peer refused replication (promoted VM)
+	ReplicationStandDown ReplicationStatus = "stand-down"
 )
 
 // ReplicationState stores the replication state for a single VM
