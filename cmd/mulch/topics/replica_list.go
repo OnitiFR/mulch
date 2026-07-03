@@ -65,8 +65,12 @@ func replicaListCB(reader io.Reader, _ http.Header) {
 	for _, line := range data {
 		status := line.Status
 		switch line.Status {
-		case "syncing":
+		case "syncing", "promoting":
 			status = yellow(status)
+		case "promoted":
+			// tombstone: the disk is gone, the entry only blocks the source
+			// peer from replicating this name again
+			status = grey(status)
 		case "idle":
 			// an idle replica whose full copy never completed is not coherent
 			// and must not be promoted: surface it as a distinct state.

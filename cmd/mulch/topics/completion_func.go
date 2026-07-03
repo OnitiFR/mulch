@@ -182,7 +182,7 @@ __mulch_custom_func() {
             __internal_list_replicated_vms
             return
             ;;
-        mulch_replica_delete)
+        mulch_replica_delete | mulch_replica_promote)
             __internal_list_replicas
             return
             ;;

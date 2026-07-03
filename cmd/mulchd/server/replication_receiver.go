@@ -15,6 +15,11 @@ import (
 var ErrReplicaFileMissing = errors.New("replica file missing, full copy required")
 var ErrReplicaOriginConflict = errors.New("replica name already owned by another peer")
 
+// ErrReplicaPromoted is the (stubbed) stand-down sentinel: the source peer
+// must stop replicating this VM and reflect that it is now served elsewhere
+// (see HA_PROMOTE.md §3.5, implemented source-side in a later step).
+var ErrReplicaPromoted = errors.New("replica was promoted on this peer, stand down")
+
 const (
 	// ReplicationBlockMagic is the magic bytes at the start of a replication block stream
 	ReplicationBlockMagic = "MRPL"
@@ -69,7 +74,43 @@ func NewReplicationReceiver(app *App) (*ReplicationReceiver, error) {
 		return nil, err
 	}
 
+	// reconcile any promote interrupted by an unclean shutdown, so the replica
+	// is not left wedged in the transient "promoting" state forever.
+	r.recoverPromotes()
+
 	return r, nil
+}
+
+// recoverPromotes reconciles replicas left in the transient "promoting" state
+// by a mulchd crash. Two cases, told apart by where the .raw sits:
+//
+//   - .raw still in replicas/: the promote died before (or rolled back) the
+//     move. Re-accept syncs, but flag the replica as diverged: the guest may
+//     have booted during the attempt, so only a full copy is trustworthy.
+//   - .raw gone: the disk was moved to the disks pool; a VM may or may not
+//     have been created before the crash. Keep refusing syncs (tombstone) and
+//     let the admin sort it out: either the VM exists and all is well, or the
+//     disk must be moved back by hand (then 'replica delete' the tombstone).
+func (r *ReplicationReceiver) recoverPromotes() {
+	for _, state := range r.app.ReplicaDB.GetAll() {
+		if !state.Promoting {
+			continue
+		}
+		vmID := state.ID()
+
+		state.Promoting = false
+		if _, err := os.Stat(r.filePath(vmID)); err == nil {
+			state.Diverged = true
+			r.app.Log.Warningf("replication receiver: promote of '%s' was interrupted by a shutdown; replica kept (as diverged: the source will have to redo a full copy)", vmID)
+		} else {
+			state.Promoted = true
+			r.app.Log.Errorf("replication receiver: promote of '%s' was interrupted by a shutdown AFTER its disk moved to the disks pool; marked as promoted — check that the VM exists, otherwise move '%s.raw' back to the replicas directory and delete the tombstone", vmID, vmID)
+		}
+
+		if err := r.app.ReplicaDB.Set(state); err != nil {
+			r.app.Log.Errorf("replication receiver: can't save recovered promote state for '%s': %s", vmID, err)
+		}
+	}
 }
 
 // markSyncing flags a VM ID as currently receiving a sync.
@@ -143,6 +184,23 @@ func (r *ReplicationReceiver) checkOriginConflict(vmName string, origin string) 
 	return nil
 }
 
+// checkPromoted refuses any replication activity for a VM name that was (or is
+// being) promoted on this peer, whatever the revision: the tombstone must keep
+// standing even if the source rebuilds the VM under a new revision.
+func (r *ReplicationReceiver) checkPromoted(vmName string) error {
+	name, err := ParseVMName(vmName)
+	if err != nil {
+		return fmt.Errorf("invalid VM name '%s': %s", vmName, err)
+	}
+
+	for _, state := range r.app.ReplicaDB.GetAllForName(name.Name) {
+		if state.Promoted || state.Promoting {
+			return fmt.Errorf("%w: '%s' now runs as a local VM", ErrReplicaPromoted, name.Name)
+		}
+	}
+	return nil
+}
+
 // Prepare creates or recreates a raw sparse file for the given VM and records
 // the replica in the database (origin = source identity, config = raw VM TOML).
 func (r *ReplicationReceiver) Prepare(vmName string, diskSize uint64, origin string, config string) error {
@@ -159,6 +217,12 @@ func (r *ReplicationReceiver) Prepare(vmName string, diskSize uint64, origin str
 	lock := r.getFileLock(vmName)
 	lock.Lock()
 	defer lock.Unlock()
+
+	// checked under the file lock so a promote that just set its state can't
+	// be raced by a sync that passed the check before the lock
+	if err := r.checkPromoted(vmName); err != nil {
+		return err
+	}
 
 	r.markSyncing(vmName)
 	defer r.unmarkSyncing(vmName)
@@ -186,6 +250,8 @@ func (r *ReplicationReceiver) Prepare(vmName string, diskSize uint64, origin str
 		// no consistent point exists until the full copy completes
 		s.ConsistentSnapshot = false
 		s.Applying = false
+		// the file was just truncated: any divergence is gone with it
+		s.Diverged = false
 	}); err != nil {
 		return err
 	}
@@ -266,6 +332,11 @@ func (r *ReplicationReceiver) ApplyBlocks(vmName string, origin string, config s
 	lock.Lock()
 	defer lock.Unlock()
 
+	// see Prepare for the locking rationale
+	if err := r.checkPromoted(vmName); err != nil {
+		return err
+	}
+
 	r.markSyncing(vmName)
 	defer r.unmarkSyncing(vmName)
 
@@ -314,6 +385,7 @@ func (r *ReplicationReceiver) applyFullCopy(vmName string, origin string, config
 	if err := r.recordReplica(vmName, origin, config, diskSize, totalBytes, func(s *ReplicaState) {
 		// the .raw now holds a complete, consistent image
 		s.ConsistentSnapshot = true
+		s.Diverged = false
 	}); err != nil {
 		return err
 	}
@@ -343,6 +415,12 @@ func (r *ReplicationReceiver) applyIncremental(vmName string, origin string, con
 		return fmt.Errorf("can't stat replica file '%s': %s", filePath, err)
 	}
 	diskSize := uint64(fi.Size())
+
+	// a diverged .raw (a failed promote booted the guest, which wrote to the
+	// disk) can't be fixed by deltas: force the source to redo a full copy
+	if state := r.app.ReplicaDB.Get(vmName); state != nil && state.Diverged {
+		return fmt.Errorf("%w (diverged by a failed promote)", ErrReplicaFileMissing)
+	}
 
 	// --- 1. spool to the staging journal (validate only, no .raw write) ---
 	part, err := os.OpenFile(partPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
@@ -573,11 +651,120 @@ func (r *ReplicationReceiver) recoverOneJournal(vmName string) {
 	r.app.Log.Infof("replication receiver: replayed committed staging journal for '%s' (%d bytes) after restart", vmName, totalBytes)
 }
 
+// RawFilePath returns the path of the replica .raw file for a VM ID
+func (r *ReplicationReceiver) RawFilePath(vmName string) string {
+	return r.filePath(vmName)
+}
+
+// BeginPromote durably switches a replica to the "promoting" state. It runs
+// under the file lock, so it serializes with any in-flight sync; once it
+// returns, no new prepare/sync can touch this VM name (checkPromoted) and the
+// .raw is guaranteed to sit at a complete FSFreeze point: a committed journal
+// left by an earlier failed replay is replayed first, and a replica without a
+// consistent snapshot (full copy in progress) is refused.
+func (r *ReplicationReceiver) BeginPromote(vmID string) (*ReplicaState, error) {
+	lock := r.getFileLock(vmID)
+	lock.Lock()
+	defer lock.Unlock()
+
+	state := r.app.ReplicaDB.Get(vmID)
+	if state == nil {
+		return nil, fmt.Errorf("no replica named '%s'", vmID)
+	}
+	if state.Promoted {
+		return nil, fmt.Errorf("replica '%s' was already promoted", vmID)
+	}
+	if state.Promoting {
+		return nil, fmt.Errorf("a promote is already in progress for '%s'", vmID)
+	}
+	if !state.ConsistentSnapshot {
+		return nil, fmt.Errorf("replica '%s' has no consistent snapshot (full copy in progress or incomplete), refusing to promote", vmID)
+	}
+
+	fi, err := os.Stat(r.filePath(vmID))
+	if err != nil {
+		return nil, fmt.Errorf("can't stat replica file: %s", err)
+	}
+
+	if _, err := os.Stat(r.journalPath(vmID)); err == nil {
+		// a committed journal whose replay failed earlier: replay it now
+		// (idempotent) so the promote uses the latest complete FSFreeze point
+		if _, err := r.replayJournal(vmID, uint64(fi.Size())); err != nil {
+			return nil, fmt.Errorf("can't replay pending staging journal: %s", err)
+		}
+		state.Applying = false
+	}
+
+	state.Promoting = true
+	if err := r.app.ReplicaDB.Set(state); err != nil {
+		return nil, fmt.Errorf("can't save replica database entry: %s", err)
+	}
+
+	r.app.Log.Infof("replication receiver: replica '%s' is now promoting, incoming syncs are refused", vmID)
+	return state, nil
+}
+
+// AbortPromote rolls back the "promoting" state after a failed promote, so
+// the replica accepts incoming syncs again. diverged must be true if the
+// guest was booted during the failed attempt (it wrote to the .raw): the
+// replica then refuses incremental syncs until the source redoes a full copy
+// (see ReplicaState.Diverged).
+func (r *ReplicationReceiver) AbortPromote(vmID string, diverged bool) {
+	lock := r.getFileLock(vmID)
+	lock.Lock()
+	defer lock.Unlock()
+
+	state := r.app.ReplicaDB.Get(vmID)
+	if state == nil || !state.Promoting {
+		return
+	}
+	state.Promoting = false
+	if diverged && !state.Diverged {
+		state.Diverged = true
+		r.app.Log.Warningf("replication receiver: replica '%s' diverged (failed promote booted the guest); still promotable, but the source will have to redo a full copy", vmID)
+	}
+	if err := r.app.ReplicaDB.Set(state); err != nil {
+		r.app.Log.Errorf("replication receiver: can't clear promoting state for '%s': %s", vmID, err)
+	}
+}
+
+// FinishPromote switches a promoting replica to its final "promoted" tombstone
+// state: the .raw was moved to the disks pool by the caller, only the database
+// entry remains (to keep refusing syncs from the original source, see
+// checkPromoted). Staging leftovers are dropped.
+func (r *ReplicationReceiver) FinishPromote(vmID string) error {
+	lock := r.getFileLock(vmID)
+	lock.Lock()
+	defer lock.Unlock()
+
+	os.Remove(r.partPath(vmID))
+	os.Remove(r.journalPath(vmID))
+
+	state := r.app.ReplicaDB.Get(vmID)
+	if state == nil {
+		return fmt.Errorf("no replica database entry for '%s'", vmID)
+	}
+	state.Promoting = false
+	state.Promoted = true
+	state.Applying = false
+	state.LastUpdate = time.Now()
+	if err := r.app.ReplicaDB.Set(state); err != nil {
+		return fmt.Errorf("can't save replica database entry: %s", err)
+	}
+
+	r.app.Log.Infof("replication receiver: replica '%s' promoted (tombstone kept, delete it to allow replication again)", vmID)
+	return nil
+}
+
 // Delete removes the replica file for the given VM
 func (r *ReplicationReceiver) Delete(vmName string) error {
 	lock := r.getFileLock(vmName)
 	lock.Lock()
 	defer lock.Unlock()
+
+	if state := r.app.ReplicaDB.Get(vmName); state != nil && state.Promoting {
+		return fmt.Errorf("a promote is in progress for '%s'", vmName)
+	}
 
 	filePath := r.filePath(vmName)
 	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {

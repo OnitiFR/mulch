@@ -31,6 +31,26 @@ type ReplicaState struct {
 	// (e.g. for "replica list"); the authoritative recovery signal is the
 	// journal file itself (see recoverJournals).
 	Applying bool
+
+	// Promoting is true while a 'replica promote' is running: incoming
+	// prepare/sync calls are durably refused (even across a mulchd restart)
+	// until the promote either completes (Promoted) or is rolled back.
+	Promoting bool
+
+	// Diverged is set when a failed promote booted the guest: the VM wrote to
+	// the .raw during the failed boot, so the image no longer matches the
+	// source's last checkpoint. It stays promotable (crash-consistent image of
+	// the failed boot), but incremental syncs are refused (deltas would apply
+	// on a diverged base): the source is told to redo a full copy, which
+	// clears the flag.
+	Diverged bool
+
+	// Promoted marks a tombstone: the replica was promoted to a local VM and
+	// its .raw was moved to the disks pool. The entry is kept so the original
+	// source peer gets a "stand-down" refusal instead of silently recreating
+	// a replica of a VM now running here. Only an explicit 'replica delete'
+	// clears it.
+	Promoted bool
 }
 
 // ID returns the unique VM ID (name + revision) for this replica

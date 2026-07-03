@@ -370,4 +370,10 @@ func AddRoutes(app *server.App) {
 		Handler: controllers.DeleteReplicaController,
 	}, server.RouteAPI)
 
+	app.AddRoute(&server.Route{
+		Route:   "POST /replica/*",
+		Type:    server.RouteTypeStream,
+		Handler: controllers.ActionReplicaController,
+	}, server.RouteAPI)
+
 }

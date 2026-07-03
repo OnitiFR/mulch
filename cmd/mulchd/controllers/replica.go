@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -34,7 +35,12 @@ func ListReplicaController(req *server.Request) {
 		seen[id] = true
 
 		status := "idle"
-		if syncing[id] {
+		switch {
+		case s.Promoted:
+			status = "promoted"
+		case s.Promoting:
+			status = "promoting"
+		case syncing[id]:
 			status = "syncing"
 		}
 
@@ -83,6 +89,58 @@ func ListReplicaController(req *server.Request) {
 	}
 }
 
+// resolveReplicaID resolves a replica name with an optional revision (either
+// embedded in the name, e.g. 'myvm-r2', or given through the "revision" form
+// value) to an existing replica VM ID. A bare name is resolved among existing
+// revisions and refused if ambiguous.
+func resolveReplicaID(nameArg string, req *server.Request) (string, error) {
+	parsed, err := server.ParseVMName(nameArg)
+	if err != nil {
+		return "", fmt.Errorf("invalid replica name '%s'", nameArg)
+	}
+
+	revisionParam := req.HTTP.FormValue("revision")
+
+	var vmID string
+	switch {
+	case revisionParam != "":
+		// explicit --revision flag: the name must not also carry a revision
+		if parsed.Revision != 0 {
+			return "", fmt.Errorf("revision given both in the name ('%s') and with --revision, use only one", nameArg)
+		}
+		revision, err := strconv.Atoi(revisionParam)
+		if err != nil {
+			return "", fmt.Errorf("invalid revision '%s'", revisionParam)
+		}
+		vmID = server.NewVMName(parsed.Name, revision).ID()
+	case parsed.Revision != 0:
+		// revision embedded in the name (e.g. 'myvm-r2')
+		vmID = nameArg
+	default:
+		// bare name: resolve among existing revisions, refuse if ambiguous
+		matches := req.App.ReplicaDB.GetAllForName(parsed.Name)
+		switch len(matches) {
+		case 0:
+			return "", fmt.Errorf("no replica named '%s'", parsed.Name)
+		case 1:
+			vmID = matches[0].ID()
+		default:
+			revs := make([]string, 0, len(matches))
+			for _, m := range matches {
+				revs = append(revs, strconv.Itoa(m.Revision))
+			}
+			sort.Strings(revs)
+			return "", fmt.Errorf("multiple revisions exist for '%s' (%s), select one with --revision", parsed.Name, strings.Join(revs, ", "))
+		}
+	}
+
+	if req.App.ReplicaDB.Get(vmID) == nil {
+		return "", fmt.Errorf("no replica named '%s'", vmID)
+	}
+
+	return vmID, nil
+}
+
 // DeleteReplicaController deletes a replica (database entry + raw file).
 // The deletion is unconditional: if the source peer is still replicating this
 // VM, the replica will reappear on the next prepare/sync.
@@ -95,53 +153,9 @@ func DeleteReplicaController(req *server.Request) {
 		return
 	}
 
-	parsed, err := server.ParseVMName(nameArg)
+	vmID, err := resolveReplicaID(nameArg, req)
 	if err != nil {
-		req.Stream.Failuref("invalid replica name '%s'", nameArg)
-		return
-	}
-
-	revisionParam := req.HTTP.FormValue("revision")
-
-	var vmID string
-	switch {
-	case revisionParam != "":
-		// explicit --revision flag: the name must not also carry a revision
-		if parsed.Revision != 0 {
-			req.Stream.Failuref("revision given both in the name ('%s') and with --revision, use only one", nameArg)
-			return
-		}
-		revision, err := strconv.Atoi(revisionParam)
-		if err != nil {
-			req.Stream.Failuref("invalid revision '%s'", revisionParam)
-			return
-		}
-		vmID = server.NewVMName(parsed.Name, revision).ID()
-	case parsed.Revision != 0:
-		// revision embedded in the name (e.g. 'myvm-r2')
-		vmID = nameArg
-	default:
-		// bare name: resolve among existing revisions, refuse if ambiguous
-		matches := req.App.ReplicaDB.GetAllForName(parsed.Name)
-		switch len(matches) {
-		case 0:
-			req.Stream.Failuref("no replica named '%s'", parsed.Name)
-			return
-		case 1:
-			vmID = matches[0].ID()
-		default:
-			revs := make([]string, 0, len(matches))
-			for _, m := range matches {
-				revs = append(revs, strconv.Itoa(m.Revision))
-			}
-			sort.Strings(revs)
-			req.Stream.Failuref("multiple revisions exist for '%s' (%s), select one with --revision", parsed.Name, strings.Join(revs, ", "))
-			return
-		}
-	}
-
-	if req.App.ReplicaDB.Get(vmID) == nil {
-		req.Stream.Failuref("no replica named '%s'", vmID)
+		req.Stream.Failure(err.Error())
 		return
 	}
 
@@ -151,4 +165,46 @@ func DeleteReplicaController(req *server.Request) {
 	}
 
 	req.Stream.Successf("replica '%s' deleted", vmID)
+}
+
+// ActionReplicaController dispatches replica actions; "promote" is the only
+// one for now.
+func ActionReplicaController(req *server.Request) {
+	req.StartStream()
+
+	action := req.HTTP.FormValue("action")
+	if action != "promote" {
+		req.Stream.Failuref("missing or invalid action ('%s')", action)
+		return
+	}
+
+	nameArg := req.SubPath
+	if nameArg == "" {
+		req.Stream.Failure("missing replica name")
+		return
+	}
+
+	vmID, err := resolveReplicaID(nameArg, req)
+	if err != nil {
+		req.Stream.Failure(err.Error())
+		return
+	}
+
+	req.SetTarget(vmID)
+
+	operation := req.App.Operations.Add(&server.Operation{
+		Origin:        req.APIKey.Comment,
+		Action:        "promote",
+		Ressource:     "replica",
+		RessourceName: vmID,
+	})
+	defer req.App.Operations.Remove(operation)
+
+	vmName, err := server.PromoteReplica(vmID, req.APIKey.Comment, req.App, req.Stream)
+	if err != nil {
+		req.Stream.Failuref("promote failed: %s", err)
+		return
+	}
+
+	req.Stream.Successf("replica '%s' promoted as VM '%s'", vmID, vmName)
 }
