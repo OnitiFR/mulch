@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
 	"github.com/OnitiFR/mulch/common"
@@ -200,11 +201,13 @@ func ActionReplicaController(req *server.Request) {
 	})
 	defer req.App.Operations.Remove(operation)
 
+	before := time.Now()
 	vmName, err := server.PromoteReplica(vmID, req.APIKey.Comment, req.App, req.Stream)
 	if err != nil {
 		req.Stream.Failuref("promote failed: %s", err)
 		return
 	}
+	after := time.Now()
 
-	req.Stream.Successf("replica '%s' promoted as VM '%s'", vmID, vmName)
+	req.Stream.Successf("replica '%s' promoted as VM '%s' (%s)", vmID, vmName, after.Sub(before))
 }
