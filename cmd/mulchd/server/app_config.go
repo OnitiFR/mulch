@@ -248,7 +248,18 @@ func NewAppConfigFromTomlFile(configPath string) (*AppConfig, error) {
 	default:
 		return nil, fmt.Errorf("unknown proxy_chain_mode value '%s'", tConfig.ProxyChainMode)
 	}
-	// no validation here, it's done by mulch-proxy, we're just an API client
+	// mostly validated by mulch-proxy (same config file), we're just an API
+	// client, except proxy_chain_child_url: it is our identity in the
+	// parent-side domain conflict checks (common.ProxyChainChildIdentity),
+	// better fail now than at every runtime check
+	if appConfig.ProxyChainMode == ProxyChainModeChild {
+		if tConfig.ProxyChainChildURL == "" {
+			return nil, fmt.Errorf("proxy_chain_child_url is required for proxy chain children")
+		}
+		if _, err := common.ProxyChainChildIdentity(tConfig.ProxyChainChildURL); err != nil {
+			return nil, fmt.Errorf("proxy_chain_child_url: %s", err)
+		}
+	}
 	appConfig.ProxyChainParentURL = tConfig.ProxyChainParentURL
 	appConfig.ProxyChainChildURL = tConfig.ProxyChainChildURL
 	appConfig.ProxyChainPSK = tConfig.ProxyChainPSK

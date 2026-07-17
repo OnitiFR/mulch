@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
 	"sync"
 
@@ -129,7 +128,9 @@ func (ddb *DomainDatabase) Count() int {
 }
 
 // ReplaceChainedDomains remove all domains chain-forwared to "forwardTo"
-// and replace it with "domains".
+// and replace it with "domains". Children are compared through their
+// hostname:port identity (see common.ProxyChainChildIdentity), never through
+// raw URL strings.
 //
 // A conflicting domain is normally erased ("last writer wins", this is what
 // lets a promoted VM take its domains over), with one exception: a domain
@@ -137,12 +138,27 @@ func (ddb *DomainDatabase) Count() int {
 // returned in refused, so the caller can log it. The owner itself can always
 // update, re-pin or release its own domains (they are dropped in step 1).
 func (ddb *DomainDatabase) ReplaceChainedDomains(domains []common.ProxyChainDomain, forwardTo string) ([]string, error) {
+	child, err := common.ProxyChainChildIdentity(forwardTo)
+	if err != nil {
+		// fail-closed: refuse the whole registration, an unidentifiable child
+		// could not be matched with its own previous domains
+		return nil, err
+	}
+
 	ddb.mutex.Lock()
 	defer ddb.mutex.Unlock()
 
 	// 1 - delete all previous domains for this child
 	for key, domain := range ddb.db {
-		if domain.Chained && domain.TargetURL == forwardTo {
+		if !domain.Chained {
+			continue
+		}
+		owner, err := common.ProxyChainChildIdentity(domain.TargetURL)
+		if err != nil {
+			// can't prove this entry is ours: leave it alone
+			continue
+		}
+		if owner == child {
 			delete(ddb.db, key)
 		}
 	}
@@ -151,8 +167,8 @@ func (ddb *DomainDatabase) ReplaceChainedDomains(domains []common.ProxyChainDoma
 	var refused []string
 	for _, domain := range domains {
 		if existing, exists := ddb.db[domain.Domain]; exists && existing.Pinned {
-			// existing.TargetURL != forwardTo here: this child's own entries
-			// were deleted in step 1
+			// pinned by another child (this child's own entries were deleted
+			// in step 1) or by an unidentifiable owner: first pin wins
 			refused = append(refused, domain.Domain)
 			continue
 		}
@@ -165,7 +181,7 @@ func (ddb *DomainDatabase) ReplaceChainedDomains(domains []common.ProxyChainDoma
 		}
 	}
 
-	err := ddb.save()
+	err = ddb.save()
 	if err != nil {
 		return refused, err
 	}
@@ -173,11 +189,15 @@ func (ddb *DomainDatabase) ReplaceChainedDomains(domains []common.ProxyChainDoma
 }
 
 // GetConflictingDomains returns a list of conflicting domains in the provided
-// list, excluding those from a specific child
-func (ddb *DomainDatabase) GetConflictingDomains(reqDomains []string, childForwardURL string) common.ProxyChainConflictingDomains {
-	childURL, err := url.ParseRequestURI(childForwardURL)
+// list, excluding those owned by the requesting child itself. Children are
+// compared through their hostname:port identity, and anything that can't be
+// identified is reported as a conflict (fail-closed): a parent's own local
+// domain, or an entry with an unparseable TargetURL.
+func (ddb *DomainDatabase) GetConflictingDomains(reqDomains []string, childForwardURL string) (common.ProxyChainConflictingDomains, error) {
+	child, err := common.ProxyChainChildIdentity(childForwardURL)
 	if err != nil {
-		return nil
+		// fail-closed: better refuse the check than falsely report no conflict
+		return nil, err
 	}
 
 	var conflicts common.ProxyChainConflictingDomains
@@ -187,19 +207,26 @@ func (ddb *DomainDatabase) GetConflictingDomains(reqDomains []string, childForwa
 			// no conflict for this domain
 			continue
 		}
-		targetURL, err := url.ParseRequestURI(domain.TargetURL)
-		if err != nil {
-			// not a child route? inconsistency?
-			continue
+
+		owner := "parent proxy (local domain)"
+		if domain.Chained {
+			ownerID, err := common.ProxyChainChildIdentity(domain.TargetURL)
+			if err == nil && ownerID == child {
+				// the requesting child already owns this domain
+				continue
+			}
+			owner = domain.TargetURL
+			if err == nil {
+				owner = ownerID
+			}
 		}
-		if domain != nil && targetURL.Hostname() != childURL.Hostname() {
-			conflicts = append(conflicts, common.ProxyChainConflictingDomain{
-				Domain: domain.Name,
-				Owner:  targetURL.Hostname(),
-			})
-		}
+
+		conflicts = append(conflicts, common.ProxyChainConflictingDomain{
+			Domain: domain.Name,
+			Owner:  owner,
+		})
 	}
-	return conflicts
+	return conflicts, nil
 }
 
 // GetChildren returns the list of children-proxies URLs
