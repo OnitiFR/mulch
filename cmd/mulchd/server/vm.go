@@ -91,12 +91,11 @@ type VM struct {
 	AssignedIPv4         string
 
 	// Promoted marks a VM born from a 'replica promote' (failover from a
-	// peer, see HA_PROMOTE.md). Its domains are registered as pinned on the
-	// proxy-chain parent, so the original (dead) peer can't reclaim them at
-	// its return, and the parent conflict pre-check is skipped when the VM is
-	// added. Historical fact about the VM: it survives rebuilds (copied by
-	// VMRebuild) and redefines (the VM entry persists) — deliberately not in
-	// the TOML, which only carries user intent.
+	// peer). Its domains are registered as pinned on the proxy-chain parent,
+	// so the original (dead) peer can't reclaim them at its return, and the
+	// parent conflict pre-check is skipped when the VM is added. Survives
+	// rebuilds and redefines — deliberately not in the TOML, which only
+	// carries user intent.
 	Promoted     bool
 	PromotedFrom string // API key comment of the source peer
 	PromotedDate time.Time
@@ -1741,7 +1740,7 @@ func VMRebuild(vmName *VMName, lock bool, authorKey string, app *App, log *Log) 
 	}()
 
 	// a promoted VM stays promoted through rebuilds: its domains must remain
-	// pinned on the proxy-chain parent (see HA_PROMOTE.md)
+	// pinned on the proxy-chain parent
 	if vm.Promoted {
 		newVM.Promoted = true
 		newVM.PromotedFrom = vm.PromotedFrom

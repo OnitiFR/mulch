@@ -340,8 +340,6 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 	}
 
 	// connect to QEMU's NBD server
-	// rm.app.Log.Tracef("replication %s: connecting NBD client to '%s' (export='%s', bitmap='%s')",
-	// vmName.ID(), nbdAddress, exportName, bitmapName)
 	nbdClient, err := NewNBDClient(nbdAddress, exportName, bitmapName)
 	if err != nil {
 		return 0, false, fmt.Errorf("NBD client connect: %s", err)

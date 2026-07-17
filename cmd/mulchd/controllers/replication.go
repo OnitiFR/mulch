@@ -264,9 +264,8 @@ func SyncReplicationController(req *server.Request) {
 		req.App.Log.Errorf("replication sync for '%s' failed: %s", vmName, err)
 		// 409 tells the source the replica file is gone: it must redo a full
 		// copy rather than retry the impossible incremental sync forever.
-		// 410 is the (stubbed) stand-down sentinel: the VM was promoted here,
-		// the source must stop replicating it (source-side handling is a later
-		// step of HA_PROMOTE.md).
+		// 410 is the stand-down sentinel: the VM was promoted here, the
+		// source must stop serving and replicating it.
 		status := 500
 		if errors.Is(err, server.ErrReplicaFileMissing) {
 			status = http.StatusConflict

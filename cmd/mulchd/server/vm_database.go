@@ -364,10 +364,10 @@ func (vmdb *VMDatabase) Add(vm *VM, name *VMName, active bool) error {
 	if active {
 		var err error
 		if vm.Promoted {
-			// "force" (HA_PROMOTE.md step 3): skip the parent conflict check,
-			// which would refuse the promote as long as the parent still
-			// routes these domains to the (dead) source peer. Our pinned
-			// registration takes them over at the next proxy refresh.
+			// skip the parent conflict check: it would refuse the promote as
+			// long as the parent still routes these domains to the (dead)
+			// source peer. Our pinned registration takes them over at the
+			// next proxy refresh.
 			err = CheckDomainsConflictsLocal(vmdb, vm.Config.Domains, name.Name)
 		} else {
 			err = CheckDomainsConflicts(vmdb, vm.Config.Domains, name.Name, vmdb.app.Config)

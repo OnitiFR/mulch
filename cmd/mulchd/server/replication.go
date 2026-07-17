@@ -44,13 +44,13 @@ import (
 )
 
 // ErrPeerStandDown is detected on the source side when the peer replies with
-// the stand-down sentinel (the VM was promoted there, see HA_PROMOTE.md §3.5):
-// this host must stop serving and replicating the VM (handleStandDown).
+// the stand-down sentinel (the VM was promoted there): this host must stop
+// serving and replicating the VM (see handleStandDown).
 var ErrPeerStandDown = errors.New("peer replied stand-down (VM was promoted there)")
 
 const (
 	// ReplicationStartupDelay is the start delay after VM state restoration
-	ReplicationStartupDelay = 5 * time.Second // testing
+	ReplicationStartupDelay = 10 * time.Second
 	// ReplicationReconcileInterval between reconcile scans
 	ReplicationReconcileInterval = 5 * time.Second
 	// ReplicationFSFreezeWarningDelay is the delay before logging a warning when FSFreeze is slow
@@ -582,15 +582,14 @@ func (rm *ReplicationManager) peerPrepare(vm *VM, vmName *VMName, actualDiskSize
 }
 
 // handleStandDown reacts to a stand-down reply from the peer: the VM was
-// promoted there (see HA_PROMOTE.md §3.5), so this host must stop serving and
-// replicating it.
+// promoted there, so this host must stop serving and replicating it.
 //
-// The VM is deactivated (all revisions: genDomainsDB then drops its domains,
-// so our proxy no longer competes with the peer's for them), the local
-// checkpoint is deleted, and the replication state is durably parked in
-// "stand-down": the reconcile loop stops spawning a replicator, even across
-// restarts. A single alert is sent. The state entry is kept as the marker;
-// 'replication full-resync' clears it (operator override, see ResetFullCopy).
+// The VM is deactivated (all revisions, so our proxy no longer competes with
+// the peer's for its domains), the local checkpoint is deleted, and the
+// replication state is durably parked in "stand-down": the reconcile loop
+// stops spawning a replicator, even across restarts. A single alert is sent.
+// 'replication full-resync' clears the state (operator override, see
+// ResetFullCopy).
 func (rm *ReplicationManager) handleStandDown(vmName *VMName, vm *VM, cause string) {
 	peerName := vm.Config.ReplicationPeer
 	rm.app.Log.Errorf("replication %s: peer '%s' replied stand-down (VM was promoted there): deactivating the VM and stopping its replication", vmName.ID(), peerName)

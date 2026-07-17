@@ -15,15 +15,13 @@ import (
 )
 
 // NeutralizeTOMLReplicationPeer returns the TOML content with any top-level
-// replication_peer assignment commented out (with an explanatory marker
-// carrying the date and the author, i.e. the API key comment).
+// replication_peer assignment commented out (with a marker carrying the date
+// and the author, i.e. the API key comment).
 //
-// A promoted VM must not replicate anywhere (D7, see HA_PROMOTE.md): the
-// stored peer name belongs to the source host — usually unknown here (parse
-// error), or worse, known (symmetric peering) and the VM would silently
-// replicate back to its origin. The neutralization must be durable, in the
-// TOML itself: FileContent is the source of truth re-parsed by every future
-// rebuild or redefine.
+// A promoted VM must not replicate anywhere: the stored peer name belongs to
+// the source host, and with symmetric peering the VM would silently replicate
+// back to its origin. The change is made in the TOML itself so it survives
+// every future rebuild or redefine (FileContent is re-parsed each time).
 func NeutralizeTOMLReplicationPeer(content string, author string) string {
 	marker := "  # neutralized by 'replica promote' on " + time.Now().Format("2006-01-02 15:04:05")
 	if author != "" {
@@ -49,7 +47,7 @@ func NeutralizeTOMLReplicationPeer(content string, author string) string {
 }
 
 // PromoteReplica turns a replica held by this peer into a real local VM (the
-// failover path, see HA_PROMOTE.md): it durably refuses any further incoming
+// failover path): it durably refuses any further incoming
 // replication for this VM name, moves the .raw into the disks pool (a rename,
 // no copy), boots a VM from it as-is (NewVMFromExistingDisk) and finally turns
 // the replica entry into a "promoted" tombstone. On failure the disk is moved
@@ -186,11 +184,10 @@ func NewVMFromExistingDisk(vmConfig *VMConfig, diskName string, active bool, aut
 	}
 
 	if active {
-		// same early checks as VMDB.Add for a promoted VM (which re-does them
-		// at the end; failing now avoids a full boot for nothing). The check
-		// is local-only ("force", HA_PROMOTE.md step 3): the parent may still
-		// route these domains to the dead source peer, our pinned registration
-		// will take them over at the proxy refresh.
+		// same early checks as VMDB.Add (which re-does them at the end;
+		// failing now avoids a full boot for nothing). Local-only: the parent
+		// may still route these domains to the dead source peer, our pinned
+		// registration will take them over at the proxy refresh.
 		err = CheckDomainsConflictsLocal(app.VMDB, vmConfig.Domains, vmName.Name)
 		if err != nil {
 			return nil, nil, err
@@ -202,7 +199,7 @@ func NewVMFromExistingDisk(vmConfig *VMConfig, diskName string, active bool, aut
 	}
 
 	// missing secrets would only surface when the guest fetches its cloud-init
-	// data, as a BuildTimeout later: fail now instead (D4)
+	// data, as a BuildTimeout later: fail now instead
 	_, err = vm.GetSecretsMap()
 	if err != nil {
 		return nil, nil, err

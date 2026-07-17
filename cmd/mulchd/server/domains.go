@@ -32,9 +32,9 @@ func CheckDomainsConflicts(db *VMDatabase, domains []*common.Domain, excludeVM s
 
 // CheckDomainsConflictsLocal is the local-only part of CheckDomainsConflicts:
 // it never contacts the proxy-chain parent. Used by the 'replica promote'
-// path ("force", see HA_PROMOTE.md step 3): the parent may legitimately still
-// route the domains to the dead source peer, but a local conflict remains a
-// real one (this host would compete with itself).
+// path: the parent may legitimately still route the domains to the dead
+// source peer, but a local conflict remains a real one (this host would
+// compete with itself).
 func CheckDomainsConflictsLocal(db *VMDatabase, domains []*common.Domain, excludeVM string) error {
 	domainMap := make(map[string]*VM)
 	vmNames := db.GetNames()

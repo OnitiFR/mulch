@@ -18,8 +18,8 @@ var ErrReplicaFileMissing = errors.New("replica file missing, full copy required
 var ErrReplicaOriginConflict = errors.New("replica name already owned by another peer")
 
 // ErrReplicaPromoted is the stand-down sentinel: the source peer must stop
-// replicating this VM and reflect that it is now served elsewhere (see
-// HA_PROMOTE.md §3.5 and handleStandDown for the source-side handling).
+// replicating this VM, now served by this host (see handleStandDown for the
+// source-side handling).
 var ErrReplicaPromoted = errors.New(common.ReplicationStandDownMessage)
 
 const (
@@ -467,10 +467,8 @@ func (r *ReplicationReceiver) applyIncremental(vmName string, origin string, con
 	if err := r.recordReplica(vmName, origin, config, diskSize, totalBytes, func(s *ReplicaState) {
 		s.Applying = false
 		// a fully replayed incremental leaves the .raw at a complete FSFreeze
-		// point, so it is consistent. The source only streams incrementals after
-		// a coupled successful full copy, so this can never mask a mid-full-copy
-		// torn image; it also re-arms the flag for replicas persisted before it
-		// existed.
+		// point (the source only streams incrementals after a successful full
+		// copy, so this can never mask a mid-full-copy torn image)
 		s.ConsistentSnapshot = true
 	}); err != nil {
 		return err
