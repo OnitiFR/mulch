@@ -25,10 +25,13 @@ var ErrReplicaPromoted = errors.New(common.ReplicationStandDownMessage)
 const (
 	// ReplicationBlockMagic is the magic bytes at the start of a replication block stream
 	ReplicationBlockMagic = "MRPL"
-	// ReplicationProtocolVersion is the current version of the block stream protocol
-	ReplicationProtocolVersion uint8 = 1
+	// ReplicationProtocolVersion is the current version of the block stream
+	// protocol (v1 had no VM config in the header)
+	ReplicationProtocolVersion uint8 = 2
 	// ReplicationMaxBlockSize is the maximum size of a single block in the stream (2 MB)
 	ReplicationMaxBlockSize = 2 * 1024 * 1024
+	// ReplicationMaxConfigSize is the maximum size of the VM config in the stream (1 MB)
+	ReplicationMaxConfigSize = 1 * 1024 * 1024
 	// ReplicationEndSentinel marks the end of the block stream
 	ReplicationEndSentinel uint64 = 0xFFFFFFFFFFFFFFFF
 
@@ -316,13 +319,14 @@ func (r *ReplicationReceiver) setApplying(vmName string, applying bool) {
 // Stream format (all big-endian):
 //
 //	Header:  "MRPL" (4 bytes) + version (uint8) + diskSize (uint64)
+//	         + configLen (uint32) + config (configLen bytes, raw VM TOML)
 //	Blocks:  offset (uint64) + length (uint32) + data (length bytes) — repeated
 //	End:     offset=0xFFFFFFFFFFFFFFFF + length=0
 //
 // fullCopy selects the write strategy: see applyFullCopy (in place) and
 // applyIncremental (staged through a journal) for the crash-consistency
 // rationale.
-func (r *ReplicationReceiver) ApplyBlocks(vmName string, origin string, config string, fullCopy bool, body io.Reader) error {
+func (r *ReplicationReceiver) ApplyBlocks(vmName string, origin string, fullCopy bool, body io.Reader) error {
 	r.originMu.Lock()
 	conflict := r.checkOriginConflict(vmName, origin)
 	r.originMu.Unlock()
@@ -343,16 +347,16 @@ func (r *ReplicationReceiver) ApplyBlocks(vmName string, origin string, config s
 	defer r.unmarkSyncing(vmName)
 
 	if fullCopy {
-		return r.applyFullCopy(vmName, origin, config, body)
+		return r.applyFullCopy(vmName, origin, body)
 	}
-	return r.applyIncremental(vmName, origin, config, body)
+	return r.applyIncremental(vmName, origin, body)
 }
 
 // applyFullCopy writes a full-copy stream directly onto the replica .raw.
 // Prepare just truncated the file, so there is no previous consistent point to
 // protect: ConsistentSnapshot stays false for the whole operation and is set to
 // true only once the full copy completes successfully.
-func (r *ReplicationReceiver) applyFullCopy(vmName string, origin string, config string, body io.Reader) error {
+func (r *ReplicationReceiver) applyFullCopy(vmName string, origin string, body io.Reader) error {
 	filePath := r.filePath(vmName)
 
 	f, err := os.OpenFile(filePath, os.O_RDWR, 0600)
@@ -372,7 +376,7 @@ func (r *ReplicationReceiver) applyFullCopy(vmName string, origin string, config
 
 	r.app.Log.Tracef("replication receiver: full-copy sync '%s' started (disk size=%d)", vmName, diskSize)
 
-	totalBytes, err := readMRPLStream(body, diskSize, func(offset uint64, data []byte) error {
+	config, totalBytes, err := readMRPLStream(body, diskSize, func(offset uint64, data []byte) error {
 		_, werr := f.WriteAt(data, int64(offset))
 		return werr
 	})
@@ -401,7 +405,7 @@ func (r *ReplicationReceiver) applyFullCopy(vmName string, origin string, config
 // committed (rename), then replayed onto the .raw (see the numbered steps
 // below). If the source crashes mid-stream the incomplete spool is discarded
 // and the .raw stays at its previous consistent point.
-func (r *ReplicationReceiver) applyIncremental(vmName string, origin string, config string, body io.Reader) error {
+func (r *ReplicationReceiver) applyIncremental(vmName string, origin string, body io.Reader) error {
 	filePath := r.filePath(vmName)
 	partPath := r.partPath(vmName)
 	journalPath := r.journalPath(vmName)
@@ -432,7 +436,7 @@ func (r *ReplicationReceiver) applyIncremental(vmName string, origin string, con
 
 	// the TeeReader mirrors every byte consumed by the parser into the .part,
 	// so a clean parse leaves an exact copy of the MRPL stream on disk.
-	_, err = readMRPLStream(io.TeeReader(body, part), diskSize, nil)
+	config, _, err := readMRPLStream(io.TeeReader(body, part), diskSize, nil)
 	if err != nil {
 		part.Close()
 		os.Remove(partPath)
@@ -497,7 +501,7 @@ func (r *ReplicationReceiver) replayJournal(vmName string, diskSize uint64) (uin
 	}
 	defer f.Close()
 
-	totalBytes, err := readMRPLStream(jf, diskSize, func(offset uint64, data []byte) error {
+	_, totalBytes, err := readMRPLStream(jf, diskSize, func(offset uint64, data []byte) error {
 		_, werr := f.WriteAt(data, int64(offset))
 		return werr
 	})
@@ -520,35 +524,49 @@ func (r *ReplicationReceiver) replayJournal(vmName string, diskSize uint64) (uin
 // against expectSize (the replica .raw size). For each data block it invokes
 // apply (when non-nil) to write the block's bytes at its offset; a nil apply
 // only validates the stream (used to spool through a TeeReader). It returns the
-// total number of data bytes carried by the stream.
+// VM config carried by the header and the total number of data bytes carried
+// by the stream.
 //
 // The stream is only complete once the explicit end sentinel is read: a
 // premature EOF (source crashed mid-copy) returns an error, so a truncated
 // journal is never mistaken for a finished one.
-func readMRPLStream(rd io.Reader, expectSize uint64, apply func(offset uint64, data []byte) error) (uint64, error) {
+func readMRPLStream(rd io.Reader, expectSize uint64, apply func(offset uint64, data []byte) error) (string, uint64, error) {
 	var magic [4]byte
 	if _, err := io.ReadFull(rd, magic[:]); err != nil {
-		return 0, fmt.Errorf("reading magic: %s", err)
+		return "", 0, fmt.Errorf("reading magic: %s", err)
 	}
 	if string(magic[:]) != ReplicationBlockMagic {
-		return 0, fmt.Errorf("invalid magic: %q", magic)
+		return "", 0, fmt.Errorf("invalid magic: %q", magic)
 	}
 
 	var version uint8
 	if err := binary.Read(rd, binary.BigEndian, &version); err != nil {
-		return 0, fmt.Errorf("reading version: %s", err)
+		return "", 0, fmt.Errorf("reading version: %s", err)
 	}
 	if version != ReplicationProtocolVersion {
-		return 0, fmt.Errorf("unsupported protocol version %d", version)
+		return "", 0, fmt.Errorf("unsupported protocol version %d", version)
 	}
 
 	var diskSize uint64
 	if err := binary.Read(rd, binary.BigEndian, &diskSize); err != nil {
-		return 0, fmt.Errorf("reading disk size: %s", err)
+		return "", 0, fmt.Errorf("reading disk size: %s", err)
 	}
 	if diskSize != expectSize {
-		return 0, fmt.Errorf("disk size mismatch: stream says %d but replica file is %d bytes", diskSize, expectSize)
+		return "", 0, fmt.Errorf("disk size mismatch: stream says %d but replica file is %d bytes", diskSize, expectSize)
 	}
+
+	var configLen uint32
+	if err := binary.Read(rd, binary.BigEndian, &configLen); err != nil {
+		return "", 0, fmt.Errorf("reading config length: %s", err)
+	}
+	if configLen > ReplicationMaxConfigSize {
+		return "", 0, fmt.Errorf("config too large: %d bytes (max %d)", configLen, ReplicationMaxConfigSize)
+	}
+	configBuf := make([]byte, configLen)
+	if _, err := io.ReadFull(rd, configBuf); err != nil {
+		return "", 0, fmt.Errorf("reading config: %s", err)
+	}
+	config := string(configBuf)
 
 	buf := make([]byte, ReplicationMaxBlockSize)
 	var totalBytes uint64
@@ -558,10 +576,10 @@ func readMRPLStream(rd io.Reader, expectSize uint64, apply func(offset uint64, d
 		var length uint32
 
 		if err := binary.Read(rd, binary.BigEndian, &offset); err != nil {
-			return totalBytes, fmt.Errorf("reading block offset: %s", err)
+			return config, totalBytes, fmt.Errorf("reading block offset: %s", err)
 		}
 		if err := binary.Read(rd, binary.BigEndian, &length); err != nil {
-			return totalBytes, fmt.Errorf("reading block length: %s", err)
+			return config, totalBytes, fmt.Errorf("reading block length: %s", err)
 		}
 
 		// end sentinel
@@ -570,29 +588,29 @@ func readMRPLStream(rd io.Reader, expectSize uint64, apply func(offset uint64, d
 		}
 
 		if length > ReplicationMaxBlockSize {
-			return totalBytes, fmt.Errorf("block too large: %d bytes (max %d)", length, ReplicationMaxBlockSize)
+			return config, totalBytes, fmt.Errorf("block too large: %d bytes (max %d)", length, ReplicationMaxBlockSize)
 		}
 		if offset+uint64(length) > diskSize {
-			return totalBytes, fmt.Errorf("block at offset %d length %d exceeds disk size %d", offset, length, diskSize)
+			return config, totalBytes, fmt.Errorf("block at offset %d length %d exceeds disk size %d", offset, length, diskSize)
 		}
 
 		if _, err := io.ReadFull(rd, buf[:length]); err != nil {
-			return totalBytes, fmt.Errorf("reading block data at offset %d: %s", offset, err)
+			return config, totalBytes, fmt.Errorf("reading block data at offset %d: %s", offset, err)
 		}
 
 		if apply != nil {
 			if err := apply(offset, buf[:length]); err != nil {
-				return totalBytes, fmt.Errorf("writing block at offset %d: %s", offset, err)
+				return config, totalBytes, fmt.Errorf("writing block at offset %d: %s", offset, err)
 			}
 		}
 
 		totalBytes += uint64(length)
 		if totalBytes > diskSize {
-			return totalBytes, fmt.Errorf("total stream data (%d bytes) exceeds disk size (%d bytes)", totalBytes, diskSize)
+			return config, totalBytes, fmt.Errorf("total stream data (%d bytes) exceeds disk size (%d bytes)", totalBytes, diskSize)
 		}
 	}
 
-	return totalBytes, nil
+	return config, totalBytes, nil
 }
 
 // recoverJournals reconciles staging journals left by an unclean shutdown,

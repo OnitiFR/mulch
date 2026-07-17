@@ -16,12 +16,15 @@ type mrplBlock struct {
 	data   []byte
 }
 
-// buildMRPLStream serializes a valid MRPL stream (header + blocks + end sentinel).
-func buildMRPLStream(diskSize uint64, blocks []mrplBlock) []byte {
+// buildMRPLStream serializes a valid MRPL stream (header + config + blocks +
+// end sentinel).
+func buildMRPLStream(diskSize uint64, config string, blocks []mrplBlock) []byte {
 	var b bytes.Buffer
 	b.WriteString(ReplicationBlockMagic)
 	binary.Write(&b, binary.BigEndian, ReplicationProtocolVersion)
 	binary.Write(&b, binary.BigEndian, diskSize)
+	binary.Write(&b, binary.BigEndian, uint32(len(config)))
+	b.WriteString(config)
 	for _, bl := range blocks {
 		binary.Write(&b, binary.BigEndian, bl.offset)
 		binary.Write(&b, binary.BigEndian, uint32(len(bl.data)))
@@ -77,18 +80,21 @@ func readRaw(t *testing.T, r *ReplicationReceiver, vmName string) []byte {
 
 func TestReadMRPLStream_Complete(t *testing.T) {
 	const size = 4096
-	stream := buildMRPLStream(size, []mrplBlock{
+	stream := buildMRPLStream(size, "config", []mrplBlock{
 		{offset: 0, data: repeat('A', 512)},
 		{offset: 1024, data: repeat('B', 256)},
 	})
 
 	got := make([]byte, size)
-	total, err := readMRPLStream(bytes.NewReader(stream), size, func(off uint64, d []byte) error {
+	config, total, err := readMRPLStream(bytes.NewReader(stream), size, func(off uint64, d []byte) error {
 		copy(got[off:], d)
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
+	}
+	if config != "config" {
+		t.Fatalf("config = %q, want %q", config, "config")
 	}
 	if total != 512+256 {
 		t.Fatalf("total = %d, want %d", total, 512+256)
@@ -102,20 +108,36 @@ func TestReadMRPLStream_Complete(t *testing.T) {
 // distinguishes a torn stream (source crashed mid-copy) from a finished one.
 func TestReadMRPLStream_TruncatedIsError(t *testing.T) {
 	const size = 4096
-	full := buildMRPLStream(size, []mrplBlock{{offset: 0, data: repeat('A', 512)}})
+	full := buildMRPLStream(size, "config", []mrplBlock{{offset: 0, data: repeat('A', 512)}})
 	truncated := full[:len(full)-4] // drop part of the end sentinel
 
-	_, err := readMRPLStream(bytes.NewReader(truncated), size, nil)
+	_, _, err := readMRPLStream(bytes.NewReader(truncated), size, nil)
 	if err == nil {
 		t.Fatal("expected error on truncated stream, got nil")
 	}
 }
 
 func TestReadMRPLStream_SizeMismatch(t *testing.T) {
-	stream := buildMRPLStream(4096, nil)
-	_, err := readMRPLStream(bytes.NewReader(stream), 8192, nil)
+	stream := buildMRPLStream(4096, "config", nil)
+	_, _, err := readMRPLStream(bytes.NewReader(stream), 8192, nil)
 	if err == nil {
 		t.Fatal("expected disk size mismatch error, got nil")
+	}
+}
+
+// A corrupt stream announcing a huge config must be rejected before any
+// allocation is attempted.
+func TestReadMRPLStream_ConfigTooLarge(t *testing.T) {
+	const size = 4096
+	var b bytes.Buffer
+	b.WriteString(ReplicationBlockMagic)
+	binary.Write(&b, binary.BigEndian, ReplicationProtocolVersion)
+	binary.Write(&b, binary.BigEndian, uint64(size))
+	binary.Write(&b, binary.BigEndian, uint32(ReplicationMaxConfigSize+1))
+
+	_, _, err := readMRPLStream(bytes.NewReader(b.Bytes()), size, nil)
+	if err == nil {
+		t.Fatal("expected config too large error, got nil")
 	}
 }
 
@@ -133,8 +155,8 @@ func TestApplyFullCopy_SetsConsistentSnapshot(t *testing.T) {
 		t.Fatal("ConsistentSnapshot should be false right after Prepare")
 	}
 
-	stream := buildMRPLStream(size, []mrplBlock{{offset: 0, data: repeat('A', size)}})
-	if err := r.ApplyBlocks(vm, "peerA", "config", true, bytes.NewReader(stream)); err != nil {
+	stream := buildMRPLStream(size, "config", []mrplBlock{{offset: 0, data: repeat('A', size)}})
+	if err := r.ApplyBlocks(vm, "peerA", true, bytes.NewReader(stream)); err != nil {
 		t.Fatalf("ApplyBlocks (full): %s", err)
 	}
 
@@ -156,9 +178,9 @@ func TestApplyFullCopy_TruncatedKeepsInconsistent(t *testing.T) {
 		t.Fatalf("Prepare: %s", err)
 	}
 
-	full := buildMRPLStream(size, []mrplBlock{{offset: 0, data: repeat('A', size)}})
+	full := buildMRPLStream(size, "config", []mrplBlock{{offset: 0, data: repeat('A', size)}})
 	truncated := full[:len(full)-4]
-	if err := r.ApplyBlocks(vm, "peerA", "config", true, bytes.NewReader(truncated)); err == nil {
+	if err := r.ApplyBlocks(vm, "peerA", true, bytes.NewReader(truncated)); err == nil {
 		t.Fatal("expected error on truncated full copy")
 	}
 
@@ -177,15 +199,20 @@ func TestApplyIncremental_AppliesDelta(t *testing.T) {
 	if err := r.Prepare(vm, size, "peerA", "config"); err != nil {
 		t.Fatalf("Prepare: %s", err)
 	}
-	full := buildMRPLStream(size, []mrplBlock{{offset: 0, data: repeat('A', size)}})
-	if err := r.ApplyBlocks(vm, "peerA", "config", true, bytes.NewReader(full)); err != nil {
+	full := buildMRPLStream(size, "config", []mrplBlock{{offset: 0, data: repeat('A', size)}})
+	if err := r.ApplyBlocks(vm, "peerA", true, bytes.NewReader(full)); err != nil {
 		t.Fatalf("full copy: %s", err)
 	}
 
-	// incremental: overwrite the first 512 bytes with B
-	inc := buildMRPLStream(size, []mrplBlock{{offset: 0, data: repeat('B', 512)}})
-	if err := r.ApplyBlocks(vm, "peerA", "config", false, bytes.NewReader(inc)); err != nil {
+	// incremental: overwrite the first 512 bytes with B (with an updated VM
+	// config, to check the stream header refreshes the database entry)
+	inc := buildMRPLStream(size, "config-v2", []mrplBlock{{offset: 0, data: repeat('B', 512)}})
+	if err := r.ApplyBlocks(vm, "peerA", false, bytes.NewReader(inc)); err != nil {
 		t.Fatalf("incremental: %s", err)
+	}
+
+	if st := r.app.ReplicaDB.Get(vm); st == nil || st.Config != "config-v2" {
+		t.Fatal("replica Config should have been refreshed from the stream header")
 	}
 
 	raw := readRaw(t, r, vm)
@@ -213,8 +240,8 @@ func TestApplyIncremental_ReArmsConsistentSnapshot(t *testing.T) {
 	if err := r.Prepare(vm, size, "peerA", "config"); err != nil {
 		t.Fatalf("Prepare: %s", err)
 	}
-	full := buildMRPLStream(size, []mrplBlock{{offset: 0, data: repeat('A', size)}})
-	if err := r.ApplyBlocks(vm, "peerA", "config", true, bytes.NewReader(full)); err != nil {
+	full := buildMRPLStream(size, "config", []mrplBlock{{offset: 0, data: repeat('A', size)}})
+	if err := r.ApplyBlocks(vm, "peerA", true, bytes.NewReader(full)); err != nil {
 		t.Fatalf("full copy: %s", err)
 	}
 
@@ -225,8 +252,8 @@ func TestApplyIncremental_ReArmsConsistentSnapshot(t *testing.T) {
 		t.Fatalf("Set: %s", err)
 	}
 
-	inc := buildMRPLStream(size, []mrplBlock{{offset: 0, data: repeat('B', 512)}})
-	if err := r.ApplyBlocks(vm, "peerA", "config", false, bytes.NewReader(inc)); err != nil {
+	inc := buildMRPLStream(size, "config", []mrplBlock{{offset: 0, data: repeat('B', 512)}})
+	if err := r.ApplyBlocks(vm, "peerA", false, bytes.NewReader(inc)); err != nil {
 		t.Fatalf("incremental: %s", err)
 	}
 
@@ -245,14 +272,14 @@ func TestApplyIncremental_TornDoesNotCorruptRaw(t *testing.T) {
 	if err := r.Prepare(vm, size, "peerA", "config"); err != nil {
 		t.Fatalf("Prepare: %s", err)
 	}
-	full := buildMRPLStream(size, []mrplBlock{{offset: 0, data: repeat('A', size)}})
-	if err := r.ApplyBlocks(vm, "peerA", "config", true, bytes.NewReader(full)); err != nil {
+	full := buildMRPLStream(size, "config", []mrplBlock{{offset: 0, data: repeat('A', size)}})
+	if err := r.ApplyBlocks(vm, "peerA", true, bytes.NewReader(full)); err != nil {
 		t.Fatalf("full copy: %s", err)
 	}
 
-	incFull := buildMRPLStream(size, []mrplBlock{{offset: 0, data: repeat('B', 512)}})
+	incFull := buildMRPLStream(size, "config", []mrplBlock{{offset: 0, data: repeat('B', 512)}})
 	torn := incFull[:len(incFull)-4]
-	if err := r.ApplyBlocks(vm, "peerA", "config", false, bytes.NewReader(torn)); err == nil {
+	if err := r.ApplyBlocks(vm, "peerA", false, bytes.NewReader(torn)); err == nil {
 		t.Fatal("expected error on torn incremental")
 	}
 
@@ -274,14 +301,14 @@ func TestRecoverJournals_ReplaysCommittedJournal(t *testing.T) {
 	if err := r.Prepare(vm, size, "peerA", "config"); err != nil {
 		t.Fatalf("Prepare: %s", err)
 	}
-	full := buildMRPLStream(size, []mrplBlock{{offset: 0, data: repeat('A', size)}})
-	if err := r.ApplyBlocks(vm, "peerA", "config", true, bytes.NewReader(full)); err != nil {
+	full := buildMRPLStream(size, "config", []mrplBlock{{offset: 0, data: repeat('A', size)}})
+	if err := r.ApplyBlocks(vm, "peerA", true, bytes.NewReader(full)); err != nil {
 		t.Fatalf("full copy: %s", err)
 	}
 
 	// simulate a crash mid-replay: a committed journal exists (B over first 512
 	// bytes) and the .raw was only partially updated.
-	journal := buildMRPLStream(size, []mrplBlock{{offset: 0, data: repeat('B', 512)}})
+	journal := buildMRPLStream(size, "config", []mrplBlock{{offset: 0, data: repeat('B', 512)}})
 	if err := os.WriteFile(r.journalPath(vm), journal, 0600); err != nil {
 		t.Fatalf("writing journal: %s", err)
 	}
@@ -314,8 +341,8 @@ func TestRecoverJournals_DiscardsPart(t *testing.T) {
 	if err := r.Prepare(vm, size, "peerA", "config"); err != nil {
 		t.Fatalf("Prepare: %s", err)
 	}
-	full := buildMRPLStream(size, []mrplBlock{{offset: 0, data: repeat('A', size)}})
-	if err := r.ApplyBlocks(vm, "peerA", "config", true, bytes.NewReader(full)); err != nil {
+	full := buildMRPLStream(size, "config", []mrplBlock{{offset: 0, data: repeat('A', size)}})
+	if err := r.ApplyBlocks(vm, "peerA", true, bytes.NewReader(full)); err != nil {
 		t.Fatalf("full copy: %s", err)
 	}
 

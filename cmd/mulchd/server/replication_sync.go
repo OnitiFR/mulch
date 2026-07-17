@@ -360,7 +360,7 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 	streamCh := make(chan streamResult, 1)
 	go func() {
 		defer pipeWriter.Close()
-		bytes, err := rm.writeBlockStream(pipeWriter, nbdClient, diskSize, fullCopy)
+		bytes, err := rm.writeBlockStream(pipeWriter, nbdClient, diskSize, vm.Config.FileContent, fullCopy)
 		streamCh <- streamResult{bytes, err}
 	}()
 
@@ -371,8 +371,9 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 		Method: "POST",
 		Path:   "/replication/sync",
 		Args: map[string]string{
-			"vm_name":   vmName.ID(),
-			"vm_config": vm.Config.FileContent,
+			// these args end up in the URL query string (UploadStream route),
+			// which leaks in error messages: keep them small and non-sensitive
+			"vm_name": vmName.ID(),
 			// tells the receiver whether to apply in place (full copy: nothing
 			// consistent to protect yet) or stage through a journal (incremental:
 			// protect the previous consistent point against a torn write).
@@ -418,8 +419,13 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 }
 
 // writeBlockStream writes the replication block protocol to w,
-// reading blocks from the NBD client. Returns the number of data bytes streamed.
-func (rm *ReplicationManager) writeBlockStream(w io.Writer, nbdClient *NBDClient, diskSize uint64, fullCopy bool) (uint64, error) {
+// reading blocks from the NBD client (see ApplyBlocks for the stream format).
+// Returns the number of data bytes streamed.
+func (rm *ReplicationManager) writeBlockStream(w io.Writer, nbdClient *NBDClient, diskSize uint64, config string, fullCopy bool) (uint64, error) {
+	if len(config) > ReplicationMaxConfigSize {
+		return 0, fmt.Errorf("VM config too large: %d bytes (max %d)", len(config), ReplicationMaxConfigSize)
+	}
+
 	// write header
 	if _, err := w.Write([]byte(ReplicationBlockMagic)); err != nil {
 		return 0, err
@@ -428,6 +434,12 @@ func (rm *ReplicationManager) writeBlockStream(w io.Writer, nbdClient *NBDClient
 		return 0, err
 	}
 	if err := binary.Write(w, binary.BigEndian, diskSize); err != nil {
+		return 0, err
+	}
+	if err := binary.Write(w, binary.BigEndian, uint32(len(config))); err != nil {
+		return 0, err
+	}
+	if _, err := io.WriteString(w, config); err != nil {
 		return 0, err
 	}
 
