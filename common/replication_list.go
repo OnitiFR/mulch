@@ -16,6 +16,7 @@ type APIReplicationEntry struct {
 	LastSyncTime       time.Time
 	LastSyncDuration   time.Duration
 	LastSyncBytes      uint64
+	NextSyncTime       time.Time // next scheduled sync (zero = none, e.g. sync in progress)
 	LastError          string
 	LastErrorTime      time.Time
 	ConsecutiveErrors  int

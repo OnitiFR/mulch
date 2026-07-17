@@ -72,6 +72,16 @@ func replicationStatusCB(reader io.Reader, _ http.Header) {
 			" (" + client.HumanDuration(now.Sub(data.LastSyncTime)) + " ago)"
 	}
 
+	nextSync := grey("-")
+	if !data.NextSyncTime.IsZero() {
+		if data.NextSyncTime.After(now) {
+			nextSync = data.NextSyncTime.Format("2006-01-02 15:04:05") +
+				" (in " + client.HumanDuration(data.NextSyncTime.Sub(now)) + ")"
+		} else {
+			nextSync = "now"
+		}
+	}
+
 	duration := grey("-")
 	if data.LastSyncDuration > 0 {
 		duration = client.HumanShortDuration(data.LastSyncDuration)
@@ -111,13 +121,19 @@ func replicationStatusCB(reader io.Reader, _ http.Header) {
 	fmt.Printf("Last sync:          %s\n", lastSync)
 	fmt.Printf("Last sync duration: %s\n", duration)
 	fmt.Printf("Last sync bytes:    %s\n", size)
+	fmt.Printf("Next sync:          %s\n", nextSync)
 	fmt.Printf("Consecutive errors: %s\n", errs)
 
-	if data.BackoffInterval > data.ConfiguredInterval && data.ConfiguredInterval > 0 {
-		fmt.Printf("Backoff:            %s, effective interval: %s (configured: %s)\n",
-			red("active"),
-			client.HumanShortDuration(data.BackoffInterval),
-			client.HumanShortDuration(data.ConfiguredInterval))
+	if data.ConfiguredInterval > 0 {
+		if data.BackoffInterval > data.ConfiguredInterval {
+			fmt.Printf("Interval:           %s (backoff %s, curr. effective interval: %s)\n",
+				client.HumanShortDuration(data.ConfiguredInterval),
+				red("active"),
+				client.HumanShortDuration(data.BackoffInterval))
+		} else {
+			fmt.Printf("Interval:           %s\n",
+				client.HumanShortDuration(data.ConfiguredInterval))
+		}
 	}
 
 	alertedStr := green("no")

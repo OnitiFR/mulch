@@ -83,6 +83,15 @@ func replicationListCB(reader io.Reader, _ http.Header) {
 			lastSync = client.HumanDuration(now.Sub(line.LastSyncTime)) + " ago"
 		}
 
+		nextSync := grey("-")
+		if !line.NextSyncTime.IsZero() {
+			if line.NextSyncTime.After(now) {
+				nextSync = "in " + client.HumanDuration(line.NextSyncTime.Sub(now))
+			} else {
+				nextSync = "now"
+			}
+		}
+
 		duration := grey("-")
 		if line.LastSyncDuration > 0 {
 			duration = client.HumanShortDuration(line.LastSyncDuration)
@@ -110,13 +119,14 @@ func replicationListCB(reader io.Reader, _ http.Header) {
 			status,
 			full,
 			lastSync,
+			nextSync,
 			duration,
 			size,
 			errs,
 		})
 	}
 
-	headers := []string{"Name", "Rev", "Peer", "Status", "Full", "Last Sync", "Duration", "Last Bytes", "Errors"}
+	headers := []string{"Name", "Rev", "Peer", "Status", "Full", "Last Sync", "Next Sync", "Duration", "Last Bytes", "Errors"}
 	client.RenderTable(headers, strData)
 }
 
