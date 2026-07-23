@@ -106,3 +106,4 @@ Long term:
 - support passphrase for Mulch SSH key?
 - move SSH Keys and MulchSuperUser to VM level?
 - challenge based auth?
+- read secret from stdin instead of cli
