@@ -89,7 +89,16 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 	freezeStart := time.Now()
 	frozen, err := rm.fsFreeze(dom, vmName)
 	if err != nil {
-		rm.recordError(vmName, fmt.Sprintf("FSFreeze failed: %s", err))
+		errMsg := fmt.Sprintf("FSFreeze failed: %s", err)
+		if isAgentUnreachableError(err) {
+			// expected while the guest boots or shuts down: keep this out of the
+			// user log, but still record the state so a durably absent agent is
+			// surfaced by the staleness alert (see recordErrorState).
+			rm.app.Log.Tracef("replication %s: %s", vmName.ID(), errMsg)
+			rm.recordErrorState(vmName, errMsg)
+		} else {
+			rm.recordError(vmName, errMsg)
+		}
 		return
 	}
 
@@ -244,6 +253,16 @@ func (rm *ReplicationManager) needsFullCopy(vmName *VMName, vm *VM, dom *libvirt
 	}
 	cp.Free()
 
+	return false
+}
+
+// isAgentUnreachableError reports whether err is the libvirt error raised when
+// the QEMU guest agent is not connected or not responding (code 86).
+func isAgentUnreachableError(err error) bool {
+	var lverr libvirt.Error
+	if errors.As(err, &lverr) {
+		return lverr.Code == libvirt.ERR_AGENT_UNRESPONSIVE
+	}
 	return false
 }
 

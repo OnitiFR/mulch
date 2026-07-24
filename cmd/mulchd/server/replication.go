@@ -527,10 +527,16 @@ func (rm *ReplicationManager) ensureState(vmName *VMName, vm *VM) *ReplicationSt
 	return state
 }
 
-// recordError records a sync error in the replication state
+// recordError records a sync error in the replication state and logs it at
+// ERROR level (surfaced to end users watching the log).
 func (rm *ReplicationManager) recordError(vmName *VMName, errMsg string) {
 	rm.app.Log.Errorf("replication %s: %s", vmName.ID(), errMsg)
+	rm.recordErrorState(vmName, errMsg)
+}
 
+// recordErrorState records a sync error in the replication state without
+// emitting a user-facing ERROR log line. Used for expected-transient failures
+func (rm *ReplicationManager) recordErrorState(vmName *VMName, errMsg string) {
 	state := rm.app.ReplicationDB.Get(vmName.ID())
 	if state == nil {
 		state = &ReplicationState{
