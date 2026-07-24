@@ -185,6 +185,11 @@ func ActionReplicaController(req *server.Request) {
 		return
 	}
 
+	if req.HTTP.FormValue("force") != common.TrueStr {
+		req.Stream.Failuref("promote is a dangerous failover action: see --help et re-run with --force to confirm")
+		return
+	}
+
 	vmID, err := resolveReplicaID(nameArg, req)
 	if err != nil {
 		req.Stream.Failure(err.Error())

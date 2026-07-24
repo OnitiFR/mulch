@@ -1,6 +1,8 @@
 package topics
 
 import (
+	"strconv"
+
 	"github.com/OnitiFR/mulch/cmd/mulch/client"
 	"github.com/spf13/cobra"
 )
@@ -11,25 +13,38 @@ var replicaPromoteCmd = &cobra.Command{
 	Short: "Promote a replica to a new local VM (failover)",
 	Long: `Promote a replica held by this peer to a new local VM.
 
-This is the failover action, when the source peer is down: the replicated
-disk is booted as-is in a new local VM.
+DANGEROUS failover — use only when the source peer is really down. It does
+NOT verify that the source is unreachable, and its effects are hard to undo,
+so it refuses to run without --force.
 
-Incoming replication for this VM name is durably refused, before anything
-else: even if the source peer comes back, it can't overwrite the promoted
-disk. The replica entry is kept as a "promoted" tombstone for that purpose;
-'replica delete' removes it explicitly (allowing replication again).
+What it does:
+  - boots the replicated disk as-is: up to one replication_interval of data
+    written on the source since the last sync is lost;
+  - when the source peer comes back, forces it to STAND DOWN — its VM is
+    deactivated and its domains are pinned to this peer;
+  - durably refuses incoming replication for this VM name (done first, so a
+    returning source can't overwrite the promoted disk). The replica is kept
+    as a "promoted" tombstone; 'replica delete' clears it and re-allows
+    replication.
 
-Use --revision to target a specific revision. Without it, the only revision
-is promoted, or the command fails if several revisions exist for that name.
+Beware split-brain: a down mulchd does NOT mean the source is down. Its guest
+VM may still be running and the parent proxy may still route live traffic to
+it, so the source keeps serving users and writing to a disk that is no longer
+replicated. Promoting then leaves two diverging copies, and the later
+stand-down destroys everything the source served since the last sync.
 
-See 'replica list' for replica names and revisions.
+Use --revision to target a specific revision. Without it, the sole revision is
+promoted, or the command fails if several exist. See 'replica list' for names
+and revisions.
 `,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		revision, _ := cmd.Flags().GetString("revision")
+		force, _ := cmd.Flags().GetBool("force")
 		call := client.GlobalAPI.NewCall("POST", "/replica/"+args[0], map[string]string{
 			"action":   "promote",
 			"revision": revision,
+			"force":    strconv.FormatBool(force),
 		})
 		call.Do()
 	},
@@ -38,4 +53,5 @@ See 'replica list' for replica names and revisions.
 func init() {
 	replicaCmd.AddCommand(replicaPromoteCmd)
 	replicaPromoteCmd.Flags().StringP("revision", "r", "", "revision number")
+	replicaPromoteCmd.Flags().BoolP("force", "f", false, "confirm this dangerous failover (required)")
 }
