@@ -184,7 +184,7 @@ func ActionReplicationController(req *server.Request) {
 			// a stood-down VM has no replicator to trigger: clearing the state
 			// (ResetFullCopy) is enough, the reconcile loop spawns one shortly
 			if wasStandDown {
-				req.Stream.Infof("stand-down cleared for %s, full resync will start shortly (note: the VM is still inactive, and the peer still refuses syncs as long as its promoted replica entry exists)", vmName.ID())
+				req.Stream.Infof("stand-down cleared for %s, full resync will start shortly", vmName.ID())
 				break
 			}
 			req.Stream.Failuref("full-resync failed: %s", err)

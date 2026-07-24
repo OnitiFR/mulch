@@ -48,8 +48,9 @@ type ReplicaState struct {
 	// Promoted marks a tombstone: the replica was promoted to a local VM and
 	// its .raw was moved to the disks pool. The entry is kept so the original
 	// source peer gets a "stand-down" refusal instead of silently recreating
-	// a replica of a VM now running here. Only an explicit 'replica delete'
-	// clears it.
+	// a replica of a VM now running here. It is cleared by 'replica delete',
+	// or automatically once the promoted VM no longer exists locally (see
+	// checkPromoted).
 	Promoted bool
 }
 

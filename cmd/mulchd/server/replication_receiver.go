@@ -93,9 +93,10 @@ func NewReplicationReceiver(app *App) (*ReplicationReceiver, error) {
 //     move. Re-accept syncs, but flag the replica as diverged: the guest may
 //     have booted during the attempt, so only a full copy is trustworthy.
 //   - .raw gone: the disk was moved to the disks pool; a VM may or may not
-//     have been created before the crash. Keep refusing syncs (tombstone) and
-//     let the admin sort it out: either the VM exists and all is well, or the
-//     disk must be moved back by hand (then 'replica delete' the tombstone).
+//     have been created before the crash. Mark as promoted: if the VM exists
+//     the tombstone stands, otherwise checkPromoted drops it at the source's
+//     next sync (fresh full copy) and the moved disk is left orphaned in the
+//     disks pool for the admin.
 func (r *ReplicationReceiver) recoverPromotes() {
 	for _, state := range r.app.ReplicaDB.GetAll() {
 		if !state.Promoting {
@@ -109,7 +110,7 @@ func (r *ReplicationReceiver) recoverPromotes() {
 			r.app.Log.Warningf("replication receiver: promote of '%s' was interrupted by a shutdown; replica kept (as diverged: the source will have to redo a full copy)", vmID)
 		} else {
 			state.Promoted = true
-			r.app.Log.Errorf("replication receiver: promote of '%s' was interrupted by a shutdown AFTER its disk moved to the disks pool; marked as promoted — check that the VM exists, otherwise move '%s.raw' back to the replicas directory and delete the tombstone", vmID, vmID)
+			r.app.Log.Errorf("replication receiver: promote of '%s' was interrupted by a shutdown AFTER its disk moved to the disks pool; marked as promoted — check that the VM exists; if not, the source will redo a full copy and the orphaned '%s.raw' can be removed from the disks pool", vmID, vmID)
 		}
 
 		if err := r.app.ReplicaDB.Set(state); err != nil {
@@ -192,6 +193,13 @@ func (r *ReplicationReceiver) checkOriginConflict(vmName string, origin string) 
 // checkPromoted refuses any replication activity for a VM name that was (or is
 // being) promoted on this peer, whatever the revision: the tombstone must keep
 // standing even if the source rebuilds the VM under a new revision.
+//
+// A "promoted" tombstone only stands while the promoted VM still exists here
+// (any revision): once that VM is deleted, this host no longer serves the
+// name, and replying stand-down would wrongly deactivate the VM of a source
+// resuming replication (failback). Such a stale tombstone is dropped on the
+// fly and replication is accepted again. A "promoting" tombstone is never
+// dropped: the VM does not exist yet during the promote.
 func (r *ReplicationReceiver) checkPromoted(vmName string) error {
 	name, err := ParseVMName(vmName)
 	if err != nil {
@@ -199,8 +207,17 @@ func (r *ReplicationReceiver) checkPromoted(vmName string) error {
 	}
 
 	for _, state := range r.app.ReplicaDB.GetAllForName(name.Name) {
-		if state.Promoted || state.Promoting {
-			return fmt.Errorf("%w: '%s' now runs as a local VM", ErrReplicaPromoted, name.Name)
+		if state.Promoting {
+			return fmt.Errorf("%w: '%s' is being promoted as a local VM", ErrReplicaPromoted, name.Name)
+		}
+		if state.Promoted {
+			if r.app.VMDB.GetCountForName(name.Name) > 0 {
+				return fmt.Errorf("%w: '%s' now runs as a local VM", ErrReplicaPromoted, name.Name)
+			}
+			r.app.Log.Warningf("replication receiver: promoted VM '%s' no longer exists, dropping stale tombstone '%s' (accepting replication again)", name.Name, state.ID())
+			if err := r.app.ReplicaDB.Delete(state.ID()); err != nil {
+				return fmt.Errorf("can't drop stale promoted tombstone '%s': %s", state.ID(), err)
+			}
 		}
 	}
 	return nil

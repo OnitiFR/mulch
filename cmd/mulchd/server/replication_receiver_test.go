@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync"
@@ -369,5 +370,67 @@ func assertNoJournalArtefacts(t *testing.T, r *ReplicationReceiver, vm string) {
 	}
 	if _, err := os.Stat(r.journalPath(vm)); !os.IsNotExist(err) {
 		t.Fatalf("unexpected .journal file for '%s'", vm)
+	}
+}
+
+// --- checkPromoted ---
+
+// newTestVMDB returns a bare in-memory VMDatabase (no file persistence),
+// enough for name-existence checks.
+func newTestVMDB() *VMDatabase {
+	return &VMDatabase{
+		db:           make(map[string]*VMDatabaseEntry),
+		greenhouseDB: make(map[string]*VMDatabaseEntry),
+	}
+}
+
+// A promoted tombstone stands while the promoted VM exists (whatever the
+// revision), and is dropped once the VM is gone (failback: the source must be
+// able to resume replication without being stood down by a stale tombstone).
+func TestCheckPromoted_StaleTombstoneDropped(t *testing.T) {
+	r := newTestReceiver(t)
+	r.app.VMDB = newTestVMDB()
+
+	tomb := &ReplicaState{Name: "vm1", Revision: 1, Promoted: true}
+	if err := r.app.ReplicaDB.Set(tomb); err != nil {
+		t.Fatalf("Set: %s", err)
+	}
+
+	vmName := NewVMName("vm1", 2)
+	r.app.VMDB.db[vmName.ID()] = &VMDatabaseEntry{Name: vmName, Active: true}
+
+	if err := r.checkPromoted("vm1-r3"); !errors.Is(err, ErrReplicaPromoted) {
+		t.Fatalf("expected ErrReplicaPromoted while the VM exists, got: %v", err)
+	}
+	if r.app.ReplicaDB.Get(tomb.ID()) == nil {
+		t.Fatal("tombstone must be kept while the promoted VM exists")
+	}
+
+	delete(r.app.VMDB.db, vmName.ID())
+
+	if err := r.checkPromoted("vm1-r3"); err != nil {
+		t.Fatalf("expected replication to be accepted again, got: %v", err)
+	}
+	if r.app.ReplicaDB.Get(tomb.ID()) != nil {
+		t.Fatal("stale tombstone should have been dropped")
+	}
+}
+
+// A "promoting" entry is never dropped: the VM does not exist yet in the VMDB
+// during the promote.
+func TestCheckPromoted_PromotingIsNeverDropped(t *testing.T) {
+	r := newTestReceiver(t)
+	r.app.VMDB = newTestVMDB()
+
+	entry := &ReplicaState{Name: "vm1", Revision: 1, Promoting: true}
+	if err := r.app.ReplicaDB.Set(entry); err != nil {
+		t.Fatalf("Set: %s", err)
+	}
+
+	if err := r.checkPromoted("vm1-r1"); !errors.Is(err, ErrReplicaPromoted) {
+		t.Fatalf("expected ErrReplicaPromoted during a promote, got: %v", err)
+	}
+	if r.app.ReplicaDB.Get(entry.ID()) == nil {
+		t.Fatal("promoting entry must never be dropped")
 	}
 }

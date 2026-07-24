@@ -209,5 +209,5 @@ func ActionReplicaController(req *server.Request) {
 	}
 	after := time.Now()
 
-	req.Stream.Successf("replica '%s' promoted as VM '%s' (%s)", vmID, vmName, after.Sub(before))
+	req.Stream.Successf("replica '%s' promoted as VM %s (%s)", vmID, vmName, after.Sub(before))
 }
