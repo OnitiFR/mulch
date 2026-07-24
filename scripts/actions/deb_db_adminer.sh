@@ -19,10 +19,12 @@ sudo chmod 770 "$dest_dir" || exit $?
 # remove any older "session"
 rm -f $dest_dir/*
 
+# explicit 'localhost' server caused by regression in 5.5.0 (value was '')
+# see https://github.com/vrana/adminer/issues/1304
 cat > $fullname <<- EOS
 <form method="post" action="../adminer.php" id="go">
     <input type="hidden" name="auth[driver]" value="pgsql">
-    <input type="hidden" name="auth[server]" value="">
+    <input type="hidden" name="auth[server]" value="localhost">
     <input type="hidden" name="auth[username]" value="app">
     <input type="hidden" name="auth[password]" value="$PGSQL_PASSWORD">
     <input type="hidden" name="auth[db]" value="app">
