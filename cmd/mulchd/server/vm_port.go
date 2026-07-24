@@ -147,7 +147,7 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 			return nil, fmt.Errorf("port range is too small in '%s'", line)
 		}
 
-		for i := 0; i < rangeSize; i++ {
+		for i := range rangeSize {
 			if srcStart == dstStart {
 				str := fmt.Sprintf("%d/%s %s %s", srcStart+i, proto, direction, group)
 				if comment != "" {
@@ -305,12 +305,13 @@ func CheckPortsConflicts(db *VMDatabase, ports []*VMPort, excludeVM string, log 
 
 	// search duplicate imports, warn about missing imports
 	for _, port := range ports {
-		if port.Direction == VMPortDirectionExport {
+		switch port.Direction {
+		case VMPortDirectionExport:
 			vm, exist := exportPortMap[port.GlobalID()]
 			if exist {
 				return fmt.Errorf("vm '%s' is already exporting '%s'", vm.Config.Name, port.GlobalID())
 			}
-		} else if port.Direction == VMPortDirectionImport {
+		case VMPortDirectionImport:
 			reversed := *port
 			reversed.Direction = VMPortDirectionExport
 			for _, p := range ports {
