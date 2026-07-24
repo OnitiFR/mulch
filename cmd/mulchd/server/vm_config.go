@@ -491,8 +491,14 @@ func NewVMConfigFromTomlReader(configIn io.Reader, app *App) (*VMConfig, error) 
 	}
 
 	if tConfig.ReplicationPeer != "" {
-		if _, exists := app.Config.Peers[tConfig.ReplicationPeer]; !exists {
+		peer, exists := app.Config.Peers[tConfig.ReplicationPeer]
+		if !exists {
 			return nil, fmt.Errorf("replication_peer '%s' is not a known peer", tConfig.ReplicationPeer)
+		}
+		// secrets only reach a peer with sync_secrets enabled: otherwise the
+		// promoted replica would fail to resolve them (see vm_promote)
+		if len(vmConfig.Secrets) > 0 && !peer.SyncSecrets {
+			return nil, fmt.Errorf("VM has secrets but replication_peer '%s' has sync_secrets disabled", tConfig.ReplicationPeer)
 		}
 		vmConfig.ReplicationPeer = tConfig.ReplicationPeer
 
