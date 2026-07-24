@@ -16,6 +16,7 @@ import (
 	"github.com/go-git/go-billy/v6/memfs"
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
+	"github.com/go-git/go-git/v6/plumbing/client"
 	"github.com/go-git/go-git/v6/plumbing/transport/ssh"
 	"github.com/go-git/go-git/v6/storage/memory"
 )
@@ -278,7 +279,7 @@ func getContentFromGitOrigin(origin *Origin, pathStr string) (io.ReadCloser, err
 			if keyError != nil {
 				return nil, keyError
 			}
-			options.Auth = publicKey
+			options.ClientOptions = append(options.ClientOptions, client.WithSSHAuth(publicKey))
 		}
 
 		origin.Log.Tracef("creating git cache for origin '%s'", originConf.Name)
