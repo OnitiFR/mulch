@@ -110,8 +110,15 @@ auto_rebuild = "weekly"
 # (see https://pkg.go.dev/time#ParseDuration for syntax)
 build_timeout = "10m"
 
-# Disk will live-replicated to the peer (WIP)
+# Continuously replicate this VM's disk to a peer, ready for failover if this
+# host goes down. The peer must be declared in mulchd.conf (see [[peer]]).
+# Only changed blocks are sent (qcow2 dirty bitmaps). The copy stays passive on
+# the peer until you promote it there with 'mulch replica promote'.
+# If this VM has secrets, the peer must have sync_secrets enabled.
 #replication_peer = "test1"
+
+# How often to sync (default "60s", minimum "10s")
+# (see https://pkg.go.dev/time#ParseDuration for syntax)
 #replication_interval = "60s"
 
 # Lifecyle scripts

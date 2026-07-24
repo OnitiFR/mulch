@@ -387,6 +387,29 @@ Secret sharing **must** be done in a bidirectional way:
  - each server must declare the all the others as peers, with `sync_secrets`
  - all servers must share the same encryption key (`mulch-secrets.key`)
 
+#### Disk replication and failover
+Going one step further than migration, Mulch can **continuously replicate a VM's disk to a peer**,
+ready to take over if the original host goes down. Just point a VM at a peer in its TOML file:
+```toml
+replication_peer = "server2"
+replication_interval = "60s"
+```
+Mulch then keeps an incremental copy of the disk on `server2` (only changed blocks are sent, thanks to
+qcow2 dirty bitmaps), syncing on your chosen interval. The copy sits there passively — not running, not
+serving traffic — waiting. Follow it with `mulch replication list` and `mulch replication status my-vm`.
+
+When disaster strikes, a single command **promotes** the replica into a real, running VM on the peer:
+```sh
+mulch replica promote my-vm
+```
+The disk boots as-is, and if the original server ever comes back it's told to stand down, so you don't
+end up with two diverging copies fighting over the same domains. It's disaster recovery you can rehearse,
+not a black box you hope works on the worst day.
+
+Each sync briefly and transparently freezes the guest's filesystems before snapshotting, so a replica
+is always a coherent point-in-time image of the disk: a journaling database like PostgreSQL just replays
+its WAL and comes back consistent.
+
 #### Inter-VM communication
 By default, network traffic is not allowed between VMs, but you can choose to
 export a port from a VM to a group (group names starts with `@`).
