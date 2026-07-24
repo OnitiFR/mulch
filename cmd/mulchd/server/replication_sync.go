@@ -368,9 +368,6 @@ func (rm *ReplicationManager) pullAndStreamBlocks(vm *VM, vmName *VMName, nbdAdd
 	diskSize := nbdClient.ExportSize
 	rm.app.Log.Tracef("replication %s: NBD connected, export size=%s bytes", vmName.ID(), datasize.ByteSize(diskSize).HR())
 
-	// debug peer
-	fmt.Printf("replication %s: streaming to peer '%s' at %s (full copy=%t)\n", vmName.ID(), peer.Name, peer.URL, fullCopy)
-
 	// set up a pipe: we write blocks into the pipe, PeerCall reads from it
 	pipeReader, pipeWriter := io.Pipe()
 
