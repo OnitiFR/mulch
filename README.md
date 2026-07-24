@@ -186,7 +186,7 @@ secrets = [
 ]
 ```
 
-To define secrets, use the client : `mulch secret set customer1/mail/SMTP_PASSWORD mysecretvalue`
+To define secrets, use the client : `mulch secret set customer1/mail/SMTP_PASSWORD` (the value is read from standard input)
 
 How does it works exactly?
 ---
