@@ -55,6 +55,22 @@ func requestGetMulchParam(r *http.Request, name string) string {
 	return val
 }
 
+// maximum time we wait for a message write on the stream, so a
+// half-dead client (sleeping laptop, gone NAT, …) can't block us
+// forever with its Messages channel left unread
+// TODO: make timeout configurable
+const streamWriteTimeout = 10 * time.Second
+
+// streamEncode writes a message on the stream with a write deadline,
+// so the caller can detect (and unregister) a dead client
+func streamEncode(rc *http.ResponseController, enc *json.Encoder, message *common.Message) error {
+	err := rc.SetWriteDeadline(time.Now().Add(streamWriteTimeout))
+	if err != nil {
+		return err
+	}
+	return enc.Encode(message)
+}
+
 func routeStreamHandler(request *Request) {
 	w := request.Response
 	r := request.HTTP
@@ -78,6 +94,7 @@ func routeStreamHandler(request *Request) {
 	w.Header().Set("Content-Type", "application/x-ndjson")
 
 	enc := json.NewEncoder(w)
+	rc := http.NewResponseController(w)
 
 	// plug ourselves into the hub
 	// TODO: use API key owner instead of "me"
@@ -116,16 +133,23 @@ func routeStreamHandler(request *Request) {
 			// Keep-alive
 			m := common.NewMessage(common.MessageNoop, common.MessageNoTarget, "")
 
-			err := enc.Encode(m)
+			err := streamEncode(rc, enc, m)
 			if err != nil {
-				fmt.Println(err)
+				request.App.Log.Tracef("stream keep-alive write failed (%s), closing", err)
+				client.Unregister()
+				return
 			}
 			flusher.Flush()
 
-		case msg := <-client.Messages:
-			err := enc.Encode(msg)
+		case msg, ok := <-client.Messages:
+			if !ok {
+				return
+			}
+			err := streamEncode(rc, enc, msg)
 			if err != nil {
-				fmt.Println(err)
+				request.App.Log.Tracef("stream message write failed (%s), closing", err)
+				client.Unregister()
+				return
 			}
 			flusher.Flush()
 		}
