@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -340,12 +341,19 @@ func ListenAndServeProxy(
 		defer listener.Close()
 		for {
 			connListener, err := listener.Accept()
-			app.Log.Tracef("SSH connection from %s", connListener.RemoteAddr())
-
 			if err != nil {
-				app.Log.Error(err.Error())
-				return
+				if errors.Is(err, net.ErrClosed) {
+					return
+				}
+				// transient error (ex: too many open files): log and
+				// keep the listener alive, with a small pause to avoid
+				// spinning
+				app.Log.Errorf("SSH listener: %s", err)
+				time.Sleep(100 * time.Millisecond)
+				continue
 			}
+
+			app.Log.Tracef("SSH connection from %s", connListener.RemoteAddr())
 
 			sshconn := &SSHProxy{
 				Conn:   connListener,
