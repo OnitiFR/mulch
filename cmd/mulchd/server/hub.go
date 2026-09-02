@@ -1,8 +1,15 @@
 package server
 
 import (
+	"fmt"
+
 	"github.com/OnitiFR/mulch/common"
 )
+
+// per-client message queue size. Must be large enough to absorb a
+// burst from a verbose operation while the client is momentarily slow to read.
+// A client that overflows its queue is considered gone, and dropped.
+const hubClientQueueSize = 8192
 
 // Hub structure allows multiple clients to receive messages
 // from mulchd.
@@ -43,10 +50,7 @@ func (h *Hub) Run() {
 			// fmt.Printf("new client: %s\n", client.clientInfo)
 		case client := <-h.unregister:
 			// fmt.Printf("del client: %s\n", client.clientInfo)
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
-				close(client.Messages)
-			}
+			h.remove(client)
 		case message := <-h.broadcast:
 			// fmt.Printf("broadcasting\n")
 			for client := range h.clients {
@@ -57,13 +61,28 @@ func (h *Hub) Run() {
 					continue // this client don't want traces
 				}
 
-				// Here was a 'select' with 'default' case, where
-				// the same things as 'h.unregister' were done.
-				// It was source of some race conditions, and it seems
-				// useless. Removed.
-				client.Messages <- message
+				// non-blocking send: the hub must never wait for a client
+				select {
+				case client.Messages <- message:
+				default:
+					// removing the current key during a range is safe
+					h.remove(client)
+					// can't use Log here, it would broadcast… to us
+					fmt.Printf("warning: hub: client '%s' stopped reading (%d messages queued), dropped\n",
+						client.clientInfo, hubClientQueueSize)
+				}
 			}
 		}
+	}
+}
+
+// remove a client from the hub and close its queue. The closed
+// channel is how the client learns it's gone.
+// Must only be called from the Run() goroutine.
+func (h *Hub) remove(client *HubClient) {
+	if _, ok := h.clients[client]; ok {
+		delete(h.clients, client)
+		close(client.Messages)
 	}
 }
 
@@ -78,7 +97,7 @@ func (h *Hub) Broadcast(message *common.Message) {
 // the client. Target may be common.MessageNoTarget.
 func (h *Hub) Register(info string, target string, trace bool) *HubClient {
 	client := &HubClient{
-		Messages:   make(chan *common.Message),
+		Messages:   make(chan *common.Message, hubClientQueueSize),
 		clientInfo: info,
 		target:     target,
 		trace:      trace,

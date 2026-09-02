@@ -122,7 +122,11 @@ func routeStreamHandler(request *Request) {
 			}
 			flusher.Flush()
 
-		case msg := <-client.Messages:
+		case msg, ok := <-client.Messages:
+			if !ok {
+				// the hub dropped us (see hubClientQueueSize)
+				return
+			}
 			err := enc.Encode(msg)
 			if err != nil {
 				fmt.Println(err)
