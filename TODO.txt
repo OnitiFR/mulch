@@ -11,9 +11,9 @@ Resource leaks:
 - check that the switch to Context fixes all known resource leaks
 - mulchd "outage" of 2020-07-22:
     - investigate all the preparePipes.funcX found in the stacktrace (see m2 log)
-    - check for a possible deadlock / missing timeout in the message hub? (same)
     - maybe fixed by the switch to Context of run.go
-    - seems it happened today (2025-12-01) - no traces, but same symptoms (after a command break from a user, it seems)
+    - the message hub deadlock hypothesis was confirmed (and fixed), see doc/incident-message-hub-deadlock.md
+      - it also explains the 2025-12-01 recurrence ("command break from a user" = stream client gone)
 - still some hanging SSH shown in status (try with a client reboot?)
     - scheduleSSHKeepAlives() does its job, the issue's upper in the stack (runChannels never ends?)
     - added goroutine pprof profile to help

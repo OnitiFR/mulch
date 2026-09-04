@@ -1,8 +1,17 @@
 package server
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/OnitiFR/mulch/common"
 )
+
+// maximum time we wait for a client to read its Messages channel
+// before dropping the message, so a single stalled client can't
+// freeze the whole hub (and, transitively, every Log call of mulchd)
+// TODO: make timeout configurable
+var hubSendTimeout = 5 * time.Second
 
 // Hub structure allows multiple clients to receive messages
 // from mulchd.
@@ -61,7 +70,20 @@ func (h *Hub) Run() {
 				// the same things as 'h.unregister' were done.
 				// It was source of some race conditions, and it seems
 				// useless. Removed.
-				client.Messages <- message
+
+				// … and here was an unguarded blocking send: one client
+				// not reading its Messages (half-dead TCP peer) was
+				// enough to block this loop forever, freezing every
+				// Log call of the daemon (SSH proxy included). We now
+				// drop the message after a timeout. We don't unregister
+				// the client here: that's the racy path removed above,
+				// slow-but-alive clients only lose some messages.
+				select {
+				case client.Messages <- message:
+				case <-time.After(hubSendTimeout):
+					// can't use Log here, it would broadcast… to us
+					fmt.Printf("warning: hub: client '%s' is too slow, message dropped\n", client.clientInfo)
+				}
 			}
 		}
 	}
