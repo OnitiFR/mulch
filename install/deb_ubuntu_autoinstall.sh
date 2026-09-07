@@ -1,13 +1,10 @@
 #!/bin/bash
 
-# Note: only Ubuntu 22.04+ is supported currently, since Go 1.18+ is needed
-
-# Debian 10: git, pkg-config, build-essential, qemu-kvm
-
 echo "This is a standalone Mulch server install script for Ubuntu."
 echo "It was tested on: (default server install)"
-echo " - Ubuntu 22.04"
+#echo " - Ubuntu 22.04"
 echo " - Ubuntu 24.04"
+echo " - Ubuntu 26.04"
 #echo " - Debian 10"
 echo "It's intended to be used for a quick demo install, since most settings are left to default values."
 echo ""
@@ -28,7 +25,7 @@ fi
 # 1st line is Debian (10) specific
 apt update || exit $?
 apt -y -qq install \
-    git pkg-config build-essential qemu-kvm \
+    git pkg-config build-essential acl qemu-system-x86 \
     golang-go \
     ebtables gawk libxml2-utils libcap2-bin dnsmasq \
     libvirt-daemon-system libvirt-dev \
