@@ -16,8 +16,7 @@ func LogController(req *server.Request) {
 	target := req.HTTP.FormValue("target")
 	req.SetTarget(target)
 
-	// nothing to do, just wait forever…
-	select {}
+	<-req.HTTP.Context().Done()
 }
 
 // GetLogHistoryController sends all "previous" log messages
