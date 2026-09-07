@@ -32,6 +32,7 @@ Short term:
   - search "GetContent"
   - this is currently a stream, it makes things a bit tricky
   - need to parse bash? (ex: ./script.sh in HereDoc)
+- disable mulchd autorestart with some distributions updates (need investigation)
 - SSH proxy: can we write an error to the client on early error? (is it a good idea anyway?)
   - see SSHProxy.serveProxy()
 - custom 5xx error pages for certain domains? (including non-existing ones ["garage"])
