@@ -90,8 +90,6 @@ func routeStreamHandler(request *Request) {
 	closer := make(chan bool)
 	go func() {
 		request.Route.Handler(request)
-		// let's ensure the last message have time to be flushed
-		time.Sleep(time.Duration(100) * time.Millisecond)
 		select {
 		case closer <- true:
 		case <-ctx.Done():
@@ -106,7 +104,15 @@ func routeStreamHandler(request *Request) {
 	for {
 		select {
 		case <-closer:
+			// unregister first, then flush what's still pending
 			client.Unregister()
+			for msg := range client.Messages {
+				err := enc.Encode(msg)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+			flusher.Flush()
 			return
 		case <-ctx.Done():
 			client.Unregister()
@@ -124,7 +130,14 @@ func routeStreamHandler(request *Request) {
 
 		case msg, ok := <-client.Messages:
 			if !ok {
-				// the hub dropped us (see hubClientQueueSize)
+				// the hub dropped us
+				m := common.NewMessage(common.MessageFailure, common.MessageNoTarget,
+					"connection dropped by the server: client was not reading fast enough")
+				err := enc.Encode(m)
+				if err != nil {
+					fmt.Println(err)
+				}
+				flusher.Flush()
 				return
 			}
 			err := enc.Encode(msg)
