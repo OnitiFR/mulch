@@ -530,11 +530,26 @@ chmod +x deb_ubuntu_autoinstall.sh
 #### Ubuntu
 ```
 sudo apt install golang-go
-sudo apt install ebtables gawk libxml2-utils libcap2-bin dnsmasq libvirt-daemon-system libvirt-dev
+sudo apt install ebtables gawk libxml2-utils libcap2-bin dnsmasq-base libvirt-daemon-system libvirt-dev
 sudo apt install git pkg-config build-essential qemu-kvm
 sudo usermod -aG libvirt USER # replace USER by the user running mulchd
 sudo setfacl -m g:libvirt-qemu:x /home/USER
 ```
+
+On Ubuntu, `needrestart` (called by `apt` and `unattended-upgrades`) restarts every
+service linked to an updated library. Since mulchd is linked to libvirt and both
+daemons to libc, they are restarted on almost every system update, breaking any
+ongoing operation (VM creation, backup…). It's strongly advised to opt out and to
+restart them by hand, at a chosen moment:
+```
+sudo mkdir -p /etc/needrestart/conf.d
+sudo tee /etc/needrestart/conf.d/mulch.conf > /dev/null <<'EOF'
+$nrconf{override_rc}{qr(^mulchd\.service$)} = 0;
+$nrconf{override_rc}{qr(^mulch-proxy\.service$)} = 0;
+EOF
+```
+Note that `needrestart -r l` will still list the services when they run on outdated
+libraries.
 
 #### Fedora
 ```
