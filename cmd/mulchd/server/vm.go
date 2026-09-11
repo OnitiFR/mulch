@@ -390,6 +390,11 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 		return nil, nil, err
 	}
 
+	err = vmTemplateCheck(domcfg)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	domcfg.Name = domainName
 
 	domcfg.Memory.Unit = "bytes"
@@ -402,6 +407,9 @@ func NewVM(vmConfig *VMConfig, active bool, allowScriptFailure bool, authorKey s
 	serial := "ds=nocloud-net;s=http://" + app.Libvirt.NetworkXML.IPs[0].Address + ":" + strconv.Itoa(app.Config.InternalServerPort) + "/cloud-init/" + vm.SecretUUID + "/"
 	serialFound := false
 	for s, sysinfo := range domcfg.SysInfo {
+		if sysinfo.SMBIOS == nil || sysinfo.SMBIOS.System == nil {
+			continue
+		}
 		for i, entry := range sysinfo.SMBIOS.System.Entry {
 			if entry.Name == "version" {
 				domcfg.SysInfo[s].SMBIOS.System.Entry[i].Value = Version
@@ -1113,6 +1121,12 @@ func VMAttachBackup(vmName *VMName, volName string, app *App) error {
 	if err != nil {
 		return err
 	}
+
+	err = vmBackupDiskTemplateCheck(diskcfg)
+	if err != nil {
+		return err
+	}
+
 	diskcfg.Alias.Name = VMStorageAliasBackup
 	diskcfg.Source.File.File = app.Libvirt.Pools.BackupsXML.Target.Path + "/" + volName
 	diskcfg.Target.Dev = "vdb"
