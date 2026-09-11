@@ -536,20 +536,8 @@ sudo usermod -aG libvirt USER # replace USER by the user running mulchd
 sudo setfacl -m g:libvirt-qemu:x /home/USER
 ```
 
-On Ubuntu, `needrestart` (called by `apt` and `unattended-upgrades`) restarts every
-service linked to an updated library. Since mulchd is linked to libvirt and both
-daemons to libc, they are restarted on almost every system update, breaking any
-ongoing operation (VM creation, backup…). It's strongly advised to opt out and to
-restart them by hand, at a chosen moment:
-```
-sudo mkdir -p /etc/needrestart/conf.d
-sudo tee /etc/needrestart/conf.d/mulch.conf > /dev/null <<'EOF'
-$nrconf{override_rc}{qr(^mulchd\.service$)} = 0;
-$nrconf{override_rc}{qr(^mulch-proxy\.service$)} = 0;
-EOF
-```
-Note that `needrestart -r l` will still list the services when they run on outdated
-libraries.
+Note: `needrestart` (called by `apt` and `unattended-upgrades`) may restart
+mulch services at unexpected times. See `deb_ubuntu_autoinstall.sh` for details.
 
 #### Fedora
 ```
