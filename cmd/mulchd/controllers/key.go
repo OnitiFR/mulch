@@ -186,6 +186,11 @@ func DeleteKeyRightController(req *server.Request) {
 		return
 	}
 
+	if req.HTTP.FormValue("all") == "true" {
+		clearKeyRights(req, key)
+		return
+	}
+
 	rightStr := req.HTTP.FormValue("right")
 	err := key.RemoveRight(rightStr)
 	if err != nil {
@@ -200,6 +205,26 @@ func DeleteKeyRightController(req *server.Request) {
 	}
 
 	req.Stream.Successf("right removed")
+}
+
+// clearKeyRights remove all rights from the key
+func clearKeyRights(req *server.Request, key *server.APIKey) {
+	count := len(key.Rights)
+	if count == 0 {
+		req.Stream.Info("this key has no rights, nothing to clear")
+		return
+	}
+
+	key.Rights = nil
+
+	err := req.App.APIKeysDB.Save()
+	if err != nil {
+		req.Stream.Failuref("Cannot save: %s", err)
+		return
+	}
+
+	req.Stream.Warning("this key has no rights anymore, it now has FULL privileges")
+	req.Stream.Successf("%d right(s) removed", count)
 }
 
 // ListKeyTrustedVMsController list all trusted VMs for the current key

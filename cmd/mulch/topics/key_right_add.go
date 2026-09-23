@@ -16,9 +16,9 @@ var keyRightAddCmd = &cobra.Command{
 	Short: "Add right(s) to the key",
 	Long: `Add a right to the key, or multiple rights at once with --file
 
-With --file (use "-" for stdin), rights are read one per line, empty lines
-and lines starting with "#" are ignored. This is atomic: if any right
-is invalid, nothing is added. Existing rights are skipped.
+With --file (use "-" for stdin, end with CTRL+d), rights are read one per line,
+empty lines and lines starting with "#" are ignored. This is atomic: if any
+right is invalid, nothing is added. Existing rights are skipped.
 
 The right must follow this format:
 METHOD path header1=value1 header2=value2
