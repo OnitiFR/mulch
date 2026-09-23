@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -461,10 +462,9 @@ func (key *APIKey) IsAllowed(method string, path string, req *http.Request) bool
 	return false
 }
 
-// AddNewRight parse + add the right to the key
-// WARNING: you may have to save the APIKeyDatabase to the disk!
+// parseRight will parse a right string
 // (see APIRight.String() form informations about the format)
-func (key *APIKey) AddNewRight(rightStr string) error {
+func parseRight(rightStr string) (*APIRight, error) {
 	spaces := regexp.MustCompile(`\s+`)
 
 	rightStr = strings.TrimSpace(rightStr)
@@ -473,7 +473,7 @@ func (key *APIKey) AddNewRight(rightStr string) error {
 	parts := strings.Split(rightStr, " ")
 
 	if len(parts) < 2 {
-		return errors.New("need at least method and path")
+		return nil, errors.New("need at least method and path")
 	}
 
 	method := strings.ToUpper(strings.TrimSpace(parts[0]))
@@ -482,11 +482,11 @@ func (key *APIKey) AddNewRight(rightStr string) error {
 	switch method {
 	case "GET", "POST", "PUT", "DELETE", "SSH", "CREATE", "*":
 	default:
-		return fmt.Errorf("'%s' is an unsupported method", method)
+		return nil, fmt.Errorf("'%s' is an unsupported method", method)
 	}
 
-	if len(path) < 1 || (path[0] != '/' && path[1] != '*') {
-		return fmt.Errorf("'%s' is not a valid path", path)
+	if len(path) < 1 || (path[0] != '/' && path[0] != '*') {
+		return nil, fmt.Errorf("'%s' is not a valid path", path)
 	}
 
 	right := APIRight{
@@ -500,29 +500,75 @@ func (key *APIKey) AddNewRight(rightStr string) error {
 		header = strings.TrimSpace(header)
 		hParts := strings.Split(header, "=")
 		if len(hParts) != 2 {
-			return fmt.Errorf("invalid header format '%s'", header)
+			return nil, fmt.Errorf("invalid header format '%s'", header)
 		}
 		name := strings.TrimSpace(hParts[0])
 		value := strings.TrimSpace(hParts[1])
 
 		if name == "" {
-			return fmt.Errorf("invalid header name in '%s'", header)
+			return nil, fmt.Errorf("invalid header name in '%s'", header)
 		}
 
 		right.Headers[name] = value
 	}
 
-	// very basic duplication check
+	return &right, nil
+}
+
+// hasRight returns true if the key already has this exact right
+// (very basic duplication check)
+func (key *APIKey) hasRight(right *APIRight) bool {
 	rs := right.String()
 	for _, r := range key.Rights {
 		if r.String() == rs {
-			return fmt.Errorf("right '%s' is duplicated", rs)
+			return true
 		}
 	}
+	return false
+}
 
-	key.Rights = append(key.Rights, right)
+// AddNewRight parse + add the right to the key
+// WARNING: you may have to save the APIKeyDatabase to the disk!
+func (key *APIKey) AddNewRight(rightStr string) error {
+	right, err := parseRight(rightStr)
+	if err != nil {
+		return err
+	}
+
+	if key.hasRight(right) {
+		return fmt.Errorf("right '%s' is duplicated", right.String())
+	}
+
+	key.Rights = append(key.Rights, *right)
 
 	return nil
+}
+
+// AddNewRights parse + add multiple rights to the key, atomically: if any
+// right is invalid, nothing is added. Duplicates are skipped and returned.
+// WARNING: you may have to save the APIKeyDatabase to the disk!
+func (key *APIKey) AddNewRights(rightStrs []string) (added int, duplicates []string, err error) {
+	var rights []APIRight
+	seen := make(map[string]bool)
+
+	for _, rightStr := range rightStrs {
+		right, err := parseRight(rightStr)
+		if err != nil {
+			return 0, nil, fmt.Errorf("'%s': %s", strings.TrimSpace(rightStr), err)
+		}
+
+		rs := right.String()
+		if seen[rs] || key.hasRight(right) {
+			duplicates = append(duplicates, rs)
+			continue
+		}
+		seen[rs] = true
+		rights = append(rights, *right)
+	}
+
+	key.Rights = append(key.Rights, rights...)
+
+	return len(rights), duplicates, nil
 }
 
 // RemoveRight will remove the parsed right from the key
@@ -553,6 +599,8 @@ func (right *APIRight) String() string {
 		h := header + "=" + value
 		headers = append(headers, h)
 	}
+	// stable output (map order is random), needed for comparisons
+	sort.Strings(headers)
 	if len(headers) > 0 {
 		str = str + " " + strings.Join(headers, " ")
 	}

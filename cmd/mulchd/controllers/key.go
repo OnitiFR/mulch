@@ -117,6 +117,12 @@ func NewKeyRightController(req *server.Request) {
 		return
 	}
 
+	rightsStr := req.HTTP.FormValue("rights")
+	if rightsStr != "" {
+		newKeyRightsBatch(req, key, rightsStr)
+		return
+	}
+
 	rightStr := req.HTTP.FormValue("right")
 	err := key.AddNewRight(rightStr)
 	if err != nil {
@@ -131,6 +137,41 @@ func NewKeyRightController(req *server.Request) {
 	}
 
 	req.Stream.Successf("right added")
+}
+
+// newKeyRightsBatch add multiple rights (one per line) to the key, atomically
+func newKeyRightsBatch(req *server.Request, key *server.APIKey, rightsStr string) {
+	var rightStrs []string
+	for _, line := range strings.Split(rightsStr, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		rightStrs = append(rightStrs, line)
+	}
+
+	if len(rightStrs) == 0 {
+		req.Stream.Failure("no right provided")
+		return
+	}
+
+	added, duplicates, err := key.AddNewRights(rightStrs)
+	if err != nil {
+		req.Stream.Failuref("Cannot add rights (nothing added): %s", err)
+		return
+	}
+
+	for _, dup := range duplicates {
+		req.Stream.Warningf("right '%s' already exists, skipped", dup)
+	}
+
+	err = req.App.APIKeysDB.Save()
+	if err != nil {
+		req.Stream.Failuref("Cannot save: %s", err)
+		return
+	}
+
+	req.Stream.Successf("%d right(s) added", added)
 }
 
 // DeleteKeyRightController remove a right from the key
