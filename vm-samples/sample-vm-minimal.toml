@@ -4,7 +4,7 @@
 #  mulch vm create sample-vm-minimal.toml
 
 name = "mini"
-seed = "debian_12"
+seed = "debian_13"
 
 disk_size = "20G"
 ram_size = "1G"
