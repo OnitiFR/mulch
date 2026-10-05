@@ -21,7 +21,7 @@ echo "* siteurl and home updated to $url"
 
 if [ "$1" == 'with-content' ]; then
     echo "Updating content:"
-    wp search-replace '$old' '$url' --skip-columns=guid || exit $?
+    wp search-replace "$old" "$url" --skip-columns=guid || exit $?
 else
     echo ""
     echo "You should now update URL in content." >&2
