@@ -48,41 +48,98 @@ func (proxy *SSHProxy) ForwardRequestsToClient(in <-chan *ssh.Request, client *s
 	}
 }
 
-func sshProxyCopyChan(dst ssh.Channel, src ssh.Channel, way string, wgChannels *sync.WaitGroup, wgClosed *sync.WaitGroup, log *Log) {
+// sshProxyCopyStreams copies data and extended data (stderr) from src to dst,
+// then forwards src EOF to dst (and only to dst: the other way may still be
+// active, ex: "ssh vm cmd < /dev/null" must still get cmd output)
+func sshProxyCopyStreams(dst ssh.Channel, src ssh.Channel, way string, log *Log) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// unread extended data would also eat the channel window
+		_, err := io.Copy(dst.Stderr(), src.Stderr())
+		if err != nil {
+			log.Tracef("SSH: %s stderr Copy error: %s", way, err)
+		}
+	}()
+
 	_, err := io.Copy(dst, src)
 	if err != nil {
 		log.Tracef("SSH: %s Copy error: %s", way, err)
 	}
 
-	// -- Cheap "relaxing" of channels
-	// I don't see better option, since EOF/Close messages from
-	// remotes are hidden by x/crypto/ssh API.
-	src.CloseWrite()
+	// CloseWrite prevents any further (extended) write, so wait for stderr
+	wg.Wait()
 	dst.CloseWrite()
 	log.Tracef("SSH: %s EOF sent", way)
+}
 
-	// -- Wait for the other copy and exit-status request writing.
-	// Notes:
-	// 	- if the request is not written, the ssh/scp/… client will return its own error code
-	//  - interestingly, higher latencies seems to mitigate the issue
-	c := make(chan struct{})
-	go func() {
-		defer close(c)
-		wgClosed.Wait()
-	}()
-	select {
-	case <-c:
-	case <-time.After(1 * time.Second):
-		// this is not supposed to happen, but let's be paranoid
-		log.Warningf("SSH: %s timeout waiting for other chan (possible goroutine leak)", way)
+// sshProxyForwardRequest forwards a channel request (exit-status, pty-req, …)
+func sshProxyForwardRequest(req *ssh.Request, dst ssh.Channel, way string, log *Log) {
+	log.Tracef("SSH: request: %s %t %s", req.Type, req.WantReply, way)
+
+	b, err := dst.SendRequest(req.Type, req.WantReply, req.Payload)
+	if err != nil {
+		log.Errorf("SSH: SendRequest error: %s", err)
 	}
 
-	// -- Close channels for real
-	src.Close()
-	dst.Close()
-	log.Tracef("SSH: %s finished", way)
+	if req.WantReply {
+		req.Reply(b, nil)
+	}
+}
 
-	wgChannels.Done()
+// runChannelPair connects two channels until both are closed
+//
+// x/crypto/ssh hides EOF/Close messages from remotes, but:
+//   - Read() returns io.EOF on both EOF and Close (after buffered data is drained)
+//   - the requests chan is closed on Close only
+//
+// So EOF is forwarded way by way when a copy ends, and a Close from one side
+// is forwarded to the other side once all its data has been delivered.
+func runChannelPair(upChannel ssh.Channel, upRequests <-chan *ssh.Request, downChannel ssh.Channel, downRequests <-chan *ssh.Request, log *Log) {
+	upDrained := make(chan struct{})
+	downDrained := make(chan struct{})
+
+	go func() {
+		sshProxyCopyStreams(downChannel, upChannel, "up->down", log)
+		close(upDrained)
+	}()
+	go func() {
+		sshProxyCopyStreams(upChannel, downChannel, "down->up", log)
+		close(downDrained)
+	}()
+
+	// requests are forwarded in order, so exit-status is sent before Close
+	for upRequests != nil || downRequests != nil {
+		select {
+		case req, ok := <-upRequests:
+			if !ok {
+				log.Trace("SSH: up channel closed")
+				upRequests = nil
+				go func() {
+					<-upDrained
+					downChannel.Close()
+				}()
+				continue
+			}
+			sshProxyForwardRequest(req, downChannel, "from up to down (dst=down)", log)
+		case req, ok := <-downRequests:
+			if !ok {
+				log.Trace("SSH: down channel closed")
+				downRequests = nil
+				go func() {
+					<-downDrained
+					upChannel.Close()
+				}()
+				continue
+			}
+			sshProxyForwardRequest(req, upChannel, "from down to up (dst=up)", log)
+		}
+	}
+
+	<-upDrained
+	<-downDrained
+	log.Trace("SSH: channel pair finished")
 }
 
 // Send sparses keepalives to detect dead connections, a failed SendRequest
@@ -136,55 +193,13 @@ func (proxy *SSHProxy) runChannels(chans <-chan ssh.NewChannel, destConn ssh.Con
 			continue
 		}
 
-		// requests + two Copy
-		wgChannels.Add(3)
-
-		var wgClosed sync.WaitGroup
-		wgClosed.Add(1)
-
-		// connect requests
-		go func() {
-			proxy.app.Log.Trace("SSH: waiting for request")
-
-			for {
-				var req *ssh.Request
-				var dst ssh.Channel
-				var chn string
-
-				select {
-				case req = <-upRequests:
-					dst = downChannel
-					chn = "from up to down (dst=down)"
-				case req = <-downRequests:
-					dst = upChannel
-					chn = "from down to up (dst=up)"
-				}
-
-				if req == nil {
-					proxy.app.Log.Trace("SSH: req is nil, both chan closed")
-					wgChannels.Done()
-					wgClosed.Done()
-					break
-				}
-
-				proxy.app.Log.Tracef("SSH: request: %s %t %s", req.Type, req.WantReply, chn)
-				// proxy.app.Log.Tracef("SSH payload: -%s-", req.Payload)
-
-				b, errS := dst.SendRequest(req.Type, req.WantReply, req.Payload)
-				if errS != nil {
-					proxy.app.Log.Errorf("SSH: SendRequest error: %s", errS)
-				}
-
-				if req.WantReply {
-					req.Reply(b, nil)
-				}
-			}
-		}()
-
 		proxy.app.Log.Trace("SSH: Connecting channels")
 
-		go sshProxyCopyChan(upChannel, downChannel, "down->up", &wgChannels, &wgClosed, proxy.app.Log)
-		go sshProxyCopyChan(downChannel, upChannel, "up->down", &wgChannels, &wgClosed, proxy.app.Log)
+		wgChannels.Add(1)
+		go func() {
+			runChannelPair(upChannel, upRequests, downChannel, downRequests, proxy.app.Log)
+			wgChannels.Done()
+		}()
 	}
 
 	// Wait io.Copies (we have defered Closes in this function)
