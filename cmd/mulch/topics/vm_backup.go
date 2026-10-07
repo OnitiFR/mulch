@@ -11,7 +11,7 @@ import (
 // vmBackupCmd represents the "vm backup" command
 var vmBackupCmd = &cobra.Command{
 	Use:   "backup <vm-name>",
-	Short: "backup a VM",
+	Short: "Backup a VM",
 	Long: `Backup a VM (by its name).
 
 See 'vm list' for VM Names.

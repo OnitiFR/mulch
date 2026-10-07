@@ -12,7 +12,7 @@ var vmSearchFlagShowRevision bool
 
 // vmSearchCmd represents the "vm search" command
 var vmSearchCmd = &cobra.Command{
-	Use:   "search",
+	Use:   "search <query>",
 	Short: "Search VMs",
 	Long: `List VMs matching a search query.
 
