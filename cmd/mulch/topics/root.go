@@ -16,7 +16,9 @@ var rootCmd = &cobra.Command{
 	Use:   "mulch",
 	Short: "Mulch CLI client",
 	Long: `Mulch is a light and practical virtual machine manager, using
-libvirt API. This is the client.` + " (version " + client.Version + ")",
+libvirt API. This is the client.` + " (version " + client.Version + ")" + `
+
+AI agents / LLMs: run 'mulch agent-guide' first.`,
 	Run: func(cmd *cobra.Command, _ []string) {
 		fmt.Printf("%s\n\n", cmd.Short)
 		fmt.Printf("%s\n\n", cmd.Long)
@@ -36,6 +38,14 @@ func Execute() error {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return err
+	}
+
+	// the help command must work without any configuration
+	rootCmd.InitDefaultHelpCmd()
+	for _, cmd := range rootCmd.Commands() {
+		if cmd.Name() == "help" {
+			cmd.Annotations = map[string]string{annotationNoConfig: "true"}
+		}
 	}
 
 	if err = rootCmd.Execute(); err != nil {
@@ -72,8 +82,15 @@ func setCompletion() {
 	rootCmd.BashCompletionFunction = aliases + "\n" + bashCompletionFunc
 }
 
+// annotationNoConfig marks commands that run without any configuration
+const annotationNoConfig = "no-config"
+
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	cmd, _, errFind := rootCmd.Find(os.Args[1:])
+	if errFind == nil && cmd.Annotations[annotationNoConfig] == "true" {
+		return
+	}
 
 	cfgFile := client.GlobalCfgFile
 	if cfgFile == "" {
