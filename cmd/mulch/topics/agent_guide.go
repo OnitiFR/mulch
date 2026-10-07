@@ -21,6 +21,7 @@ concepts, safety rules, output handling and a full command reference.
 
 This command does not require any configuration file.`,
 	Aliases:     []string{"llm"},
+	Hidden:      true,
 	Args:        cobra.NoArgs,
 	Annotations: map[string]string{annotationNoConfig: "true"},
 	Run: func(_ *cobra.Command, _ []string) {
