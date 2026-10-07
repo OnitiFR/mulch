@@ -100,6 +100,16 @@ func NewRootConfig(filename string) (*client.RootConfig, error) {
 		tConfig.Default = tConfig.Server[0].Name
 	}
 
+	// selected server may also be an alias (server names take precedence)
+	if !serverNameExists(tConfig.Server, tConfig.Default) {
+		for _, server := range tConfig.Server {
+			if server.Alias != "" && server.Alias == tConfig.Default {
+				tConfig.Default = server.Name
+				break
+			}
+		}
+	}
+
 	for _, server := range tConfig.Server {
 		if server.Name == tConfig.Default {
 			if rootConfig.Server != nil {
@@ -156,4 +166,13 @@ func NewRootConfig(filename string) (*client.RootConfig, error) {
 	}
 
 	return rootConfig, nil
+}
+
+func serverNameExists(servers []*tomlServerConfig, name string) bool {
+	for _, server := range servers {
+		if server.Name == name {
+			return true
+		}
+	}
+	return false
 }
