@@ -1,13 +1,10 @@
 #!/bin/bash
 
-# Note: only Ubuntu 22.04+ is supported currently, since Go 1.18+ is needed
-
-# Debian 10: git, pkg-config, build-essential, qemu-kvm
-
 echo "This is a standalone Mulch server install script for Ubuntu."
 echo "It was tested on: (default server install)"
-echo " - Ubuntu 22.04"
+#echo " - Ubuntu 22.04"
 echo " - Ubuntu 24.04"
+echo " - Ubuntu 26.04"
 #echo " - Debian 10"
 echo "It's intended to be used for a quick demo install, since most settings are left to default values."
 echo ""
@@ -28,9 +25,9 @@ fi
 # 1st line is Debian (10) specific
 apt update || exit $?
 apt -y -qq install \
-    git pkg-config build-essential qemu-kvm \
+    git pkg-config build-essential acl qemu-system-x86 \
     golang-go \
-    ebtables gawk libxml2-utils libcap2-bin dnsmasq \
+    ebtables gawk libxml2-utils libcap2-bin dnsmasq-base \
     libvirt-daemon-system libvirt-dev \
     || exit $?
 
@@ -54,6 +51,17 @@ echo "-- OK, let me do most of this setup for you…"
 
 cp mulchd.service mulch-proxy.service /etc/systemd/system/ || exit $?
 systemctl daemon-reload || exit $?
+
+# Ubuntu's needrestart (run by apt and unattended-upgrades) restarts every service
+# linked to an updated library: mulchd is linked to libvirt, both daemons to libc.
+mkdir -p /etc/needrestart/conf.d || exit $?
+cat > /etc/needrestart/conf.d/mulch.conf <<'EOF' || exit $?
+# Never restart Mulch services automatically: it would break any ongoing
+# operation (VM creation, backup…). Restart them by hand, at a chosen moment.
+# 'needrestart -r l' still lists them when they run on outdated libraries.
+$nrconf{override_rc}{qr(^mulchd\.service$)} = 0;
+$nrconf{override_rc}{qr(^mulch-proxy\.service$)} = 0;
+EOF
 
 sudo -iu mulch sed -i'' "s|^proxy_acme_email =.*|proxy_acme_email = \"mulch-testing@oniti.fr\"|" /home/mulch/mulch/etc/mulchd.toml
 

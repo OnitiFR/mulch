@@ -1,7 +1,7 @@
-name = "debian_11_lamp"
+name = "ubuntu_2604_lamp"
 hostname = "lamp"
 
-seed = "debian_11"
+seed = "ubuntu_2604"
 
 disk_size = "8G"
 ram_size = "2G"

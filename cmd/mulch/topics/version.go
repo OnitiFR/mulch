@@ -32,6 +32,12 @@ Examples:
 }
 
 func init() {
+	// 'mulch --version' only prints the version number (hidden, no -v shorthand)
+	rootCmd.Version = client.Version
+	rootCmd.SetVersionTemplate("{{.Version}}\n")
+	rootCmd.Flags().Bool("version", false, "show client version number")
+	rootCmd.Flags().MarkHidden("version")
+
 	rootCmd.AddCommand(versionCmd)
 	versionCmd.Flags().BoolP("remote", "r", false, "also show server version")
 }

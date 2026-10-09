@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
+	"github.com/OnitiFR/mulch/common"
 )
 
 const logControllerHistoryMaxLines = 3000
@@ -16,8 +17,20 @@ func LogController(req *server.Request) {
 	target := req.HTTP.FormValue("target")
 	req.SetTarget(target)
 
-	// nothing to do, just wait forever…
-	select {}
+	name := target
+	if name == "" {
+		name = common.MessageAllTargets
+	}
+
+	operation := req.App.Operations.Add(&server.Operation{
+		Origin:        req.APIKey.Comment,
+		Action:        "follow",
+		Ressource:     "log",
+		RessourceName: name,
+	})
+	defer req.App.Operations.Remove(operation)
+
+	<-req.HTTP.Context().Done()
 }
 
 // GetLogHistoryController sends all "previous" log messages

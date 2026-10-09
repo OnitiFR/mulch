@@ -19,16 +19,24 @@ var sshCmdVM *common.APIVMInfos
 var sshCmdUser string
 var sshCmdAsAdmin bool
 var sshCmdWithRevision bool
+var sshCmdRemoteCommand []string
 
 // sshCmd represents the "ssh" command
 var sshCmd = &cobra.Command{
-	Use:   "ssh <vm-name>",
+	Use:   "ssh <vm-name> [-- command...]",
 	Short: "Open a SSH session",
-	Long: `Open a SSH shell session to the VM.
+	Long: `Open a SSH shell session to the VM, or execute a command on it.
 
 See 'vm list' for VM Names.
+
+Examples:
+  mulch ssh myvm
+  mulch ssh myvm -a
+  mulch ssh myvm -- cat hello.txt
+  mulch ssh myvm -a -- ls -la /etc
+  mulch ssh myvm -- 'cat > file.txt' < local_file.txt
 `,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		err := client.CreateSSHMulchDir()
 		if err != nil {
@@ -36,6 +44,16 @@ See 'vm list' for VM Names.
 		}
 
 		sshCmdAsAdmin, _ = cmd.Flags().GetBool("admin")
+
+		// remote command is everything after "--"
+		argsBeforeDash := len(args)
+		if cmd.ArgsLenAtDash() != -1 {
+			argsBeforeDash = cmd.ArgsLenAtDash()
+		}
+		if argsBeforeDash != 1 {
+			log.Fatal("usage: mulch ssh <vm-name> [-- command...]")
+		}
+		sshCmdRemoteCommand = args[1:]
 
 		revision, _ := cmd.Flags().GetString("revision")
 		sshCmdWithRevision = false
@@ -105,6 +123,11 @@ func sshCmdPairCB(reader io.Reader, _ http.Header) {
 		"-A",
 		destination,
 	}
+	if len(sshCmdRemoteCommand) > 0 {
+		// prevent ssh from parsing the remote command as its own options
+		args = append(args, "--")
+		args = append(args, sshCmdRemoteCommand...)
+	}
 
 	sshPath, err := exec.LookPath("ssh")
 	if err != nil {
@@ -119,6 +142,10 @@ func sshCmdPairCB(reader io.Reader, _ http.Header) {
 
 	err = cmd.Run()
 	if err != nil {
+		// forward remote command exit code (ssh errors are already shown on stderr)
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			os.Exit(exitErr.ExitCode())
+		}
 		log.Fatal(err.Error())
 	}
 }

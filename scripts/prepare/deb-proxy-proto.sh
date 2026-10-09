@@ -22,21 +22,40 @@ go install || exit $?
 cd .. || exit $?
 
 
+# go-mmproxy spoofs the client source address: the replies must be routed
+# back to the loopback. systemd-networkd has to own this rule, or it will
+# flush it as "foreign" on its next start (netplan does not manage lo).
+sudo bash -c "cat > /etc/systemd/network/10-mmproxy.network" <<- 'EOS'
+# added by deb-proxy-proto.sh
+[Match]
+Name=lo
+
+[RoutingPolicyRule]
+From=127.0.0.1/8
+IncomingInterface=lo
+Table=123
+
+[Route]
+Type=local
+Destination=0.0.0.0/0
+Table=123
+EOS
+[ $? -eq 0 ] || exit $?
+
+sudo networkctl reload || exit $?
+sudo networkctl reconfigure lo || exit $?
+
+
 sudo bash -c "cat > /etc/systemd/system/mmproxy.service" <<- EOS
 [Unit]
 Description=mmproxy
-After=network.target
+After=network.target systemd-networkd.service
 
 [Service]
 Type=simple
 LimitNOFILE=65535
-ExecStartPost=/sbin/ip rule add from 127.0.0.1/8 iif lo table 123
-ExecStartPost=/sbin/ip route add local 0.0.0.0/0 dev lo table 123
 
 ExecStart=$HOME/go/bin/go-mmproxy -dynamic-destination
-
-ExecStopPost=/sbin/ip rule del from 127.0.0.1/8 iif lo table 123
-ExecStopPost=/sbin/ip route del local 0.0.0.0/0 dev lo table 123
 
 Restart=on-failure
 RestartSec=3s

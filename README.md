@@ -553,11 +553,14 @@ chmod +x deb_ubuntu_autoinstall.sh
 #### Ubuntu
 ```
 sudo apt install golang-go
-sudo apt install ebtables gawk libxml2-utils libcap2-bin dnsmasq libvirt-daemon-system libvirt-dev
+sudo apt install ebtables gawk libxml2-utils libcap2-bin dnsmasq-base libvirt-daemon-system libvirt-dev
 sudo apt install git pkg-config build-essential qemu-kvm
 sudo usermod -aG libvirt USER # replace USER by the user running mulchd
 sudo setfacl -m g:libvirt-qemu:x /home/USER
 ```
+
+Note: `needrestart` (called by `apt` and `unattended-upgrades`) may restart
+mulch services at unexpected times. See `deb_ubuntu_autoinstall.sh` for details.
 
 #### Fedora
 ```

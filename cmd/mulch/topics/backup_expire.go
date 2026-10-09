@@ -28,8 +28,7 @@ See also -e argument on other commands:
 	vm backup
 	backup upload
 `,
-	Args:    cobra.ExactArgs(2),
-	Aliases: []string{"remove"},
+	Args: cobra.ExactArgs(2),
 	Run: func(_ *cobra.Command, args []string) {
 
 		expireDuration, err := client.ParseDuration(args[1])

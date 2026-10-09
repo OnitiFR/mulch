@@ -7,7 +7,7 @@ import (
 
 // secretDeleteCmd represents the "secret delete" command
 var secretDeleteCmd = &cobra.Command{
-	Use:   "delete <name> <value>",
+	Use:   "delete <name>",
 	Short: "Delete a secret value",
 	Args:  cobra.ExactArgs(1),
 	Run: func(_ *cobra.Command, args []string) {

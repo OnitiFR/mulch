@@ -9,11 +9,6 @@ Always:
 Resource leaks:
 - check for remaining map race-conditions
 - check that the switch to Context fixes all known resource leaks
-- mulchd "outage" of 2020-07-22:
-    - investigate all the preparePipes.funcX found in the stacktrace (see m2 log)
-    - check for a possible deadlock / missing timeout in the message hub? (same)
-    - maybe fixed by the switch to Context of run.go
-    - seems it happened today (2025-12-01) - no traces, but same symptoms (after a command break from a user, it seems)
 - still some hanging SSH shown in status (try with a client reboot?)
     - scheduleSSHKeepAlives() does its job, the issue's upper in the stack (runChannels never ends?)
     - added goroutine pprof profile to help
@@ -27,10 +22,12 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Short term:
+- .mulch.toml: allow things like key_cmd = "pass show mulch/4" ? (so no key is read by LLMs)
 - allow `. [...]another_script.sh` in scripts? (from another origin? ex: apache2)
   - search "GetContent"
   - this is currently a stream, it makes things a bit tricky
   - need to parse bash? (ex: ./script.sh in HereDoc)
+- "FAILURE: connection dropped by the server: client was not reading fast enough" on very fast outputs
 - SSH proxy: can we write an error to the client on early error? (is it a good idea anyway?)
   - see SSHProxy.serveProxy()
 - custom 5xx error pages for certain domains? (including non-existing ones ["garage"])
@@ -67,13 +64,12 @@ Short term:
 - allow to globally disable auto-rebuild?
 - allow a cron-style syntax for auto_rebuild
 - allow to set a manual rebuild ("at" style?)
-- like restore_backup, allow to restore from a VM (ex: autorebuild from prod)
+- like restore_backup, allow rebuild to restore from a VM (ex: autorebuild from prod)
 - backup available at "prepare" stage during a restore? / "meta" informations for restore? (ex: gitlab version)
   - must be available BEFORE the backup even exists (ex: rebuild)
 - purge old secrets (caution with long time disconnected peers, manual 'purge' command?)
   - new endpoint so every peer purge at the same time?
 - even better "secret list" command (closer to the usual FS experience)
-- investigate Let's Encrypt throttling issues
 - add "ipv4 only" option for seed downloads?
 - cloud-init: The 'nocloud-net' datasource name is deprecated in 24.1 and scheduled to be removed in 29.1. Use 'nocloud' instead, which uses the seedfrom protocolscheme (http// or file://) to decide how to run.
 - cloud-init: Unhandled non-multipart (text/x-not-multipart) userdata: 'b''...'
