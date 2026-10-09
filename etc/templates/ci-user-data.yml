@@ -121,6 +121,14 @@ write_files:
     permissions: '0644'
     path: /etc/profile.d/mulch-env.sh
 
+  - content: |
+      # avoid replication logs (would create unnecessary replication blocks even at idle)
+      [Service]
+      LogLevelMax=notice
+    owner: root:root
+    permissions: '0644'
+    path: /etc/systemd/system/qemu-guest-agent.service.d/mulch.conf
+
 runcmd:
   - [ systemctl, enable, --now, qemu-guest-agent]
   - [ systemctl, enable, phone_home ]
