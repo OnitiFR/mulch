@@ -111,12 +111,19 @@ func (rc *RateController) Clean(UnusedTime time.Duration) {
 func (rce *RateControllerEntry) IsAllowed(reqCtx context.Context) (bool, bool, string) {
 	// check if we are over the limit
 	if rce.rateController.config.ConcurrentMaxRequests > 0 {
+		// try to get a free slot without waiting first: with a zero timeout,
+		// time.After(0) is immediately ready, and select would pick randomly
+		// between the two cases, even with free slots
 		select {
 		case rce.currentRequestSlots <- true:
-		case <-time.After(rce.rateController.config.ConcurrentOverflowTimeout):
-			atomic.AddUint64(&rce.rateController.tooManyRequestsCounter, 1)
-			// tell caller to NOT call FinishRequest, because we failed to get a slot
-			return false, false, "concurrent requests limit timeout reached"
+		default:
+			select {
+			case rce.currentRequestSlots <- true:
+			case <-time.After(rce.rateController.config.ConcurrentOverflowTimeout):
+				atomic.AddUint64(&rce.rateController.tooManyRequestsCounter, 1)
+				// tell caller to NOT call FinishRequest, because we failed to get a slot
+				return false, false, "concurrent requests limit timeout reached"
+			}
 		}
 	}
 
