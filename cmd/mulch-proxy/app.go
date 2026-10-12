@@ -36,6 +36,10 @@ const WatchDogHeaderName = "Mulch-Watchdog"
 // RateControllerCleanupInterval is the interval for cleaning the rate controller IP entries
 const RateControllerCleanupInterval = 5 * time.Minute
 
+// RateControllerBusyCleanupInterval is the same, but for entries with requests
+// still in progress (long-lived connections, or stuck on a hung backend)
+const RateControllerBusyCleanupInterval = 1 * time.Hour
+
 // NewApp creates a new application
 func NewApp(config *AppConfig, trace bool, debug bool) (*App, error) {
 
