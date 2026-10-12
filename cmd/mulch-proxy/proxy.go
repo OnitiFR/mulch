@@ -344,6 +344,11 @@ func (proxy *ProxyServer) handleRequest(res http.ResponseWriter, req *http.Reque
 			}
 
 			if !allowed {
+				// client is gone, no one to send the 429 to
+				if req.Context().Err() != nil {
+					return
+				}
+
 				body, errG := proxy.genErrorPage(429, "Too many requests")
 				if errG != nil {
 					proxy.Log.Errorf("Error with the error page: %s", errG)

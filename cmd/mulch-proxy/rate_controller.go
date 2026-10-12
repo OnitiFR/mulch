@@ -122,6 +122,10 @@ func (rce *RateControllerEntry) IsAllowed(reqCtx context.Context) (bool, bool, s
 		default:
 			select {
 			case rce.currentRequestSlots <- true:
+			case <-reqCtx.Done():
+				// client gone while waiting for a slot, don't count it as a 429
+				// and don't call FinishRequest, we never got a slot
+				return false, false, "client gone while waiting for a slot"
 			case <-time.After(rce.rateController.config.ConcurrentOverflowTimeout):
 				atomic.AddUint64(&rce.rateController.tooManyRequestsCounter, 1)
 				// tell caller to NOT call FinishRequest, because we failed to get a slot
