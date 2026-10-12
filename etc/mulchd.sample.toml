@@ -101,7 +101,7 @@ proxy_force_x_forwarded_for = false
 proxy_trusted_proxies = []
 
 # Rate Control for the Reverse Proxy
-# (use "proxy_rate" in VM TOMLs to select a rate control profile)
+# (use "rate_profile" in VM TOMLs to select a rate control profile)
 # The special name "default" is used when no profile is specified, and
 # is automatically created if not present here (with all values = 0)
 # Feel free to modify the default profile.

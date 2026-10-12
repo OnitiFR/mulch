@@ -84,10 +84,8 @@ func (rc *RateController) GetEntry(ip string) *RateControllerEntry {
 }
 
 // IsVIP will check if an IP is in the VIP list
+// (no lock needed, VipList is read-only after config loading)
 func (rc *RateController) IsVIP(ip string) bool {
-	rc.mu.Lock()
-	defer rc.mu.Unlock()
-
 	_, ok := rc.config.VipList[ip]
 	return ok
 }

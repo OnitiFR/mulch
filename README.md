@@ -470,7 +470,7 @@ else is denied. The server log even shows denied requests, so building a tight r
 #### Rate limiting
 The reverse proxy can rate-limit incoming HTTP(S) traffic to protect your VMs from spikes and abuse,
 limiting both concurrent requests and request rate (with a configurable burst and a VIP exemption list).
-You define named profiles in `mulchd.conf` and pick one per VM with the `rate_profile` setting — see the
+You define named profiles in `mulchd.toml` and pick one per VM with the `rate_profile` setting — see the
 sample config for the available knobs.
 
 #### More…
