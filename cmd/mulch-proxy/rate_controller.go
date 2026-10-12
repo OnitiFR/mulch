@@ -146,9 +146,11 @@ func (rce *RateControllerEntry) IsAllowed(reqCtx context.Context) (bool, bool, s
 	// (Tokens() is then typically -49.3 for a rate of 50 req/s)
 	err := rce.rateLimiter.Wait(ctx)
 	if err != nil {
-		// if request context was cancelled, just return (client gone?)
+		// client gone while waiting: don't forward the request, since the
+		// limiter gave back the token, it would bypass the rate limit
+		// (don't count it as a 429, and we may hold a slot, so need_finish)
 		if reqCtx.Err() != nil {
-			return true, true, ""
+			return false, true, "client gone while waiting for rate limiter"
 		}
 
 		atomic.AddUint64(&rce.rateController.tooManyRequestsCounter, 1)
