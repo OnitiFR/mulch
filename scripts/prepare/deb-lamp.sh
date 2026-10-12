@@ -69,6 +69,35 @@ sudo sed -i "s/APACHE_RUN_GROUP=www-data/APACHE_RUN_GROUP=$_APP_USER/" /etc/apac
 
 sudo sed -i 's/^ServerTokens \(.\+\)$/ServerTokens Prod/' /etc/apache2/conf-enabled/security.conf || exit $?
 
+# Apache prefork (mod_php): bound the number of processes using CPU and RAM,
+# so a bot scan can't exhaust memory (no swap) or drown the CPU.
+# - CPU: ~5 processes per core (PHP waits for DB/IO) + 5 for slow requests/static
+# - RAM: ~60 MB per process, after ~600 MB for MariaDB and the system
+# You may define MULCH_HTTP_MAX_WORKERS to override the computed value.
+cpus=$(nproc)
+mem_mb=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo)
+by_cpu=$((cpus * 5 + 5))
+by_ram=$(((mem_mb - 600) / 60))
+workers=$(( by_cpu < by_ram ? by_cpu : by_ram ))
+[ -n "$MULCH_HTTP_MAX_WORKERS" ] && workers=$MULCH_HTTP_MAX_WORKERS
+[ $workers -lt 5 ] && workers=5
+echo "Apache prefork: $workers workers ($cpus CPU, $mem_mb MB RAM)"
+
+sudo bash -c "cat > /etc/apache2/mods-available/mpm_prefork.conf" <<- EOS
+<IfModule mpm_prefork_module>
+    StartServers            5
+    MinSpareServers         5
+    MaxSpareServers         $workers
+    MaxRequestWorkers       $workers
+    MaxConnectionsPerChild  1000
+</IfModule>
+EOS
+[ $? -eq 0 ] || exit $?
+
+# with so few processes, a prefork process waiting on an idle keep-alive
+# connection can't serve anyone else
+sudo sed -i 's/^KeepAlive On$/KeepAlive Off/' /etc/apache2/apache2.conf || exit $?
+
 if [ -n "$MULCH_HTTP_BASIC_AUTH" ]; then
     # create htpasswd file
     htpasswd="/home/$_APP_USER/.htpasswd"
