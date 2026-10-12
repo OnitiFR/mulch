@@ -98,6 +98,11 @@ func (rc *RateController) Clean(UnusedTime time.Duration) {
 	defer rc.mu.Unlock()
 
 	for ip, entry := range rc.entries {
+		// don't remove an entry with requests still in progress (long-lived
+		// connections), it would reset its concurrent slots
+		if len(entry.currentRequestSlots) > 0 {
+			continue
+		}
 		if time.Since(entry.lastUseTime) > UnusedTime {
 			delete(rc.entries, ip)
 		}
