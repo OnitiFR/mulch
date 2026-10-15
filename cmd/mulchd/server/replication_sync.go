@@ -126,8 +126,11 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 	// Without this, every failed cycle (BackupBegin error, broken pipe, crash…)
 	// leaves an orphan checkpoint + dirty bitmap piling up on the disk.
 	syncOK := false
+	// libvirt can't delete a checkpoint of an inactive domain (VM destroyed
+	// under us by a delete/stop): leave it, undefine drops its metadata and
+	// the next successful sync of a restarted VM prunes it.
 	defer func() {
-		if !syncOK {
+		if active, _ := dom.IsActive(); !syncOK && active {
 			rm.deleteCheckpoint(dom, newCpName, vmName)
 		}
 	}()
@@ -195,7 +198,16 @@ func (rm *ReplicationManager) syncVM(vmName *VMName, vm *VM) {
 			rm.app.Log.Warningf("replication %s: peer replica file is missing, forcing a full copy on next sync", vmName.ID())
 			rm.ResetFullCopy(vmName)
 		}
-		rm.recordError(vmName, fmt.Sprintf("pull and stream failed: %s", err))
+		errMsg := fmt.Sprintf("pull and stream failed: %s", err)
+		// our backup job is gone: it was aborted under us (AbortSync on VM
+		// stop/delete) or QEMU exited, so the truncated stream is expected.
+		// Keep it out of the user log (state is still recorded for alerting).
+		if info, jErr := dom.GetJobInfo(); jErr != nil || info.Type == libvirt.DOMAIN_JOB_NONE {
+			rm.app.Log.Tracef("replication %s: %s (backup job aborted)", vmName.ID(), errMsg)
+			rm.recordErrorState(vmName, errMsg)
+			return
+		}
+		rm.recordError(vmName, errMsg)
 		return
 	}
 
