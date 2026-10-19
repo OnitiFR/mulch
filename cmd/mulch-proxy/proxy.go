@@ -152,15 +152,22 @@ func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 	// (ex: no 301 path cleaning)
 	handler := http.HandlerFunc(proxy.handleRequest)
 
-	// We're still very kind here, because some legitimate "long idling request"
-	// use case exists out there. But we should add a runtime setting somewhere to
-	// allow the admin to drastically lower this value. (ex: Træfik default is 3min)
-	IdleTimeout := 15 * time.Minute
+	// Keep-alive delay between two requests on the same connection (in-flight
+	// requests like long-polling, SSE or websockets are not affected). Must stay
+	// above clients' own idle delay (Go's DefaultTransport is 90s, ex: chained
+	// mulch-proxy) to avoid reuse-while-closing races
+	IdleTimeout := 3 * time.Minute
+
+	// Time allowed to receive request headers, also used by Go as TLS handshake
+	// timeout. Without it, a connection that never sends a full request would
+	// stay open forever (slowloris)
+	ReadHeaderTimeout := 30 * time.Second
 
 	proxy.HTTP = &http.Server{
-		Handler:     manager.HTTPHandler(handler),
-		Addr:        config.ListenHTTP,
-		IdleTimeout: IdleTimeout,
+		Handler:           manager.HTTPHandler(handler),
+		Addr:              config.ListenHTTP,
+		IdleTimeout:       IdleTimeout,
+		ReadHeaderTimeout: ReadHeaderTimeout,
 	}
 
 	proxy.HTTPS = &http.Server{
@@ -179,7 +186,8 @@ func NewProxyServer(config *ProxyServerParams) *ProxyServer {
 			},
 			MinVersion: tls.VersionTLS12,
 		},
-		IdleTimeout: IdleTimeout,
+		IdleTimeout:       IdleTimeout,
+		ReadHeaderTimeout: ReadHeaderTimeout,
 	}
 
 	return &proxy
