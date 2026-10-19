@@ -50,7 +50,7 @@ Short term:
 - explore vm migration possible edge case:
   // migration of active VM ok → local vm deletion → an existing
   // "lower" inactive VM is activated (unharmful error if source was active?)
-- rights: logs may expose sensitive data (which ones?)
+- rights: logs may expose sensitive data (ex: WP user passwords during VM creation)
 - rights: add predefined right groups for common usages?
 - add "variables" to TOML files? (like $author or $USER in VM name or URL, to create "generic" TOML files)
 - provide a whereis feature / add "official" scripts (like wtf_is_my_vm.sh) to the client?
