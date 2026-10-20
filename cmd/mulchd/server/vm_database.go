@@ -137,9 +137,9 @@ func (vmdb *VMDatabase) genPortsDB() error {
 		}
 	}
 
-	listeners := common.PortListeners{
-		TCP: make(common.TCPPortListeners),
-		UDP: make(common.UDPPortListeners),
+	listeners := common.PortListenersConfig{
+		TCP: make(common.TCPPortListenersConfig),
+		UDP: make(common.UDPPortListenersConfig),
 	}
 	gateway := vmdb.app.Libvirt.NetworkXML.IPs[0].Address
 
@@ -159,9 +159,9 @@ func (vmdb *VMDatabase) genPortsDB() error {
 				if err != nil {
 					return err
 				}
-				listener = &common.TCPPortListener{
+				listener = &common.TCPPortListenerConfig{
 					ListenAddr: listenAddr,
-					Forwards:   make(map[string]*common.TCPForwarder),
+					Forwards:   make(map[string]*common.TCPForwarderConfig),
 				}
 				listeners.TCP[listenPort] = listener
 			} else if srcIP == "*" {
@@ -172,7 +172,7 @@ func (vmdb *VMDatabase) genPortsDB() error {
 			if err != nil {
 				return err
 			}
-			listener.Forwards[srcIP] = &common.TCPForwarder{
+			listener.Forwards[srcIP] = &common.TCPForwarderConfig{
 				Dest:           forwardAddr,
 				PROXYProtoPort: p.ProxyPort,
 			}
@@ -183,9 +183,9 @@ func (vmdb *VMDatabase) genPortsDB() error {
 				if err != nil {
 					return err
 				}
-				listener = &common.UDPPortListener{
+				listener = &common.UDPPortListenerConfig{
 					ListenAddr: listenAddr,
-					Forwards:   make(map[string]*common.UDPForwarder),
+					Forwards:   make(map[string]*common.UDPForwarderConfig),
 				}
 				listeners.UDP[listenPort] = listener
 			} else if srcIP == "*" {
@@ -196,7 +196,7 @@ func (vmdb *VMDatabase) genPortsDB() error {
 			if err != nil {
 				return err
 			}
-			listener.Forwards[srcIP] = &common.UDPForwarder{
+			listener.Forwards[srcIP] = &common.UDPForwarderConfig{
 				Dest: forwardAddr,
 			}
 		default:

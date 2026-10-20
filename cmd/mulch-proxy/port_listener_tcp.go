@@ -8,14 +8,14 @@ import (
 	"github.com/OnitiFR/mulch/common"
 )
 
-// PortListener is a TCP listener holder
-type PortListener struct {
+// TCPPortListener is a TCP listener holder
+type TCPPortListener struct {
 	ConnectionCount int32
 	listenAddr      *net.TCPAddr
 	listener        *net.TCPListener
 	port            uint16
 	public          bool
-	forwardMap      map[string]*common.TCPForwarder
+	forwardMap      map[string]*common.TCPForwarderConfig
 	closeChannels   map[string]chan bool
 	log             *Log
 	closed          bool
@@ -23,11 +23,11 @@ type PortListener struct {
 	mutex           sync.Mutex
 }
 
-// NewPortListener will listen on port and forward clients
-func NewPortListener(listenAddr *net.TCPAddr, forwardMap map[string]*common.TCPForwarder, version int, log *Log) (*PortListener, error) {
+// NewTCPPortListener will listen on port and forward clients
+func NewTCPPortListener(listenAddr *net.TCPAddr, forwardMap map[string]*common.TCPForwarderConfig, version int, log *Log) (*TCPPortListener, error) {
 	var err error
 
-	listener := &PortListener{
+	listener := &TCPPortListener{
 		listenAddr:    listenAddr,
 		port:          uint16(listenAddr.Port),
 		closeChannels: make(map[string]chan bool),
@@ -57,7 +57,7 @@ func NewPortListener(listenAddr *net.TCPAddr, forwardMap map[string]*common.TCPF
 }
 
 // Listen will wait for client connections
-func (pl *PortListener) Listen() {
+func (pl *TCPPortListener) Listen() {
 	for {
 		conn, err := pl.listener.AcceptTCP()
 		if err != nil {
@@ -69,7 +69,7 @@ func (pl *PortListener) Listen() {
 
 		sourceIP := conn.RemoteAddr().(*net.TCPAddr).IP.String()
 
-		var forwarder *common.TCPForwarder
+		var forwarder *common.TCPForwarderConfig
 		var forwardTo net.TCPAddr
 		var existsF bool
 
@@ -109,7 +109,7 @@ func (pl *PortListener) Listen() {
 				toPrelude = []byte(p)
 			}
 
-			go NewPortForward(conn, &forwardTo, closeChan, pl.log, &pl.ConnectionCount, toPrelude)
+			go NewTCPPortForward(conn, &forwardTo, closeChan, pl.log, &pl.ConnectionCount, toPrelude)
 		} else {
 			conn.Close()
 		}
@@ -117,7 +117,7 @@ func (pl *PortListener) Listen() {
 }
 
 // Close the listener
-func (pl *PortListener) Close() error {
+func (pl *TCPPortListener) Close() error {
 	pl.closed = true
 	err := pl.listener.Close()
 	if err != nil {
@@ -136,7 +136,7 @@ func (pl *PortListener) Close() error {
 }
 
 // UpdateForwardMap will update our forwarding config
-func (pl *PortListener) UpdateForwardMap(forwardMap map[string]*common.TCPForwarder) error {
+func (pl *TCPPortListener) UpdateForwardMap(forwardMap map[string]*common.TCPForwarderConfig) error {
 	pl.mutex.Lock()
 	defer pl.mutex.Unlock()
 

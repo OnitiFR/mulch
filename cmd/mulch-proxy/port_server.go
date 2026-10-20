@@ -5,7 +5,7 @@ import "sync/atomic"
 // PortServer will manage TCP/UDP forward proxy port listeners
 type PortServer struct {
 	PortDB         *PortDatabase
-	Listeners      map[uint16]*PortListener
+	TCPListeners   map[uint16]*TCPPortListener
 	UDPListeners   map[uint16]*UDPPortListener
 	Log            *Log
 	CurrentVersion int
@@ -21,7 +21,7 @@ func NewPortServer(filename string, log *Log) (*PortServer, error) {
 	server := &PortServer{
 		PortDB:       db,
 		Log:          log,
-		Listeners:    make(map[uint16]*PortListener),
+		TCPListeners: make(map[uint16]*TCPPortListener),
 		UDPListeners: make(map[uint16]*UDPPortListener),
 	}
 
@@ -50,7 +50,7 @@ func (server *PortServer) ReloadPorts() {
 // GetTotalConnections return the total connection count for all listeners
 func (server *PortServer) GetTotalConnections() int {
 	total := 0
-	for _, l := range server.Listeners {
+	for _, l := range server.TCPListeners {
 		total += int(atomic.LoadInt32(&l.ConnectionCount))
 	}
 	for _, l := range server.UDPListeners {
@@ -68,33 +68,33 @@ func (server *PortServer) refreshListeners() error {
 	server.CurrentVersion++
 
 	for portNum, portConf := range server.PortDB.db.TCP {
-		listener, exists := server.Listeners[portNum]
+		listener, exists := server.TCPListeners[portNum]
 		if !exists {
-			server.Log.Infof("port proxy: opening port %s", portConf.ListenAddr.String())
-			listener, err = NewPortListener(portConf.ListenAddr, portConf.Forwards, server.CurrentVersion, server.Log)
+			server.Log.Infof("port proxy: opening TCP port %s", portConf.ListenAddr.String())
+			listener, err = NewTCPPortListener(portConf.ListenAddr, portConf.Forwards, server.CurrentVersion, server.Log)
 			if err != nil {
-				server.Log.Errorf("unable to listen on port %d: %s", portNum, err)
+				server.Log.Errorf("unable to listen on TCP port %d: %s", portNum, err)
 				continue
 			}
-			server.Listeners[portNum] = listener
+			server.TCPListeners[portNum] = listener
 		} else {
 			listener.version = server.CurrentVersion
 			err := listener.UpdateForwardMap(portConf.Forwards)
 			if err != nil {
-				server.Log.Errorf("unable to update port %d: %s", portNum, err)
+				server.Log.Errorf("unable to update TCP port %d: %s", portNum, err)
 			}
 		}
 	}
 
 	// delete unused listeners
-	for portNum, listener := range server.Listeners {
+	for portNum, listener := range server.TCPListeners {
 		if listener.version != server.CurrentVersion {
-			server.Log.Infof("port proxy: closing port %d", portNum)
+			server.Log.Infof("port proxy: closing TCP port %d", portNum)
 			err := listener.Close()
 			if err != nil {
-				server.Log.Errorf("unable to close port %d: %s", portNum, err)
+				server.Log.Errorf("unable to close TCP port %d: %s", portNum, err)
 			} else {
-				delete(server.Listeners, portNum)
+				delete(server.TCPListeners, portNum)
 			}
 		}
 	}
@@ -127,7 +127,7 @@ func (server *PortServer) refreshListeners() error {
 		}
 	}
 
-	server.Log.Infof("refresh: %d TCP port(s) - %d UDP port(s) - %d connection(s)", len(server.Listeners), len(server.UDPListeners), server.GetTotalConnections())
+	server.Log.Infof("refresh: %d TCP port(s) - %d UDP port(s) - %d connection(s)", len(server.TCPListeners), len(server.UDPListeners), server.GetTotalConnections())
 
 	return nil
 }

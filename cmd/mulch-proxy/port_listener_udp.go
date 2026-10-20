@@ -33,7 +33,7 @@ type UDPPortListener struct {
 	conn            *net.UDPConn
 	port            uint16
 	public          bool
-	forwardMap      map[string]*common.UDPForwarder
+	forwardMap      map[string]*common.UDPForwarderConfig
 	sessions        map[string]*udpSession // key is the client address (ip:port)
 	log             *Log
 	closed          bool
@@ -51,7 +51,7 @@ type udpSession struct {
 }
 
 // NewUDPPortListener will listen on port and forward clients
-func NewUDPPortListener(listenAddr *net.UDPAddr, forwardMap map[string]*common.UDPForwarder, version int, log *Log) (*UDPPortListener, error) {
+func NewUDPPortListener(listenAddr *net.UDPAddr, forwardMap map[string]*common.UDPForwarderConfig, version int, log *Log) (*UDPPortListener, error) {
 	var err error
 
 	listener := &UDPPortListener{
@@ -159,7 +159,7 @@ func (pl *UDPPortListener) getSession(clientAddr *net.UDPAddr) *udpSession {
 
 // findForwarder returns the forwarder for this source IP (or nil)
 // (mutex must be locked)
-func (pl *UDPPortListener) findForwarder(sourceIP string) *common.UDPForwarder {
+func (pl *UDPPortListener) findForwarder(sourceIP string) *common.UDPForwarderConfig {
 	if pl.public {
 		sourceIP = "*"
 	}
@@ -254,7 +254,7 @@ func (pl *UDPPortListener) Close() error {
 
 // UpdateForwardMap will update our forwarding config, closing sessions
 // that are no longer allowed
-func (pl *UDPPortListener) UpdateForwardMap(forwardMap map[string]*common.UDPForwarder) {
+func (pl *UDPPortListener) UpdateForwardMap(forwardMap map[string]*common.UDPForwarderConfig) {
 	pl.mutex.Lock()
 	defer pl.mutex.Unlock()
 

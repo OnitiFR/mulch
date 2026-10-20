@@ -6,8 +6,8 @@ import (
 	"sync/atomic"
 )
 
-// PortForward is an actual established port forwarding
-type PortForward struct {
+// TCPPortForward is an actual established port forwarding
+type TCPPortForward struct {
 	fromConn          io.ReadWriteCloser
 	toConn            io.ReadWriteCloser
 	closeChanInternal chan bool
@@ -16,8 +16,8 @@ type PortForward struct {
 	log               *Log
 }
 
-// NewPortForward will connect to remote host and forward connection
-func NewPortForward(fromConn io.ReadWriteCloser, toAddr *net.TCPAddr, closeChanExternal chan bool, log *Log, connectionCount *int32, toPrelude []byte) {
+// NewTCPPortForward will connect to remote host and forward connection
+func NewTCPPortForward(fromConn io.ReadWriteCloser, toAddr *net.TCPAddr, closeChanExternal chan bool, log *Log, connectionCount *int32, toPrelude []byte) {
 	defer func() {
 		err := fromConn.Close()
 		if err != nil {
@@ -27,7 +27,7 @@ func NewPortForward(fromConn io.ReadWriteCloser, toAddr *net.TCPAddr, closeChanE
 
 	var err error
 
-	pf := &PortForward{
+	pf := &TCPPortForward{
 		fromConn:          fromConn,
 		closeChanInternal: make(chan bool),
 		closeChanExternal: closeChanExternal,
@@ -66,7 +66,7 @@ func NewPortForward(fromConn io.ReadWriteCloser, toAddr *net.TCPAddr, closeChanE
 }
 
 // pipe a reader to a writer
-func (pf *PortForward) pipe(src io.Reader, dst io.Writer) {
+func (pf *TCPPortForward) pipe(src io.Reader, dst io.Writer) {
 	buff := make([]byte, 64*1024) // 64kB
 	for {
 		n, err := src.Read(buff)
@@ -85,7 +85,7 @@ func (pf *PortForward) pipe(src io.Reader, dst io.Writer) {
 }
 
 // close the forwarding
-func (pf *PortForward) close() {
+func (pf *TCPPortForward) close() {
 	if pf.closed {
 		return
 	}

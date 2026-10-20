@@ -2,41 +2,41 @@ package common
 
 import "net"
 
-// PortListeners is the port database shared by mulchd and mulch-proxy
-type PortListeners struct {
-	TCP TCPPortListeners
-	UDP UDPPortListeners
+// PortListenersConfig is the port database shared by mulchd and mulch-proxy
+type PortListenersConfig struct {
+	TCP TCPPortListenersConfig
+	UDP UDPPortListenersConfig
 }
 
-type TCPForwarder struct {
+type TCPForwarderConfig struct {
 	Dest           *net.TCPAddr
 	PROXYProtoPort uint16
 }
 
-// TCPPortListener describe how the TCP proxy will listen on a port
-type TCPPortListener struct {
+// TCPPortListenerConfig describe how the TCP proxy will listen on a port
+type TCPPortListenerConfig struct {
 	// example: net.ResolveTCPAddr("10.104.0.1:9001")
 	ListenAddr *net.TCPAddr
 
 	// the key is the client VM IPv4, value is the forward destination
-	Forwards map[string]*TCPForwarder
+	Forwards map[string]*TCPForwarderConfig
 }
 
-// TCPPortListeners is a map of TCPPortListener instances, with the port as key
-type TCPPortListeners map[uint16]*TCPPortListener
+// TCPPortListenersConfig is a map of TCPPortListenerConfig instances, with the port as key
+type TCPPortListenersConfig map[uint16]*TCPPortListenerConfig
 
-type UDPForwarder struct {
+type UDPForwarderConfig struct {
 	Dest *net.UDPAddr
 }
 
-// UDPPortListener describe how the UDP proxy will listen on a port
-type UDPPortListener struct {
+// UDPPortListenerConfig describe how the UDP proxy will listen on a port
+type UDPPortListenerConfig struct {
 	// example: net.ResolveUDPAddr("10.104.0.1:9001")
 	ListenAddr *net.UDPAddr
 
 	// the key is the client VM IPv4, value is the forward destination
-	Forwards map[string]*UDPForwarder
+	Forwards map[string]*UDPForwarderConfig
 }
 
-// UDPPortListeners is a map of UDPPortListener instances, with the port as key
-type UDPPortListeners map[uint16]*UDPPortListener
+// UDPPortListenersConfig is a map of UDPPortListenerConfig instances, with the port as key
+type UDPPortListenersConfig map[uint16]*UDPPortListenerConfig
