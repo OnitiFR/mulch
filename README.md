@@ -432,7 +432,7 @@ ports = [
 ]
 ```
 
-For UDP, the VM will see the host IP as the client address. The TCP-proxy supports [PROXY protocol](http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt),
+For UDP (IPv4 only for public ports), the VM will see the host IP as the client address. The TCP-proxy supports [PROXY protocol](http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt),
 so you can preserve original IP address of the client if needed:
 
 ```toml

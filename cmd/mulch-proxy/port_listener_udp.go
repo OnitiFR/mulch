@@ -3,12 +3,14 @@ package main
 import (
 	"errors"
 	"net"
+	"net/netip"
 	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
+	"golang.org/x/net/ipv4"
 )
 
 // UDP session timeouts (same as Linux conntrack defaults)
@@ -27,6 +29,9 @@ const UDPMaxSessionsPerListener = 1024
 // Since UDP is connectionless, a "session" is created for each client
 // address, with its own socket to the destination, and closed after some
 // inactivity.
+// Public listeners listen on all host addresses (IPv4 only), so we use
+// IP_PKTINFO to reply with the address targeted by the client as source
+// (ex: failover IP), instead of the one chosen by the routing table.
 type UDPPortListener struct {
 	ConnectionCount int32
 	listenAddr      *net.UDPAddr
@@ -34,18 +39,26 @@ type UDPPortListener struct {
 	port            uint16
 	public          bool
 	forwardMap      map[string]*common.UDPForwarderConfig
-	sessions        map[string]*udpSession // key is the client address (ip:port)
+	sessions        map[udpSessionKey]*udpSession
 	log             *Log
 	closed          bool
 	version         int
 	mutex           sync.Mutex
 }
 
+// udpSessionKey identifies a client, a client may target multiple
+// addresses of the host (public listeners only)
+type udpSessionKey struct {
+	clientAddr netip.AddrPort
+	localIP    netip.Addr // invalid for private listeners
+}
+
 // udpSession is a client of a UDPPortListener
 type udpSession struct {
-	clientAddr   *net.UDPAddr
+	key          udpSessionKey
 	dest         *net.UDPAddr
 	upstream     *net.UDPConn
+	replyOOB     []byte       // IP_PKTINFO control message forcing reply source address
 	lastActivity atomic.Int64 // UnixNano
 	replied      atomic.Bool
 }
@@ -57,7 +70,7 @@ func NewUDPPortListener(listenAddr *net.UDPAddr, forwardMap map[string]*common.U
 	listener := &UDPPortListener{
 		listenAddr: listenAddr,
 		port:       uint16(listenAddr.Port),
-		sessions:   make(map[string]*udpSession),
+		sessions:   make(map[udpSessionKey]*udpSession),
 		log:        log,
 		version:    version,
 		closed:     false,
@@ -68,9 +81,17 @@ func NewUDPPortListener(listenAddr *net.UDPAddr, forwardMap map[string]*common.U
 		listener.public = true
 	}
 
-	listener.conn, err = net.ListenUDP("udp", listenAddr)
+	listener.conn, err = net.ListenUDP("udp4", listenAddr)
 	if err != nil {
 		return nil, err
+	}
+
+	if listener.public {
+		err = ipv4.NewPacketConn(listener.conn).SetControlMessage(ipv4.FlagDst, true)
+		if err != nil {
+			listener.conn.Close()
+			return nil, err
+		}
 	}
 
 	listener.UpdateForwardMap(forwardMap)
@@ -83,8 +104,10 @@ func NewUDPPortListener(listenAddr *net.UDPAddr, forwardMap map[string]*common.U
 // Listen will wait for client datagrams
 func (pl *UDPPortListener) Listen() {
 	buff := make([]byte, 64*1024) // max UDP datagram size
+	oob := ipv4.NewControlMessage(ipv4.FlagDst)
+	var cm ipv4.ControlMessage // reused, so Parse does not allocate
 	for {
-		n, clientAddr, err := pl.conn.ReadFromUDP(buff)
+		n, oobn, _, clientAddr, err := pl.conn.ReadMsgUDPAddrPort(buff, oob)
 		if err != nil {
 			if pl.isClosed() {
 				break
@@ -93,7 +116,17 @@ func (pl *UDPPortListener) Listen() {
 			continue
 		}
 
-		session := pl.getSession(clientAddr)
+		key := udpSessionKey{clientAddr: clientAddr}
+		if pl.public {
+			err = cm.Parse(oob[:oobn])
+			if err != nil || cm.Dst == nil {
+				pl.log.Errorf("port proxy: %s: unable to get UDP datagram destination address", pl.listenAddr.String())
+				continue
+			}
+			key.localIP, _ = netip.AddrFromSlice(cm.Dst.To4())
+		}
+
+		session := pl.getSession(key)
 		if session == nil {
 			continue
 		}
@@ -107,7 +140,7 @@ func (pl *UDPPortListener) Listen() {
 
 // getSession returns the session of the client, creating it if needed,
 // and updates its activity (nil is returned if the client is not allowed)
-func (pl *UDPPortListener) getSession(clientAddr *net.UDPAddr) *udpSession {
+func (pl *UDPPortListener) getSession(key udpSessionKey) *udpSession {
 	pl.mutex.Lock()
 	defer pl.mutex.Unlock()
 
@@ -115,7 +148,6 @@ func (pl *UDPPortListener) getSession(clientAddr *net.UDPAddr) *udpSession {
 		return nil
 	}
 
-	key := clientAddr.String()
 	session, exists := pl.sessions[key]
 	if exists {
 		if session.remaining() > 0 {
@@ -127,7 +159,7 @@ func (pl *UDPPortListener) getSession(clientAddr *net.UDPAddr) *udpSession {
 		session.upstream.Close()
 	}
 
-	forwarder := pl.findForwarder(clientAddr.IP.String())
+	forwarder := pl.findForwarder(key.clientAddr.Addr().String())
 	if forwarder == nil {
 		return nil
 	}
@@ -143,14 +175,18 @@ func (pl *UDPPortListener) getSession(clientAddr *net.UDPAddr) *udpSession {
 	}
 
 	session = &udpSession{
-		clientAddr: clientAddr,
-		dest:       forwarder.Dest,
-		upstream:   upstream,
+		key:      key,
+		dest:     forwarder.Dest,
+		upstream: upstream,
+	}
+	if key.localIP.IsValid() {
+		cm := ipv4.ControlMessage{Src: key.localIP.AsSlice()}
+		session.replyOOB = cm.Marshal()
 	}
 	session.touch()
 	pl.sessions[key] = session
 
-	pl.log.Tracef("+ UDP %s->%s:%d", clientAddr.IP.String(), forwarder.Dest.IP.String(), pl.port)
+	pl.log.Tracef("+ UDP %s->%s:%d", key.clientAddr.Addr().String(), forwarder.Dest.IP.String(), pl.port)
 	atomic.AddInt32(&pl.ConnectionCount, 1)
 	go pl.relayReplies(session)
 
@@ -169,7 +205,7 @@ func (pl *UDPPortListener) findForwarder(sourceIP string) *common.UDPForwarderCo
 // evictOldestSession closes the least recently active session
 // (mutex must be locked)
 func (pl *UDPPortListener) evictOldestSession() {
-	var oldestKey string
+	var oldestKey udpSessionKey
 	var oldest *udpSession
 	for key, session := range pl.sessions {
 		if oldest == nil || session.lastActivity.Load() < oldest.lastActivity.Load() {
@@ -179,7 +215,7 @@ func (pl *UDPPortListener) evictOldestSession() {
 	}
 
 	if oldest != nil {
-		pl.log.Tracef("port proxy: %s: too many UDP sessions, evicting %s", pl.listenAddr.String(), oldestKey)
+		pl.log.Tracef("port proxy: %s: too many UDP sessions, evicting %s", pl.listenAddr.String(), oldestKey.clientAddr.String())
 		delete(pl.sessions, oldestKey)
 		oldest.upstream.Close()
 	}
@@ -190,15 +226,14 @@ func (pl *UDPPortListener) evictOldestSession() {
 func (pl *UDPPortListener) relayReplies(session *udpSession) {
 	defer func() {
 		pl.mutex.Lock()
-		key := session.clientAddr.String()
-		if pl.sessions[key] == session {
-			delete(pl.sessions, key)
+		if pl.sessions[session.key] == session {
+			delete(pl.sessions, session.key)
 		}
 		pl.mutex.Unlock()
 
 		session.upstream.Close()
 		atomic.AddInt32(&pl.ConnectionCount, -1)
-		pl.log.Tracef("- UDP %s->%s:%d", session.clientAddr.IP.String(), session.dest.IP.String(), pl.port)
+		pl.log.Tracef("- UDP %s->%s:%d", session.key.clientAddr.Addr().String(), session.dest.IP.String(), pl.port)
 	}()
 
 	buff := make([]byte, 64*1024)
@@ -226,9 +261,9 @@ func (pl *UDPPortListener) relayReplies(session *udpSession) {
 		session.replied.Store(true)
 		session.touch()
 
-		_, err = pl.conn.WriteToUDP(buff[:n], session.clientAddr)
+		_, _, err = pl.conn.WriteMsgUDPAddrPort(buff[:n], session.replyOOB, session.key.clientAddr)
 		if err != nil {
-			pl.log.Tracef("port proxy: UDP %s<-%s: %s", session.clientAddr.String(), session.dest.String(), err)
+			pl.log.Tracef("port proxy: UDP %s<-%s: %s", session.key.clientAddr.String(), session.dest.String(), err)
 		}
 	}
 }
@@ -261,7 +296,7 @@ func (pl *UDPPortListener) UpdateForwardMap(forwardMap map[string]*common.UDPFor
 	pl.forwardMap = forwardMap
 
 	for key, session := range pl.sessions {
-		forwarder := pl.findForwarder(session.clientAddr.IP.String())
+		forwarder := pl.findForwarder(session.key.clientAddr.Addr().String())
 		if forwarder == nil || forwarder.Dest.String() != session.dest.String() {
 			delete(pl.sessions, key)
 			session.upstream.Close()
