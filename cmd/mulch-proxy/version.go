@@ -1,4 +1,4 @@
 package main
 
 // Version of the proxy server
-const Version = "1.19.6"
+const Version = "1.20.0"

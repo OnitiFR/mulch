@@ -157,7 +157,7 @@ func (vm *VM) GetEnvMap(vmName *VMName) (map[string]string, error) {
 	res["_PORT5"] = fmt.Sprintf("%d", VMPortBaseForward+4)
 	for _, port := range vm.Config.Ports {
 		if port.Direction == VMPortDirectionImport {
-			name := fmt.Sprintf("_%d_%s", port.Port, "TCP")
+			name := fmt.Sprintf("_%d_%s", port.Port, strings.ToUpper(port.ProtocolString()))
 			_, exists := res[name]
 			if exists {
 				conflict = append(conflict, name)

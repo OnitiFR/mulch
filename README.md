@@ -391,7 +391,7 @@ Secret sharing **must** be done in a bidirectional way:
 By default, network traffic is not allowed between VMs, but you can choose to
 export a port from a VM to a group (group names starts with `@`).
 
-Any other VM can then import the port from the group, and connect to this port (using an internal TCP-proxy).
+Any other VM can then import the port from the group, and connect to this port (using an internal TCP/UDP-proxy).
 
 To export a PostgreSQL server, use this in the VM TOML file:
 ```toml
@@ -408,10 +408,12 @@ ports = [
 ```
 Then, inside the VM, connect to `$_MULCH_PROXY_IP:$_5432_TCP`
 
+UDP is supported too (ex: `"53/udp->@my_project"`, then `$_53_UDP`).
+
 Ports are dynamic, they're affected immediately by commands like `vm redefine` and `vm active`, no rebuild is needed. See sample TOML file for more informations.
 
 #### Port forwarding
-The TCP-proxy can also be used to expose a VM network port to the outside world using the special `PUBLIC` group:
+The TCP/UDP-proxy can also be used to expose a VM network port to the outside world using the special `PUBLIC` group:
 
 ```toml
 # expose IRC server of this VM to the outside world
@@ -430,7 +432,7 @@ ports = [
 ]
 ```
 
-The TCP-proxy also supports [PROXY protocol](http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt),
+For UDP, the VM will see the host IP as the client address. The TCP-proxy supports [PROXY protocol](http://www.haproxy.org/download/1.8/doc/proxy-protocol.txt),
 so you can preserve original IP address of the client if needed:
 
 ```toml

@@ -11,7 +11,7 @@ import (
 // PortDatabase describes a persistent database for port forwarding
 type PortDatabase struct {
 	filename string
-	db       common.TCPPortListeners
+	db       common.PortListeners
 
 	mutex sync.Mutex
 }
@@ -37,7 +37,10 @@ func (pdb *PortDatabase) Load() error {
 	defer pdb.mutex.Unlock()
 
 	// clear any previous map
-	pdb.db = make(common.TCPPortListeners)
+	pdb.db = common.PortListeners{
+		TCP: make(common.TCPPortListeners),
+		UDP: make(common.UDPPortListeners),
+	}
 
 	if !common.PathExist(pdb.filename) {
 		return nil

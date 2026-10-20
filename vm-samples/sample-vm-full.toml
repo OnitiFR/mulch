@@ -51,9 +51,10 @@ redirects = [
 # (using a non-existing profile will fallback to "default", without any warning)
 rate_profile = "default"
 
-# Allow communications **between VMs** of the same @group using a TCP-proxy
+# Allow communications **between VMs** of the same @group using a TCP/UDP-proxy
 # Notes:
-#   - only TCP is supported currently
+#   - tcp and udp are supported (UDP sessions expire after 30s of
+#     inactivity if the VM never replied, 120s otherwise)
 #   - groups are automatically declared
 #   - you can import a non-existing (yet) port (with a warning)
 ports = [
@@ -89,8 +90,12 @@ ports = [
     "8080-8090/tcp->@PUBLIC",
     "9080-9090/tcp->@PUBLIC:4000-4010",
 
-    # PROXY protocol is supported, see deb-proxy-proto.sh prepare script
-    # for transparent client IP forwarding
+    # UDP works the same way (ex: DNS server), use $_53_UDP when importing
+    "53/udp->@PUBLIC",
+    "53/tcp->@PUBLIC",
+
+    # PROXY protocol is supported (tcp only), see deb-proxy-proto.sh prepare
+    # script for transparent client IP forwarding
     "8081/tcp->@PUBLIC (PROXY)", # default PROXY protocol server port is 8443
     "8082/tcp->@PUBLIC (PROXY:8888)", # … but you can change it
 ]

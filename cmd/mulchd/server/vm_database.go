@@ -110,7 +110,7 @@ func (vmdb *VMDatabase) genDomainsDB() error {
 	return nil
 }
 
-// build port database for the TCP proxy
+// build port database for the TCP/UDP proxy
 func (vmdb *VMDatabase) genPortsDB() error {
 	var vmEntries []*VMDatabaseEntry
 	exportedPortMap := make(map[string]*VM)
@@ -137,16 +137,77 @@ func (vmdb *VMDatabase) genPortsDB() error {
 		}
 	}
 
-	listeners := make(common.TCPPortListeners)
+	listeners := common.PortListeners{
+		TCP: make(common.TCPPortListeners),
+		UDP: make(common.UDPPortListeners),
+	}
 	gateway := vmdb.app.Libvirt.NetworkXML.IPs[0].Address
+
+	// add a forward to the listener (created if needed) of the port protocol
+	// srcIP is the client VM IPv4, or "*" for public ports
+	addForward := func(p *VMPort, listenStr string, srcIP string, destStr string) error {
+		listenPort := p.PublicPort
+		if listenPort == 0 {
+			listenPort = VMPortBaseForward + uint16(p.Index)
+		}
+
+		switch p.Protocol {
+		case VMPortProtocolTCP:
+			listener, exists := listeners.TCP[listenPort]
+			if !exists {
+				listenAddr, err := net.ResolveTCPAddr("tcp", listenStr)
+				if err != nil {
+					return err
+				}
+				listener = &common.TCPPortListener{
+					ListenAddr: listenAddr,
+					Forwards:   make(map[string]*common.TCPForwarder),
+				}
+				listeners.TCP[listenPort] = listener
+			} else if srcIP == "*" {
+				return fmt.Errorf("public port %d/tcp is duplicated", listenPort)
+			}
+
+			forwardAddr, err := net.ResolveTCPAddr("tcp", destStr)
+			if err != nil {
+				return err
+			}
+			listener.Forwards[srcIP] = &common.TCPForwarder{
+				Dest:           forwardAddr,
+				PROXYProtoPort: p.ProxyPort,
+			}
+		case VMPortProtocolUDP:
+			listener, exists := listeners.UDP[listenPort]
+			if !exists {
+				listenAddr, err := net.ResolveUDPAddr("udp", listenStr)
+				if err != nil {
+					return err
+				}
+				listener = &common.UDPPortListener{
+					ListenAddr: listenAddr,
+					Forwards:   make(map[string]*common.UDPForwarder),
+				}
+				listeners.UDP[listenPort] = listener
+			} else if srcIP == "*" {
+				return fmt.Errorf("public port %d/udp is duplicated", listenPort)
+			}
+
+			forwardAddr, err := net.ResolveUDPAddr("udp", destStr)
+			if err != nil {
+				return err
+			}
+			listener.Forwards[srcIP] = &common.UDPForwarder{
+				Dest: forwardAddr,
+			}
+		default:
+			return fmt.Errorf("unsupported protocol '%s'", p.String())
+		}
+		return nil
+	}
 
 	for _, entry := range vmEntries {
 		vm := entry.VM
 		for _, p := range vm.Config.Ports {
-			if p.Protocol != VMPortProtocolTCP {
-				return fmt.Errorf("unsupported protocol '%s'", p.String())
-			}
-
 			if p.Direction != VMPortDirectionImport {
 				continue
 			}
@@ -160,29 +221,11 @@ func (vmdb *VMDatabase) genPortsDB() error {
 				continue
 			}
 
-			// add to the correct listener
-			listenPort := VMPortBaseForward + uint16(p.Index)
-			listener, exists := listeners[listenPort]
-			if !exists {
-				listenStr := fmt.Sprintf("%s:%d", gateway, listenPort)
-				listenAddr, err := net.ResolveTCPAddr("tcp", listenStr)
-				if err != nil {
-					return err
-				}
-				listener = &common.TCPPortListener{
-					ListenAddr: listenAddr,
-					Forwards:   make(map[string]*common.TCPForwarder),
-				}
-				listeners[listenPort] = listener
-			}
-
+			listenStr := fmt.Sprintf("%s:%d", gateway, VMPortBaseForward+uint16(p.Index))
 			forwardStr := fmt.Sprintf("%s:%d", exportingVM.AssignedIPv4, p.Port)
-			forwardAddr, err := net.ResolveTCPAddr("tcp", forwardStr)
+			err := addForward(p, listenStr, vm.AssignedIPv4, forwardStr)
 			if err != nil {
 				return err
-			}
-			listener.Forwards[vm.AssignedIPv4] = &common.TCPForwarder{
-				Dest: forwardAddr,
 			}
 		}
 	}
@@ -196,29 +239,10 @@ func (vmdb *VMDatabase) genPortsDB() error {
 		for _, p := range vm.Config.Ports {
 			if p.PublicPort != 0 {
 				listenStr := fmt.Sprintf(":%d", p.PublicPort)
-				listenAddr, err := net.ResolveTCPAddr("tcp", listenStr)
-				if err != nil {
-					return err
-				}
-				listener := &common.TCPPortListener{
-					ListenAddr: listenAddr,
-					Forwards:   make(map[string]*common.TCPForwarder),
-				}
-
-				_, exists := listeners[p.PublicPort]
-				if exists {
-					return fmt.Errorf("public port %d is duplicated", p.PublicPort)
-				}
-				listeners[p.PublicPort] = listener
-
 				forwardStr := fmt.Sprintf("%s:%d", vm.AssignedIPv4, p.Port)
-				forwardAddr, err := net.ResolveTCPAddr("tcp", forwardStr)
+				err := addForward(p, listenStr, "*", forwardStr)
 				if err != nil {
 					return err
-				}
-				listener.Forwards["*"] = &common.TCPForwarder{
-					Dest:           forwardAddr,
-					PROXYProtoPort: p.ProxyPort,
 				}
 			}
 		}

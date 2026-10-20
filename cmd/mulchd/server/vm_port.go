@@ -11,6 +11,7 @@ import (
 // VMPort constants
 const (
 	VMPortProtocolTCP = 0
+	VMPortProtocolUDP = 1
 
 	VMPortDirectionExport  = 0
 	VMPortDirectionImport  = 1
@@ -34,7 +35,7 @@ const VMPortProxyProtocoDefault = 8443
 // VMPort is a network port inside a VM
 type VMPort struct {
 	Port       uint16
-	Protocol   int // tcp (VMPortProtocol*)
+	Protocol   int // tcp / udp (VMPortProtocol*)
 	Direction  int // export / import
 	Index      int // position in the direction (ex: 2nd exported port), 0 indexed
 	Group      string
@@ -49,24 +50,30 @@ func (p *VMPort) String() string {
 		arrow = "<-"
 	}
 
-	proto := "???"
-	if p.Protocol == VMPortProtocolTCP {
-		proto = "tcp"
-	}
-
 	publicPort := ""
 	if p.PublicPort != 0 {
 		publicPort = fmt.Sprintf(":%d", p.PublicPort)
 	}
 
-	return fmt.Sprintf("%d/%s%s%s%s", p.Port, proto, arrow, p.Group, publicPort)
+	return fmt.Sprintf("%d/%s%s%s%s", p.Port, p.ProtocolString(), arrow, p.Group, publicPort)
+}
+
+// ProtocolString returns the protocol name (tcp, udp)
+func (p *VMPort) ProtocolString() string {
+	switch p.Protocol {
+	case VMPortProtocolTCP:
+		return "tcp"
+	case VMPortProtocolUDP:
+		return "udp"
+	}
+	return "???"
 }
 
 // GlobalID will return a "global" ID for the port (public ports are merged)
 // Useful for deduplication
 func (p *VMPort) GlobalID() string {
 	if p.PublicPort != 0 {
-		return fmt.Sprintf("...->%s:%d", p.Group, p.PublicPort)
+		return fmt.Sprintf(".../%s->%s:%d", p.ProtocolString(), p.Group, p.PublicPort)
 	}
 	return p.String()
 }
@@ -86,7 +93,8 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 	// 2000-2010/tcp -> @xxx
 	// 2000-2010/tcp -> @xxx:3000
 	// 2000-2010/tcp -> @xxx:3000-3010
-	isRange := regexp.MustCompile(`^(\d+)-(\d+)/(tcp) *(<-|->) *(@[A-Za-z0-9_]+)(:(\d+)(-(\d+))?)?$`)
+	// 2000-2010/udp -> @xxx
+	isRange := regexp.MustCompile(`^(\d+)-(\d+)/(tcp|udp) *(<-|->) *(@[A-Za-z0-9_]+)(:(\d+)(-(\d+))?)?$`)
 
 	for _, lineOrg := range strPorts {
 		line, comment := portExtractComment(lineOrg)
@@ -194,7 +202,7 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 
 		portParts := strings.Split(strPort, "/")
 		if len(portParts) != 2 {
-			return nil, fmt.Errorf("invalid port '%s' (ex: 22/tcp)", strPort)
+			return nil, fmt.Errorf("invalid port '%s' (ex: 22/tcp, 53/udp)", strPort)
 		}
 
 		portNum, err := strconv.Atoi(portParts[0])
@@ -205,11 +213,15 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 			return nil, fmt.Errorf("port '%d' is out of bound ", portNum)
 		}
 
-		if portParts[1] != "tcp" {
-			return nil, fmt.Errorf("only tcp protocol is supported (%s)", line)
+		switch portParts[1] {
+		case "tcp":
+			port.Protocol = VMPortProtocolTCP
+		case "udp":
+			port.Protocol = VMPortProtocolUDP
+		default:
+			return nil, fmt.Errorf("unsupported protocol '%s', only tcp and udp are supported (%s)", portParts[1], line)
 		}
 
-		port.Protocol = VMPortProtocolTCP
 		port.Port = uint16(portNum)
 
 		group := strings.TrimSpace(lineParts[1])
@@ -251,6 +263,9 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 			// check if we found a PROXY comment
 			parts := strings.Split(comment, ":")
 			if len(parts) > 0 && parts[0] == "PROXY" {
+				if port.Protocol != VMPortProtocolTCP {
+					return nil, fmt.Errorf("PROXY protocol is only supported with tcp (%s)", line)
+				}
 				port.ProxyPort = VMPortProxyProtocoDefault
 				if len(parts) == 2 {
 					p, err := strconv.Atoi(parts[1])
