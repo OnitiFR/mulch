@@ -282,6 +282,9 @@ func NewVMPortArray(strPorts []string) ([]*VMPort, error) {
 			if port.Port == p.Port && port.Direction == p.Direction && port.Protocol == p.Protocol && port.Group == p.Group && port.PublicPort == p.PublicPort {
 				return nil, fmt.Errorf("duplicate port '%s'", line)
 			}
+			if port.PublicPort != 0 && port.PublicPort == p.PublicPort && port.Protocol == p.Protocol {
+				return nil, fmt.Errorf("public port %d/%s is already used by '%s' (%s)", port.PublicPort, port.ProtocolString(), p.String(), line)
+			}
 		}
 
 		ports = append(ports, &port)
