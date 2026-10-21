@@ -113,6 +113,7 @@ func (pl *UDPPortListener) Listen() {
 				break
 			}
 			pl.log.Errorf("port proxy: %s: failed to read UDP datagram: %s", pl.listenAddr.String(), err)
+			time.Sleep(100 * time.Millisecond)
 			continue
 		}
 
