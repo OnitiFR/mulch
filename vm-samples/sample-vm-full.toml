@@ -90,14 +90,14 @@ ports = [
     "8080-8090/tcp->@PUBLIC",
     "9080-9090/tcp->@PUBLIC:4000-4010",
 
-    # UDP works the same way (ex: DNS server), use $_53_UDP when importing
-    "53/udp->@PUBLIC",
-    "53/tcp->@PUBLIC",
+    # UDP works the same way, ex: expose a WireGuard VPN server
+    # (when importing an UDP port from a group, use $_51820_UDP)
+    "51820/udp->@PUBLIC",
 
     # PROXY protocol is supported (tcp only), see deb-proxy-proto.sh prepare
     # script for transparent client IP forwarding
-    "8081/tcp->@PUBLIC (PROXY)", # default PROXY protocol server port is 8443
-    "8082/tcp->@PUBLIC (PROXY:8888)", # … but you can change it
+    "8091/tcp->@PUBLIC (PROXY)", # default PROXY protocol server port is 8443…
+    "8092/tcp->@PUBLIC (PROXY:8888)", # … but you can change it
 ]
 
 backup_disk_size = "2G"
