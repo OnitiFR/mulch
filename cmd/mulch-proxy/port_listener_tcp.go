@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/OnitiFR/mulch/common"
 )
@@ -61,10 +62,15 @@ func (pl *TCPPortListener) Listen() {
 	for {
 		conn, err := pl.listener.AcceptTCP()
 		if err != nil {
-			if pl.closed {
+			pl.mutex.Lock()
+			closed := pl.closed
+			pl.mutex.Unlock()
+			if closed {
 				break
 			}
 			pl.log.Errorf("port proxy: %s: failed to accept connection: %s", pl.listenAddr.String(), err)
+			time.Sleep(100 * time.Millisecond)
+			continue
 		}
 
 		sourceIP := conn.RemoteAddr().(*net.TCPAddr).IP.String()
@@ -73,6 +79,7 @@ func (pl *TCPPortListener) Listen() {
 		var forwardTo net.TCPAddr
 		var existsF bool
 
+		pl.mutex.Lock()
 		if pl.public {
 			forwarder, existsF = pl.forwardMap["*"]
 			if existsF {
@@ -98,6 +105,7 @@ func (pl *TCPPortListener) Listen() {
 		}
 
 		closeChan, existsC := pl.closeChannels[key]
+		pl.mutex.Unlock()
 
 		if existsF && existsC {
 			pl.log.Tracef("+ TCP %s->%s:%d", sourceIP, forwardTo.IP.String(), pl.port)
@@ -118,14 +126,14 @@ func (pl *TCPPortListener) Listen() {
 
 // Close the listener
 func (pl *TCPPortListener) Close() error {
+	pl.mutex.Lock()
+	defer pl.mutex.Unlock()
+
 	pl.closed = true
 	err := pl.listener.Close()
 	if err != nil {
 		return err
 	}
-
-	pl.mutex.Lock()
-	defer pl.mutex.Unlock()
 
 	for key, c := range pl.closeChannels {
 		close(c)
