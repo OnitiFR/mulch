@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"net"
+	"sync"
 	"sync/atomic"
 )
 
@@ -12,7 +13,7 @@ type TCPPortForward struct {
 	toConn            io.ReadWriteCloser
 	closeChanInternal chan bool
 	closeChanExternal chan bool
-	closed            bool
+	closeOnce         sync.Once
 	log               *Log
 }
 
@@ -84,11 +85,9 @@ func (pf *TCPPortForward) pipe(src io.Reader, dst io.Writer) {
 	}
 }
 
-// close the forwarding
+// close the forwarding (called by both pipes, possibly at the same time)
 func (pf *TCPPortForward) close() {
-	if pf.closed {
-		return
-	}
-	pf.closed = true
-	close(pf.closeChanInternal)
+	pf.closeOnce.Do(func() {
+		close(pf.closeChanInternal)
+	})
 }
