@@ -261,7 +261,7 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 	}
 
 	if !route.Public {
-		valid, key := app.APIKeysDB.IsValidKey(requestGetMulchParam(r, "key"))
+		valid, key := app.APIKeysDB.IsValidKey(r.Header.Get("Mulch-Key"))
 		if !valid {
 			errMsg := "invalid key"
 			app.Log.Errorf("%d: %s", http.StatusForbidden, errMsg)
