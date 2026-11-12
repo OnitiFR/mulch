@@ -291,6 +291,15 @@ func AddKeyTrustedVMController(req *server.Request) {
 
 	req.Stream.Infof("key fingerprint: %s", fingerprint)
 	req.Stream.Warning("reminder: this key can be used by other users on the VM when you are connected")
+
+	// forwarding a mulch authentication key is allowed (mulch client used
+	// inside the VM, for instance), but it's risky: warn the user
+	owner := req.App.APIKeysDB.GetBySSHAuthorizedKeyFingerprint(fingerprint)
+	if owner != nil {
+		req.Stream.Warningf("this SSH key is also a mulch authentication key (API key '%s'): while you are connected, anyone able to use your agent on VM '%s' can authenticate to mulch as '%s'. You should use a dedicated SSH key for mulch, see 'mulch help key ssh'",
+			owner.Comment, vmName, owner.Comment)
+	}
+
 	req.Stream.Successf("key will now be forwared to VM '%s'", vmName)
 }
 

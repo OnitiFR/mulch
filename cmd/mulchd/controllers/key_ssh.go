@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/OnitiFR/mulch/cmd/mulchd/server"
 	"github.com/OnitiFR/mulch/common"
@@ -64,6 +65,22 @@ func AddKeySSHController(req *server.Request) {
 		ssh.FingerprintSHA256(pub), key.Comment, req.Author()))
 
 	req.Stream.Infof("fingerprint: %s", ssh.FingerprintSHA256(pub))
+
+	// same key already forwarded to VMs ('trust forward')? allowed, but risky
+	trusts := req.App.APIKeysDB.GetTrustsByFingerprint(ssh.FingerprintSHA256(pub))
+	if len(trusts) > 0 {
+		vms := make([]string, 0, len(trusts))
+		for _, trust := range trusts {
+			if trust.APIKey == key {
+				vms = append(vms, trust.VMName)
+			} else {
+				vms = append(vms, fmt.Sprintf("%s (by '%s')", trust.VMName, trust.APIKey.Comment))
+			}
+		}
+		req.Stream.Warningf("this SSH key is also forwarded to VM(s) %s: while connected, anyone able to use the agent on these VMs can authenticate to mulch as '%s'. You should use a dedicated SSH key for mulch, see 'mulch help key ssh'",
+			strings.Join(vms, ", "), key.Comment)
+	}
+
 	req.Stream.Successf("SSH key added to '%s'", key.Comment)
 }
 

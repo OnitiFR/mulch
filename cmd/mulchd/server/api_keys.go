@@ -344,6 +344,46 @@ func (db *APIKeyDatabase) GetBySSHAuthorizedKey(pub ssh.PublicKey) *APIKey {
 	return nil
 }
 
+// GetBySSHAuthorizedKeyFingerprint returns the API key owning the personal
+// SSH key with this SHA256 fingerprint, or nil if not found
+func (db *APIKeyDatabase) GetBySSHAuthorizedKeyFingerprint(fingerprint string) *APIKey {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	for _, key := range db.keys {
+		for _, authKey := range key.SSHAuthorizedKeys {
+			pub, _, _, _, err := ssh.ParseAuthorizedKey([]byte(authKey.PublicKey))
+			if err == nil && ssh.FingerprintSHA256(pub) == fingerprint {
+				return key
+			}
+		}
+	}
+	return nil
+}
+
+// APISSHFingerprintTrust is a VM an SSH key is forwarded to, by an API key
+type APISSHFingerprintTrust struct {
+	APIKey *APIKey
+	VMName string
+}
+
+// GetTrustsByFingerprint returns every VM this SSH key fingerprint is
+// forwarded to ('trust forward'), for all API keys
+func (db *APIKeyDatabase) GetTrustsByFingerprint(fingerprint string) []APISSHFingerprintTrust {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	var res []APISSHFingerprintTrust
+	for _, key := range db.keys {
+		for _, fp := range key.SSHAllowedFingerprints {
+			if fp.Fingerprint == fingerprint {
+				res = append(res, APISSHFingerprintTrust{APIKey: key, VMName: fp.VMName})
+			}
+		}
+	}
+	return res
+}
+
 // IsSSHKeyStillAuthorized returns true if the key still exists in the
 // database and still authorizes the (marshaled) SSH public key
 func (db *APIKeyDatabase) IsSSHKeyStillAuthorized(key *APIKey, pub string) bool {

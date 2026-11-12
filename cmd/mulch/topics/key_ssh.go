@@ -21,6 +21,10 @@ ssh_pub_key = "~/.ssh/id_ed25519.pub"
 Security keys (ed25519-sk / ecdsa-sk, ex: YubiKey) are supported, and
 need a touch for each new session.
 
+Use a dedicated SSH key for mulch, and do not forward it to VMs ('trust
+forward', for git, for instance): while you are connected, anyone able to
+use your agent on the VM could authenticate to mulch as you.
+
 You can then disable the static key with 'key ssh only' (warning: test that
 your SSH keys work before doing this)
 `,

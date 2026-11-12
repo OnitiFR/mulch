@@ -521,6 +521,10 @@ ssh_pub_key = "~/.ssh/id_ed25519.pub"
 ```
 You can then disable the static key with `mulch key ssh only <key> on`.
 
+Use a dedicated key for mulch (ideally a security key), and don't forward
+it to your VMs with `mulch trust forward`: while you are connected, anyone
+able to use your agent on the VM could authenticate to mulch as you.
+
 ### Completion
 
 To install bash completion, you may have a look at `mulch help completion`, you may

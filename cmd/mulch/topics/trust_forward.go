@@ -25,6 +25,10 @@ exists in your own SSH agent (and you use the same mulch API key, of course).
 
 Warning: this is a security-sensitive operation, and your key will be available
 to anyone who can connect to the VM while you are connected.
+
+Do not forward your mulch authentication key ('ssh_pub_key'), unless you
+know what you are doing: anyone using it on the VM could authenticate to
+mulch as you.
 `,
 	Aliases: []string{"add"},
 
