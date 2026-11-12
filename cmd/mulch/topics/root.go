@@ -116,7 +116,7 @@ alias = "my"
 
 Instead of a static key, you can authenticate with your own SSH key (it
 must be registered with 'mulch key ssh add'), replacing 'key' with:
-ssh_pub_key = "~/.ssh/id_ed25519.pub"
+ssh_pub_key = "~/.ssh/id_ed25519_mulch_api.pub"
 
 You can define multiple servers and use -s option to select one, or use
 default = "my-mulch" as a global setting (i.e. before [[server]]).

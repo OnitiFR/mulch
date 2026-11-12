@@ -22,7 +22,7 @@ Accepted types: ed25519, ecdsa, RSA (2048 bits or more) and their
 security key variants (ed25519-sk, ecdsa-sk).
 
 Examples:
-  mulch key ssh add alice ~/.ssh/id_ed25519.pub
+  mulch key ssh add alice ~/.ssh/id_ed25519_mulch_api.pub
   ssh-add -L | grep alice@laptop | mulch key ssh add alice -
 `,
 	Args: cobra.ExactArgs(2),

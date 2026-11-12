@@ -512,18 +512,24 @@ First server is the default. Environment variable `SERVER` is also available.
 ### Authenticate with your SSH key (recommended)
 
 Instead of storing a static API key in this file, you can use your own SSH
-key, loaded into your SSH agent (security keys like YubiKey `ed25519-sk`
-are supported). Once your public key is registered on the server
-(`mulch key ssh add <key> ~/.ssh/id_ed25519.pub`, see `mulch help key ssh`),
+key, loaded into your SSH agent. Use a dedicated key for mulch, not your
+everyday key, protected by a passphrase (or, even better, a security key,
+like YubiKey `ed25519-sk`):
+```sh
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_mulch_api
+```
+Once your public key is registered on the server
+(`mulch key ssh add <key> ~/.ssh/id_ed25519_mulch_api.pub`, see `mulch help key ssh`),
 replace `key` with:
 ```toml
-ssh_pub_key = "~/.ssh/id_ed25519.pub"
+ssh_pub_key = "~/.ssh/id_ed25519_mulch_api.pub"
 ```
 You can then disable the static key with `mulch key ssh only <key> on`.
 
-Use a dedicated key for mulch (ideally a security key), and don't forward
-it to your VMs with `mulch trust forward`: while you are connected, anyone
-able to use your agent on the VM could authenticate to mulch as you.
+Don't forward this key to your VMs with `mulch trust forward`: while you are
+connected, anyone able to use your agent on the VM could authenticate to mulch
+as you. Beware of `ssh -A` (`ForwardAgent`), which forwards your whole agent,
+this key included (a security key mitigates this, as each use needs a touch).
 
 ### Completion
 
