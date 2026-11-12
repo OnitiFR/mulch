@@ -3,6 +3,7 @@ package server
 import (
 	"bufio"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/OnitiFR/mulch/common"
+	"golang.org/x/crypto/ssh"
 	"libvirt.org/go/libvirt"
 	"libvirt.org/go/libvirtxml"
 )
@@ -54,6 +56,7 @@ type App struct {
 	VMStateDB      *VMStateDatabase
 	BackupsDB      *BackupDatabase
 	APIKeysDB      *APIKeyDatabase
+	AuthTokens     *AuthTokenStore
 	AlertSender    *AlertSender
 	Seeder         *SeedDatabase
 	Origins        *Origins
@@ -372,12 +375,58 @@ func (app *App) initBackupDB() error {
 func (app *App) initAPIKeysDB() error {
 	dbPath := app.Config.DataPath + "/mulch-api-keys.db"
 
-	db, err := NewAPIKeyDatabase(dbPath, app.Log, app.Rand)
+	db, err := NewAPIKeyDatabase(dbPath, app.Log)
 	if err != nil {
 		return err
 	}
 	app.APIKeysDB = db
+	app.AuthTokens = NewAuthTokenStore()
 	return nil
+}
+
+// ErrInvalidKey is returned for an unknown/expired key or token
+var ErrInvalidKey = errors.New("invalid key")
+
+// ErrSSHAuthRequired is returned for the static secret of a key in SSH-only mode
+var ErrSSHAuthRequired = errors.New("this API key requires SSH authentication (use 'ssh_pub_key', see 'mulch help key ssh')")
+
+// GetAPIKeyFromSecret returns the API key matching the secret sent by
+// the client (a session token or a static API key), and the SSH key used
+// to open the session (nil for a static API key). With ErrSSHAuthRequired,
+// the API key is returned too (for alerts), but must not be used.
+func (app *App) GetAPIKeyFromSecret(secret string) (*APIKey, ssh.PublicKey, error) {
+	apiKey, pubStr, isToken := app.AuthTokens.Get(secret)
+	if isToken {
+		// the key may have been deleted or the SSH key revoked since
+		if !app.APIKeysDB.IsSSHKeyStillAuthorized(apiKey, pubStr) {
+			return nil, nil, ErrInvalidKey
+		}
+		pub, err := ssh.ParsePublicKey([]byte(pubStr))
+		if err != nil {
+			return nil, nil, ErrInvalidKey
+		}
+		return apiKey, pub, nil
+	}
+
+	valid, apiKey := app.APIKeysDB.IsValidKey(secret)
+	if !valid {
+		return nil, nil, ErrInvalidKey
+	}
+	if apiKey.SSHAuthOnly {
+		return apiKey, nil, ErrSSHAuthRequired
+	}
+	return apiKey, nil, nil
+}
+
+// SSHAuthServerHost returns our host name, as clients must see it, for
+// signature checks: the HTTPS domain if configured, else the Host header
+// (in HTTP mode, there's no way to protect against relay attacks anyway:
+// the token can be intercepted)
+func (app *App) SSHAuthServerHost(r *http.Request) string {
+	if app.Config.ListenHTTPSDomain != "" {
+		return common.SSHAuthHost(app.Config.ListenHTTPSDomain)
+	}
+	return common.SSHAuthHost(r.Host)
 }
 
 func (app *App) initSeedsDB() error {

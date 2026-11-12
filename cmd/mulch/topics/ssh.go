@@ -81,6 +81,17 @@ func sshCmdInfoCB(reader io.Reader, _ http.Header) {
 	}
 
 	sshCmdVM = &data
+
+	if client.SSHAuthEnabled() {
+		// personal key, via the SSH agent: nothing written on disk
+		identityFile, err := client.SSHAuthIdentityFile()
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		sshCmdRun(identityFile)
+		return
+	}
+
 	call := client.GlobalAPI.NewCall("GET", "/sshpair", map[string]string{})
 	call.JSONCallback = sshCmdPairCB
 	call.Do()
@@ -92,7 +103,12 @@ func sshCmdPairCB(reader io.Reader, _ http.Header) {
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+	sshCmdRun(privFilePath)
+}
 
+// sshCmdRun launches ssh, using the given identity file (private key, or
+// public key of a key loaded in the agent)
+func sshCmdRun(identityFile string) {
 	hostname, err := client.GetSSHHost()
 	if err != nil {
 		log.Fatal(err.Error())
@@ -118,7 +134,8 @@ func sshCmdPairCB(reader io.Reader, _ http.Header) {
 
 	// launch 'ssh' command
 	args := []string{
-		"-i", privFilePath,
+		"-i", identityFile,
+		"-o", "IdentitiesOnly=yes",
 		"-p", strconv.Itoa(client.GlobalConfig.Server.SSHPort),
 		"-A",
 		destination,

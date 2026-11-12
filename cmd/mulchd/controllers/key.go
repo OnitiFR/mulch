@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 	"strings"
@@ -46,6 +47,8 @@ func NewKeyController(req *server.Request) {
 		req.Stream.Failuref("Cannot create Key: %s", err)
 		return
 	}
+
+	req.App.AlertSender.Security("API key created", fmt.Sprintf("key '%s' created by %s", key.Comment, req.Author()))
 
 	req.Stream.Infof("key = %s", key.Key)
 	req.Stream.Successf("Key '%s' created", key.Comment)

@@ -2,9 +2,9 @@ package server
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"io"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -30,14 +30,30 @@ func IsValidWord(token string) bool {
 	return match
 }
 
-// RandString generate a random string of A-Za-z0-9 runes
-func RandString(n int, rand *rand.Rand) string {
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+// RandString generate a random string of A-Za-z0-9 runes, using
+// a cryptographically secure source (use it for keys, tokens, passwords…)
+func RandString(n int) (string, error) {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	// reject bytes >= 248 (4*62) to avoid modulo bias
+	const maxByte = 256 - (256 % len(letters))
+
+	res := make([]byte, 0, n)
+	buf := make([]byte, n)
+	for len(res) < n {
+		if _, err := rand.Read(buf); err != nil {
+			return "", err
+		}
+		for _, b := range buf {
+			if int(b) >= maxByte {
+				continue
+			}
+			res = append(res, letters[int(b)%len(letters)])
+			if len(res) == n {
+				break
+			}
+		}
 	}
-	return string(b)
+	return string(res), nil
 }
 
 // GetURLScheme returns the scheme of the given URL

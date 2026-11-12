@@ -369,7 +369,8 @@ func (db *SecretDatabase) savePassphrase() error {
 func (db *SecretDatabase) generatePassphrase() error {
 	passphrase := make([]byte, 32)
 
-	_, err := db.app.Rand.Read(passphrase)
+	// must be cryptographically secure: this is the AES key of the database
+	_, err := rand.Read(passphrase)
 	if err != nil {
 		return err
 	}

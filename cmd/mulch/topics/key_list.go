@@ -52,14 +52,20 @@ func keyListCB(reader io.Reader, _ http.Header) {
 
 		strData := [][]string{}
 		for _, line := range data {
+			sshOnly := ""
+			if line.SSHAuthOnly {
+				sshOnly = "yes"
+			}
 			strData = append(strData, []string{
 				line.Comment,
 				fmt.Sprintf("%d", line.RightCount),
 				fmt.Sprintf("%d", line.FingerprintCount),
+				fmt.Sprintf("%d", line.SSHKeyCount),
+				sshOnly,
 			})
 		}
 
-		headers := []string{"Comment", "Rights", "Fingerprints"}
+		headers := []string{"Comment", "Rights", "Fingerprints", "SSH keys", "SSH only"}
 		client.RenderTable(headers, strData)
 	}
 }

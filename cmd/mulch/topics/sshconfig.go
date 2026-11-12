@@ -55,6 +55,20 @@ If --all is used, two aliases are available per VM:
 		sshConfigCmdData.hostname = hostname
 		sshConfigCmdData.all, _ = cmd.Flags().GetBool("all")
 
+		if client.SSHAuthEnabled() {
+			// personal key, via the SSH agent: nothing secret written on disk
+			identityFile, errI := client.SSHAuthIdentityFile()
+			if errI != nil {
+				log.Fatal(errI.Error())
+			}
+			sshConfigCmdData.privKeyPath = identityFile
+
+			call := client.GlobalAPI.NewCall("GET", "/vm", map[string]string{})
+			call.JSONCallback = sshConfigCmdVMListCB
+			call.Do()
+			return
+		}
+
 		call := client.GlobalAPI.NewCall("GET", "/sshpair", map[string]string{})
 		call.JSONCallback = sshConfigCmdPairCB
 		call.Do()
@@ -106,6 +120,11 @@ func sshConfigCmdVMListCB(reader io.Reader, _ http.Header) {
 	err = sshConfigCmdGenerate(&sshConfigCmdData)
 	if err != nil {
 		log.Fatal(err.Error())
+	}
+
+	// aliases no longer use the generated key pair, remove it
+	if client.SSHAuthEnabled() {
+		client.RemoveLegacySSHPair()
 	}
 }
 
@@ -163,6 +182,7 @@ Host *
 		file.WriteString(fmt.Sprintf("Host %s\n", aliasName))
 		file.WriteString(fmt.Sprintf("    HostName %s\n", conf.hostname))
 		file.WriteString(fmt.Sprintf("    IdentityFile %s\n", conf.privKeyPath))
+		file.WriteString("    IdentitiesOnly yes\n")
 		file.WriteString(fmt.Sprintf("    Port %d\n", client.GlobalConfig.Server.SSHPort))
 		file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.AppUser, vm.Name+revision))
 		file.WriteString("    ForwardAgent yes\n")
@@ -174,6 +194,7 @@ Host *
 			file.WriteString(fmt.Sprintf("Host %s\n", appAliasName))
 			file.WriteString(fmt.Sprintf("    HostName %s\n", conf.hostname))
 			file.WriteString(fmt.Sprintf("    IdentityFile %s\n", conf.privKeyPath))
+			file.WriteString("    IdentitiesOnly yes\n")
 			file.WriteString(fmt.Sprintf("    Port %d\n", client.GlobalConfig.Server.SSHPort))
 			file.WriteString(fmt.Sprintf("    User %s@%s\n", vm.SuperUser, vm.Name+revision))
 			file.WriteString("    ForwardAgent yes\n")

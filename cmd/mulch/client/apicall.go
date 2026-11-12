@@ -28,8 +28,11 @@ var currentVMName string
 type API struct {
 	ServerURL string
 	APIKey    string
+	SSHPubKey string // personal SSH key (replaces APIKey)
 	Trace     bool
 	Time      common.MessageTimestamp
+
+	sshAuth *sshAuthState
 }
 
 // APICall describes a call to the API
@@ -44,6 +47,7 @@ type APICall struct {
 	DisableSpecialMessages bool
 	PrintLogTarget         bool
 	files                  map[string]string
+	noAuth                 bool // do not send any key (auth routes)
 }
 
 // NewAPI create a new API instance
@@ -80,15 +84,20 @@ func (call *APICall) AddFile(fieldname string, filename string) error {
 	return nil
 }
 
-// Do the actual API call
-func (call *APICall) Do() {
-	method := strings.ToUpper(call.Method)
+// requestSignature is the signature of a sensitive request, for the
+// server's challenge (see signRequest)
+type requestSignature struct {
+	challenge string
+	signature string
+}
 
-	apiURL, err := common.CleanURL(call.api.ServerURL + "/" + call.Path)
-	if err != nil {
-		log.Fatal(err)
-	}
+// url returns the full URL of the call (without parameters)
+func (call *APICall) url() (string, error) {
+	return common.CleanURL(call.api.ServerURL + "/" + call.Path)
+}
 
+// params returns all parameters sent with the call
+func (call *APICall) params() url.Values {
 	data := url.Values{}
 	for key, val := range call.Args {
 		data.Add(key, val)
@@ -96,25 +105,39 @@ func (call *APICall) Do() {
 	if call.api.Trace {
 		data.Add("trace", "true")
 	}
+	return data
+}
+
+// buildRequest creates the HTTP request, using secret as the key, and
+// with the request signature, if any
+func (call *APICall) buildRequest(secret string, sig *requestSignature) (*http.Request, error) {
+	method := strings.ToUpper(call.Method)
+
+	apiURL, err := call.url()
+	if err != nil {
+		return nil, err
+	}
+
+	data := call.params()
 
 	var req *http.Request
 
 	switch method {
 	case "GET", "DELETE":
 		if len(call.files) > 0 {
-			log.Fatal("file upload is not supported using this method")
+			return nil, errors.New("file upload is not supported using this method")
 		}
 		finalURL := apiURL + "?" + data.Encode()
 		req, err = http.NewRequest(method, finalURL, nil)
 		if err != nil {
-			log.Fatal(common.RemoveAPIKeyFromString(err.Error(), call.api.APIKey))
+			return nil, err
 		}
 	case "POST", "PUT":
 		if len(call.files) == 0 {
 			// simple URL encoded form
 			req, err = http.NewRequest(method, apiURL, bytes.NewBufferString(data.Encode()))
 			if err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		} else {
@@ -123,68 +146,132 @@ func (call *APICall) Do() {
 			pipeReader, pipeWriter := io.Pipe()
 			multipartWriter := multipart.NewWriter(pipeWriter)
 
+			// errors are forwarded to the HTTP client using the pipe (the
+			// server may also reject the request before reading the body)
 			go func() {
-				defer pipeWriter.Close()
-
 				for fieldname, value := range data {
 					errM := multipartWriter.WriteField(fieldname, value[0])
 					if errM != nil {
-						log.Fatal(errM)
+						pipeWriter.CloseWithError(errM)
+						return
 					}
 				}
 
-				// range call.files
 				for field, filename := range call.files {
 					ff, errM := multipartWriter.CreateFormFile(field, path.Base(filename))
 					if errM != nil {
-						log.Fatal(errM)
+						pipeWriter.CloseWithError(errM)
+						return
 					}
 					file, errO := os.Open(filename)
 					if errO != nil {
-						log.Fatal(errO)
+						pipeWriter.CloseWithError(errO)
+						return
 					}
-					defer file.Close()
-					if _, err = io.Copy(ff, file); err != nil {
-						log.Fatal(err)
+					_, errC := io.Copy(ff, file)
+					file.Close()
+					if errC != nil {
+						pipeWriter.CloseWithError(errC)
+						return
 					}
 				}
 
-				err = multipartWriter.Close()
-				if err != nil {
-					log.Fatal(err)
-				}
+				pipeWriter.CloseWithError(multipartWriter.Close())
 			}()
 			req, err = http.NewRequest(method, apiURL, pipeReader)
 			if err != nil {
-				return
+				return nil, err
 			}
 			req.Header.Set("Content-Type", multipartWriter.FormDataContentType())
 		}
 	default:
-		log.Fatalf("apicall does not support '%s' yet", method)
+		return nil, fmt.Errorf("apicall does not support '%s' yet", method)
 	}
 
-	req.Header.Set("Mulch-Key", call.api.APIKey)
+	if secret != "" {
+		req.Header.Set("Mulch-Key", secret)
+	}
+	if sig != nil {
+		req.Header.Set(common.SSHRequestChallengeHeader, sig.challenge)
+		req.Header.Set(common.SSHRequestSignatureHeader, sig.signature)
+	}
 	req.Header.Set("Mulch-Version", Version)
 	req.Header.Set("Mulch-Protocol", strconv.Itoa(ProtocolVersion))
 
+	return req, nil
+}
+
+// send the request, with the given secret and signature
+func (call *APICall) send(secret string, sig *requestSignature) *http.Response {
+	req, err := call.buildRequest(secret, sig)
+	if err != nil {
+		log.Fatal(common.RemoveAPIKeyFromString(err.Error(), secret))
+	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatal(common.RemoveAPIKeyFromString(err.Error(), call.api.APIKey))
+		log.Fatal(common.RemoveAPIKeyFromString(err.Error(), secret))
 	}
-	defer resp.Body.Close()
+	return resp
+}
 
-	if resp.StatusCode != http.StatusOK {
+// Do the actual API call
+func (call *APICall) Do() {
+	secret := ""
+	fromCache := false
+	if !call.noAuth {
+		var err error
+		secret, fromCache, err = call.api.getSecret()
+		if err != nil {
+			log.Fatalf("Error: %s", err)
+		}
+	}
+
+	// the request may be sent again (once for each case):
+	// - with a new session token, if the cached one was rejected
+	// - signed, if the server requires it (sensitive request)
+	var sig *requestSignature
+	var resp *http.Response
+	for {
+		resp = call.send(secret, sig)
+		if resp.StatusCode == http.StatusOK {
+			break
+		}
+
 		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		// cached session token rejected (expired, server restart, …)?
+		if fromCache && resp.StatusCode == http.StatusForbidden && strings.TrimSpace(string(body)) == "invalid key" {
+			call.api.clearCachedToken()
+			secret, _, err = call.api.getSecret()
+			if err != nil {
+				log.Fatalf("Error: %s", err)
+			}
+			fromCache = false
+			continue
+		}
+
+		// the request must be signed with our SSH key
+		challenge := resp.Header.Get(common.SSHRequestChallengeHeader)
+		if sig == nil && resp.StatusCode == http.StatusUnauthorized && challenge != "" && call.api.SSHPubKey != "" {
+			sig, err = call.signRequest(challenge)
+			if err != nil {
+				log.Fatalf("Error: %s", err)
+			}
+			continue
+		}
+
 		log.Fatalf("Error: %s (%v)\nMessage: %s",
 			resp.Status,
 			resp.StatusCode,
 			string(body),
 		)
 	}
+	defer resp.Body.Close()
 
 	mime := resp.Header.Get("Content-Type")
 	cvnHeader := resp.Header.Get("Current-VM-Name")

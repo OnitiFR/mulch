@@ -509,6 +509,22 @@ You can define multiple servers and use -s option to select one, or use
 default = "my-mulch" as a global setting (i.e. before [[server]]).
 First server is the default. Environment variable `SERVER` is also available.
 
+### Authenticate with your SSH key (recommended)
+
+Instead of storing a static API key in this file, you can use your own SSH
+key, loaded in your SSH agent (security keys like YubiKey `ed25519-sk` are
+supported). Once your public key is registered on the server
+(`mulch key ssh add <key> ~/.ssh/id_ed25519.pub`, see `mulch help key ssh`),
+replace `key` with:
+```toml
+ssh_pub_key = "~/.ssh/id_ed25519.pub"
+```
+The client signs a challenge with your key and gets a session token (valid
+8 hours), kept in `$XDG_RUNTIME_DIR`.
+Nothing secret is stored on disk: the same key is used for `mulch ssh`,
+`mulch ssh-config`, etc. An admin can then disable the static key with
+`mulch key ssh only <key> on`.
+
 To install bash completion, you may have a look at `mulch help completion`, you may
 also install ssh aliases right now with `mulch ssh-config`.
 

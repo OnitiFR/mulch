@@ -22,7 +22,7 @@ var callCountForSFTPCopy = 0
 // SFTPCopy is a WIP
 func SFTPCopy(vmName string, user string, filename string) error {
 	// only on first call
-	if callCountForSFTPCopy == 0 {
+	if callCountForSFTPCopy == 0 && !SSHAuthEnabled() {
 		err := CreateSSHMulchDir()
 		if err != nil {
 			return err
@@ -34,7 +34,17 @@ func SFTPCopy(vmName string, user string, filename string) error {
 	}
 	callCountForSFTPCopy++
 
-	privKeyFile := GetSSHPath(MulchSSHSubDir + SSHKeyPrefix + GlobalConfig.Server.Name)
+	var authMethod ssh.AuthMethod
+	if SSHAuthEnabled() {
+		var err error
+		authMethod, err = SSHAuthMethod()
+		if err != nil {
+			return err
+		}
+	} else {
+		privKeyFile := GetSSHPath(MulchSSHSubDir + SSHKeyPrefix + GlobalConfig.Server.Name)
+		authMethod = publicKeyAuthFromPubFile(privKeyFile)
+	}
 
 	sshUser := user + "@" + vmName
 	remote, err := GetSSHHost()
@@ -51,7 +61,7 @@ func SFTPCopy(vmName string, user string, filename string) error {
 	config := &ssh.ClientConfig{
 		User: sshUser,
 		Auth: []ssh.AuthMethod{
-			publicKeyAuthFromPubFile(privKeyFile),
+			authMethod,
 		},
 		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			err := hostKeyCallback(hostname, remote, key)

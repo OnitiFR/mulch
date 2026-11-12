@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Alert parameters are stored in environment:
-# TYPE ("GOOD" / "BAD")
+# TYPE ("GOOD" / "BAD" / "SECURITY")
 # SUBJECT
 # CONTENT
 # Variables content is as harmless as possible: no (single/double) quotes, $, …
@@ -11,6 +11,8 @@ hook_url="https://hooks.slack.com/services/xxx"
 mark=":exclamation:"
 if [ "$TYPE" = "GOOD" ]; then
     mark=":heavy_check_mark:"
+elif [ "$TYPE" = "SECURITY" ]; then
+    mark=":lock:"
 fi
 
 payload=$(cat <<EOT

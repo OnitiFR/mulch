@@ -29,11 +29,31 @@ const (
 	RouteAPI      = "api"
 )
 
+// Route authentication modes. There's no default: every route must
+// explicitly choose its mode (AddRoute panics otherwise), so adding a
+// route is always an occasion to wonder if it's a sensitive one.
+const (
+	routeAuthUnset = iota // zero value, invalid
+
+	// RouteAuthPublic: no authentication
+	RouteAuthPublic
+
+	// RouteAuthKey: API key or session token (+ rights)
+	RouteAuthKey
+
+	// RouteAuthFresh: same as RouteAuthKey, but with a session token, the
+	// request itself must also be signed with the SSH key (see
+	// request_signature.go). Use it for every route allowing to keep
+	// access beyond the session lifetime (keys, rights, SSH keys, …):
+	// a stolen session token is then not enough to do so.
+	RouteAuthFresh
+)
+
 // Route describes a route to a handler
 type Route struct {
 	Route        string
 	Type         int
-	Public       bool
+	Auth         int // RouteAuth*, mandatory
 	NoProtoCheck bool
 	Handler      func(*Request)
 
@@ -156,6 +176,13 @@ func (app *App) AddRoute(route *Route, routeMuxer string) error {
 		return errors.New("field Route is not set")
 	}
 
+	switch route.Auth {
+	case RouteAuthPublic, RouteAuthKey, RouteAuthFresh:
+	default:
+		// programming error, fail as soon as possible
+		panic(fmt.Sprintf("route '%s': field Auth is not set (RouteAuthPublic, RouteAuthKey or RouteAuthFresh)", route.Route))
+	}
+
 	parts := strings.Split(route.Route, " ")
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid Route '%s'", route.Route)
@@ -260,16 +287,22 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 		streamStarted:   false,
 	}
 
-	if !route.Public {
-		valid, key := app.APIKeysDB.IsValidKey(r.Header.Get("Mulch-Key"))
-		if !valid {
-			errMsg := "invalid key"
+	if route.Auth != RouteAuthPublic {
+		key, sshPub, errK := app.GetAPIKeyFromSecret(r.Header.Get("Mulch-Key"))
+		if errK != nil {
+			if errors.Is(errK, ErrSSHAuthRequired) {
+				app.AlertSender.SecurityThrottled("Static API key used", key.Comment, fmt.Sprintf(
+					"the static secret of '%s' (SSH-only mode) was used from %s: leaked secret, or outdated client configuration?",
+					key.Comment, ip))
+			}
+			errMsg := errK.Error()
 			app.Log.Errorf("%d: %s", http.StatusForbidden, errMsg)
 			http.Error(w, errMsg, http.StatusForbidden)
 			return
 		}
 
 		request.APIKey = key
+		request.SSHPubKey = sshPub
 
 		if !request.IsAPIKeyAllowed() {
 			errMsg := "permission denied (rights)"
@@ -277,6 +310,15 @@ func routeHandleFunc(route *Route, w http.ResponseWriter, r *http.Request, app *
 			http.Error(w, errMsg, http.StatusForbidden)
 			return
 		}
+
+		// static API keys can't sign anything (SSH-only keys are
+		// already rejected by GetAPIKeyFromSecret)
+		if route.Auth == RouteAuthFresh && sshPub != nil {
+			if !request.checkRequestSignature(sshPub) {
+				return
+			}
+		}
+
 		app.Log.Tracef("API call: %s %s %s (key: %s)", ip, r.Method, route.path, key.Comment)
 	} else {
 		app.Log.Tracef("API call: %s %s %s", ip, r.Method, route.path)

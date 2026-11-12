@@ -12,11 +12,12 @@ import (
 )
 
 type tomlServerConfig struct {
-	Name    string
-	URL     string
-	Key     string
-	Alias   string
-	SSHPort int `toml:"ssh_port"`
+	Name      string
+	URL       string
+	Key       string
+	SSHPubKey string `toml:"ssh_pub_key"`
+	Alias     string
+	SSHPort   int `toml:"ssh_port"`
 }
 
 type tomlRootConfig struct {
@@ -120,12 +121,21 @@ func NewRootConfig(filename string) (*client.RootConfig, error) {
 				server.SSHPort = 8022
 			}
 
+			if server.Key != "" && server.SSHPubKey != "" {
+				return nil, fmt.Errorf("server '%s': 'key' and 'ssh_pub_key' are mutually exclusive, remove 'key' from %s", server.Name, filename)
+			}
+
+			if server.Key == "" && server.SSHPubKey == "" {
+				return nil, fmt.Errorf("server '%s': 'key' or 'ssh_pub_key' is required", server.Name)
+			}
+
 			rootConfig.Server = &client.ServerConfig{
-				Name:    server.Name,
-				URL:     server.URL,
-				Key:     server.Key,
-				Alias:   server.Alias,
-				SSHPort: server.SSHPort,
+				Name:      server.Name,
+				URL:       server.URL,
+				Key:       server.Key,
+				SSHPubKey: server.SSHPubKey,
+				Alias:     server.Alias,
+				SSHPort:   server.SSHPort,
 			}
 		}
 	}

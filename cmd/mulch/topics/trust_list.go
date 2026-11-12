@@ -14,6 +14,8 @@ import (
 )
 
 // trustListCmd represents the "trust list" command
+var trustListFlagBasic bool
+
 var trustListCmd = &cobra.Command{
 	Use:   "list [vm]",
 	Short: "List your forwarded SSH keys",
@@ -29,6 +31,11 @@ Warning: Remember that all forwarded keys can be used by other users on the VM w
 `,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		trustListFlagBasic, _ = cmd.Flags().GetBool("basic")
+		if trustListFlagBasic {
+			client.GetExitMessage().Disable()
+		}
+
 		vm := ""
 		if len(args) == 1 {
 			vm = args[0]
@@ -45,6 +52,13 @@ func TrustListCB(reader io.Reader, _ http.Header) {
 	err := dec.Decode(&data)
 	if err != nil {
 		log.Fatal(err.Error())
+	}
+
+	if trustListFlagBasic {
+		for _, line := range data {
+			fmt.Println(line.Fingerprint)
+		}
+		return
 	}
 
 	if len(data) == 0 {
@@ -68,4 +82,5 @@ func TrustListCB(reader io.Reader, _ http.Header) {
 
 func init() {
 	trustCmd.AddCommand(trustListCmd)
+	trustListCmd.Flags().BoolP("basic", "b", false, "show fingerprints only, without any formating")
 }

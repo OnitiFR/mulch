@@ -8,4 +8,6 @@ type APIKeyListEntry struct {
 	Comment          string
 	RightCount       int
 	FingerprintCount int
+	SSHKeyCount      int
+	SSHAuthOnly      bool
 }

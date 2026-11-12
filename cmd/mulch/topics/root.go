@@ -114,6 +114,10 @@ url = "http://192.168.10.104:8686"
 key = "gein2xah7keeL33thpe9ahvaegF15TUL3surae3Chue4riokooJ5WuTI80FTWfz2"
 alias = "my"
 
+Instead of a static key, you can authenticate with your own SSH key (it
+must registered with 'mulch key ssh add'):
+ssh_pub_key = "~/.ssh/id_ed25519.pub"
+
 You can define multiple servers and use -s option to select one, or use
 default = "my-mulch" as a global setting (i.e. before [[server]]).
 First server is the default.
@@ -132,6 +136,7 @@ Note: you can also use environment variables (SERVER, TRACE, TIMESTAMP).
 		client.GlobalConfig.Trace,
 		client.GlobalConfig.Time,
 	)
+	client.GlobalAPI.SSHPubKey = client.GlobalConfig.Server.SSHPubKey
 
 	setCompletion()
 

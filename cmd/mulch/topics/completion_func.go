@@ -75,6 +75,71 @@ __internal_list_keys() {
     fi
 }
 
+# completion of "<subcommand> <arg1> [arg2]" commands, by position
+# (key ssh …, trust …). Words are read keeping ':' (fingerprints contain
+# ':', a word break for bash), using bash-completion helpers when available.
+# $1: arg1 completion function, $2: arg2 completion function (called with
+# arg1 and the current word), $3…: subcommand name and its aliases
+__internal_two_args() {
+    local arg1_func=$1 arg2_func=$2 name
+    shift 2
+    local c_cur=$cur c_prev=$prev c_words c_cword
+    c_words=("${COMP_WORDS[@]}")
+    c_cword=$COMP_CWORD
+    if declare -F _get_comp_words_by_ref >/dev/null; then
+        _get_comp_words_by_ref -n : -c c_cur -p c_prev -w c_words -i c_cword
+    fi
+
+    for name in "$@"; do
+        if [ "$c_prev" = "$name" ]; then
+            $arg1_func
+            return
+        fi
+    done
+    for name in "$@"; do
+        if [ "${c_words[c_cword-2]}" = "$name" ]; then
+            $arg2_func "$c_prev" "$c_cur"
+            return
+        fi
+    done
+}
+
+__internal_none() {
+    :
+}
+
+# *.pub files, and directories to reach them (ex: ~/.ssh/)
+__internal_pub_files() {
+    local IFS=$'\n'
+    compopt -o filenames 2>/dev/null
+    COMPREPLY=( $( compgen -f -X '!*.pub' -- "$2"; compgen -d -- "$2" ) )
+}
+
+__internal_on_off() {
+    COMPREPLY=( $( compgen -W "on off" -- "$2" ) )
+}
+
+# $1: current word, $2…: mulch command listing fingerprints (first column)
+__internal_fingerprints() {
+    local c_cur=$1 mulch_output
+    shift
+    __mulch_get_server
+    if mulch_output=$(mulch --server $__mulch_current_server "$@" 2>/dev/null); then
+        COMPREPLY=( $( compgen -W "$(echo "${mulch_output}" | awk '{print $1}')" -- "$c_cur" ) )
+        if declare -F __ltrim_colon_completions >/dev/null; then
+            __ltrim_colon_completions "$c_cur"
+        fi
+    fi
+}
+
+__internal_key_fingerprints() {
+    __internal_fingerprints "$2" key ssh list "$1"
+}
+
+__internal_trust_fingerprints() {
+    __internal_fingerprints "$2" trust list "$1" --basic
+}
+
 __internal_list_peers() {
     local mulch_output out
     __mulch_get_server
@@ -124,7 +189,7 @@ __mulch_custom_func() {
             __internal_list_toml_files
             return
             ;;
-        mulch_ssh | mulch_vm_backup | mulch_vm_config | mulch_vm_delete | mulch_vm_infos | mulch_vm_lock | mulch_vm_rebuild | mulch_vm_redefine | mulch_vm_start | mulch_vm_stop | mulch_vm_unlock | mulch_vm_activate | mulch_vm_deactivate | mulch_log | mulch_vm_console | mulch_vm_restart | mulch_vm_load | mulch_trust_forward | mulch_trust_list | mulch_trust_remove)
+        mulch_ssh | mulch_vm_backup | mulch_vm_config | mulch_vm_delete | mulch_vm_infos | mulch_vm_lock | mulch_vm_rebuild | mulch_vm_redefine | mulch_vm_start | mulch_vm_stop | mulch_vm_unlock | mulch_vm_activate | mulch_vm_deactivate | mulch_log | mulch_vm_console | mulch_vm_restart | mulch_vm_load)
             __internal_list_vms
             return
             ;;
@@ -154,6 +219,34 @@ __mulch_custom_func() {
             ;;
         mulch_key_right_list | mulch_key_right_add | mulch_key_right_remove | mulch_key_delete)
             __internal_list_keys
+            return
+            ;;
+        mulch_key_ssh_list)
+            __internal_two_args __internal_list_keys __internal_none list
+            return
+            ;;
+        mulch_key_ssh_add)
+            __internal_two_args __internal_list_keys __internal_pub_files add
+            return
+            ;;
+        mulch_key_ssh_remove)
+            __internal_two_args __internal_list_keys __internal_key_fingerprints remove
+            return
+            ;;
+        mulch_key_ssh_only)
+            __internal_two_args __internal_list_keys __internal_on_off only
+            return
+            ;;
+        mulch_trust_list)
+            __internal_two_args __internal_list_vms __internal_none list
+            return
+            ;;
+        mulch_trust_forward)
+            __internal_two_args __internal_list_vms __internal_pub_files forward add
+            return
+            ;;
+        mulch_trust_remove)
+            __internal_two_args __internal_list_vms __internal_trust_fingerprints remove delete unforward
             return
             ;;
         mulch_secret_set | mulch_secret_get | mulch_secret_delete | mulch_secret_list)

@@ -10,6 +10,13 @@ import (
 
 // GetKeyPairController returns user key pair
 func GetKeyPairController(req *server.Request) {
+	if req.APIKey.SSHAuthOnly {
+		msg := "generated SSH key pair is disabled for this API key"
+		req.App.Log.Errorf("%d: %s (key: %s)", http.StatusForbidden, msg, req.APIKey.Comment)
+		http.Error(req.Response, msg, http.StatusForbidden)
+		return
+	}
+
 	req.Response.Header().Set("Content-Type", "application/json")
 
 	retData := &common.APISSHPair{

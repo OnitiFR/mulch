@@ -1,10 +1,11 @@
 package server
 
 import (
+	"crypto/rsa"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"os"
 	"regexp"
@@ -29,6 +30,20 @@ type APIKey struct {
 	SSHPublic              string
 	Rights                 []APIRight
 	SSHAllowedFingerprints []APISSHFingerprint
+
+	// personal SSH public keys allowed to authenticate as this API key
+	// (API, using a signed challenge, and SSH proxy)
+	SSHAuthorizedKeys []APIAuthorizedSSHKey `json:",omitempty"`
+
+	// if true, static secrets (Key and SSHPrivate/SSHPublic pair) are
+	// disabled: only SSHAuthorizedKeys can be used
+	SSHAuthOnly bool `json:",omitempty"`
+}
+
+// APIAuthorizedSSHKey is a personal SSH public key of the key owner
+type APIAuthorizedSSHKey struct {
+	PublicKey string // authorized_keys format
+	AddedAt   time.Time
 }
 
 // APIRight is a parsed "Rights" line
@@ -49,15 +64,13 @@ type APISSHFingerprint struct {
 type APIKeyDatabase struct {
 	filename string
 	keys     []*APIKey
-	rand     *rand.Rand
 	mutex    sync.Mutex
 }
 
 // NewAPIKeyDatabase creates a new API key database
-func NewAPIKeyDatabase(filename string, log *Log, rand *rand.Rand) (*APIKeyDatabase, error) {
+func NewAPIKeyDatabase(filename string, log *Log) (*APIKeyDatabase, error) {
 	db := &APIKeyDatabase{
 		filename: filename,
-		rand:     rand,
 	}
 
 	// if the file exists, load it
@@ -171,8 +184,9 @@ func (db *APIKeyDatabase) IsValidKey(key string) (bool, *APIKey) {
 		return false, nil
 	}
 
+	// note: keys in SSH-only mode are returned too, the caller must check
 	for _, candidate := range db.keys {
-		if candidate.Key == key {
+		if subtle.ConstantTimeCompare([]byte(candidate.Key), []byte(key)) == 1 {
 			return true, candidate
 		}
 	}
@@ -212,6 +226,8 @@ func (db *APIKeyDatabase) ListEntries() common.APIKeyListEntries {
 			Comment:          key.Comment,
 			RightCount:       len(key.Rights),
 			FingerprintCount: len(key.SSHAllowedFingerprints),
+			SSHKeyCount:      len(key.SSHAuthorizedKeys),
+			SSHAuthOnly:      key.SSHAuthOnly,
 		})
 	}
 
@@ -219,8 +235,8 @@ func (db *APIKeyDatabase) ListEntries() common.APIKeyListEntries {
 }
 
 // GenKey generates a new random API key
-func (db *APIKeyDatabase) genKey() string {
-	return RandString(apiKeyMinLength, db.rand)
+func (db *APIKeyDatabase) genKey() (string, error) {
+	return RandString(apiKeyMinLength)
 }
 
 // AddNew generates a new key and adds it to the database
@@ -239,9 +255,14 @@ func (db *APIKeyDatabase) AddNew(comment string) (*APIKey, error) {
 		return nil, err
 	}
 
+	secret, err := db.genKey()
+	if err != nil {
+		return nil, err
+	}
+
 	key := &APIKey{
 		Comment:    comment,
-		Key:        db.genKey(),
+		Key:        secret,
 		SSHPrivate: priv,
 		SSHPublic:  pub,
 	}
@@ -285,6 +306,16 @@ func (db *APIKeyDatabase) GetByPubKey(pub string) (*APIKey, error) {
 	defer db.mutex.Unlock()
 
 	for _, key := range db.keys {
+		// personal keys
+		if key.hasSSHAuthorizedKey(pub) {
+			return key, nil
+		}
+
+		// static (generated) key pair
+		if key.SSHAuthOnly {
+			continue
+		}
+
 		pubKey, _, _, _, errP := ssh.ParseAuthorizedKey([]byte(key.SSHPublic))
 		if errP != nil {
 			return nil, errP
@@ -296,6 +327,167 @@ func (db *APIKeyDatabase) GetByPubKey(pub string) (*APIKey, error) {
 	}
 
 	return nil, nil
+}
+
+// GetBySSHAuthorizedKey returns the API key owning this personal SSH
+// public key, or nil if not found
+func (db *APIKeyDatabase) GetBySSHAuthorizedKey(pub ssh.PublicKey) *APIKey {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	marshaled := string(pub.Marshal())
+	for _, key := range db.keys {
+		if key.hasSSHAuthorizedKey(marshaled) {
+			return key
+		}
+	}
+	return nil
+}
+
+// IsSSHKeyStillAuthorized returns true if the key still exists in the
+// database and still authorize the (marshaled) SSH public key
+func (db *APIKeyDatabase) IsSSHKeyStillAuthorized(key *APIKey, pub string) bool {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	return db.keyExists(key) && key.hasSSHAuthorizedKey(pub)
+}
+
+// hasSSHAuthorizedKey returns true if the (marshaled) public key is
+// one of the personal keys of this API key (no locking)
+func (key *APIKey) hasSSHAuthorizedKey(pub string) bool {
+	for _, authKey := range key.SSHAuthorizedKeys {
+		pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(authKey.PublicKey))
+		if err != nil {
+			continue
+		}
+		if string(pubKey.Marshal()) == pub {
+			return true
+		}
+	}
+	return false
+}
+
+// CheckSSHAuthKeyType returns an error if this SSH public key type is
+// not accepted for authentication
+func CheckSSHAuthKeyType(pub ssh.PublicKey) error {
+	switch pub.Type() {
+	case ssh.KeyAlgoED25519, ssh.KeyAlgoSKED25519,
+		ssh.KeyAlgoECDSA256, ssh.KeyAlgoECDSA384, ssh.KeyAlgoECDSA521,
+		ssh.KeyAlgoSKECDSA256:
+		return nil
+	case ssh.KeyAlgoRSA:
+		cryptoPub, ok := pub.(ssh.CryptoPublicKey)
+		if !ok {
+			return errors.New("unable to read RSA key")
+		}
+		rsaPub, ok := cryptoPub.CryptoPublicKey().(*rsa.PublicKey)
+		if !ok {
+			return errors.New("unable to read RSA key")
+		}
+		if rsaPub.N.BitLen() < 2048 {
+			return fmt.Errorf("RSA key is too short (%d bits, 2048 minimum)", rsaPub.N.BitLen())
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported key type '%s'", pub.Type())
+	}
+}
+
+// AddSSHAuthorizedKey adds a personal SSH public key (authorized_keys
+// format) to the API key
+func (db *APIKeyDatabase) AddSSHAuthorizedKey(key *APIKey, authorizedKey string) (ssh.PublicKey, error) {
+	pub, comment, _, _, err := ssh.ParseAuthorizedKey([]byte(authorizedKey))
+	if err != nil {
+		return nil, fmt.Errorf("invalid public key: %s", err)
+	}
+
+	err = CheckSSHAuthKeyType(pub)
+	if err != nil {
+		return nil, err
+	}
+
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	if !db.keyExists(key) {
+		return nil, errors.New("key not found in database")
+	}
+
+	marshaled := string(pub.Marshal())
+	for _, other := range db.keys {
+		if other.hasSSHAuthorizedKey(marshaled) {
+			if other == key {
+				return nil, errors.New("this SSH key is already authorized for this API key")
+			}
+			return nil, errors.New("this SSH key is already used by another API key")
+		}
+	}
+
+	// normalize (type, key, comment), dropping any authorized_keys options
+	line := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(pub)))
+	if comment != "" {
+		line += " " + comment
+	}
+
+	key.SSHAuthorizedKeys = append(key.SSHAuthorizedKeys, APIAuthorizedSSHKey{
+		PublicKey: line,
+		AddedAt:   time.Now(),
+	})
+
+	err = db.save()
+	if err != nil {
+		return nil, err
+	}
+	return pub, nil
+}
+
+// RemoveSSHAuthorizedKey removes a personal SSH public key, using its
+// SHA256 fingerprint
+func (db *APIKeyDatabase) RemoveSSHAuthorizedKey(key *APIKey, fingerprint string) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	if !db.keyExists(key) {
+		return errors.New("key not found in database")
+	}
+
+	newList := make([]APIAuthorizedSSHKey, 0, len(key.SSHAuthorizedKeys))
+	for _, authKey := range key.SSHAuthorizedKeys {
+		pub, _, _, _, err := ssh.ParseAuthorizedKey([]byte(authKey.PublicKey))
+		if err == nil && ssh.FingerprintSHA256(pub) == fingerprint {
+			continue
+		}
+		newList = append(newList, authKey)
+	}
+
+	if len(newList) == len(key.SSHAuthorizedKeys) {
+		return fmt.Errorf("SSH key '%s' not found", fingerprint)
+	}
+
+	if len(newList) == 0 && key.SSHAuthOnly {
+		return errors.New("cannot remove the last SSH key of a key in SSH-only mode (disable SSH-only mode first)")
+	}
+
+	key.SSHAuthorizedKeys = newList
+	return db.save()
+}
+
+// SetSSHAuthOnly enables or disables SSH-only mode for this key
+func (db *APIKeyDatabase) SetSSHAuthOnly(key *APIKey, enable bool) error {
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
+
+	if !db.keyExists(key) {
+		return errors.New("key not found in database")
+	}
+
+	if enable && len(key.SSHAuthorizedKeys) == 0 {
+		return errors.New("this key has no SSH key, add one first")
+	}
+
+	key.SSHAuthOnly = enable
+	return db.save()
 }
 
 // GetByComment returns an API key by its comment, or nil if not found
