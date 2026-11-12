@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/OnitiFR/mulch/common"
 	"github.com/ryanuber/go-glob"
@@ -437,10 +438,23 @@ func CheckSSHAuthKeyType(pub ssh.PublicKey) error {
 // AddSSHAuthorizedKey adds a personal SSH public key (authorized_keys
 // format) to the API key
 func (db *APIKeyDatabase) AddSSHAuthorizedKey(key *APIKey, authorizedKey string) (ssh.PublicKey, error) {
-	pub, comment, _, _, err := ssh.ParseAuthorizedKey([]byte(authorizedKey))
+	pub, comment, _, rest, err := ssh.ParseAuthorizedKey([]byte(authorizedKey))
 	if err != nil {
 		return nil, fmt.Errorf("invalid public key: %s", err)
 	}
+
+	// one key at a time (ex: unfiltered 'ssh-add -L' output)
+	if _, _, _, _, errR := ssh.ParseAuthorizedKey(rest); errR == nil {
+		return nil, errors.New("only one public key can be added at a time")
+	}
+
+	// no control characters in comments (displayed in terminals)
+	comment = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, comment)
 
 	err = CheckSSHAuthKeyType(pub)
 	if err != nil {
@@ -461,6 +475,12 @@ func (db *APIKeyDatabase) AddSSHAuthorizedKey(key *APIKey, authorizedKey string)
 				return nil, errors.New("this SSH key is already authorized for this API key")
 			}
 			return nil, errors.New("this SSH key is already used by another API key")
+		}
+
+		// generated key pairs: mulchd stores (and serves) their private key
+		static, _, _, _, errS := ssh.ParseAuthorizedKey([]byte(other.SSHPublic))
+		if errS == nil && string(static.Marshal()) == marshaled {
+			return nil, errors.New("this is a mulch generated SSH key (see 'sshpair'), use your own SSH key")
 		}
 	}
 

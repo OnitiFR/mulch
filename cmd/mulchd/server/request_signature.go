@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/OnitiFR/mulch/common"
 	"golang.org/x/crypto/ssh"
@@ -42,10 +43,7 @@ func (req *Request) checkRequestSignature(pub ssh.PublicKey) bool {
 	err := req.verifyRequestSignature(pub, challenge, sigB64)
 	if err != nil {
 		app.Log.Warningf("request signature failed from %s for %s %s with %s: %s", req.RemoteIP(), r.Method, r.URL.Path, fingerprint, err)
-		app.AlertSender.SecurityThrottled("Request signature refused", req.APIKey.Comment, fmt.Sprintf(
-			"a valid session of %s was used without a valid signature for %s %s: stolen session token?",
-			req.Author(), r.Method, r.URL.Path))
-		http.Error(w, "request signature verification failed", http.StatusForbidden)
+		http.Error(w, "request signature verification failed: "+err.Error(), http.StatusForbidden)
 		return false
 	}
 
@@ -97,6 +95,21 @@ func VerifySSHSignature(pub ssh.PublicKey, sigB64 string, data []byte) error {
 	// SHA-1 RSA signatures are not accepted
 	if sig.Format == ssh.KeyAlgoRSA {
 		return errors.New("ssh-rsa (SHA-1) signature refused")
+	}
+
+	// security keys: require user presence (touch), as OpenSSH does by
+	// default (keys generated with "no-touch-required" are refused)
+	if strings.HasPrefix(sig.Format, "sk-") {
+		var skf struct {
+			Flags   byte
+			Counter uint32
+		}
+		if err := ssh.Unmarshal(sig.Rest, &skf); err != nil {
+			return errors.New("invalid security key signature")
+		}
+		if skf.Flags&0x01 == 0 {
+			return errors.New("security key signature without user presence (touch) refused")
+		}
 	}
 
 	return pub.Verify(data, &sig)
