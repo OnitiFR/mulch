@@ -101,7 +101,15 @@ func routeStreamHandler(request *Request) {
 
 	// plug ourselves into the hub
 	// TODO: use API key owner instead of "me"
-	tmpTarget := fmt.Sprintf(".tmp-%d", request.App.Rand.Int31())
+	// must be unpredictable: private messages (secrets) are sent to this
+	// target, and any client can watch any target (see LogController)
+	tmpRand, err := RandString(32)
+	if err != nil {
+		request.App.Log.Error(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	tmpTarget := ".tmp-" + tmpRand
 	client := request.App.Hub.Register("me", tmpTarget, trace)
 
 	request.Stream = NewLog(tmpTarget, request.App.Hub, request.App.LogHistory)
