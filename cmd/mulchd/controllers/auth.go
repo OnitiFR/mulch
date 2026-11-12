@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
 
@@ -38,24 +38,18 @@ func authWriteJSON(req *server.Request, data any) {
 }
 
 // AuthChallengeController returns a challenge to be signed by the
-// given (personal) SSH key
+// given (personal) SSH key. Challenges are issued for any key, registered
+// or not, so this route can't be used to find out which keys are.
 func AuthChallengeController(req *server.Request) {
 	pub, ok := authParsePublicKey(req)
 	if !ok {
-		return
-	}
-	fingerprint := ssh.FingerprintSHA256(pub)
-
-	apiKey := req.App.APIKeysDB.GetBySSHAuthorizedKey(pub)
-	if apiKey == nil {
-		authFail(req, "unknown SSH key "+fingerprint)
 		return
 	}
 
 	challenge, expires, err := req.App.AuthTokens.NewChallenge(pub)
 	if err != nil {
 		req.App.Log.Error(err.Error())
-		http.Error(req.Response, err.Error(), http.StatusServiceUnavailable)
+		http.Error(req.Response, err.Error(), 500)
 		return
 	}
 
@@ -74,45 +68,29 @@ func AuthTokenController(req *server.Request) {
 	}
 	fingerprint := ssh.FingerprintSHA256(pub)
 
-	challenge := req.HTTP.FormValue("challenge")
-	err := req.App.AuthTokens.ConsumeChallenge(challenge, pub)
-	if err != nil {
-		authFail(req, err.Error()+" for "+fingerprint)
-		return
-	}
-
-	sigBytes, err := base64.StdEncoding.DecodeString(req.HTTP.FormValue("signature"))
-	if err != nil {
-		authFail(req, "invalid signature encoding for "+fingerprint)
-		return
-	}
-
-	var sig ssh.Signature
-	err = ssh.Unmarshal(sigBytes, &sig)
-	if err != nil {
-		authFail(req, "invalid signature format for "+fingerprint)
-		return
-	}
-
-	// SHA-1 RSA signatures are not accepted
-	if sig.Format == ssh.KeyAlgoRSA {
-		authFail(req, "ssh-rsa (SHA-1) signature refused for "+fingerprint)
+	// unknown key (or revoked since the challenge). Checked first, so only
+	// registered keys can fill the list of used challenges. The response
+	// is the same as for a bad signature (no registered key disclosure).
+	apiKey := req.App.APIKeysDB.GetBySSHAuthorizedKey(pub)
+	if apiKey == nil {
+		authFail(req, "unknown SSH key "+fingerprint)
 		return
 	}
 
 	// the signature is bound to our host name (see common.SSHAuthMessage)
+	challenge := req.HTTP.FormValue("challenge")
 	host := req.App.SSHAuthServerHost(req.HTTP)
 	data := common.SSHSigSignedData(common.SSHAuthNamespace, common.SSHAuthMessage(challenge, host))
-	err = pub.Verify(data, &sig)
-	if err != nil {
-		authFail(req, "bad signature for "+fingerprint+" (signed for another server than '"+host+"'?): "+err.Error())
+
+	err := req.App.AuthTokens.ConsumeChallenge(challenge, pub, func() error {
+		return server.VerifySSHSignature(pub, req.HTTP.FormValue("signature"), data)
+	})
+	if errors.Is(err, server.ErrAuthChallenge) {
+		authFail(req, err.Error()+" for "+fingerprint)
 		return
 	}
-
-	// the key may have been revoked during the challenge
-	apiKey := req.App.APIKeysDB.GetBySSHAuthorizedKey(pub)
-	if apiKey == nil {
-		authFail(req, "unknown SSH key "+fingerprint)
+	if err != nil {
+		authFail(req, "bad signature for "+fingerprint+" (signed for another server than '"+host+"'?): "+err.Error())
 		return
 	}
 

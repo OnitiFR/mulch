@@ -1,9 +1,11 @@
 package server
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"sync"
@@ -20,21 +22,23 @@ const AuthChallengeTTL = 60 * time.Second
 // a security key (-sk): 8h means one touch per working day.
 const AuthTokenTTL = 8 * time.Hour
 
-// maximum number of pending challenges (flood protection), globally and
-// per SSH key (so a single known public key can't block everyone)
-const authMaxPendingChallenges = 10000
-const authMaxPendingChallengesPerKey = 10
-
 // AuthTokenPrefix is the prefix of session tokens (helps to recognize them)
 const AuthTokenPrefix = "mulch-token-"
 
-// ErrAuthChallenge is returned for any invalid / expired / unknown challenge
-var ErrAuthChallenge = errors.New("invalid or expired challenge")
+// challenge layout (before base64): expiration (unix time), random nonce,
+// then HMAC-SHA256 of these two fields and the public key
+const (
+	challengeExpiresLen = 8
+	challengeNonceLen   = 16
+	challengePayloadLen = challengeExpiresLen + challengeNonceLen
+	challengeLen        = challengePayloadLen + sha256.Size
+)
 
-type authChallenge struct {
-	pubKey  string // marshaled
-	expires time.Time
-}
+// strict: a challenge has only one valid encoding (see usedChallenges)
+var challengeEncoding = base64.RawURLEncoding.Strict()
+
+// ErrAuthChallenge is returned for any invalid / expired / used challenge
+var ErrAuthChallenge = errors.New("invalid or expired challenge")
 
 type authToken struct {
 	apiKey  *APIKey
@@ -42,21 +46,34 @@ type authToken struct {
 	expires time.Time
 }
 
-// AuthTokenStore stores pending SSH challenges and session tokens, in
-// memory only (a mulchd restart invalidates every token, clients will
-// transparently authenticate again)
+// AuthTokenStore issues SSH challenges and stores session tokens, in
+// memory only (a mulchd restart invalidates every challenge and token,
+// clients will transparently authenticate again).
+//
+// Challenges are stateless (HMAC, bound to a public key and an expiration):
+// nothing is stored when a challenge is issued, so there's no limit to
+// flood, and challenges can be issued for any key, registered or not.
+// Only successfully used challenges are stored (until they expire), so
+// they can't be used twice.
 type AuthTokenStore struct {
-	challenges map[string]*authChallenge
-	tokens     map[string]*authToken // key: sha256(token)
-	mutex      sync.Mutex
+	hmacKey        []byte
+	usedChallenges map[string]time.Time  // challenge → expiration
+	tokens         map[string]*authToken // key: sha256(token)
+	mutex          sync.Mutex
 }
 
 // NewAuthTokenStore creates a new (empty) store
-func NewAuthTokenStore() *AuthTokenStore {
-	return &AuthTokenStore{
-		challenges: make(map[string]*authChallenge),
-		tokens:     make(map[string]*authToken),
+func NewAuthTokenStore() (*AuthTokenStore, error) {
+	hmacKey := make([]byte, 32)
+	if _, err := rand.Read(hmacKey); err != nil {
+		return nil, err
 	}
+
+	return &AuthTokenStore{
+		hmacKey:        hmacKey,
+		usedChallenges: make(map[string]time.Time),
+		tokens:         make(map[string]*authToken),
+	}, nil
 }
 
 func randomBase64(size int) (string, error) {
@@ -75,9 +92,9 @@ func hashToken(token string) string {
 // purge expired entries (no locking)
 func (s *AuthTokenStore) purge() {
 	now := time.Now()
-	for id, c := range s.challenges {
-		if now.After(c.expires) {
-			delete(s.challenges, id)
+	for challenge, expires := range s.usedChallenges {
+		if now.After(expires) {
+			delete(s.usedChallenges, challenge)
 		}
 	}
 	for id, t := range s.tokens {
@@ -87,55 +104,74 @@ func (s *AuthTokenStore) purge() {
 	}
 }
 
+// challengeMAC returns the HMAC of a challenge payload for this public key
+// (no locking needed, hmacKey never changes)
+func (s *AuthTokenStore) challengeMAC(payload []byte, pub ssh.PublicKey) []byte {
+	mac := hmac.New(sha256.New, s.hmacKey)
+	mac.Write(payload) // fixed size, can't overlap the key
+	mac.Write(pub.Marshal())
+	return mac.Sum(nil)
+}
+
 // NewChallenge creates a single-use challenge, bound to the given public key
 func (s *AuthTokenStore) NewChallenge(pub ssh.PublicKey) (string, time.Time, error) {
-	challenge, err := randomBase64(32)
-	if err != nil {
+	expires := time.Unix(time.Now().Add(AuthChallengeTTL).Unix(), 0)
+
+	payload := make([]byte, challengePayloadLen)
+	binary.BigEndian.PutUint64(payload, uint64(expires.Unix()))
+	if _, err := rand.Read(payload[challengeExpiresLen:]); err != nil {
 		return "", time.Time{}, err
 	}
 
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	s.purge()
-	if len(s.challenges) >= authMaxPendingChallenges {
-		return "", time.Time{}, errors.New("too many pending challenges, try again later")
-	}
-
-	pubKey := string(pub.Marshal())
-	count := 0
-	for _, c := range s.challenges {
-		if c.pubKey == pubKey {
-			count++
-		}
-	}
-	if count >= authMaxPendingChallengesPerKey {
-		return "", time.Time{}, errors.New("too many pending challenges for this key, try again later")
-	}
-
-	expires := time.Now().Add(AuthChallengeTTL)
-	s.challenges[challenge] = &authChallenge{
-		pubKey:  pubKey,
-		expires: expires,
-	}
-	return challenge, expires, nil
+	raw := append(payload, s.challengeMAC(payload, pub)...)
+	return challengeEncoding.EncodeToString(raw), expires, nil
 }
 
-// ConsumeChallenge checks that the challenge exists, is not expired and
-// was issued for this public key. The challenge is deleted in any case.
-func (s *AuthTokenStore) ConsumeChallenge(challenge string, pub ssh.PublicKey) error {
+// checkChallenge returns the challenge expiration if it was issued by us,
+// for this public key, and is not expired
+func (s *AuthTokenStore) checkChallenge(challenge string, pub ssh.PublicKey) (time.Time, error) {
+	raw, err := challengeEncoding.DecodeString(challenge)
+	if err != nil || len(raw) != challengeLen {
+		return time.Time{}, ErrAuthChallenge
+	}
+
+	payload, mac := raw[:challengePayloadLen], raw[challengePayloadLen:]
+	if !hmac.Equal(mac, s.challengeMAC(payload, pub)) {
+		return time.Time{}, ErrAuthChallenge
+	}
+
+	expires := time.Unix(int64(binary.BigEndian.Uint64(payload)), 0)
+	if time.Now().After(expires) {
+		return time.Time{}, ErrAuthChallenge
+	}
+	return expires, nil
+}
+
+// ConsumeChallenge checks that the challenge was issued by us for this
+// public key and is not expired, then calls verify (signature check). If
+// verify succeeds, the challenge is marked as used, so it can't be used
+// again. Returns ErrAuthChallenge or the error returned by verify.
+func (s *AuthTokenStore) ConsumeChallenge(challenge string, pub ssh.PublicKey, verify func() error) error {
+	expires, err := s.checkChallenge(challenge, pub)
+	if err != nil {
+		return err
+	}
+
+	err = verify()
+	if err != nil {
+		return err
+	}
+
+	// only verified challenges are stored (bounded memory), and check+mark
+	// is atomic, so concurrent requests can't use the same challenge
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	c, exists := s.challenges[challenge]
-	if !exists {
+	if _, used := s.usedChallenges[challenge]; used {
 		return ErrAuthChallenge
 	}
-	delete(s.challenges, challenge)
-
-	if time.Now().After(c.expires) || c.pubKey != string(pub.Marshal()) {
-		return ErrAuthChallenge
-	}
+	s.purge()
+	s.usedChallenges[challenge] = expires
 	return nil
 }
 

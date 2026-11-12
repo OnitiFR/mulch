@@ -380,7 +380,12 @@ func (app *App) initAPIKeysDB() error {
 		return err
 	}
 	app.APIKeysDB = db
-	app.AuthTokens = NewAuthTokenStore()
+
+	tokens, err := NewAuthTokenStore()
+	if err != nil {
+		return err
+	}
+	app.AuthTokens = tokens
 	return nil
 }
 

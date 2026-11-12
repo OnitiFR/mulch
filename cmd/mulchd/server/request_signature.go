@@ -56,11 +56,33 @@ func (req *Request) checkRequestSignature(pub ssh.PublicKey) bool {
 func (req *Request) verifyRequestSignature(pub ssh.PublicKey, challenge string, sigB64 string) error {
 	r := req.HTTP
 
-	err := req.App.AuthTokens.ConsumeChallenge(challenge, pub)
-	if err != nil {
+	// parse every parameter (query string and body), the same way
+	// handlers will (FormValue), so they're all covered by the signature
+	err := r.ParseMultipartForm(requestSignatureMaxMemory)
+	if err != nil && !errors.Is(err, http.ErrNotMultipart) {
 		return err
 	}
+	// uploaded files are not covered by the signature
+	if r.MultipartForm != nil && len(r.MultipartForm.File) > 0 {
+		return errors.New("file upload is not supported for signed requests")
+	}
 
+	host := req.App.SSHAuthServerHost(r)
+	message := common.SSHRequestMessage(challenge, host, r.Method, r.URL.Path, r.Form)
+	data := common.SSHSigSignedData(common.SSHRequestNamespace, message)
+
+	return req.App.AuthTokens.ConsumeChallenge(challenge, pub, func() error {
+		err := VerifySSHSignature(pub, sigB64, data)
+		if err != nil {
+			return fmt.Errorf("bad signature (signed for another request or server than '%s'?): %s", host, err)
+		}
+		return nil
+	})
+}
+
+// VerifySSHSignature checks the signature (SSH wire format, base64
+// encoded) of data with this public key
+func VerifySSHSignature(pub ssh.PublicKey, sigB64 string, data []byte) error {
 	sigBytes, err := base64.StdEncoding.DecodeString(sigB64)
 	if err != nil {
 		return errors.New("invalid signature encoding")
@@ -77,23 +99,5 @@ func (req *Request) verifyRequestSignature(pub ssh.PublicKey, challenge string, 
 		return errors.New("ssh-rsa (SHA-1) signature refused")
 	}
 
-	// parse every parameter (query string and body), the same way
-	// handlers will (FormValue), so they're all covered by the signature
-	err = r.ParseMultipartForm(requestSignatureMaxMemory)
-	if err != nil && !errors.Is(err, http.ErrNotMultipart) {
-		return err
-	}
-	// uploaded files are not covered by the signature
-	if r.MultipartForm != nil && len(r.MultipartForm.File) > 0 {
-		return errors.New("file upload is not supported for signed requests")
-	}
-
-	host := req.App.SSHAuthServerHost(r)
-	message := common.SSHRequestMessage(challenge, host, r.Method, r.URL.Path, r.Form)
-	data := common.SSHSigSignedData(common.SSHRequestNamespace, message)
-	err = pub.Verify(data, &sig)
-	if err != nil {
-		return errors.New("bad signature (signed for another request or server than '" + host + "'?): " + err.Error())
-	}
-	return nil
+	return pub.Verify(data, &sig)
 }
