@@ -101,7 +101,7 @@ func DeleteKeySSHController(req *server.Request) {
 		return
 	}
 
-	req.Stream.Info("existing sessions using this SSH key are revoked")
+	req.Stream.Info("existing API sessions using this SSH key are revoked (open SSH connections are not closed)")
 	req.Stream.Successf("SSH key removed from '%s'", key.Comment)
 }
 

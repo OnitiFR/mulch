@@ -10,7 +10,8 @@ var keySSHRemoveCmd = &cobra.Command{
 	Use:   "remove <key> <fingerprint>",
 	Short: "Remove a personal SSH key from an API key",
 	Long: `Remove a personal SSH key from an API key, using its fingerprint
-(see 'key ssh list'). Sessions opened with this SSH key are revoked.
+(see 'key ssh list'). API sessions opened with this SSH key are revoked
+(but open SSH connections are not closed).
 `,
 	Args: cobra.ExactArgs(2),
 	Run: func(_ *cobra.Command, args []string) {

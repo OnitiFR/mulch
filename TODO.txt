@@ -8,6 +8,9 @@ Always:
 
 Resource leaks:
 - check for remaining map race-conditions
+- APIKey fields (Rights, SSHAllowedFingerprints, SSHAuthorizedKeys, SSHAuthOnly)
+  are read without APIKeysDB lock (IsAllowed, SSH agent proxy, controllers…),
+  and even written without it (CleanKeyTrustedVMsController)
 - check that the switch to Context fixes all known resource leaks
 - still some hanging SSH shown in status (try with a client reboot?)
     - scheduleSSHKeepAlives() does its job, the issue's upper in the stack (runChannels never ends?)

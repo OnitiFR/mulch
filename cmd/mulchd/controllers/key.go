@@ -208,7 +208,21 @@ func DeleteKeyRightController(req *server.Request) {
 		return
 	}
 
+	// last right removed
+	if len(key.Rights) == 0 {
+		warnKeyFullPrivileges(req, key)
+	}
+
 	req.Stream.Successf("right removed")
+}
+
+// warnKeyFullPrivileges warns the user and sends a security alert: the key
+// has no rights anymore, so it now has full privileges
+func warnKeyFullPrivileges(req *server.Request, key *server.APIKey) {
+	req.Stream.Warning("this key has no rights anymore, it now has FULL privileges")
+	req.App.AlertSender.Security("API key with full privileges", fmt.Sprintf(
+		"all rights of '%s' were removed by %s: the key now has FULL privileges",
+		key.Comment, req.Author()))
 }
 
 // clearKeyRights remove all rights from the key
@@ -227,7 +241,7 @@ func clearKeyRights(req *server.Request, key *server.APIKey) {
 		return
 	}
 
-	req.Stream.Warning("this key has no rights anymore, it now has FULL privileges")
+	warnKeyFullPrivileges(req, key)
 	req.Stream.Successf("%d right(s) removed", count)
 }
 
