@@ -16,7 +16,7 @@ import (
 // keySSHListCmd represents the "key ssh list" command
 var keySSHListCmd = &cobra.Command{
 	Use:   "list <key>",
-	Short: "List personal SSH keys of the key",
+	Short: "List personal SSH keys of an API key",
 	Args:  cobra.ExactArgs(1),
 	Run: func(_ *cobra.Command, args []string) {
 		call := client.GlobalAPI.NewCall("GET", "/key/ssh/"+args[0], map[string]string{})

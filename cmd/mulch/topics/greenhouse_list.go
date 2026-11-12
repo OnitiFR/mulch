@@ -52,5 +52,5 @@ func greenhouseListCB(reader io.Reader, _ http.Header) {
 
 func init() {
 	greenhouseCmd.AddCommand(greenhouseListCmd)
-	greenhouseListCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formating")
+	greenhouseListCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formatting")
 }

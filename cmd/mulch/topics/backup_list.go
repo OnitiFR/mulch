@@ -81,5 +81,5 @@ func backupListCB(reader io.Reader, _ http.Header) {
 
 func init() {
 	backupCmd.AddCommand(backupListCmd)
-	backupListCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formating")
+	backupListCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formatting")
 }

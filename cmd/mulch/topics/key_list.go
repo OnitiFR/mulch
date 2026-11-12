@@ -72,5 +72,5 @@ func keyListCB(reader io.Reader, _ http.Header) {
 
 func init() {
 	keyCmd.AddCommand(keyListCmd)
-	keyListCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formating")
+	keyListCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formatting")
 }

@@ -8,8 +8,8 @@ import (
 // keySSHRemoveCmd represents the "key ssh remove" command
 var keySSHRemoveCmd = &cobra.Command{
 	Use:   "remove <key> <fingerprint>",
-	Short: "Remove a personal SSH key from the key",
-	Long: `Remove a personal SSH key from the key, using its fingerprint
+	Short: "Remove a personal SSH key from an API key",
+	Long: `Remove a personal SSH key from an API key, using its fingerprint
 (see 'key ssh list'). Sessions opened with this SSH key are revoked.
 `,
 	Args: cobra.ExactArgs(2),

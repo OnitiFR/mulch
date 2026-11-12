@@ -97,6 +97,6 @@ func doListCB(reader io.Reader, _ http.Header) {
 
 func init() {
 	rootCmd.AddCommand(doCmd)
-	doCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formating")
+	doCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formatting")
 	doCmd.Flags().StringP("revision", "r", "", "revision number")
 }

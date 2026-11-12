@@ -77,5 +77,5 @@ func seedsCB(reader io.Reader, _ http.Header) {
 
 func init() {
 	seedCmd.AddCommand(seedListCmd)
-	seedListCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formating")
+	seedListCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formatting")
 }

@@ -512,8 +512,8 @@ First server is the default. Environment variable `SERVER` is also available.
 ### Authenticate with your SSH key (recommended)
 
 Instead of storing a static API key in this file, you can use your own SSH
-key, loaded in your SSH agent (security keys like YubiKey `ed25519-sk` are
-supported). Once your public key is registered on the server
+key, loaded into your SSH agent (security keys like YubiKey `ed25519-sk`
+are supported). Once your public key is registered on the server
 (`mulch key ssh add <key> ~/.ssh/id_ed25519.pub`, see `mulch help key ssh`),
 replace `key` with:
 ```toml

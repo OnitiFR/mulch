@@ -92,5 +92,5 @@ func vmListCB(reader io.Reader, _ http.Header) {
 
 func init() {
 	vmCmd.AddCommand(vmListCmd)
-	vmListCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formating")
+	vmListCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formatting")
 }

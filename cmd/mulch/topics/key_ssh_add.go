@@ -15,8 +15,8 @@ import (
 // keySSHAddCmd represents the "key ssh add" command
 var keySSHAddCmd = &cobra.Command{
 	Use:   "add <key> <public-key-file>",
-	Short: "Add a personal SSH key to the key",
-	Long: `Add a personal SSH public key to the key (use "-" to read from stdin).
+	Short: "Add a personal SSH key to an API key",
+	Long: `Add a personal SSH public key to an API key (use "-" to read from stdin).
 
 Accepted types: ed25519, ecdsa, RSA (2048 bits or more) and their
 security key variants (ed25519-sk, ecdsa-sk).

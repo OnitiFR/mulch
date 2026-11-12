@@ -13,9 +13,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// trustListCmd represents the "trust list" command
 var trustListFlagBasic bool
 
+// trustListCmd represents the "trust list" command
 var trustListCmd = &cobra.Command{
 	Use:   "list [vm]",
 	Short: "List your forwarded SSH keys",
@@ -82,5 +82,5 @@ func TrustListCB(reader io.Reader, _ http.Header) {
 
 func init() {
 	trustCmd.AddCommand(trustListCmd)
-	trustListCmd.Flags().BoolP("basic", "b", false, "show fingerprints only, without any formating")
+	trustListCmd.Flags().BoolP("basic", "b", false, "show fingerprints only, without any formatting")
 }

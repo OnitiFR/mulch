@@ -115,7 +115,7 @@ key = "gein2xah7keeL33thpe9ahvaegF15TUL3surae3Chue4riokooJ5WuTI80FTWfz2"
 alias = "my"
 
 Instead of a static key, you can authenticate with your own SSH key (it
-must registered with 'mulch key ssh add'):
+must be registered with 'mulch key ssh add'), replacing 'key' with:
 ssh_pub_key = "~/.ssh/id_ed25519.pub"
 
 You can define multiple servers and use -s option to select one, or use

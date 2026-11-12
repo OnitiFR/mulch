@@ -30,7 +30,7 @@ func IsValidWord(token string) bool {
 	return match
 }
 
-// RandString generate a random string of A-Za-z0-9 runes, using
+// RandString generates a random string of A-Za-z0-9 runes, using
 // a cryptographically secure source (use it for keys, tokens, passwords…)
 func RandString(n int) (string, error) {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

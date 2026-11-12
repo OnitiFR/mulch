@@ -7,11 +7,11 @@ import (
 // keySSHCmd represents the 'key ssh' command
 var keySSHCmd = &cobra.Command{
 	Use:   "ssh",
-	Short: "Personal SSH keys of an API key",
+	Short: "Personal SSH keys management",
 	Long: `Manage personal SSH keys allowed to authenticate as an API key.
 
 Once a personal SSH key is added, the key owner can replace the static
-'key' setting by 'ssh_pub_key' in their client configuration:
+'key' setting with 'ssh_pub_key' in their client configuration:
 
 [[server]]
 name = "my-mulch"

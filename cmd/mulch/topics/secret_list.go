@@ -69,5 +69,5 @@ func secretListCB(reader io.Reader, _ http.Header) {
 
 func init() {
 	secretCmd.AddCommand(secretListCmd)
-	secretListCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formating")
+	secretListCmd.Flags().BoolP("basic", "b", false, "show basic list, without any formatting")
 }

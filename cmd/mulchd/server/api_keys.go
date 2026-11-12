@@ -345,7 +345,7 @@ func (db *APIKeyDatabase) GetBySSHAuthorizedKey(pub ssh.PublicKey) *APIKey {
 }
 
 // IsSSHKeyStillAuthorized returns true if the key still exists in the
-// database and still authorize the (marshaled) SSH public key
+// database and still authorizes the (marshaled) SSH public key
 func (db *APIKeyDatabase) IsSSHKeyStillAuthorized(key *APIKey, pub string) bool {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
