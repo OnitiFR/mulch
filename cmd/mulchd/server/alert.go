@@ -173,15 +173,15 @@ func (sender *AlertSender) sendBackground(alert *Alert, throttleID string, throt
 	}()
 }
 
-// alertSanitize removes characters that could be harmful in alert scripts
-// (some content comes from users: key comments, SSH key comments…)
+// alertSanitize replaces control characters (new lines, NUL, …) with spaces:
+// alerts are single-line, and a NUL byte is not allowed in the environment.
+// Everything else is passed as is (quotes, $, backslashes, …) and some
+// content comes from users (key comments, SSH key comments…): alert
+// scripts must escape these variables for their own output format.
 func alertSanitize(s string) string {
 	return strings.Map(func(r rune) rune {
-		switch {
-		case r < 0x20 || r == 0x7f:
+		if r < 0x20 || r == 0x7f {
 			return ' '
-		case strings.ContainsRune("\"'`$\\", r):
-			return -1
 		}
 		return r
 	}, s)
