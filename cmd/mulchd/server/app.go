@@ -420,8 +420,7 @@ func (app *App) GetAPIKeyFromSecret(secret string) (*APIKey, ssh.PublicKey, erro
 
 // SSHAuthServerHost returns our host name, as clients must see it, for
 // signature checks: the HTTPS domain if configured, else the Host header
-// (in HTTP mode, there's no way to protect against relay attacks anyway:
-// the token can be intercepted)
+// (sent by the client, so no protection against relay attacks in HTTP mode)
 func (app *App) SSHAuthServerHost(r *http.Request) string {
 	if app.Config.ListenHTTPSDomain != "" {
 		return common.SSHAuthHost(app.Config.ListenHTTPSDomain)
@@ -570,6 +569,7 @@ func (app *App) Run() {
 		if app.Config.ListenHTTPSDomain == "" {
 			// HTTP API Server
 			app.Log.Infof("API server listening on %s (HTTP)", app.Config.Listen)
+			app.Log.Warning("API server running over HTTP, server is insecure: keys/tokens/… sent in clear, allows relay attacks, etc")
 			err := http.ListenAndServe(app.Config.Listen, app.MuxAPI)
 			errChan <- fmt.Errorf("ListenAndServe API server: %s", err)
 		} else {

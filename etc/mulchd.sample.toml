@@ -5,7 +5,9 @@
 listen = ":8686"
 
 # Enable HTTPS-only for *API server*, using a Let's Encrypt certificate
-# with specified domain. Default ("") is HTTP-only.
+# with specified domain. Default ("") is HTTP-only, and it's very insecure
+# (keys/tokens/… sent in clear, allows relay attacks, etc).
+#
 # See also proxy_acme_* settings below since the certificate is generated
 # by mulch-proxy (port 443)
 listen_https_domain = ""
