@@ -21,7 +21,7 @@ ssh_pub_key = "~/.ssh/id_ed25519.pub"
 Security keys (ed25519-sk / ecdsa-sk, ex: YubiKey) are supported, and
 need a touch for each new session.
 
-You can then disable the static key with 'key ssh only'(warning: test that
+You can then disable the static key with 'key ssh only' (warning: test that
 your SSH keys work before doing this)
 `,
 }

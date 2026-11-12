@@ -519,11 +519,9 @@ replace `key` with:
 ```toml
 ssh_pub_key = "~/.ssh/id_ed25519.pub"
 ```
-The client signs a challenge with your key and gets a session token (valid
-8 hours), kept in `$XDG_RUNTIME_DIR`.
-Nothing secret is stored on disk: the same key is used for `mulch ssh`,
-`mulch ssh-config`, etc. An admin can then disable the static key with
-`mulch key ssh only <key> on`.
+You can then disable the static key with `mulch key ssh only <key> on`.
+
+### Completion
 
 To install bash completion, you may have a look at `mulch help completion`, you may
 also install ssh aliases right now with `mulch ssh-config`.
