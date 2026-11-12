@@ -50,7 +50,8 @@ func NewKeyController(req *server.Request) {
 
 	req.App.AlertSender.Security("API key created", fmt.Sprintf("key '%s' created by %s", key.Comment, req.Author()))
 
-	req.Stream.Infof("key = %s", key.Key)
+	// private: must not reach other log watchers, history or mulchd output
+	req.Stream.InfoPrivatef("key = %s", key.Key)
 	req.Stream.Successf("Key '%s' created", key.Comment)
 }
 

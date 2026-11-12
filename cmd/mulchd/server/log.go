@@ -27,13 +27,18 @@ func NewLog(target string, hub *Hub, history *LogHistory) *Log {
 func (log *Log) Log(message *common.Message) {
 	message.Target = log.target
 
-	if !(message.Type == common.MessageTrace && !log.hub.trace) {
-		// TODO: use our own *log.Logger (see log.go in Nosee project)
-		fmt.Printf("%s(%s): %s\n", message.Type, message.Target, message.Message)
+	text := message.Message
+	if message.Private {
+		text = "(private message)"
 	}
 
-	// we don't historize NOOP and TRACE messages
-	if message.Type != common.MessageNoop && message.Type != common.MessageTrace {
+	if !(message.Type == common.MessageTrace && !log.hub.trace) {
+		// TODO: use our own *log.Logger (see log.go in Nosee project)
+		fmt.Printf("%s(%s): %s\n", message.Type, message.Target, text)
+	}
+
+	// we don't historize NOOP, TRACE and private messages
+	if message.Type != common.MessageNoop && message.Type != common.MessageTrace && !message.Private {
 		log.history.Push(message)
 	}
 
@@ -71,6 +76,16 @@ func (log *Log) Info(message string) {
 func (log *Log) Infof(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	log.Info(msg)
+}
+
+// InfoPrivatef sends a formated string MessageInfo Message to the exact
+// target only: no broadcast to "*" watchers, no history, not printed.
+// Use it for secrets, on a request stream with its default private target
+// (not after a SetTarget(), other clients may watch this target).
+func (log *Log) InfoPrivatef(format string, args ...interface{}) {
+	message := common.NewMessage(common.MessageInfo, log.target, fmt.Sprintf(format, args...))
+	message.Private = true
+	log.Log(message)
 }
 
 // Trace sends an MessageTrace Message

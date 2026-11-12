@@ -71,6 +71,9 @@ func (h *Hub) Run() {
 				if !message.MatchTarget(client.target, common.MessageMatchDefault) {
 					continue // not for this client
 				}
+				if message.Private && client.target != message.Target {
+					continue // private: exact target only (not "*" watchers)
+				}
 				if message.Type == common.MessageTrace && !client.trace {
 					continue // this client don't want traces
 				}

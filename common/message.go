@@ -63,6 +63,11 @@ type Message struct {
 	Type    string    `json:"type"`
 	Target  string    `json:"target"`
 	Message string    `json:"message"`
+
+	// server side only: the message is only sent to clients with this
+	// exact target (not "*" watchers), and is neither historized nor
+	// printed (ex: secrets)
+	Private bool `json:"-"`
 }
 
 // NewMessage creates a new Message instance
