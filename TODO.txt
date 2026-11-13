@@ -25,6 +25,10 @@ Resource leaks:
   - seems libvirt related! (Streams & Volume transferts) - anonymous allocations
 
 Short term:
+- once all mulchd servers use the new ci-user-data.yml (/etc/mulch-app-env.sh),
+  remove the redundant ~/env export appended to ~/.bashrc by prepare scripts
+  (core and mulch-scripts):
+  grep -rln -F "| xargs)' >> /home/" --include=*.sh scripts/ <mulch-scripts>/
 - .mulch.toml: allow things like key_cmd = "pass show mulch/4" ? (so no key is read by LLMs)
 - allow `. [...]another_script.sh` in scripts? (from another origin? ex: apache2)
   - search "GetContent"

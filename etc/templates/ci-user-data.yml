@@ -120,7 +120,22 @@ write_files:
     permissions: '0644'
     path: /etc/profile.d/mulch-env.sh
 
+  # profile.d is only read by login shells, so this file is sourced at the
+  # top of the app user ~/.bashrc (see runcmd), before the "not running
+  # interactively" return: env is then also available for "ssh vm cmd"
+  - content: |
+      . /etc/mulch.env
+      if [ -f /home/$_APP_USER/env ]; then
+          set -a
+          . /home/$_APP_USER/env
+          set +a
+      fi
+    owner: root:root
+    permissions: '0644'
+    path: /etc/mulch-app-env.sh
+
 runcmd:
+  - [ sed, -i, '1i . /etc/mulch-app-env.sh', /home/$_APP_USER/.bashrc ]
   - [ systemctl, enable, phone_home ]
   - [ systemctl, enable, --now, get_env ]
 
