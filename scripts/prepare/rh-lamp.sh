@@ -54,6 +54,16 @@ sudo chown -R $_APP_USER:$_APP_USER $html_dir $appenv || exit $?
 sudo bash -c "echo > /etc/httpd/conf.d/welcome.conf" || exit $?
 sudo bash -c "echo > /etc/httpd/conf.d/userdir.conf" || exit $?
 
+# never serve VCS metadata (.git…), for all vhosts
+sudo bash -c "cat > /etc/httpd/conf.d/deny-vcs.conf" <<- 'EOS'
+# RedirectMatch can't be overridden by <Location>, DirectoryMatch is a fallback
+RedirectMatch 404 "/\.(git|svn|hg)(/|$)"
+<DirectoryMatch "/\.(git|svn|hg)(/|$)">
+    Require all denied
+</DirectoryMatch>
+EOS
+[ $? -eq 0 ] || exit $?
+
 if [ -n "$MULCH_HTTP_BASIC_AUTH" ]; then
     # create htpasswd file
     htpasswd="/home/$_APP_USER/.htpasswd"

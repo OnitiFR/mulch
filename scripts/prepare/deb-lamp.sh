@@ -278,6 +278,19 @@ EOS
 fi
 
 sudo a2enconf phpmyadmin || exit $?
+
+# never serve VCS metadata (.git…), for all vhosts
+sudo bash -c "cat > /etc/apache2/conf-available/deny-vcs.conf" <<- 'EOS'
+# RedirectMatch can't be overridden by <Location>, DirectoryMatch is a fallback
+RedirectMatch 404 "/\.(git|svn|hg)(/|$)"
+<DirectoryMatch "/\.(git|svn|hg)(/|$)">
+    Require all denied
+</DirectoryMatch>
+EOS
+[ $? -eq 0 ] || exit $?
+sudo a2enmod alias || exit $?
+sudo a2enconf deny-vcs || exit $?
+
 sudo a2enmod rewrite expires headers || exit $?
 
 sudo sed -i 's/^disable_functions = \(.*\)/disable_functions = \1phpinfo,/' /etc/php/*/apache2/php.ini || exit $?
