@@ -2,6 +2,7 @@
 
 user_login="$_CALLING_KEY"
 echo_prefix='_MULCH_OPEN_URL='
+validity_min=60
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -31,40 +32,37 @@ set -a
 . ~/env
 set +a
 
-cd $HTML_DIR || exit $?
+cd "$HTML_DIR" || exit $?
 
+# Resolve the user
+user_id=$(wp user get "$user_login" --field=ID 2>/dev/null)
+if ! [[ "$user_id" =~ ^[0-9]+$ ]]; then
+    >&2 echo "unable to find user '$user_login', administrators are:"
+    wp user list --role=administrator --field=user_login >&2
+    exit 1
+fi
 
-filename="$(pwgen 32).php" || exit $?
-fullname="auth/$filename"
+token=$(pwgen -s 32 1) || exit $?
+expire=$(( $(date +%s) + validity_min * 60 ))
+
 mkdir -p auth/ || exit $?
+touch auth/index.html || exit $? # prevent directory listing of pending links
+find auth/ -name '*.php' -mmin +$validity_min -delete # purge unused links
 
-cat > $fullname <<- EOS
+cat > "auth/$token.php" <<EOS
 <?php
-require_once("../wp-config.php");
-require_once(ABSPATH . "/wp-load.php");
+unlink(__FILE__); // one-time link
 
-unlink(__FILE__);
-
-\$user = get_userdatabylogin('${user_login}');
-if (!\$user) {
-    echo '<h3>Unable to find user "${user_login}"</h3>';
-    \$users = get_users([
-        'role__in' => ['administrator'],
-        'orderby' => 'display_name',
-        'order' => 'ASC',
-    ]);
-    echo '<ul>';
-    foreach (\$users as \$user) {
-        echo '<li>' . \$user->user_login . '</li>';
-    }
-    echo '</ul>';
-    die();
+if (time() > $expire) {
+    http_response_code(410);
+    die('link expired');
 }
 
-wp_set_auth_cookie(\$user->ID);
+require_once __DIR__ . '/../wp-load.php';
+
+wp_set_auth_cookie($user_id);
 header('Location: ' . parse_url(get_admin_url(), PHP_URL_PATH));
 EOS
 [ $? -eq 0 ] || exit $?
 
-echo "${echo_prefix}https://$_DOMAIN_FIRST/auth/$filename"
-
+echo "${echo_prefix}https://$_DOMAIN_FIRST/auth/$token.php"
