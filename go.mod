@@ -6,6 +6,7 @@ require (
 	al.essio.dev/pkg/shellescape v1.6.1
 	github.com/BurntSushi/toml v1.6.0
 	github.com/Knetic/govaluate v3.0.0+incompatible
+	github.com/Microsoft/go-winio v0.6.2
 	github.com/blang/semver/v4 v4.0.0
 	github.com/c2h5oh/datasize v0.0.0-20231215233829-aa82cc1e6500
 	github.com/fatih/color v1.19.0
@@ -31,7 +32,6 @@ require (
 )
 
 require (
-	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.5.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
