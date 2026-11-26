@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -76,14 +75,9 @@ func (api *API) resolveSSHAuth() (*sshAuthState, error) {
 		return nil, err
 	}
 
-	sock := os.Getenv("SSH_AUTH_SOCK")
-	if sock == "" {
-		return nil, errors.New("ssh_pub_key is set, but no SSH agent is available (SSH_AUTH_SOCK is not set)")
-	}
-
-	conn, err := net.Dial("unix", sock)
+	conn, err := dialSSHAgent()
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to SSH agent: %s", err)
+		return nil, err
 	}
 
 	ag := agent.NewClient(conn)
